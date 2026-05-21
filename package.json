@@ -9,7 +9,11 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "prisma:push": "prisma db push",
-    "prisma:generate": "prisma generate"
+    "prisma:generate": "prisma generate",
+    "prisma:seed": "prisma db seed"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.mjs"
   },
   "dependencies": {
     "@prisma/client": "6.2.1",

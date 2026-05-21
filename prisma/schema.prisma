@@ -3,13 +3,159 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-model AppSetting {
-  key       String   @id
-  value     String
+enum UserRole {
+  USER
+  MANAGER
+  ADMIN
+}
+
+enum ReservationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED_BY_USER
+  CANCELLED_BY_ADMIN
+  ALTERNATIVE_PROPOSED
+}
+
+enum AlternativeStatus {
+  PROPOSED
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(USER)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  reservations             Reservation[]            @relation("ReservationUser")
+  approvedReservations     Reservation[]            @relation("ReservationApprover")
+  cancelledReservations    Reservation[]            @relation("ReservationCanceller")
+  proposedAlternatives     ReservationAlternative[] @relation("AlternativeProposer")
+  auditLogs                AuditLog[]               @relation("AuditActor")
+  notifications            Notification[]           @relation("NotificationUser")
+}
+
+model ResourcePool {
+  id        String   @id @default(cuid())
+  name      String
+  capacity  Int
+  active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  reservations Reservation[]
+}
+
+model WorkingSchedule {
+  id           String   @id @default(cuid())
+  /// Uses JavaScript Date.getDay(): Sunday=0, Monday=1, ..., Friday=5, Saturday=6.
+  dayOfWeek    Int      @unique
+  isWorkingDay Boolean  @default(true)
+  startTime    String
+  endTime      String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model ScheduleException {
+  id           String   @id @default(cuid())
+  date         DateTime @unique @db.Date
+  isWorkingDay Boolean
+  startTime    String?
+  endTime      String?
+  reason       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Reservation {
+  id                String            @id @default(cuid())
+  userId            String
+  resourcePoolId    String
+  startAt           DateTime
+  endAt             DateTime
+  status            ReservationStatus @default(PENDING)
+  reason            String?
+  rejectionReason   String?
+  approvedById      String?
+  approvedAt        DateTime?
+  cancelledById     String?
+  cancelledAt       DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  user          User                 @relation("ReservationUser", fields: [userId], references: [id])
+  resourcePool  ResourcePool         @relation(fields: [resourcePoolId], references: [id])
+  approvedBy    User?                @relation("ReservationApprover", fields: [approvedById], references: [id])
+  cancelledBy   User?                @relation("ReservationCanceller", fields: [cancelledById], references: [id])
+  alternatives  ReservationAlternative[]
+  notifications Notification[]
+
+  @@index([resourcePoolId, startAt, endAt])
+  @@index([status, startAt])
+  @@index([userId, startAt])
+}
+
+model ReservationAlternative {
+  id              String            @id @default(cuid())
+  reservationId   String
+  proposedStartAt DateTime
+  proposedEndAt   DateTime
+  proposedById    String
+  status          AlternativeStatus @default(PROPOSED)
+  respondedAt     DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  reservation Reservation @relation(fields: [reservationId], references: [id])
+  proposedBy  User        @relation("AlternativeProposer", fields: [proposedById], references: [id])
+
+  @@index([reservationId])
+  @@index([status])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String?
+  entityType  String
+  entityId    String
+  action      String
+  oldValue    Json?
+  newValue    Json?
+  createdAt   DateTime @default(now())
+
+  actor User? @relation("AuditActor", fields: [actorUserId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([actorUserId])
+  @@index([createdAt])
+}
+
+model Notification {
+  id            String   @id @default(cuid())
+  userId        String
+  reservationId String?
+  type          String
+  title         String
+  body          String
+  readAt        DateTime?
+  createdAt     DateTime @default(now())
+
+  user        User         @relation("NotificationUser", fields: [userId], references: [id])
+  reservation Reservation? @relation(fields: [reservationId], references: [id])
+
+  @@index([userId, readAt])
+  @@index([reservationId])
 }

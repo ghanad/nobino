@@ -15,7 +15,7 @@ export default function Home() {
       <section className="mx-auto flex min-h-screen w-full max-w-5xl flex-col justify-center px-6 py-16">
         <div className="max-w-3xl">
           <p className="mb-3 text-sm font-medium text-muted-foreground">
-            Phase 0 bootstrap
+            Phase 1 data model
           </p>
           <h1 className="text-4xl font-semibold tracking-normal text-foreground sm:text-5xl">
             Nobino Reservations
@@ -26,7 +26,7 @@ export default function Home() {
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button>Health check ready</Button>
-            <Button variant="outline">SQLite configured</Button>
+            <Button variant="outline">PostgreSQL schema ready</Button>
           </div>
         </div>
 
@@ -51,7 +51,7 @@ export default function Home() {
             <h2 className="font-medium">Hourly schedule</h2>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               The app will enforce configurable working days and hourly booking
-              windows in later phases.
+              windows from seeded schedule data in later phases.
             </p>
           </div>
         </div>

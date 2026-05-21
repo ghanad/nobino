@@ -20,7 +20,7 @@ Out-of-scope for this project unless explicitly requested: check-in, check-out, 
 - Tailwind CSS
 - shadcn/ui-compatible component setup
 - Prisma
-- SQLite for the local and first operational database
+- PostgreSQL for local and operational data
 - Zod for validation in later phases
 
 ## Setup
@@ -37,11 +37,17 @@ Create a local environment file:
 cp .env.example .env
 ```
 
-Initialize the SQLite database:
+Start PostgreSQL:
 
 ```bash
-touch dev.db
-npx prisma db push
+docker compose up -d
+```
+
+Apply the database migration and seed defaults:
+
+```bash
+npx prisma migrate dev
+npm run prisma:seed
 ```
 
 Start the development server:
@@ -62,8 +68,19 @@ npm run lint
 npm run typecheck
 npm run prisma:push
 npm run prisma:generate
+npm run prisma:seed
 ```
+
+## Seeded Data
+
+The seed script creates:
+
+- `admin@nobino.local` / `Admin123!`
+- `manager@nobino.local` / `Manager123!`
+- `user@nobino.local` / `User123!`
+- Resource pool `Company Systems` with capacity `5`
+- Weekly schedule using JavaScript `Date.getDay()` values: Sunday through Thursday and Saturday are `09:00-17:00`; Friday is disabled.
 
 ## Phase Status
 
-Phase 0 is a project bootstrap only. Core database models, seed data, authentication, scheduling logic, reservation creation, capacity checks, and manager approval flows are intentionally left for later phases.
+Phase 1 is complete: the core Prisma data model, PostgreSQL migration, seed users, resource pool, weekly schedule, and notification table are in place. Authentication, scheduling services, reservation creation, capacity checks, and manager approval flows are intentionally left for later phases.
