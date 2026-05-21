@@ -9,6 +9,7 @@ import {
 } from "@/app/reservations/actions";
 import { CreateReservationForm } from "@/components/reservation/create-reservation-form";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { UrlToast } from "@/components/ui/url-toast";
 import { requireCurrentUser } from "@/lib/auth";
 import { getSlotUsage } from "@/lib/capacity-service";
 import { db } from "@/lib/db";
@@ -101,17 +102,15 @@ function getAlternativeStatusClass(status: AlternativeStatus): string {
   return "bg-muted text-muted-foreground ring-border";
 }
 
-function ReservationsFlash({
-  params,
-}: {
-  params: Awaited<ReservationsPageProps["searchParams"]>;
-}) {
+function getReservationsToast(
+  params: Awaited<ReservationsPageProps["searchParams"]>,
+) {
   if (params?.error) {
-    return (
-      <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
-        {params.error}
-      </div>
-    );
+    return {
+      consumeKeys: ["error"],
+      message: params.error,
+      variant: "error" as const,
+    };
   }
 
   const successMessage =
@@ -126,11 +125,16 @@ function ReservationsFlash({
     return null;
   }
 
-  return (
-    <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
-      {successMessage}
-    </div>
-  );
+  return {
+    consumeKeys: [
+      "created",
+      "cancelled",
+      "alternativeAccepted",
+      "alternativeRejected",
+    ],
+    message: successMessage,
+    variant: "success" as const,
+  };
 }
 
 function AlternativeList({
@@ -307,6 +311,7 @@ export default async function ReservationsPage({
 }: ReservationsPageProps) {
   const user = await requireCurrentUser();
   const params = await searchParams;
+  const toast = getReservationsToast(params);
   const selectedDate = parseJalaliDateParam(params?.date) ?? new Date();
   const dateParam = formatJalaliDateParam(selectedDate);
   const [resourcePools, reservations] = await Promise.all([
@@ -427,7 +432,7 @@ export default async function ReservationsPage({
 
   return (
     <div className="grid gap-6">
-      <ReservationsFlash params={params} />
+      {toast ? <UrlToast {...toast} /> : null}
 
       <CreateReservationForm
         action={createReservationAction}

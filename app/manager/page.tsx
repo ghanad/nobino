@@ -8,6 +8,7 @@ import {
 } from "@/app/manager/actions";
 import { DailyCapacityCalendar } from "@/components/calendar/daily-capacity-calendar";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { UrlToast } from "@/components/ui/url-toast";
 import { getSlotUsage } from "@/lib/capacity-service";
 import { db } from "@/lib/db";
 import {
@@ -104,44 +105,27 @@ function buildExportHref(dateParam: string): string {
   return `/manager/export?date=${encodeURIComponent(dateParam)}`;
 }
 
-function QueueFlash({
-  params,
-}: {
-  params: Awaited<ManagerPageProps["searchParams"]>;
-}) {
+function getQueueToast(params: Awaited<ManagerPageProps["searchParams"]>) {
   if (params?.error) {
-    return (
-      <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
-        {params.error}
-      </div>
-    );
+    return {
+      consumeKeys: ["error"],
+      message: params.error,
+      variant: "error" as const,
+    };
   }
 
-  if (params?.approved) {
-    return (
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
-        Reservation approved.
-      </div>
-    );
-  }
+  const successMessage =
+    (params?.approved && "Reservation approved.") ||
+    (params?.rejected && "Reservation rejected.") ||
+    (params?.alternative && "Alternative proposed.");
 
-  if (params?.rejected) {
-    return (
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
-        Reservation rejected.
-      </div>
-    );
-  }
-
-  if (params?.alternative) {
-    return (
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
-        Alternative proposed.
-      </div>
-    );
-  }
-
-  return null;
+  return successMessage
+    ? {
+        consumeKeys: ["approved", "rejected", "alternative"],
+        message: successMessage,
+        variant: "success" as const,
+      }
+    : null;
 }
 
 function CapacitySummary({ item }: { item: QueueItem }) {
@@ -354,6 +338,7 @@ function QueueCard({
 
 export default async function ManagerPage({ searchParams }: ManagerPageProps) {
   const params = await searchParams;
+  const toast = getQueueToast(params);
   const selectedDate = parseJalaliDateParam(params?.date) ?? new Date();
   const dateParam = formatJalaliDateParam(selectedDate);
   const resourcePool = await db.resourcePool.findFirst({
@@ -477,7 +462,7 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
 
   return (
     <div className="grid gap-6">
-      <QueueFlash params={params} />
+      {toast ? <UrlToast {...toast} /> : null}
 
       <section className="grid gap-3">
         <div className="flex justify-end">

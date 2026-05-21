@@ -25,6 +25,24 @@ export async function getUnreadNotificationCount(
   });
 }
 
+export async function getLatestUnreadNotification(
+  userId: string,
+  client: DbClient = db,
+) {
+  return client.notification.findFirst({
+    where: {
+      userId,
+      readAt: null,
+    },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      title: true,
+      body: true,
+    },
+  });
+}
+
 export async function markNotificationAsRead(input: {
   notificationId: string;
   userId: string;

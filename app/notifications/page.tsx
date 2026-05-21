@@ -5,6 +5,7 @@ import {
   markNotificationAsReadAction,
 } from "@/app/notifications/actions";
 import { Button } from "@/components/ui/button";
+import { UrlToast } from "@/components/ui/url-toast";
 import { requireCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatJalaliDateTime } from "@/lib/jalali-date";
@@ -32,17 +33,15 @@ type NotificationItem = {
   } | null;
 };
 
-function NotificationsFlash({
-  params,
-}: {
-  params: Awaited<NotificationsPageProps["searchParams"]>;
-}) {
+function getNotificationsToast(
+  params: Awaited<NotificationsPageProps["searchParams"]>,
+) {
   if (params?.error) {
-    return (
-      <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
-        {params.error}
-      </div>
-    );
+    return {
+      consumeKeys: ["error"],
+      message: params.error,
+      variant: "error" as const,
+    };
   }
 
   const successMessage =
@@ -53,11 +52,11 @@ function NotificationsFlash({
     return null;
   }
 
-  return (
-    <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
-      {successMessage}
-    </div>
-  );
+  return {
+    consumeKeys: ["read", "allRead"],
+    message: successMessage,
+    variant: "success" as const,
+  };
 }
 
 function NotificationCard({
@@ -157,10 +156,11 @@ export default async function NotificationsPage({
   const unreadCount = notifications.filter(
     (notification) => !notification.readAt,
   ).length;
+  const toast = getNotificationsToast(params);
 
   return (
     <div className="grid gap-6">
-      <NotificationsFlash params={params} />
+      {toast ? <UrlToast {...toast} /> : null}
 
       <section className="rounded-lg border bg-card p-5 text-card-foreground">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
