@@ -1,5 +1,5 @@
 import { ReservationStatus } from "@prisma/client";
-import { CalendarClock, Check, X } from "lucide-react";
+import { CalendarClock, Check, Download, X } from "lucide-react";
 
 import {
   approveReservationAction,
@@ -98,6 +98,10 @@ function formatDuration(startAt: Date, endAt: Date): string {
 
 function buildHourOptions() {
   return Array.from({ length: 24 }, (_, hour) => hour);
+}
+
+function buildExportHref(dateParam: string): string {
+  return `/manager/export?date=${encodeURIComponent(dateParam)}`;
 }
 
 function QueueFlash({
@@ -475,24 +479,36 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
     <div className="grid gap-6">
       <QueueFlash params={params} />
 
-      <DailyCapacityCalendar
-        date={selectedDate}
-        dateParam={dateParam}
-        detailsBySlotStart={detailsBySlotStart}
-        emptyMessage={
-          resourcePool
-            ? "No working-hour slots are configured for this date."
-            : "No active resource pool is configured."
-        }
-        nextDateParam={formatJalaliDateParam(addDays(selectedDate, 1))}
-        previousDateParam={formatJalaliDateParam(addDays(selectedDate, -1))}
-        slots={slots}
-        title={
-          resourcePool
-            ? `${resourcePool.name} manager availability`
-            : "Manager availability"
-        }
-      />
+      <section className="grid gap-3">
+        <div className="flex justify-end">
+          <a
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-input bg-background px-4 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+            href={buildExportHref(dateParam)}
+          >
+            <Download className="h-4 w-4" />
+            Export CSV
+          </a>
+        </div>
+
+        <DailyCapacityCalendar
+          date={selectedDate}
+          dateParam={dateParam}
+          detailsBySlotStart={detailsBySlotStart}
+          emptyMessage={
+            resourcePool
+              ? "No working-hour slots are configured for this date."
+              : "No active resource pool is configured."
+          }
+          nextDateParam={formatJalaliDateParam(addDays(selectedDate, 1))}
+          previousDateParam={formatJalaliDateParam(addDays(selectedDate, -1))}
+          slots={slots}
+          title={
+            resourcePool
+              ? `${resourcePool.name} manager availability`
+              : "Manager availability"
+          }
+        />
+      </section>
 
       <section className="rounded-lg border bg-card p-5 text-card-foreground">
         <h2 className="font-medium">Approval queue</h2>
