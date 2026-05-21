@@ -17,6 +17,12 @@ import {
   parseJalaliDateParam,
   isValidJalaliDateParam,
 } from "@/lib/jalali-date";
+import {
+  createManagedUser,
+  resetManagedUserPassword,
+  updateManagedUser,
+  UserManagementError,
+} from "@/lib/user-management-service";
 
 const timeSchema = z.string().regex(/^([01]\d|2[0-3]):00$/);
 
@@ -50,6 +56,25 @@ const deleteExceptionSchema = z.object({
   exceptionId: z.string().min(1),
 });
 
+const createUserSchema = z.object({
+  name: z.string().trim().min(1).max(100),
+  email: z.string().trim().email().max(200),
+  role: z.nativeEnum(UserRole),
+  password: z.string().min(8).max(200),
+});
+
+const updateUserSchema = z.object({
+  userId: z.string().min(1),
+  name: z.string().trim().min(1).max(100),
+  role: z.nativeEnum(UserRole),
+  active: z.coerce.boolean(),
+});
+
+const resetPasswordSchema = z.object({
+  userId: z.string().min(1),
+  password: z.string().min(8).max(200),
+});
+
 function checkboxToBoolean(value: FormDataEntryValue | null): boolean {
   return value === "on";
 }
@@ -75,7 +100,7 @@ function redirectToAdmin(params: Record<string, string | undefined>): never {
 }
 
 function getActionErrorMessage(error: unknown): string {
-  if (error instanceof AdminSettingsError) {
+  if (error instanceof AdminSettingsError || error instanceof UserManagementError) {
     return error.message;
   }
 
@@ -224,4 +249,81 @@ export async function deleteScheduleExceptionAction(
   }
 
   redirectToAdmin({ exceptionDeleted: "1" });
+}
+
+export async function createUserAction(formData: FormData): Promise<void> {
+  const admin = await requireRole([UserRole.ADMIN]);
+  const parsed = createUserSchema.safeParse({
+    name: formData.get("name"),
+    email: formData.get("email"),
+    role: formData.get("role"),
+    password: formData.get("password"),
+  });
+
+  if (!parsed.success) {
+    redirectToAdmin({
+      error: "Enter a valid user name, email, role, and temporary password.",
+    });
+  }
+
+  try {
+    await createManagedUser({
+      adminId: admin.id,
+      ...parsed.data,
+    });
+  } catch (error) {
+    redirectToAdmin({ error: getActionErrorMessage(error) });
+  }
+
+  redirectToAdmin({ userCreated: "1" });
+}
+
+export async function updateUserAction(formData: FormData): Promise<void> {
+  const admin = await requireRole([UserRole.ADMIN]);
+  const parsed = updateUserSchema.safeParse({
+    userId: formData.get("userId"),
+    name: formData.get("name"),
+    role: formData.get("role"),
+    active: checkboxToBoolean(formData.get("active")),
+  });
+
+  if (!parsed.success) {
+    redirectToAdmin({ error: "Enter valid user details." });
+  }
+
+  try {
+    await updateManagedUser({
+      adminId: admin.id,
+      ...parsed.data,
+    });
+  } catch (error) {
+    redirectToAdmin({ error: getActionErrorMessage(error) });
+  }
+
+  redirectToAdmin({ userUpdated: "1" });
+}
+
+export async function resetUserPasswordAction(
+  formData: FormData,
+): Promise<void> {
+  const admin = await requireRole([UserRole.ADMIN]);
+  const parsed = resetPasswordSchema.safeParse({
+    userId: formData.get("userId"),
+    password: formData.get("password"),
+  });
+
+  if (!parsed.success) {
+    redirectToAdmin({ error: "Temporary password must be at least 8 characters." });
+  }
+
+  try {
+    await resetManagedUserPassword({
+      adminId: admin.id,
+      ...parsed.data,
+    });
+  } catch (error) {
+    redirectToAdmin({ error: getActionErrorMessage(error) });
+  }
+
+  redirectToAdmin({ passwordReset: "1" });
 }

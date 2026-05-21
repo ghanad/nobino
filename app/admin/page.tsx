@@ -1,14 +1,19 @@
-import { Save, Trash2 } from "lucide-react";
+import { KeyRound, Save, Trash2, UserPlus } from "lucide-react";
+import { UserRole } from "@prisma/client";
 import type { ReactNode } from "react";
 
 import {
+  createUserAction,
   createScheduleExceptionAction,
   deleteScheduleExceptionAction,
+  resetUserPasswordAction,
   updateResourcePoolAction,
   updateScheduleExceptionAction,
+  updateUserAction,
   updateWeeklyScheduleAction,
 } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
+import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
   JALALI_DATE_INPUT_PLACEHOLDER,
@@ -21,8 +26,11 @@ type AdminPageProps = {
     exceptionCreated?: string;
     exceptionDeleted?: string;
     exceptionUpdated?: string;
+    passwordReset?: string;
     poolUpdated?: string;
     scheduleUpdated?: string;
+    userCreated?: string;
+    userUpdated?: string;
   }>;
 };
 
@@ -54,7 +62,10 @@ function AdminFlash({
     (params?.scheduleUpdated && "Weekly schedule updated.") ||
     (params?.exceptionCreated && "Schedule exception created.") ||
     (params?.exceptionUpdated && "Schedule exception updated.") ||
-    (params?.exceptionDeleted && "Schedule exception deleted.");
+    (params?.exceptionDeleted && "Schedule exception deleted.") ||
+    (params?.userCreated && "User created.") ||
+    (params?.userUpdated && "User updated.") ||
+    (params?.passwordReset && "Temporary password set.");
 
   if (!successMessage) {
     return null;
@@ -87,6 +98,183 @@ function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
       {...props}
       className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
     />
+  );
+}
+
+function SelectInput(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <select
+      {...props}
+      className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+    />
+  );
+}
+
+function UserManagement({
+  currentAdminId,
+  users,
+}: {
+  currentAdminId: string;
+  users: Array<{
+    id: string;
+    name: string;
+    email: string;
+    role: UserRole;
+    active: boolean;
+    createdAt: Date;
+  }>;
+}) {
+  return (
+    <section className="rounded-lg border bg-card p-5 text-card-foreground">
+      <div className="flex flex-col gap-1">
+        <h2 className="font-medium">Users</h2>
+        <p className="text-sm text-muted-foreground">
+          Create accounts, change roles, deactivate users, and set temporary
+          passwords.
+        </p>
+      </div>
+
+      <form
+        action={createUserAction}
+        className="mt-5 grid gap-4 rounded-md border bg-muted/20 p-4 lg:grid-cols-[1fr_1.2fr_150px_180px_auto]"
+      >
+        <div className="grid gap-2">
+          <FieldLabel htmlFor="new-user-name">Name</FieldLabel>
+          <TextInput id="new-user-name" maxLength={100} name="name" required />
+        </div>
+        <div className="grid gap-2">
+          <FieldLabel htmlFor="new-user-email">Email</FieldLabel>
+          <TextInput
+            id="new-user-email"
+            maxLength={200}
+            name="email"
+            required
+            type="email"
+          />
+        </div>
+        <div className="grid gap-2">
+          <FieldLabel htmlFor="new-user-role">Role</FieldLabel>
+          <SelectInput defaultValue={UserRole.USER} id="new-user-role" name="role">
+            <option value={UserRole.USER}>User</option>
+            <option value={UserRole.MANAGER}>Manager</option>
+            <option value={UserRole.ADMIN}>Admin</option>
+          </SelectInput>
+        </div>
+        <div className="grid gap-2">
+          <FieldLabel htmlFor="new-user-password">
+            Temporary password
+          </FieldLabel>
+          <TextInput
+            id="new-user-password"
+            minLength={8}
+            name="password"
+            required
+            type="password"
+          />
+        </div>
+        <div className="flex items-end">
+          <Button type="submit">
+            <UserPlus className="h-4 w-4" />
+            Create
+          </Button>
+        </div>
+      </form>
+
+      <div className="mt-5 grid gap-3">
+        {users.map((user) => (
+          <div className="rounded-md border bg-muted/20 p-4" key={user.id}>
+            <form
+              action={updateUserAction}
+              className="grid gap-4 lg:grid-cols-[1fr_1.2fr_150px_1fr_auto]"
+            >
+              <input name="userId" type="hidden" value={user.id} />
+              <div className="grid gap-2">
+                <FieldLabel htmlFor={`user-name-${user.id}`}>Name</FieldLabel>
+                <TextInput
+                  defaultValue={user.name}
+                  id={`user-name-${user.id}`}
+                  maxLength={100}
+                  name="name"
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel htmlFor={`user-email-${user.id}`}>Email</FieldLabel>
+                <TextInput
+                  defaultValue={user.email}
+                  disabled
+                  id={`user-email-${user.id}`}
+                />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel htmlFor={`user-role-${user.id}`}>Role</FieldLabel>
+                <SelectInput
+                  defaultValue={user.role}
+                  id={`user-role-${user.id}`}
+                  name="role"
+                >
+                  <option value={UserRole.USER}>User</option>
+                  <option value={UserRole.MANAGER}>Manager</option>
+                  <option value={UserRole.ADMIN}>Admin</option>
+                </SelectInput>
+              </div>
+              <div className="flex flex-col justify-end gap-2">
+                {user.id === currentAdminId ? (
+                  <input name="active" type="hidden" value="on" />
+                ) : null}
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    className="h-4 w-4 rounded border-input"
+                    defaultChecked={user.active}
+                    disabled={user.id === currentAdminId}
+                    name="active"
+                    type="checkbox"
+                  />
+                  Active
+                </label>
+                {user.id === currentAdminId ? (
+                  <p className="text-xs text-muted-foreground">
+                    Your own account cannot be deactivated here.
+                  </p>
+                ) : null}
+              </div>
+              <div className="flex items-end">
+                <Button type="submit">
+                  <Save className="h-4 w-4" />
+                  Save
+                </Button>
+              </div>
+            </form>
+
+            <form
+              action={resetUserPasswordAction}
+              className="mt-4 grid gap-3 border-t pt-4 sm:grid-cols-[1fr_auto]"
+            >
+              <input name="userId" type="hidden" value={user.id} />
+              <div className="grid gap-2">
+                <FieldLabel htmlFor={`user-password-${user.id}`}>
+                  Temporary password
+                </FieldLabel>
+                <TextInput
+                  id={`user-password-${user.id}`}
+                  minLength={8}
+                  name="password"
+                  placeholder="At least 8 characters"
+                  required
+                  type="password"
+                />
+              </div>
+              <div className="flex items-end">
+                <Button type="submit" variant="outline">
+                  <KeyRound className="h-4 w-4" />
+                  Set password
+                </Button>
+              </div>
+            </form>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -414,8 +602,9 @@ function ScheduleExceptions({
 }
 
 export default async function AdminPage({ searchParams }: AdminPageProps) {
+  const currentAdmin = await requireRole([UserRole.ADMIN]);
   const params = await searchParams;
-  const [resourcePools, schedules, exceptions] = await Promise.all([
+  const [resourcePools, schedules, exceptions, users] = await Promise.all([
     db.resourcePool.findMany({
       orderBy: { name: "asc" },
       select: {
@@ -446,11 +635,23 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         reason: true,
       },
     }),
+    db.user.findMany({
+      orderBy: [{ active: "desc" }, { name: "asc" }],
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        active: true,
+        createdAt: true,
+      },
+    }),
   ]);
 
   return (
     <div className="grid gap-6">
       <AdminFlash params={params} />
+      <UserManagement currentAdminId={currentAdmin.id} users={users} />
       <ResourcePoolSettings resourcePools={resourcePools} />
       <WeeklyScheduleSettings schedules={schedules} />
       <ScheduleExceptions exceptions={exceptions} />
