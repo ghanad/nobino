@@ -342,7 +342,7 @@ export function CreateReservationForm({
                     <div className="touch-none select-none">
                       {hours.map((hour) => (
                         <div
-                          className="grid h-16 grid-cols-[72px_repeat(7,minmax(116px,1fr))] border-b last:border-b-0"
+                          className="grid h-12 grid-cols-[72px_repeat(7,minmax(116px,1fr))] border-b last:border-b-0"
                           key={hour}
                         >
                           <div className="relative border-r bg-background">
@@ -374,15 +374,14 @@ export function CreateReservationForm({
                                 aria-pressed={isSelected}
                                 className={cn(
                                   "relative border-r bg-background p-0 text-left last:border-r-0 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                                  "after:absolute after:inset-x-0 after:top-1/2 after:border-t after:border-dotted after:border-border/80",
                                   !cell.isWorkingHour &&
-                                    "cursor-not-allowed bg-muted/30 after:border-transparent",
+                                    "cursor-not-allowed bg-muted/30",
                                   cell.isWorkingHour &&
                                     cell.unavailableReason === "full" &&
-                                    "cursor-not-allowed bg-red-50/80 text-red-800 after:border-red-100",
+                                    "cursor-not-allowed bg-red-50/80 text-red-800",
                                   cell.isWorkingHour &&
                                     cell.unavailableReason === "past" &&
-                                    "cursor-not-allowed bg-muted/50 text-muted-foreground after:border-muted",
+                                    "cursor-not-allowed bg-muted/50 text-muted-foreground",
                                   cell.isRequestable && "hover:bg-sky-50/60",
                                 )}
                                 data-calendar-cell="true"
