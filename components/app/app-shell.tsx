@@ -51,9 +51,14 @@ export async function AppShell({ user, title, children }: AppShellProps) {
               </Button>
             ) : null}
             {canAccessAdminArea(user.role) ? (
-              <Button variant="ghost" asChild>
-                <Link href="/admin">Admin</Link>
-              </Button>
+              <>
+                <Button variant="ghost" asChild>
+                  <Link href="/admin">Admin</Link>
+                </Button>
+                <Button variant="ghost" asChild>
+                  <Link href="/admin/audit">Audit</Link>
+                </Button>
+              </>
             ) : null}
             <form action={logoutAction}>
               <Button type="submit" variant="outline">

@@ -1,4 +1,5 @@
-import { KeyRound, Save, Trash2, UserPlus } from "lucide-react";
+import Link from "next/link";
+import { ClipboardList, KeyRound, Save, Trash2, UserPlus } from "lucide-react";
 import { UserRole } from "@prisma/client";
 import type { ReactNode } from "react";
 
@@ -651,6 +652,23 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   return (
     <div className="grid gap-6">
       <AdminFlash params={params} />
+      <section className="rounded-lg border bg-card p-5 text-card-foreground">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="font-medium">Audit log</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Inspect reservation approvals, capacity changes, schedule changes,
+              and user-management events.
+            </p>
+          </div>
+          <Button asChild variant="outline">
+            <Link href="/admin/audit">
+              <ClipboardList className="h-4 w-4" />
+              Open audit log
+            </Link>
+          </Button>
+        </div>
+      </section>
       <UserManagement currentAdminId={currentAdmin.id} users={users} />
       <ResourcePoolSettings resourcePools={resourcePools} />
       <WeeklyScheduleSettings schedules={schedules} />
