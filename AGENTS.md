@@ -90,10 +90,9 @@ Use:
 - Tailwind CSS
 - shadcn/ui
 - Prisma
-- PostgreSQL
+- SQLite
 - Zod
 - Auth.js / NextAuth credentials, or a simple secure cookie session
-- Docker Compose for local PostgreSQL
 
 Do not add unnecessary services, message queues, microservices, event buses, or complex infrastructure.
 
@@ -139,7 +138,6 @@ Do not add unnecessary services, message queues, microservices, event buses, or 
 │   └── seed.ts
 ├── scripts/
 ├── tests/
-├── docker-compose.yml
 ├── .env.example
 └── README.md
 ```

@@ -152,17 +152,16 @@ Use a simple, modern, LLM-friendly full-stack setup:
 - Tailwind CSS
 - shadcn/ui
 - Prisma ORM
-- PostgreSQL
+- SQLite
 - Auth.js / NextAuth Credentials provider or a simple secure session implementation
 - Zod for validation
-- Docker Compose for local database
 
 Reasoning:
 
 - Small user base
 - Need fast implementation
 - Need transactional capacity checks
-- PostgreSQL prevents avoidable concurrency problems
+- SQLite keeps local setup simple while still supporting transactional approval checks for this small app
 - Next.js keeps frontend and backend in one repo
 
 ## Deployment assumptions
@@ -172,7 +171,7 @@ Keep deployment simple.
 Suggested first deployment:
 
 - One web app container
-- One PostgreSQL database
+- One SQLite database file on persistent storage
 - Environment variables
 - Seeded admin user
 - Internal company network or VPN access

@@ -36,7 +36,7 @@ Create the base application.
 - Add Tailwind CSS.
 - Add shadcn/ui setup.
 - Add Prisma.
-- Add PostgreSQL Docker Compose.
+- Configure Prisma with SQLite.
 - Add `.env.example`.
 - Add basic README setup instructions.
 - Add health/check page or simple homepage.
@@ -46,7 +46,6 @@ Create the base application.
 ## Acceptance criteria
 
 - `npm install` works.
-- `docker compose up -d` starts PostgreSQL.
 - `npx prisma db push` or migration command works.
 - `npm run dev` starts the app.
 - Homepage renders.
@@ -430,7 +429,7 @@ Make the app safe enough for real internal use.
 - Add basic automated tests for business logic.
 - Add production build verification.
 - Add Dockerfile if deployment needs it.
-- Add backup notes for PostgreSQL.
+- Add backup notes for SQLite database files.
 - Add environment variable documentation.
 - Add timezone handling notes.
 - Review security basics:

@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -39,12 +39,12 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  reservations             Reservation[]            @relation("ReservationUser")
-  approvedReservations     Reservation[]            @relation("ReservationApprover")
-  cancelledReservations    Reservation[]            @relation("ReservationCanceller")
-  proposedAlternatives     ReservationAlternative[] @relation("AlternativeProposer")
-  auditLogs                AuditLog[]               @relation("AuditActor")
-  notifications            Notification[]           @relation("NotificationUser")
+  reservations          Reservation[]            @relation("ReservationUser")
+  approvedReservations  Reservation[]            @relation("ReservationApprover")
+  cancelledReservations Reservation[]            @relation("ReservationCanceller")
+  proposedAlternatives  ReservationAlternative[] @relation("AlternativeProposer")
+  auditLogs             AuditLog[]               @relation("AuditActor")
+  notifications         Notification[]           @relation("NotificationUser")
 }
 
 model ResourcePool {
@@ -71,7 +71,7 @@ model WorkingSchedule {
 
 model ScheduleException {
   id           String   @id @default(cuid())
-  date         DateTime @unique @db.Date
+  date         DateTime @unique
   isWorkingDay Boolean
   startTime    String?
   endTime      String?
@@ -81,25 +81,25 @@ model ScheduleException {
 }
 
 model Reservation {
-  id                String            @id @default(cuid())
-  userId            String
-  resourcePoolId    String
-  startAt           DateTime
-  endAt             DateTime
-  status            ReservationStatus @default(PENDING)
-  reason            String?
-  rejectionReason   String?
-  approvedById      String?
-  approvedAt        DateTime?
-  cancelledById     String?
-  cancelledAt       DateTime?
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  id              String            @id @default(cuid())
+  userId          String
+  resourcePoolId  String
+  startAt         DateTime
+  endAt           DateTime
+  status          ReservationStatus @default(PENDING)
+  reason          String?
+  rejectionReason String?
+  approvedById    String?
+  approvedAt      DateTime?
+  cancelledById   String?
+  cancelledAt     DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 
-  user          User                 @relation("ReservationUser", fields: [userId], references: [id])
-  resourcePool  ResourcePool         @relation(fields: [resourcePoolId], references: [id])
-  approvedBy    User?                @relation("ReservationApprover", fields: [approvedById], references: [id])
-  cancelledBy   User?                @relation("ReservationCanceller", fields: [cancelledById], references: [id])
+  user          User                     @relation("ReservationUser", fields: [userId], references: [id])
+  resourcePool  ResourcePool             @relation(fields: [resourcePoolId], references: [id])
+  approvedBy    User?                    @relation("ReservationApprover", fields: [approvedById], references: [id])
+  cancelledBy   User?                    @relation("ReservationCanceller", fields: [cancelledById], references: [id])
   alternatives  ReservationAlternative[]
   notifications Notification[]
 
@@ -144,14 +144,14 @@ model AuditLog {
 }
 
 model Notification {
-  id            String   @id @default(cuid())
+  id            String    @id @default(cuid())
   userId        String
   reservationId String?
   type          String
   title         String
   body          String
   readAt        DateTime?
-  createdAt     DateTime @default(now())
+  createdAt     DateTime  @default(now())
 
   user        User         @relation("NotificationUser", fields: [userId], references: [id])
   reservation Reservation? @relation(fields: [reservationId], references: [id])

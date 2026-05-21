@@ -166,7 +166,7 @@ Check:
 - role checks
 - server-side validation
 - production build
-- PostgreSQL backup note
+- SQLite backup note
 - deployment steps
 
 Do not add new product features.

@@ -29,7 +29,7 @@ export default function Home() {
             <Button asChild>
               <Link href="/login">Sign in</Link>
             </Button>
-            <Button variant="outline">PostgreSQL schema ready</Button>
+            <Button variant="outline">SQLite schema ready</Button>
           </div>
         </div>
 

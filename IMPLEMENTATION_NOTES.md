@@ -22,7 +22,7 @@ Do not overbuild.
 
 For 5–6 systems and around 50 users, these are enough:
 
-- one PostgreSQL database
+- one SQLite database file
 - one Next.js app
 - one resource pool
 - admin-managed users
@@ -63,7 +63,7 @@ Two managers might approve overlapping requests at nearly the same time.
 
 The approval function must check capacity inside a database transaction.
 
-For this small app, this is usually enough if implemented carefully.
+For this small app, SQLite transactions are enough if implemented carefully.
 
 ## Capacity reduction
 

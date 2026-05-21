@@ -20,7 +20,7 @@ Out-of-scope for this project unless explicitly requested: check-in, check-out, 
 - Tailwind CSS
 - shadcn/ui-compatible component setup
 - Prisma
-- PostgreSQL for local and operational data
+- SQLite for local and operational data
 - Zod for validation in later phases
 - Signed HTTP-only cookie sessions for authentication
 
@@ -41,16 +41,10 @@ cp .env.example .env
 Set `AUTH_SECRET` in `.env` to a long random value before using shared or
 production environments.
 
-Start PostgreSQL:
+Apply the SQLite database migration and seed defaults:
 
 ```bash
-docker compose up -d
-```
-
-Apply the database migration and seed defaults:
-
-```bash
-npx prisma migrate dev
+npx prisma migrate deploy
 npm run prisma:seed
 ```
 
