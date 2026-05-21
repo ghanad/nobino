@@ -22,6 +22,7 @@ Out-of-scope for this project unless explicitly requested: check-in, check-out, 
 - Prisma
 - PostgreSQL for local and operational data
 - Zod for validation in later phases
+- Signed HTTP-only cookie sessions for authentication
 
 ## Setup
 
@@ -36,6 +37,9 @@ Create a local environment file:
 ```bash
 cp .env.example .env
 ```
+
+Set `AUTH_SECRET` in `.env` to a long random value before using shared or
+production environments.
 
 Start PostgreSQL:
 
@@ -83,4 +87,11 @@ The seed script creates:
 
 ## Phase Status
 
-Phase 1 is complete: the core Prisma data model, PostgreSQL migration, seed users, resource pool, weekly schedule, and notification table are in place. Authentication, scheduling services, reservation creation, capacity checks, and manager approval flows are intentionally left for later phases.
+Phase 2 is complete: seeded users can sign in with email and password, sessions are stored in signed HTTP-only cookies, logout is available, and dashboard, manager, and admin areas enforce role access. Scheduling services, reservation creation, capacity checks, and manager approval flows are intentionally left for later phases.
+
+## Auth Routes
+
+- `/login` accepts seeded user credentials.
+- `/dashboard` is available to all authenticated active users.
+- `/manager` is available to managers and admins.
+- `/admin` is available to admins only.

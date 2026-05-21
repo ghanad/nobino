@@ -1,4 +1,5 @@
 import { CalendarDays, Database, ShieldCheck } from "lucide-react";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 
@@ -15,7 +16,7 @@ export default function Home() {
       <section className="mx-auto flex min-h-screen w-full max-w-5xl flex-col justify-center px-6 py-16">
         <div className="max-w-3xl">
           <p className="mb-3 text-sm font-medium text-muted-foreground">
-            Phase 1 data model
+            Phase 2 authentication
           </p>
           <h1 className="text-4xl font-semibold tracking-normal text-foreground sm:text-5xl">
             Nobino Reservations
@@ -25,7 +26,9 @@ export default function Home() {
             pool of identical company systems.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Button>Health check ready</Button>
+            <Button asChild>
+              <Link href="/login">Sign in</Link>
+            </Button>
             <Button variant="outline">PostgreSQL schema ready</Button>
           </div>
         </div>
