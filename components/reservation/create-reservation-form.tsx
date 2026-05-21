@@ -16,6 +16,7 @@ type RequestableSlot = {
   slotStartHour: number;
   slotEndHour: number;
   isRequestable: boolean;
+  unavailableReason: "full" | "past" | null;
 };
 
 type WeekDay = {
@@ -47,6 +48,7 @@ type Selection = {
 type CellState = {
   isRequestable: boolean;
   isWorkingHour: boolean;
+  unavailableReason: "full" | "past" | null;
 };
 
 function formatHour(hour: number): string {
@@ -79,12 +81,14 @@ function getCellState(day: WeekDay, hour: number): CellState {
     return {
       isRequestable: false,
       isWorkingHour: false,
+      unavailableReason: null,
     };
   }
 
   return {
     isRequestable: slot.isRequestable,
     isWorkingHour: true,
+    unavailableReason: slot.unavailableReason,
   };
 }
 
@@ -289,7 +293,7 @@ export function CreateReservationForm({
             <div>
               <p className="text-sm font-medium">{weekLabel}</p>
               <p className="text-xs text-muted-foreground">
-                White slots are requestable. Full slots are blocked.
+                White slots are requestable. Past and full slots are blocked.
               </p>
             </div>
             <p className="rounded-md bg-muted px-3 py-2 text-sm font-medium">
@@ -374,8 +378,11 @@ export function CreateReservationForm({
                                   !cell.isWorkingHour &&
                                     "cursor-not-allowed bg-muted/30 after:border-transparent",
                                   cell.isWorkingHour &&
-                                    !cell.isRequestable &&
+                                    cell.unavailableReason === "full" &&
                                     "cursor-not-allowed bg-red-50/80 text-red-800 after:border-red-100",
+                                  cell.isWorkingHour &&
+                                    cell.unavailableReason === "past" &&
+                                    "cursor-not-allowed bg-muted/50 text-muted-foreground after:border-muted",
                                   cell.isRequestable && "hover:bg-sky-50/60",
                                 )}
                                 data-calendar-cell="true"
@@ -423,9 +430,18 @@ export function CreateReservationForm({
                                   </span>
                                 ) : null}
 
-                                {cell.isWorkingHour && !cell.isRequestable ? (
-                                  <span className="absolute inset-x-1 top-2 z-10 rounded-sm bg-red-100 px-1 py-1 text-center text-[11px] font-medium leading-4 text-red-800">
-                                    No system available
+                                {cell.isWorkingHour && cell.unavailableReason ? (
+                                  <span
+                                    className={cn(
+                                      "absolute inset-x-1 top-2 z-10 rounded-sm px-1 py-1 text-center text-[11px] font-medium leading-4",
+                                      cell.unavailableReason === "full"
+                                        ? "bg-red-100 text-red-800"
+                                        : "bg-muted text-muted-foreground",
+                                    )}
+                                  >
+                                    {cell.unavailableReason === "full"
+                                      ? "No system available"
+                                      : "Past time"}
                                   </span>
                                 ) : null}
 

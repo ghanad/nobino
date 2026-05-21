@@ -163,6 +163,12 @@ export async function validateReservationTimeRange(input: {
 
   const durationMs = endAt.getTime() - startAt.getTime();
 
+  if (startAt.getTime() < Date.now()) {
+    throw new ReservationTimeRangeError(
+      "Reservation start time cannot be in the past.",
+    );
+  }
+
   if (durationMs < ONE_HOUR_MS) {
     throw new ReservationTimeRangeError(
       "Reservations must be at least 1 hour long.",

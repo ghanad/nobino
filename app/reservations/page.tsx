@@ -375,6 +375,7 @@ export default async function ReservationsPage({
     ReservationStatus.CANCELLED_BY_ADMIN,
   ];
   const selectedResourcePool = resourcePools[0];
+  const now = new Date();
   const weekStart = getWeekStart(selectedDate);
   const weekDates = Array.from({ length: 7 }, (_, index) =>
     addDays(weekStart, index),
@@ -398,11 +399,22 @@ export default async function ReservationsPage({
             dateLabel: formatJalaliDate(date),
             dateParam: formatJalaliDateParam(date),
             shortLabel: formatCalendarColumnLabel(date),
-            slots: slots.map((slot) => ({
-              slotStartHour: slot.slotStart.getHours(),
-              slotEndHour: slot.slotEnd.getHours(),
-              isRequestable: slot.approvedCount < slot.capacity,
-            })),
+            slots: slots.map((slot) => {
+              const isPast = slot.slotStart.getTime() < now.getTime();
+              const isFull = slot.approvedCount >= slot.capacity;
+              const unavailableReason: "past" | "full" | null = isPast
+                ? "past"
+                : isFull
+                  ? "full"
+                  : null;
+
+              return {
+                slotStartHour: slot.slotStart.getHours(),
+                slotEndHour: slot.slotEnd.getHours(),
+                isRequestable: !isPast && !isFull,
+                unavailableReason,
+              };
+            }),
           };
         }),
       )

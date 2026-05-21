@@ -40,6 +40,18 @@ function nextWorkingDateAtHour(hour: number): Date {
   return date;
 }
 
+function previousWorkingDateAtHour(hour: number): Date {
+  const date = new Date();
+  date.setDate(date.getDate() - 1);
+  date.setHours(hour, 0, 0, 0);
+
+  while (date.getDay() === 5) {
+    date.setDate(date.getDate() - 1);
+  }
+
+  return date;
+}
+
 function addHours(date: Date, hours: number): Date {
   return new Date(date.getTime() + hours * 60 * 60 * 1000);
 }
@@ -202,6 +214,16 @@ test("reservation time range must start and end on exact hours", async () => {
 
   await assert.rejects(
     () => validateReservationTimeRange({ startAt, endAt }),
+    ReservationTimeRangeError,
+  );
+});
+
+test("reservation requests cannot start in the past", async () => {
+  const startAt = previousWorkingDateAtHour(9);
+  const endAt = addHours(startAt, 1);
+
+  await assert.rejects(
+    () => createReservationRequest({ userId, resourcePoolId: poolId, startAt, endAt }),
     ReservationTimeRangeError,
   );
 });
