@@ -7,13 +7,13 @@ import {
   createReservationAction,
   rejectAlternativeAction,
 } from "@/app/reservations/actions";
-import { DailyCapacityCalendar } from "@/components/calendar/daily-capacity-calendar";
 import { CreateReservationForm } from "@/components/reservation/create-reservation-form";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { requireCurrentUser } from "@/lib/auth";
 import { getSlotUsage } from "@/lib/capacity-service";
 import { db } from "@/lib/db";
 import {
+  formatJalaliDate,
   formatJalaliDateParam,
   formatJalaliDateTime,
   parseJalaliDateParam,
@@ -51,8 +51,26 @@ type MyReservation = {
   }>;
 };
 
+const JALALI_WEEKDAY_FORMATTER = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
+  weekday: "long",
+});
+
+const JALALI_MONTH_DAY_FORMATTER = new Intl.DateTimeFormat(
+  "fa-IR-u-ca-persian-nu-latn",
+  {
+    day: "numeric",
+    month: "numeric",
+  },
+);
+
 function formatDateTime(date: Date): string {
   return formatJalaliDateTime(date);
+}
+
+function formatCalendarColumnLabel(date: Date): string {
+  return `${JALALI_WEEKDAY_FORMATTER.format(date)} ${JALALI_MONTH_DAY_FORMATTER.format(
+    date,
+  )}`;
 }
 
 function getStatusClass(status: ReservationStatus): string {
@@ -264,6 +282,12 @@ function addDays(date: Date, days: number): Date {
   );
 }
 
+function getWeekStart(date: Date): Date {
+  const daysSinceSaturday = (date.getDay() + 1) % 7;
+
+  return addDays(date, -daysSinceSaturday);
+}
+
 function buildDateAtTime(date: Date, time: string): Date {
   const [hour, minute] = time.split(":").map(Number);
 
@@ -351,18 +375,43 @@ export default async function ReservationsPage({
     ReservationStatus.CANCELLED_BY_ADMIN,
   ];
   const selectedResourcePool = resourcePools[0];
-  const workingWindow = await getWorkingWindowForDate(selectedDate);
-  const calendarSlots =
-    selectedResourcePool &&
-    workingWindow.isWorkingDay &&
-    workingWindow.startTime &&
-    workingWindow.endTime
-      ? await getSlotUsage({
-          resourcePoolId: selectedResourcePool.id,
-          startAt: buildDateAtTime(selectedDate, workingWindow.startTime),
-          endAt: buildDateAtTime(selectedDate, workingWindow.endTime),
-        })
-      : [];
+  const weekStart = getWeekStart(selectedDate);
+  const weekDates = Array.from({ length: 7 }, (_, index) =>
+    addDays(weekStart, index),
+  );
+  const weekDays = selectedResourcePool
+    ? await Promise.all(
+        weekDates.map(async (date) => {
+          const workingWindow = await getWorkingWindowForDate(date);
+          const slots =
+            workingWindow.isWorkingDay &&
+            workingWindow.startTime &&
+            workingWindow.endTime
+              ? await getSlotUsage({
+                  resourcePoolId: selectedResourcePool.id,
+                  startAt: buildDateAtTime(date, workingWindow.startTime),
+                  endAt: buildDateAtTime(date, workingWindow.endTime),
+                })
+              : [];
+
+          return {
+            dateLabel: formatJalaliDate(date),
+            dateParam: formatJalaliDateParam(date),
+            shortLabel: formatCalendarColumnLabel(date),
+            slots: slots.map((slot) => ({
+              slotStartHour: slot.slotStart.getHours(),
+              slotEndHour: slot.slotEnd.getHours(),
+              isRequestable: slot.approvedCount < slot.capacity,
+            })),
+          };
+        }),
+      )
+    : weekDates.map((date) => ({
+        dateLabel: formatJalaliDate(date),
+        dateParam: formatJalaliDateParam(date),
+        shortLabel: formatCalendarColumnLabel(date),
+        slots: [],
+      }));
 
   return (
     <div className="grid gap-6">
@@ -370,25 +419,19 @@ export default async function ReservationsPage({
 
       <CreateReservationForm
         action={createReservationAction}
-        resourcePools={resourcePools}
-      />
-
-      <DailyCapacityCalendar
-        date={selectedDate}
-        dateParam={dateParam}
+        currentDateParam={dateParam}
         emptyMessage={
           selectedResourcePool
-            ? "No working-hour slots are configured for this date."
+            ? "No working-hour slots are configured for this week."
             : "No active resource pool is configured."
         }
-        nextDateParam={formatJalaliDateParam(addDays(selectedDate, 1))}
-        previousDateParam={formatJalaliDateParam(addDays(selectedDate, -1))}
-        slots={calendarSlots}
-        title={
-          selectedResourcePool
-            ? `${selectedResourcePool.name} availability`
-            : "Daily availability"
-        }
+        nextWeekDateParam={formatJalaliDateParam(addDays(weekStart, 7))}
+        previousWeekDateParam={formatJalaliDateParam(addDays(weekStart, -7))}
+        resourcePools={resourcePools}
+        weekDays={weekDays}
+        weekLabel={`${formatJalaliDate(weekDates[0])} to ${formatJalaliDate(
+          weekDates[6],
+        )}`}
       />
 
       <section className="rounded-lg border bg-card p-5">
