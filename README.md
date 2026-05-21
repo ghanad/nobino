@@ -85,7 +85,7 @@ The seed script creates:
 
 ## Phase Status
 
-Phase 7 is complete: seeded users can sign in, create hourly reservation requests, see their own reservations grouped by status, cancel pending requests, and accept or reject manager-proposed alternatives. Accepted alternatives re-check capacity before approving the reservation. Calendar views show aggregate capacity, and manager approval flows are available from `/manager`.
+Phase 8 is complete: seeded users can sign in, create hourly reservation requests, see their own reservations grouped by status, cancel pending requests, and accept or reject manager-proposed alternatives. Managers can approve, reject, and propose alternatives from `/manager`. Admins can manage resource pool capacity and active state, weekly working schedule rows, and Jalali date-specific schedule exceptions from `/admin`. Capacity reductions are blocked when future approved reservations would exceed the new capacity.
 
 ## Auth Routes
 

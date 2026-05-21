@@ -1,0 +1,414 @@
+import "server-only";
+
+import { ReservationStatus, UserRole, type Prisma } from "@prisma/client";
+
+import { db } from "@/lib/db";
+import { formatJalaliDateTime } from "@/lib/jalali-date";
+
+const ONE_HOUR_MS = 60 * 60 * 1000;
+const TIME_PATTERN = /^([01]\d|2[0-3]):00$/;
+
+type DbClient = typeof db | Prisma.TransactionClient;
+
+export class AdminSettingsError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AdminSettingsError";
+  }
+}
+
+async function assertAdmin(adminId: string, client: DbClient = db) {
+  const user = await client.user.findUnique({
+    where: { id: adminId },
+    select: { active: true, role: true },
+  });
+
+  if (!user?.active || user.role !== UserRole.ADMIN) {
+    throw new AdminSettingsError("Only admins can change system settings.");
+  }
+}
+
+function assertTime(value: string, fieldName: string): void {
+  if (!TIME_PATTERN.test(value)) {
+    throw new AdminSettingsError(`${fieldName} must be an exact hour like 09:00.`);
+  }
+}
+
+function assertWorkingHours(input: {
+  isWorkingDay: boolean;
+  startTime?: string | null;
+  endTime?: string | null;
+}): { startTime: string | null; endTime: string | null } {
+  if (!input.isWorkingDay) {
+    return { startTime: null, endTime: null };
+  }
+
+  if (!input.startTime || !input.endTime) {
+    throw new AdminSettingsError("Working days need start and end hours.");
+  }
+
+  assertTime(input.startTime, "Start time");
+  assertTime(input.endTime, "End time");
+
+  if (input.endTime <= input.startTime) {
+    throw new AdminSettingsError("End time must be after start time.");
+  }
+
+  return {
+    startTime: input.startTime,
+    endTime: input.endTime,
+  };
+}
+
+function startOfLocalDay(date: Date): Date {
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    0,
+    0,
+    0,
+    0,
+  );
+}
+
+function buildHourlySlots(startAt: Date, endAt: Date) {
+  const slots: Array<{ slotStart: Date; slotEnd: Date }> = [];
+
+  for (
+    let slotStartMs = startAt.getTime();
+    slotStartMs < endAt.getTime();
+    slotStartMs += ONE_HOUR_MS
+  ) {
+    slots.push({
+      slotStart: new Date(slotStartMs),
+      slotEnd: new Date(slotStartMs + ONE_HOUR_MS),
+    });
+  }
+
+  return slots;
+}
+
+async function findCapacityReductionBlocks(input: {
+  resourcePoolId: string;
+  capacity: number;
+  client: DbClient;
+}) {
+  const now = new Date();
+  const reservations = await input.client.reservation.findMany({
+    where: {
+      resourcePoolId: input.resourcePoolId,
+      status: ReservationStatus.APPROVED,
+      endAt: { gt: now },
+    },
+    select: {
+      startAt: true,
+      endAt: true,
+    },
+  });
+
+  const usageBySlot = new Map<string, { slotStart: Date; count: number }>();
+
+  for (const reservation of reservations) {
+    for (const slot of buildHourlySlots(reservation.startAt, reservation.endAt)) {
+      const key = slot.slotStart.toISOString();
+      const current = usageBySlot.get(key);
+
+      usageBySlot.set(key, {
+        slotStart: slot.slotStart,
+        count: (current?.count ?? 0) + 1,
+      });
+    }
+  }
+
+  return [...usageBySlot.values()]
+    .filter((slot) => slot.count > input.capacity)
+    .sort((left, right) => left.slotStart.getTime() - right.slotStart.getTime());
+}
+
+function formatBlockingSlots(
+  blocks: Array<{ slotStart: Date; count: number }>,
+): string {
+  return blocks
+    .slice(0, 5)
+    .map((slot) => `${formatJalaliDateTime(slot.slotStart)} (${slot.count})`)
+    .join(", ");
+}
+
+export async function updateResourcePoolSettings(input: {
+  adminId: string;
+  resourcePoolId: string;
+  name: string;
+  capacity: number;
+  active: boolean;
+}) {
+  if (input.capacity < 1 || input.capacity > 50) {
+    throw new AdminSettingsError("Capacity must be between 1 and 50.");
+  }
+
+  const name = input.name.trim();
+
+  if (!name) {
+    throw new AdminSettingsError("Resource pool name is required.");
+  }
+
+  return db.$transaction(async (tx) => {
+    await assertAdmin(input.adminId, tx);
+
+    const current = await tx.resourcePool.findUnique({
+      where: { id: input.resourcePoolId },
+      select: { id: true, name: true, capacity: true, active: true },
+    });
+
+    if (!current) {
+      throw new AdminSettingsError("Resource pool was not found.");
+    }
+
+    if (input.capacity < current.capacity) {
+      const blocks = await findCapacityReductionBlocks({
+        resourcePoolId: current.id,
+        capacity: input.capacity,
+        client: tx,
+      });
+
+      if (blocks.length > 0) {
+        throw new AdminSettingsError(
+          `Capacity cannot be reduced to ${input.capacity}; future approved reservations exceed it at ${formatBlockingSlots(
+            blocks,
+          )}.`,
+        );
+      }
+    }
+
+    const updated = await tx.resourcePool.update({
+      where: { id: current.id },
+      data: {
+        name,
+        capacity: input.capacity,
+        active: input.active,
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorUserId: input.adminId,
+        entityType: "ResourcePool",
+        entityId: updated.id,
+        action: "CAPACITY_CHANGED",
+        oldValue: current,
+        newValue: {
+          id: updated.id,
+          name: updated.name,
+          capacity: updated.capacity,
+          active: updated.active,
+        },
+      },
+    });
+
+    return updated;
+  });
+}
+
+export async function updateWeeklySchedule(input: {
+  adminId: string;
+  scheduleId: string;
+  isWorkingDay: boolean;
+  startTime?: string | null;
+  endTime?: string | null;
+}) {
+  const workingHours = assertWorkingHours(input);
+
+  return db.$transaction(async (tx) => {
+    await assertAdmin(input.adminId, tx);
+
+    const current = await tx.workingSchedule.findUnique({
+      where: { id: input.scheduleId },
+    });
+
+    if (!current) {
+      throw new AdminSettingsError("Weekly schedule row was not found.");
+    }
+
+    const updated = await tx.workingSchedule.update({
+      where: { id: current.id },
+      data: {
+        isWorkingDay: input.isWorkingDay,
+        startTime: workingHours.startTime ?? current.startTime,
+        endTime: workingHours.endTime ?? current.endTime,
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorUserId: input.adminId,
+        entityType: "WorkingSchedule",
+        entityId: updated.id,
+        action: "WORKING_SCHEDULE_CHANGED",
+        oldValue: {
+          dayOfWeek: current.dayOfWeek,
+          isWorkingDay: current.isWorkingDay,
+          startTime: current.startTime,
+          endTime: current.endTime,
+        },
+        newValue: {
+          dayOfWeek: updated.dayOfWeek,
+          isWorkingDay: updated.isWorkingDay,
+          startTime: updated.startTime,
+          endTime: updated.endTime,
+        },
+      },
+    });
+
+    return updated;
+  });
+}
+
+export async function createScheduleException(input: {
+  adminId: string;
+  date: Date;
+  isWorkingDay: boolean;
+  startTime?: string | null;
+  endTime?: string | null;
+  reason?: string | null;
+}) {
+  const workingHours = assertWorkingHours(input);
+  const exceptionDate = startOfLocalDay(input.date);
+
+  return db.$transaction(async (tx) => {
+    await assertAdmin(input.adminId, tx);
+
+    const existing = await tx.scheduleException.findFirst({
+      where: { date: exceptionDate },
+      select: { id: true },
+    });
+
+    if (existing) {
+      throw new AdminSettingsError(
+        "A schedule exception already exists for this date.",
+      );
+    }
+
+    const exception = await tx.scheduleException.create({
+      data: {
+        date: exceptionDate,
+        isWorkingDay: input.isWorkingDay,
+        startTime: workingHours.startTime,
+        endTime: workingHours.endTime,
+        reason: input.reason?.trim() || null,
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorUserId: input.adminId,
+        entityType: "ScheduleException",
+        entityId: exception.id,
+        action: "SCHEDULE_EXCEPTION_CREATED",
+        newValue: {
+          date: exception.date.toISOString(),
+          isWorkingDay: exception.isWorkingDay,
+          startTime: exception.startTime,
+          endTime: exception.endTime,
+          reason: exception.reason,
+        },
+      },
+    });
+
+    return exception;
+  });
+}
+
+export async function updateScheduleException(input: {
+  adminId: string;
+  exceptionId: string;
+  isWorkingDay: boolean;
+  startTime?: string | null;
+  endTime?: string | null;
+  reason?: string | null;
+}) {
+  const workingHours = assertWorkingHours(input);
+
+  return db.$transaction(async (tx) => {
+    await assertAdmin(input.adminId, tx);
+
+    const current = await tx.scheduleException.findUnique({
+      where: { id: input.exceptionId },
+    });
+
+    if (!current) {
+      throw new AdminSettingsError("Schedule exception was not found.");
+    }
+
+    const updated = await tx.scheduleException.update({
+      where: { id: current.id },
+      data: {
+        isWorkingDay: input.isWorkingDay,
+        startTime: workingHours.startTime,
+        endTime: workingHours.endTime,
+        reason: input.reason?.trim() || null,
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorUserId: input.adminId,
+        entityType: "ScheduleException",
+        entityId: updated.id,
+        action: "SCHEDULE_EXCEPTION_UPDATED",
+        oldValue: {
+          date: current.date.toISOString(),
+          isWorkingDay: current.isWorkingDay,
+          startTime: current.startTime,
+          endTime: current.endTime,
+          reason: current.reason,
+        },
+        newValue: {
+          date: updated.date.toISOString(),
+          isWorkingDay: updated.isWorkingDay,
+          startTime: updated.startTime,
+          endTime: updated.endTime,
+          reason: updated.reason,
+        },
+      },
+    });
+
+    return updated;
+  });
+}
+
+export async function deleteScheduleException(input: {
+  adminId: string;
+  exceptionId: string;
+}) {
+  return db.$transaction(async (tx) => {
+    await assertAdmin(input.adminId, tx);
+
+    const current = await tx.scheduleException.findUnique({
+      where: { id: input.exceptionId },
+    });
+
+    if (!current) {
+      throw new AdminSettingsError("Schedule exception was not found.");
+    }
+
+    await tx.scheduleException.delete({
+      where: { id: current.id },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorUserId: input.adminId,
+        entityType: "ScheduleException",
+        entityId: current.id,
+        action: "SCHEDULE_EXCEPTION_DELETED",
+        oldValue: {
+          date: current.date.toISOString(),
+          isWorkingDay: current.isWorkingDay,
+          startTime: current.startTime,
+          endTime: current.endTime,
+          reason: current.reason,
+        },
+      },
+    });
+  });
+}
