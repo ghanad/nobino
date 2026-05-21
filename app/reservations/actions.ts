@@ -41,8 +41,14 @@ function buildLocalDateAtHour(dateValue: string, hour: number): Date {
   return new Date(year, month - 1, day, hour, 0, 0, 0);
 }
 
-function redirectWithError(message: string): never {
-  redirect(`/reservations?error=${encodeURIComponent(message)}`);
+function redirectWithError(message: string, date?: string): never {
+  const params = new URLSearchParams({ error: message });
+
+  if (date) {
+    params.set("date", date);
+  }
+
+  redirect(`/reservations?${params.toString()}`);
 }
 
 export async function createReservationAction(
@@ -74,11 +80,11 @@ export async function createReservationAction(
       error instanceof ReservationTimeRangeError ||
       error instanceof CapacityUnavailableError
     ) {
-      redirectWithError(error.message);
+      redirectWithError(error.message, parsed.data.date);
     }
 
     throw error;
   }
 
-  redirect("/reservations?created=1");
+  redirect(`/reservations?created=1&date=${parsed.data.date}`);
 }

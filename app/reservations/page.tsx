@@ -1,13 +1,17 @@
 import { ReservationStatus } from "@prisma/client";
 
 import { createReservationAction } from "@/app/reservations/actions";
+import { DailyCapacityCalendar } from "@/components/calendar/daily-capacity-calendar";
 import { CreateReservationForm } from "@/components/reservation/create-reservation-form";
+import { getSlotUsage } from "@/lib/capacity-service";
 import { requireCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getWorkingWindowForDate } from "@/lib/schedule";
 
 type ReservationsPageProps = {
   searchParams?: Promise<{
     created?: string;
+    date?: string;
     error?: string;
   }>;
 };
@@ -31,11 +35,70 @@ function getStatusClass(status: ReservationStatus): string {
   return "bg-muted text-muted-foreground ring-border";
 }
 
+function formatDateParam(date: Date): string {
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, "0");
+  const day = date.getDate().toString().padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function isValidDateParam(value: string | undefined): value is string {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+
+  return (
+    date.getFullYear() === year &&
+    date.getMonth() === month - 1 &&
+    date.getDate() === day
+  );
+}
+
+function buildLocalDate(dateParam: string): Date {
+  const [year, month, day] = dateParam.split("-").map(Number);
+
+  return new Date(year, month - 1, day, 0, 0, 0, 0);
+}
+
+function addDays(date: Date, days: number): Date {
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate() + days,
+    0,
+    0,
+    0,
+    0,
+  );
+}
+
+function buildDateAtTime(date: Date, time: string): Date {
+  const [hour, minute] = time.split(":").map(Number);
+
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    hour,
+    minute,
+    0,
+    0,
+  );
+}
+
 export default async function ReservationsPage({
   searchParams,
 }: ReservationsPageProps) {
   const user = await requireCurrentUser();
   const params = await searchParams;
+  const dateParam = isValidDateParam(params?.date)
+    ? params.date
+    : formatDateParam(new Date());
+  const selectedDate = buildLocalDate(dateParam);
   const [resourcePools, reservations] = await Promise.all([
     db.resourcePool.findMany({
       where: { active: true },
@@ -64,6 +127,19 @@ export default async function ReservationsPage({
       },
     }),
   ]);
+  const selectedResourcePool = resourcePools[0];
+  const workingWindow = await getWorkingWindowForDate(selectedDate);
+  const calendarSlots =
+    selectedResourcePool &&
+    workingWindow.isWorkingDay &&
+    workingWindow.startTime &&
+    workingWindow.endTime
+      ? await getSlotUsage({
+          resourcePoolId: selectedResourcePool.id,
+          startAt: buildDateAtTime(selectedDate, workingWindow.startTime),
+          endAt: buildDateAtTime(selectedDate, workingWindow.endTime),
+        })
+      : [];
 
   return (
     <div className="grid gap-6">
@@ -82,6 +158,24 @@ export default async function ReservationsPage({
       <CreateReservationForm
         action={createReservationAction}
         resourcePools={resourcePools}
+      />
+
+      <DailyCapacityCalendar
+        date={selectedDate}
+        dateParam={dateParam}
+        emptyMessage={
+          selectedResourcePool
+            ? "No working-hour slots are configured for this date."
+            : "No active resource pool is configured."
+        }
+        nextDateParam={formatDateParam(addDays(selectedDate, 1))}
+        previousDateParam={formatDateParam(addDays(selectedDate, -1))}
+        slots={calendarSlots}
+        title={
+          selectedResourcePool
+            ? `${selectedResourcePool.name} availability`
+            : "Daily availability"
+        }
       />
 
       <section className="rounded-lg border bg-card p-5">
