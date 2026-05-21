@@ -85,9 +85,7 @@ The seed script creates:
 
 ## Phase Status
 
-Phase 4 is complete: seeded users can sign in, create hourly reservation requests, and see their recent requests. New reservations are stored as `PENDING`, create audit logs, and notify active managers/admins in the notification table. Server-side validation enforces the configured schedule and time rules, and request creation is blocked only when already-approved reservations fill capacity for any requested hour.
-
-Calendar views and manager approval flows are intentionally left for later phases.
+Phase 7 is complete: seeded users can sign in, create hourly reservation requests, see their own reservations grouped by status, cancel pending requests, and accept or reject manager-proposed alternatives. Accepted alternatives re-check capacity before approving the reservation. Calendar views show aggregate capacity, and manager approval flows are available from `/manager`.
 
 ## Auth Routes
 
@@ -120,5 +118,5 @@ Gregorian date pickers or Gregorian-formatted dates in product UI.
 `lib/reservation-service.ts` provides `createReservationRequest`, which keeps
 business rules out of UI code. Pending reservations do not consume capacity.
 For the first operational version, request creation rejects ranges where
-approved reservations already fill any requested hour; final capacity is still
-expected to be checked again during manager approval in a later phase.
+approved reservations already fill any requested hour; final capacity is checked
+again during manager approval and when a user accepts an alternative proposal.
