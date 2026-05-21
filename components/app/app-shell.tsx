@@ -27,6 +27,9 @@ export function AppShell({ user, title, children }: AppShellProps) {
             <Button variant="ghost" asChild>
               <Link href="/dashboard">Dashboard</Link>
             </Button>
+            <Button variant="ghost" asChild>
+              <Link href="/reservations">Reservations</Link>
+            </Button>
             {canAccessManagerArea(user.role) ? (
               <Button variant="ghost" asChild>
                 <Link href="/manager">Manager</Link>

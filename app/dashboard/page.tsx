@@ -4,8 +4,8 @@ export default function DashboardPage() {
       <div className="rounded-lg border bg-card p-5 text-card-foreground">
         <h2 className="font-medium">Reservation workspace</h2>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          Authenticated users land here. Reservation request creation and
-          calendar availability arrive in later phases.
+          Create hourly reservation requests from the Reservations area.
+          Requests remain pending until manager approval.
         </p>
       </div>
       <div className="rounded-lg border bg-card p-5 text-card-foreground">

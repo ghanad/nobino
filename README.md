@@ -82,14 +82,16 @@ The seed script creates:
 
 ## Phase Status
 
-Phase 3 is complete: seeded users can sign in with email and password, sessions are stored in signed HTTP-only cookies, logout is available, and dashboard, manager, and admin areas enforce role access. The schedule service now retrieves weekly working windows, applies date-specific exceptions, and validates reservation time ranges server-side.
+Phase 4 is complete: seeded users can sign in, create hourly reservation requests, and see their recent requests. New reservations are stored as `PENDING`, create audit logs, and notify active managers/admins in the notification table. Server-side validation enforces the configured schedule and time rules, and request creation is blocked only when already-approved reservations fill capacity for any requested hour.
 
-Reservation creation, capacity checks, calendar views, and manager approval flows are intentionally left for later phases.
+Calendar views and manager approval flows are intentionally left for later phases.
 
 ## Auth Routes
 
 - `/login` accepts seeded user credentials.
 - `/dashboard` is available to all authenticated active users.
+- `/reservations` allows authenticated users to create pending reservation
+  requests and review their recent requests.
 - `/manager` is available to managers and admins.
 - `/admin` is available to admins only.
 
@@ -104,3 +106,11 @@ Monday is `1`, and Friday is `5`.
 - `validateReservationTimeRange({ startAt, endAt })` for exact hourly bounds,
   same-day reservations, minimum 1 hour, maximum one configured working day,
   enabled working days, and working-hour containment.
+
+## Reservation Requests
+
+`lib/reservation-service.ts` provides `createReservationRequest`, which keeps
+business rules out of UI code. Pending reservations do not consume capacity.
+For the first operational version, request creation rejects ranges where
+approved reservations already fill any requested hour; final capacity is still
+expected to be checked again during manager approval in a later phase.

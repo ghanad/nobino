@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { SESSION_COOKIE_NAME } from "@/lib/session";
 
-const PROTECTED_PREFIXES = ["/dashboard", "/manager", "/admin"];
+const PROTECTED_PREFIXES = ["/dashboard", "/reservations", "/manager", "/admin"];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -23,5 +23,10 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/manager/:path*", "/admin/:path*"],
+  matcher: [
+    "/dashboard/:path*",
+    "/reservations/:path*",
+    "/manager/:path*",
+    "/admin/:path*",
+  ],
 };
