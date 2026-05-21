@@ -11,6 +11,8 @@ Internal capacity-based reservation web application for a small company resource
 - Manager approval is required before a reservation is final.
 - Working days and working hours are configurable through weekly schedule rows
   and date-specific exceptions.
+- Resource pool capacity has a default value, plus optional Jalali date-specific
+  capacity exceptions for repairs or temporary outages.
 - All user-facing date input, URLs, and date display use the Persian/Jalali
   calendar. Internal persistence and capacity calculations still use JavaScript
   `Date` values.
@@ -90,7 +92,7 @@ The seed script creates:
 
 ## Phase Status
 
-Phase 12 is complete: seeded users can sign in, create hourly reservation requests, see their own reservations grouped by status, cancel pending requests, and accept or reject manager-proposed alternatives. Managers can approve, reject, and propose alternatives from `/manager`. Admins can manage resource pool capacity and active state, weekly working schedule rows, Jalali date-specific schedule exceptions, users from `/admin`, and audit history from `/admin/audit`. Users and managers can review unread in-app notifications from `/notifications` and mark notifications as read. Capacity reductions are blocked when future approved reservations would exceed the new capacity. Core service rules are covered by automated tests.
+Phase 12 is complete: seeded users can sign in, create hourly reservation requests, see their own reservations grouped by status, cancel pending requests, and accept or reject manager-proposed alternatives. Managers can approve, reject, and propose alternatives from `/manager`. Admins can manage resource pool capacity and active state, Jalali date-specific capacity exceptions, weekly working schedule rows, Jalali date-specific schedule exceptions, users from `/admin`, and audit history from `/admin/audit`. Users and managers can review unread in-app notifications from `/notifications` and mark notifications as read. Capacity reductions are blocked when future approved reservations would exceed the new effective capacity. Core service rules are covered by automated tests.
 
 ## Auth Routes
 
@@ -127,6 +129,15 @@ business rules out of UI code. Pending reservations do not consume capacity.
 For the first operational version, request creation rejects ranges where
 approved reservations already fill any requested hour; final capacity is checked
 again during manager approval and when a user accepts an alternative proposal.
+
+## Capacity Exceptions
+
+`ResourcePool.capacity` is the default capacity. Admins can add
+`ResourcePoolCapacityException` rows from `/admin` to override capacity for one
+Jalali date, for example when one or more systems are unavailable for repair.
+The app prevents creating or lowering a daily capacity exception when existing
+approved reservations would exceed that day's capacity, so an admin must choose
+which approved reservation to cancel before applying the lower capacity.
 
 ## Environment Variables
 

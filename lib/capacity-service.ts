@@ -32,6 +32,47 @@ function buildHourlySlots(startAt: Date, endAt: Date) {
   return slots;
 }
 
+function startOfLocalDay(date: Date): Date {
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    0,
+    0,
+    0,
+    0,
+  );
+}
+
+export async function getEffectiveCapacityForDate(
+  input: {
+    resourcePoolId: string;
+    date: Date;
+  },
+  client: DbClient = db,
+): Promise<number> {
+  const resourcePool = await client.resourcePool.findUnique({
+    where: { id: input.resourcePoolId },
+    select: { capacity: true, active: true },
+  });
+
+  if (!resourcePool?.active) {
+    throw new CapacityUnavailableError("Resource pool is not available.");
+  }
+
+  const exception = await client.resourcePoolCapacityException.findUnique({
+    where: {
+      resourcePoolId_date: {
+        resourcePoolId: input.resourcePoolId,
+        date: startOfLocalDay(input.date),
+      },
+    },
+    select: { capacity: true },
+  });
+
+  return exception?.capacity ?? resourcePool.capacity;
+}
+
 export async function getSlotUsage(
   input: {
     resourcePoolId: string;
@@ -48,14 +89,13 @@ export async function getSlotUsage(
     capacity: number;
   }>
 > {
-  const resourcePool = await client.resourcePool.findUnique({
-    where: { id: input.resourcePoolId },
-    select: { capacity: true, active: true },
-  });
-
-  if (!resourcePool?.active) {
-    throw new CapacityUnavailableError("Resource pool is not available.");
-  }
+  const effectiveCapacity = await getEffectiveCapacityForDate(
+    {
+      resourcePoolId: input.resourcePoolId,
+      date: input.startAt,
+    },
+    client,
+  );
 
   const reservations = await client.reservation.findMany({
     where: {
@@ -87,7 +127,7 @@ export async function getSlotUsage(
       pendingCount: overlappingReservations.filter(
         (reservation) => reservation.status === ReservationStatus.PENDING,
       ).length,
-      capacity: resourcePool.capacity,
+      capacity: effectiveCapacity,
     };
   });
 }
@@ -101,14 +141,13 @@ export async function assertCapacityAvailableForApproval(
   },
   client: DbClient = db,
 ): Promise<void> {
-  const resourcePool = await client.resourcePool.findUnique({
-    where: { id: input.resourcePoolId },
-    select: { capacity: true, active: true },
-  });
-
-  if (!resourcePool?.active) {
-    throw new CapacityUnavailableError("Resource pool is not available.");
-  }
+  const effectiveCapacity = await getEffectiveCapacityForDate(
+    {
+      resourcePoolId: input.resourcePoolId,
+      date: input.startAt,
+    },
+    client,
+  );
 
   const slots = buildHourlySlots(input.startAt, input.endAt);
   const approvedReservations = await client.reservation.findMany({
@@ -133,7 +172,7 @@ export async function assertCapacityAvailableForApproval(
         reservation.startAt < slot.slotEnd && reservation.endAt > slot.slotStart,
     ).length;
 
-    return approvedCount >= resourcePool.capacity;
+    return approvedCount >= effectiveCapacity;
   });
 
   if (hasFullSlot) {

@@ -7,7 +7,10 @@ import {
   UserRole,
 } from "@prisma/client";
 
-import { updateResourcePoolSettings } from "@/lib/admin-settings-service";
+import {
+  createCapacityException,
+  updateResourcePoolSettings,
+} from "@/lib/admin-settings-service";
 import { CapacityUnavailableError, getSlotUsage } from "@/lib/capacity-service";
 import {
   approveReservation,
@@ -61,6 +64,7 @@ async function resetDatabase() {
   await db.auditLog.deleteMany();
   await db.reservationAlternative.deleteMany();
   await db.reservation.deleteMany();
+  await db.resourcePoolCapacityException.deleteMany();
   await db.scheduleException.deleteMany();
   await db.workingSchedule.deleteMany();
   await db.resourcePool.deleteMany();
@@ -265,6 +269,53 @@ test("admin cannot reduce capacity below future approved usage", async () => {
       name: "Company Systems",
       capacity: 1,
       active: true,
+    }),
+  );
+});
+
+test("daily capacity exceptions override default capacity", async () => {
+  await db.resourcePool.update({
+    where: { id: poolId },
+    data: { capacity: 2 },
+  });
+  const startAt = nextWorkingDateAtHour(9);
+  const endAt = addHours(startAt, 1);
+
+  await createCapacityException({
+    adminId,
+    resourcePoolId: poolId,
+    date: startAt,
+    capacity: 1,
+    reason: "One system is under repair.",
+  });
+
+  const usage = await getSlotUsage({ resourcePoolId: poolId, startAt, endAt });
+
+  assert.equal(usage[0].capacity, 1);
+});
+
+test("admin cannot set daily capacity below approved usage for that day", async () => {
+  await db.resourcePool.update({
+    where: { id: poolId },
+    data: { capacity: 3 },
+  });
+  const startAt = nextWorkingDateAtHour(9);
+  const endAt = addHours(startAt, 1);
+  await createReservation({ startAt, endAt, status: ReservationStatus.APPROVED });
+  await createReservation({
+    userId: secondUserId,
+    startAt,
+    endAt,
+    status: ReservationStatus.APPROVED,
+  });
+
+  await assert.rejects(() =>
+    createCapacityException({
+      adminId,
+      resourcePoolId: poolId,
+      date: startAt,
+      capacity: 1,
+      reason: "Two systems are under repair.",
     }),
   );
 });

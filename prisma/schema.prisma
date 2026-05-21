@@ -39,12 +39,13 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  reservations          Reservation[]            @relation("ReservationUser")
-  approvedReservations  Reservation[]            @relation("ReservationApprover")
-  cancelledReservations Reservation[]            @relation("ReservationCanceller")
-  proposedAlternatives  ReservationAlternative[] @relation("AlternativeProposer")
-  auditLogs             AuditLog[]               @relation("AuditActor")
-  notifications         Notification[]           @relation("NotificationUser")
+  reservations              Reservation[]                   @relation("ReservationUser")
+  approvedReservations      Reservation[]                   @relation("ReservationApprover")
+  cancelledReservations     Reservation[]                   @relation("ReservationCanceller")
+  proposedAlternatives      ReservationAlternative[]        @relation("AlternativeProposer")
+  createdCapacityExceptions ResourcePoolCapacityException[] @relation("CapacityExceptionCreator")
+  auditLogs                 AuditLog[]                      @relation("AuditActor")
+  notifications             Notification[]                  @relation("NotificationUser")
 }
 
 model ResourcePool {
@@ -55,7 +56,25 @@ model ResourcePool {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  reservations Reservation[]
+  reservations       Reservation[]
+  capacityExceptions ResourcePoolCapacityException[]
+}
+
+model ResourcePoolCapacityException {
+  id             String   @id @default(cuid())
+  resourcePoolId String
+  date           DateTime
+  capacity       Int
+  reason         String?
+  createdById    String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  resourcePool ResourcePool @relation(fields: [resourcePoolId], references: [id])
+  createdBy    User         @relation("CapacityExceptionCreator", fields: [createdById], references: [id])
+
+  @@unique([resourcePoolId, date])
+  @@index([date])
 }
 
 model WorkingSchedule {

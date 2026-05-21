@@ -6,8 +6,11 @@ import { z } from "zod";
 
 import {
   AdminSettingsError,
+  createCapacityException,
   createScheduleException,
+  deleteCapacityException,
   deleteScheduleException,
+  updateCapacityException,
   updateResourcePoolSettings,
   updateScheduleException,
   updateWeeklySchedule,
@@ -54,6 +57,23 @@ const updateExceptionSchema = createExceptionSchema.omit({ date: true }).extend(
 
 const deleteExceptionSchema = z.object({
   exceptionId: z.string().min(1),
+});
+
+const createCapacityExceptionSchema = z.object({
+  resourcePoolId: z.string().min(1),
+  date: z.string().refine(isValidJalaliDateParam),
+  capacity: z.coerce.number().int().min(1).max(50),
+  reason: z.string().trim().max(200).optional(),
+});
+
+const updateCapacityExceptionSchema = z.object({
+  capacityExceptionId: z.string().min(1),
+  capacity: z.coerce.number().int().min(1).max(50),
+  reason: z.string().trim().max(200).optional(),
+});
+
+const deleteCapacityExceptionSchema = z.object({
+  capacityExceptionId: z.string().min(1),
 });
 
 const createUserSchema = z.object({
@@ -132,6 +152,96 @@ export async function updateResourcePoolAction(
   }
 
   redirectToAdmin({ poolUpdated: "1" });
+}
+
+export async function createCapacityExceptionAction(
+  formData: FormData,
+): Promise<void> {
+  const admin = await requireRole([UserRole.ADMIN]);
+  const parsed = createCapacityExceptionSchema.safeParse({
+    resourcePoolId: formData.get("resourcePoolId"),
+    date: formData.get("date"),
+    capacity: formData.get("capacity"),
+    reason: emptyToUndefined(formData.get("reason")),
+  });
+
+  if (!parsed.success) {
+    redirectToAdmin({
+      error: "Enter a valid resource pool, Jalali date, and capacity.",
+    });
+  }
+
+  const date = parseJalaliDateParam(parsed.data.date);
+
+  if (!date) {
+    redirectToAdmin({ error: "Enter a valid Jalali capacity date." });
+  }
+
+  try {
+    await createCapacityException({
+      adminId: admin.id,
+      resourcePoolId: parsed.data.resourcePoolId,
+      date,
+      capacity: parsed.data.capacity,
+      reason: parsed.data.reason,
+    });
+  } catch (error) {
+    redirectToAdmin({ error: getActionErrorMessage(error) });
+  }
+
+  redirectToAdmin({ capacityExceptionCreated: "1" });
+}
+
+export async function updateCapacityExceptionAction(
+  formData: FormData,
+): Promise<void> {
+  const admin = await requireRole([UserRole.ADMIN]);
+  const parsed = updateCapacityExceptionSchema.safeParse({
+    capacityExceptionId: formData.get("capacityExceptionId"),
+    capacity: formData.get("capacity"),
+    reason: emptyToUndefined(formData.get("reason")),
+  });
+
+  if (!parsed.success) {
+    redirectToAdmin({ error: "Enter a valid daily capacity value." });
+  }
+
+  try {
+    await updateCapacityException({
+      adminId: admin.id,
+      exceptionId: parsed.data.capacityExceptionId,
+      capacity: parsed.data.capacity,
+      reason: parsed.data.reason,
+    });
+  } catch (error) {
+    redirectToAdmin({ error: getActionErrorMessage(error) });
+  }
+
+  redirectToAdmin({ capacityExceptionUpdated: "1" });
+}
+
+export async function deleteCapacityExceptionAction(
+  formData: FormData,
+): Promise<void> {
+  const admin = await requireRole([UserRole.ADMIN]);
+  const parsed = deleteCapacityExceptionSchema.safeParse({
+    capacityExceptionId: formData.get("capacityExceptionId"),
+  });
+
+  if (!parsed.success) {
+    redirectToAdmin({ error: "Choose a valid capacity exception to delete." });
+  }
+
+  try {
+    await deleteCapacityException({
+      adminId: admin.id,
+      exceptionId: parsed.data.capacityExceptionId,
+    });
+  } catch (error) {
+    redirectToAdmin({ error: getActionErrorMessage(error) });
+  }
+
+  redirectToAdmin({ capacityExceptionDeleted: "1" });
 }
 
 export async function updateWeeklyScheduleAction(

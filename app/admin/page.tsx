@@ -4,9 +4,12 @@ import { UserRole } from "@prisma/client";
 import type { ReactNode } from "react";
 
 import {
+  createCapacityExceptionAction,
   createUserAction,
   createScheduleExceptionAction,
+  deleteCapacityExceptionAction,
   deleteScheduleExceptionAction,
+  updateCapacityExceptionAction,
   resetUserPasswordAction,
   updateResourcePoolAction,
   updateScheduleExceptionAction,
@@ -25,6 +28,9 @@ import {
 type AdminPageProps = {
   searchParams?: Promise<{
     error?: string;
+    capacityExceptionCreated?: string;
+    capacityExceptionDeleted?: string;
+    capacityExceptionUpdated?: string;
     exceptionCreated?: string;
     exceptionDeleted?: string;
     exceptionUpdated?: string;
@@ -57,6 +63,9 @@ function getAdminToast(params: Awaited<AdminPageProps["searchParams"]>) {
 
   const successMessage =
     (params?.poolUpdated && "Resource pool settings updated.") ||
+    (params?.capacityExceptionCreated && "Daily capacity exception created.") ||
+    (params?.capacityExceptionUpdated && "Daily capacity exception updated.") ||
+    (params?.capacityExceptionDeleted && "Daily capacity exception deleted.") ||
     (params?.scheduleUpdated && "Weekly schedule updated.") ||
     (params?.exceptionCreated && "Schedule exception created.") ||
     (params?.exceptionUpdated && "Schedule exception updated.") ||
@@ -72,6 +81,9 @@ function getAdminToast(params: Awaited<AdminPageProps["searchParams"]>) {
   return {
     consumeKeys: [
       "poolUpdated",
+      "capacityExceptionCreated",
+      "capacityExceptionUpdated",
+      "capacityExceptionDeleted",
       "scheduleUpdated",
       "exceptionCreated",
       "exceptionUpdated",
@@ -366,6 +378,163 @@ function ResourcePoolSettings({
   );
 }
 
+function CapacityExceptions({
+  capacityExceptions,
+  resourcePools,
+}: {
+  capacityExceptions: Array<{
+    id: string;
+    date: Date;
+    capacity: number;
+    reason: string | null;
+    resourcePool: {
+      id: string;
+      name: string;
+      capacity: number;
+    };
+  }>;
+  resourcePools: Array<{
+    id: string;
+    name: string;
+    capacity: number;
+    active: boolean;
+  }>;
+}) {
+  return (
+    <section className="rounded-lg border bg-card p-5 text-card-foreground">
+      <div className="flex flex-col gap-1">
+        <h2 className="font-medium">Daily capacity exceptions</h2>
+        <p className="text-sm text-muted-foreground">
+          Override capacity for a specific Jalali date when systems are out for
+          repair. Existing approved reservations must still fit the new value.
+        </p>
+      </div>
+
+      <form
+        action={createCapacityExceptionAction}
+        className="mt-5 grid gap-4 rounded-md border bg-muted/20 p-4 lg:grid-cols-[1fr_150px_120px_1fr_auto]"
+      >
+        <div className="grid gap-2">
+          <FieldLabel htmlFor="capacity-exception-pool">Pool</FieldLabel>
+          <SelectInput id="capacity-exception-pool" name="resourcePoolId">
+            {resourcePools.map((pool) => (
+              <option key={pool.id} value={pool.id}>
+                {pool.name} default {pool.capacity}
+              </option>
+            ))}
+          </SelectInput>
+        </div>
+        <div className="grid gap-2">
+          <FieldLabel htmlFor="capacity-exception-date">Jalali date</FieldLabel>
+          <TextInput
+            id="capacity-exception-date"
+            name="date"
+            placeholder={JALALI_DATE_INPUT_PLACEHOLDER}
+            required
+          />
+        </div>
+        <div className="grid gap-2">
+          <FieldLabel htmlFor="capacity-exception-capacity">
+            Capacity
+          </FieldLabel>
+          <TextInput
+            id="capacity-exception-capacity"
+            inputMode="numeric"
+            max={50}
+            min={1}
+            name="capacity"
+            required
+            type="number"
+          />
+        </div>
+        <div className="grid gap-2">
+          <FieldLabel htmlFor="capacity-exception-reason">Reason</FieldLabel>
+          <TextInput
+            id="capacity-exception-reason"
+            maxLength={200}
+            name="reason"
+            placeholder="Repair, maintenance, or temporary capacity change"
+          />
+        </div>
+        <div className="flex items-end">
+          <Button type="submit">Create</Button>
+        </div>
+      </form>
+
+      {capacityExceptions.length === 0 ? (
+        <p className="mt-5 text-sm text-muted-foreground">
+          No daily capacity exceptions are configured.
+        </p>
+      ) : (
+        <div className="mt-5 grid gap-3">
+          {capacityExceptions.map((exception) => (
+            <form
+              action={updateCapacityExceptionAction}
+              className="grid gap-4 rounded-md border bg-muted/20 p-4 lg:grid-cols-[220px_120px_1fr_auto_auto]"
+              key={exception.id}
+            >
+              <input
+                name="capacityExceptionId"
+                type="hidden"
+                value={exception.id}
+              />
+              <div>
+                <p className="font-medium">{exception.resourcePool.name}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {formatJalaliDate(exception.date)} - default{" "}
+                  {exception.resourcePool.capacity}
+                </p>
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel htmlFor={`capacity-exception-value-${exception.id}`}>
+                  Capacity
+                </FieldLabel>
+                <TextInput
+                  defaultValue={exception.capacity}
+                  id={`capacity-exception-value-${exception.id}`}
+                  inputMode="numeric"
+                  max={50}
+                  min={1}
+                  name="capacity"
+                  required
+                  type="number"
+                />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel htmlFor={`capacity-exception-reason-${exception.id}`}>
+                  Reason
+                </FieldLabel>
+                <TextInput
+                  defaultValue={exception.reason ?? ""}
+                  id={`capacity-exception-reason-${exception.id}`}
+                  maxLength={200}
+                  name="reason"
+                />
+              </div>
+              <div className="flex items-end">
+                <Button type="submit">
+                  <Save className="h-4 w-4" />
+                  Save
+                </Button>
+              </div>
+              <div className="flex items-end">
+                <Button
+                  formAction={deleteCapacityExceptionAction}
+                  type="submit"
+                  variant="outline"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete
+                </Button>
+              </div>
+            </form>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function WeeklyScheduleSettings({
   schedules,
 }: {
@@ -612,7 +781,8 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const currentAdmin = await requireRole([UserRole.ADMIN]);
   const params = await searchParams;
   const toast = getAdminToast(params);
-  const [resourcePools, schedules, exceptions, users] = await Promise.all([
+  const [resourcePools, capacityExceptions, schedules, exceptions, users] =
+    await Promise.all([
     db.resourcePool.findMany({
       orderBy: { name: "asc" },
       select: {
@@ -620,6 +790,22 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         name: true,
         capacity: true,
         active: true,
+      },
+    }),
+    db.resourcePoolCapacityException.findMany({
+      orderBy: [{ date: "asc" }, { createdAt: "asc" }],
+      select: {
+        id: true,
+        date: true,
+        capacity: true,
+        reason: true,
+        resourcePool: {
+          select: {
+            id: true,
+            name: true,
+            capacity: true,
+          },
+        },
       },
     }),
     db.workingSchedule.findMany({
@@ -678,6 +864,10 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       </section>
       <UserManagement currentAdminId={currentAdmin.id} users={users} />
       <ResourcePoolSettings resourcePools={resourcePools} />
+      <CapacityExceptions
+        capacityExceptions={capacityExceptions}
+        resourcePools={resourcePools}
+      />
       <WeeklyScheduleSettings schedules={schedules} />
       <ScheduleExceptions exceptions={exceptions} />
     </div>
