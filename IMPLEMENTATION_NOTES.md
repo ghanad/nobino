@@ -49,11 +49,14 @@ or another company timezone.
 
 ## Persian/Jalali date
 
-Do not block the first version on Jalali calendar.
+Jalali calendar support is required for the operational product.
 
-First version can use Gregorian dates if faster.
+All user-facing date entry, calendar navigation, URL date parameters, and date
+display must use Persian/Jalali dates.
 
-Add Persian/Jalali display later if users need it.
+Store and calculate with JavaScript `Date`/database `DateTime` values, then
+convert at the UI/action boundary. Do not use native Gregorian browser
+`type=date` controls in product forms.
 
 ## Concurrency
 

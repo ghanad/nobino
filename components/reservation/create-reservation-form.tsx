@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { JALALI_DATE_INPUT_PLACEHOLDER } from "@/lib/jalali-date";
 
 type ResourcePoolOption = {
   id: string;
@@ -51,12 +52,16 @@ export function CreateReservationForm({
         </label>
 
         <label className="grid gap-2 text-sm font-medium">
-          Date
+          Jalali date
           <input
             className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            dir="ltr"
             name="date"
+            pattern="\d{4}[-/]\d{1,2}[-/]\d{1,2}"
+            placeholder={JALALI_DATE_INPUT_PLACEHOLDER}
             required
-            type="date"
+            title={`Enter a Jalali date like ${JALALI_DATE_INPUT_PLACEHOLDER}`}
+            type="text"
           />
         </label>
 

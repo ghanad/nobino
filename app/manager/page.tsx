@@ -10,6 +10,13 @@ import { DailyCapacityCalendar } from "@/components/calendar/daily-capacity-cale
 import { Button } from "@/components/ui/button";
 import { getSlotUsage } from "@/lib/capacity-service";
 import { db } from "@/lib/db";
+import {
+  JALALI_DATE_INPUT_PLACEHOLDER,
+  formatJalaliDateParam,
+  formatJalaliDateTime,
+  formatLocalTime,
+  parseJalaliDateParam,
+} from "@/lib/jalali-date";
 import { getWorkingWindowForDate } from "@/lib/schedule";
 
 type ManagerPageProps = {
@@ -49,35 +56,6 @@ type QueueItem = {
   }>;
 };
 
-function formatDateParam(date: Date): string {
-  const year = date.getFullYear();
-  const month = (date.getMonth() + 1).toString().padStart(2, "0");
-  const day = date.getDate().toString().padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
-
-function isValidDateParam(value: string | undefined): value is string {
-  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return false;
-  }
-
-  const [year, month, day] = value.split("-").map(Number);
-  const date = new Date(year, month - 1, day);
-
-  return (
-    date.getFullYear() === year &&
-    date.getMonth() === month - 1 &&
-    date.getDate() === day
-  );
-}
-
-function buildLocalDate(dateParam: string): Date {
-  const [year, month, day] = dateParam.split("-").map(Number);
-
-  return new Date(year, month - 1, day, 0, 0, 0, 0);
-}
-
 function addDays(date: Date, days: number): Date {
   return new Date(
     date.getFullYear(),
@@ -105,17 +83,11 @@ function buildDateAtTime(date: Date, time: string): Date {
 }
 
 function formatDateTime(date: Date): string {
-  return new Intl.DateTimeFormat("en", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
+  return formatJalaliDateTime(date);
 }
 
 function formatHour(date: Date): string {
-  return new Intl.DateTimeFormat("en", {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
+  return formatLocalTime(date);
 }
 
 function formatDuration(startAt: Date, endAt: Date): string {
@@ -209,7 +181,7 @@ function QueueCard({
   dateParam: string;
 }) {
   const hourOptions = buildHourOptions();
-  const requestedDate = formatDateParam(item.reservation.startAt);
+  const requestedDate = formatJalaliDateParam(item.reservation.startAt);
   const defaultStartHour = item.reservation.startAt.getHours();
   const defaultEndHour = item.reservation.endAt.getHours();
 
@@ -306,9 +278,13 @@ function QueueCard({
               <input
                 className="h-10 rounded-md border border-input bg-background px-3 text-sm"
                 defaultValue={requestedDate}
+                dir="ltr"
                 id={`proposedDate-${item.reservation.id}`}
                 name="proposedDate"
-                type="date"
+                pattern="\d{4}[-/]\d{1,2}[-/]\d{1,2}"
+                placeholder={JALALI_DATE_INPUT_PLACEHOLDER}
+                title={`Enter a Jalali date like ${JALALI_DATE_INPUT_PLACEHOLDER}`}
+                type="text"
               />
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -366,10 +342,8 @@ function QueueCard({
 
 export default async function ManagerPage({ searchParams }: ManagerPageProps) {
   const params = await searchParams;
-  const dateParam = isValidDateParam(params?.date)
-    ? params.date
-    : formatDateParam(new Date());
-  const selectedDate = buildLocalDate(dateParam);
+  const selectedDate = parseJalaliDateParam(params?.date) ?? new Date();
+  const dateParam = formatJalaliDateParam(selectedDate);
   const resourcePool = await db.resourcePool.findFirst({
     where: { active: true },
     orderBy: { name: "asc" },
@@ -502,8 +476,8 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
             ? "No working-hour slots are configured for this date."
             : "No active resource pool is configured."
         }
-        nextDateParam={formatDateParam(addDays(selectedDate, 1))}
-        previousDateParam={formatDateParam(addDays(selectedDate, -1))}
+        nextDateParam={formatJalaliDateParam(addDays(selectedDate, 1))}
+        previousDateParam={formatJalaliDateParam(addDays(selectedDate, -1))}
         slots={slots}
         title={
           resourcePool

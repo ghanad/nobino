@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { formatJalaliDate, formatLocalTime } from "@/lib/jalali-date";
+
 type Slot = {
   slotStart: Date;
   slotEnd: Date;
@@ -27,19 +29,7 @@ type DailyCapacityCalendarProps = {
 };
 
 function formatHour(date: Date): string {
-  return new Intl.DateTimeFormat("en", {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-}
-
-function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat("en", {
-    weekday: "long",
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  }).format(date);
+  return formatLocalTime(date);
 }
 
 function buildDateHref(dateParam: string): string {
@@ -84,7 +74,7 @@ export function DailyCapacityCalendar({
         <div>
           <h2 className="font-medium">{title}</h2>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            {formatDate(date)}
+            {formatJalaliDate(date)}
           </p>
         </div>
 
@@ -99,8 +89,12 @@ export function DailyCapacityCalendar({
             <input
               className="h-9 rounded-md border border-input bg-background px-3 text-sm"
               defaultValue={dateParam}
+              dir="ltr"
               name="date"
-              type="date"
+              pattern="\d{4}[-/]\d{1,2}[-/]\d{1,2}"
+              placeholder="1405-02-31"
+              title="Enter a Jalali date like 1405-02-31"
+              type="text"
             />
             <button
               className="inline-flex h-9 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"

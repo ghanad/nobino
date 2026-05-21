@@ -16,6 +16,11 @@ They choose:
 
 > I need one system on this date, from this hour to this hour.
 
+All user-facing dates must be entered, displayed, and navigated as
+Persian/Jalali dates. The application may store converted `DateTime` values
+internally for capacity checks and persistence, but product UI must not expose
+Gregorian date pickers or Gregorian-formatted reservation dates.
+
 The application checks the active capacity of the resource pool.
 
 Example:
@@ -205,7 +210,7 @@ Pending should be visually lighter than approved.
 
 Fields:
 
-- Date
+- Jalali date
 - Start hour
 - End hour
 - Optional reason
@@ -233,7 +238,7 @@ Admin can manage:
 
 - Capacity
 - Weekly working schedule
-- Date exceptions
+- Jalali date exceptions
 - Users
 
 ## Critical backend behavior

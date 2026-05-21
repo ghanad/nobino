@@ -6,6 +6,11 @@ import { CreateReservationForm } from "@/components/reservation/create-reservati
 import { getSlotUsage } from "@/lib/capacity-service";
 import { requireCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import {
+  formatJalaliDateParam,
+  formatJalaliDateTime,
+  parseJalaliDateParam,
+} from "@/lib/jalali-date";
 import { getWorkingWindowForDate } from "@/lib/schedule";
 
 type ReservationsPageProps = {
@@ -17,10 +22,7 @@ type ReservationsPageProps = {
 };
 
 function formatDateTime(date: Date): string {
-  return new Intl.DateTimeFormat("en", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
+  return formatJalaliDateTime(date);
 }
 
 function getStatusClass(status: ReservationStatus): string {
@@ -33,35 +35,6 @@ function getStatusClass(status: ReservationStatus): string {
   }
 
   return "bg-muted text-muted-foreground ring-border";
-}
-
-function formatDateParam(date: Date): string {
-  const year = date.getFullYear();
-  const month = (date.getMonth() + 1).toString().padStart(2, "0");
-  const day = date.getDate().toString().padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
-
-function isValidDateParam(value: string | undefined): value is string {
-  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return false;
-  }
-
-  const [year, month, day] = value.split("-").map(Number);
-  const date = new Date(year, month - 1, day);
-
-  return (
-    date.getFullYear() === year &&
-    date.getMonth() === month - 1 &&
-    date.getDate() === day
-  );
-}
-
-function buildLocalDate(dateParam: string): Date {
-  const [year, month, day] = dateParam.split("-").map(Number);
-
-  return new Date(year, month - 1, day, 0, 0, 0, 0);
 }
 
 function addDays(date: Date, days: number): Date {
@@ -95,10 +68,8 @@ export default async function ReservationsPage({
 }: ReservationsPageProps) {
   const user = await requireCurrentUser();
   const params = await searchParams;
-  const dateParam = isValidDateParam(params?.date)
-    ? params.date
-    : formatDateParam(new Date());
-  const selectedDate = buildLocalDate(dateParam);
+  const selectedDate = parseJalaliDateParam(params?.date) ?? new Date();
+  const dateParam = formatJalaliDateParam(selectedDate);
   const [resourcePools, reservations] = await Promise.all([
     db.resourcePool.findMany({
       where: { active: true },
@@ -168,8 +139,8 @@ export default async function ReservationsPage({
             ? "No working-hour slots are configured for this date."
             : "No active resource pool is configured."
         }
-        nextDateParam={formatDateParam(addDays(selectedDate, 1))}
-        previousDateParam={formatDateParam(addDays(selectedDate, -1))}
+        nextDateParam={formatJalaliDateParam(addDays(selectedDate, 1))}
+        previousDateParam={formatJalaliDateParam(addDays(selectedDate, -1))}
         slots={calendarSlots}
         title={
           selectedResourcePool

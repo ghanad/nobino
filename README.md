@@ -11,6 +11,9 @@ Internal capacity-based reservation web application for a small company resource
 - Manager approval is required before a reservation is final.
 - Working days and working hours are configurable through weekly schedule rows
   and date-specific exceptions.
+- All user-facing date input, URLs, and date display use the Persian/Jalali
+  calendar. Internal persistence and capacity calculations still use JavaScript
+  `Date` values.
 
 Out-of-scope for this project unless explicitly requested: check-in, check-out, no-show handling, penalties, quotas, and physical device assignment.
 
@@ -99,6 +102,11 @@ Calendar views and manager approval flows are intentionally left for later phase
 
 Working schedules use JavaScript `Date.getDay()` values: Sunday is `0`,
 Monday is `1`, and Friday is `5`.
+
+All user-facing reservation and calendar dates are Jalali dates in
+`YYYY-MM-DD` form, for example `1405-02-31`. Persian and Arabic numerals are
+accepted in date fields, and `/` can be used instead of `-`. Do not introduce
+Gregorian date pickers or Gregorian-formatted dates in product UI.
 
 `lib/schedule.ts` provides:
 

@@ -5,41 +5,21 @@ import { z } from "zod";
 
 import { CapacityUnavailableError } from "@/lib/capacity-service";
 import { requireCurrentUser } from "@/lib/auth";
+import {
+  buildLocalDateAtHourFromJalali,
+  formatJalaliDateParam,
+  isValidJalaliDateParam,
+} from "@/lib/jalali-date";
 import { createReservationRequest } from "@/lib/reservation-service";
 import { ReservationTimeRangeError } from "@/lib/schedule";
 
-function isValidCalendarDateString(value: string): boolean {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-
-  if (!match) {
-    return false;
-  }
-
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  const date = new Date(year, month - 1, day, 0, 0, 0, 0);
-
-  return (
-    date.getFullYear() === year &&
-    date.getMonth() === month - 1 &&
-    date.getDate() === day
-  );
-}
-
 const reservationFormSchema = z.object({
   resourcePoolId: z.string().min(1),
-  date: z.string().refine(isValidCalendarDateString),
+  date: z.string().refine(isValidJalaliDateParam),
   startHour: z.coerce.number().int().min(0).max(23),
   endHour: z.coerce.number().int().min(1).max(23),
   reason: z.string().trim().max(500).optional(),
 });
-
-function buildLocalDateAtHour(dateValue: string, hour: number): Date {
-  const [year, month, day] = dateValue.split("-").map(Number);
-
-  return new Date(year, month - 1, day, hour, 0, 0, 0);
-}
 
 function redirectWithError(message: string, date?: string): never {
   const params = new URLSearchParams({ error: message });
@@ -64,15 +44,22 @@ export async function createReservationAction(
   });
 
   if (!parsed.success) {
-    redirectWithError("Enter a valid date, start hour, and end hour.");
+    redirectWithError("Enter a valid Jalali date, start hour, and end hour.");
   }
+
+  const dateParam = formatJalaliDateParam(
+    buildLocalDateAtHourFromJalali(parsed.data.date, 0),
+  );
 
   try {
     await createReservationRequest({
       userId: user.id,
       resourcePoolId: parsed.data.resourcePoolId,
-      startAt: buildLocalDateAtHour(parsed.data.date, parsed.data.startHour),
-      endAt: buildLocalDateAtHour(parsed.data.date, parsed.data.endHour),
+      startAt: buildLocalDateAtHourFromJalali(
+        parsed.data.date,
+        parsed.data.startHour,
+      ),
+      endAt: buildLocalDateAtHourFromJalali(parsed.data.date, parsed.data.endHour),
       reason: parsed.data.reason,
     });
   } catch (error) {
@@ -80,11 +67,11 @@ export async function createReservationAction(
       error instanceof ReservationTimeRangeError ||
       error instanceof CapacityUnavailableError
     ) {
-      redirectWithError(error.message, parsed.data.date);
+      redirectWithError(error.message, dateParam);
     }
 
     throw error;
   }
 
-  redirect(`/reservations?created=1&date=${parsed.data.date}`);
+  redirect(`/reservations?created=1&date=${dateParam}`);
 }

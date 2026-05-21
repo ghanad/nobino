@@ -63,6 +63,18 @@ Do the approval and capacity check in a backend transaction.
 - Maximum reservation length is one working day.
 - A reservation cannot span multiple calendar days.
 
+### Date calendar
+
+All user-facing dates must use the Persian/Jalali calendar.
+
+Use Jalali dates for reservation forms, calendar navigation, manager/admin date
+inputs, URLs that carry a selected date, and visible date formatting.
+
+Do not use browser-native Gregorian date pickers for product date input.
+
+Internal storage and business logic may use JavaScript `Date`/database
+`DateTime` values, but conversion must happen at the application boundary.
+
 ### Working schedule
 
 Working days and hours must be configurable.

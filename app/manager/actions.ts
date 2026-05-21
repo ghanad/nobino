@@ -6,31 +6,16 @@ import { z } from "zod";
 import { CapacityUnavailableError } from "@/lib/capacity-service";
 import { requireCurrentUser } from "@/lib/auth";
 import {
+  buildLocalDateAtHourFromJalali,
+  isValidJalaliDateParam,
+} from "@/lib/jalali-date";
+import {
   approveReservation,
   proposeAlternative,
   rejectReservation,
   ReservationTransitionError,
 } from "@/lib/reservation-service";
 import { ReservationTimeRangeError } from "@/lib/schedule";
-
-function isValidCalendarDateString(value: string): boolean {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-
-  if (!match) {
-    return false;
-  }
-
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  const date = new Date(year, month - 1, day, 0, 0, 0, 0);
-
-  return (
-    date.getFullYear() === year &&
-    date.getMonth() === month - 1 &&
-    date.getDate() === day
-  );
-}
 
 const reservationIdSchema = z.object({
   reservationId: z.string().min(1),
@@ -42,16 +27,10 @@ const rejectSchema = reservationIdSchema.extend({
 });
 
 const alternativeSchema = reservationIdSchema.extend({
-  proposedDate: z.string().refine(isValidCalendarDateString),
+  proposedDate: z.string().refine(isValidJalaliDateParam),
   proposedStartHour: z.coerce.number().int().min(0).max(23),
   proposedEndHour: z.coerce.number().int().min(1).max(23),
 });
-
-function buildLocalDateAtHour(dateValue: string, hour: number): Date {
-  const [year, month, day] = dateValue.split("-").map(Number);
-
-  return new Date(year, month - 1, day, hour, 0, 0, 0);
-}
 
 function redirectToQueue(params: Record<string, string | undefined>): never {
   const searchParams = new URLSearchParams();
@@ -148,18 +127,18 @@ export async function proposeAlternativeAction(
   });
 
   if (!parsed.success) {
-    redirectToQueue({ error: "Enter a valid alternative date and hours." });
+    redirectToQueue({ error: "Enter a valid Jalali alternative date and hours." });
   }
 
   try {
     await proposeAlternative({
       reservationId: parsed.data.reservationId,
       managerId: user.id,
-      proposedStartAt: buildLocalDateAtHour(
+      proposedStartAt: buildLocalDateAtHourFromJalali(
         parsed.data.proposedDate,
         parsed.data.proposedStartHour,
       ),
-      proposedEndAt: buildLocalDateAtHour(
+      proposedEndAt: buildLocalDateAtHourFromJalali(
         parsed.data.proposedDate,
         parsed.data.proposedEndHour,
       ),

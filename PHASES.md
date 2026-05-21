@@ -461,7 +461,7 @@ Pick based on actual complaints.
 Possible improvements:
 
 - Weekly calendar view
-- Persian/Jalali date display if needed
+- Persian/Jalali date input and display in all user-facing date surfaces
 - Better manager filtering
 - Export reservations to CSV
 - Email reminders
