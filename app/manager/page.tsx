@@ -7,7 +7,7 @@ import {
   rejectReservationAction,
 } from "@/app/manager/actions";
 import { DailyCapacityCalendar } from "@/components/calendar/daily-capacity-calendar";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { getSlotUsage } from "@/lib/capacity-service";
 import { db } from "@/lib/db";
 import {
@@ -244,10 +244,10 @@ function QueueCard({
           <form action={approveReservationAction}>
             <input name="reservationId" type="hidden" value={item.reservation.id} />
             <input name="date" type="hidden" value={dateParam} />
-            <Button className="w-full" type="submit">
+            <SubmitButton className="w-full" pendingLabel="Approving...">
               <Check className="h-4 w-4" />
               Approve
-            </Button>
+            </SubmitButton>
           </form>
 
           <form action={rejectReservationAction} className="grid gap-2">
@@ -259,10 +259,14 @@ function QueueCard({
               name="rejectionReason"
               placeholder="Optional rejection reason"
             />
-            <Button className="w-full" type="submit" variant="outline">
+            <SubmitButton
+              className="w-full"
+              pendingLabel="Rejecting..."
+              variant="outline"
+            >
               <X className="h-4 w-4" />
               Reject
-            </Button>
+            </SubmitButton>
           </form>
 
           <form action={proposeAlternativeAction} className="grid gap-3">
@@ -329,10 +333,14 @@ function QueueCard({
                 </select>
               </div>
             </div>
-            <Button className="w-full" type="submit" variant="secondary">
+            <SubmitButton
+              className="w-full"
+              pendingLabel="Proposing..."
+              variant="secondary"
+            >
               <CalendarClock className="h-4 w-4" />
               Propose alternative
-            </Button>
+            </SubmitButton>
           </form>
         </div>
       </div>

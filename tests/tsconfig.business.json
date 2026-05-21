@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "baseUrl": "..",
+    "paths": {
+      "@/*": ["./*"]
+    },
+    "outDir": "../.test-build",
+    "rootDir": "..",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": [
+    "server-only.d.ts",
+    "business-rules.test.ts",
+    "../lib/admin-settings-service.ts",
+    "../lib/capacity-service.ts",
+    "../lib/db.ts",
+    "../lib/jalali-date.ts",
+    "../lib/reservation-service.ts",
+    "../lib/schedule.ts"
+  ]
+}

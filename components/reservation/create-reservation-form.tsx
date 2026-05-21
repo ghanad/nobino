@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { JALALI_DATE_INPUT_PLACEHOLDER } from "@/lib/jalali-date";
 
 type ResourcePoolOption = {
@@ -109,9 +109,12 @@ export function CreateReservationForm({
       </label>
 
       <div>
-        <Button disabled={resourcePools.length === 0} type="submit">
+        <SubmitButton
+          disabled={resourcePools.length === 0}
+          pendingLabel="Submitting..."
+        >
           Submit request
-        </Button>
+        </SubmitButton>
       </div>
     </form>
   );

@@ -68,10 +68,15 @@ npm run build
 npm run start
 npm run lint
 npm run typecheck
+npm run test
 npm run prisma:push
 npm run prisma:generate
 npm run prisma:seed
 ```
+
+`npm run test` runs the core business-rule tests against an isolated temporary
+SQLite database under `.test-build`; it does not modify the development
+database.
 
 ## Seeded Data
 
@@ -85,7 +90,7 @@ The seed script creates:
 
 ## Phase Status
 
-Phase 10 is complete: seeded users can sign in, create hourly reservation requests, see their own reservations grouped by status, cancel pending requests, and accept or reject manager-proposed alternatives. Managers can approve, reject, and propose alternatives from `/manager`. Admins can manage resource pool capacity and active state, weekly working schedule rows, Jalali date-specific schedule exceptions, and users from `/admin`. Users and managers can review unread in-app notifications from `/notifications` and mark notifications as read. Capacity reductions are blocked when future approved reservations would exceed the new capacity.
+Phase 12 is complete: seeded users can sign in, create hourly reservation requests, see their own reservations grouped by status, cancel pending requests, and accept or reject manager-proposed alternatives. Managers can approve, reject, and propose alternatives from `/manager`. Admins can manage resource pool capacity and active state, weekly working schedule rows, Jalali date-specific schedule exceptions, users from `/admin`, and audit history from `/admin/audit`. Users and managers can review unread in-app notifications from `/notifications` and mark notifications as read. Capacity reductions are blocked when future approved reservations would exceed the new capacity. Core service rules are covered by automated tests.
 
 ## Auth Routes
 
@@ -122,3 +127,68 @@ business rules out of UI code. Pending reservations do not consume capacity.
 For the first operational version, request creation rejects ranges where
 approved reservations already fill any requested hour; final capacity is checked
 again during manager approval and when a user accepts an alternative proposal.
+
+## Environment Variables
+
+Use `.env.example` as the source of truth for required settings:
+
+- `DATABASE_URL`: SQLite database URL. For local development the default
+  `file:./dev.db` creates `prisma/dev.db` because Prisma resolves relative
+  SQLite paths from the `prisma/` directory.
+- `AUTH_SECRET`: long random secret used to sign HTTP-only session cookies.
+  Generate a unique value for every shared or production environment.
+- `APP_TIMEZONE`: operational timezone. Use `Asia/Tehran` unless the company
+  explicitly changes scheduling policy.
+- `NEXT_PUBLIC_APP_NAME`: display name used by the app shell.
+
+## Production Deployment
+
+Minimum deployment flow for the current SQLite-backed version:
+
+```bash
+npm ci
+npm run prisma:generate
+npx prisma migrate deploy
+npm run test
+npm run build
+npm run start
+```
+
+Set `NODE_ENV=production`, provide a strong `AUTH_SECRET`, and place the SQLite
+database on persistent storage. Do not deploy with the seeded demo passwords in
+a real environment; create operational admin and manager accounts, then replace
+or deactivate seed users.
+
+## SQLite Backup And Recovery
+
+SQLite stores operational state in one database file plus a possible journal or
+WAL sidecar depending on runtime mode. For the default local URL, back up:
+
+- `prisma/dev.db`
+- `prisma/dev.db-journal`, if present
+- `prisma/dev.db-wal` and `prisma/dev.db-shm`, if present
+
+For production, schedule file-level backups while the app is stopped or use
+SQLite's online backup tooling from the hosting platform. Test restoration into
+a separate environment before relying on backups operationally.
+
+## Timezone Notes
+
+Reservation boundaries are stored as JavaScript/Prisma `DateTime` values, while
+all user-facing date input and display use Jalali dates. Run the Node process
+with `TZ=Asia/Tehran` and keep `APP_TIMEZONE=Asia/Tehran` so local working-day
+checks, hourly boundaries, and Jalali URL dates are interpreted consistently.
+
+## Security Checklist
+
+- Passwords are hashed with `scrypt` before storage.
+- Session cookies are HTTP-only, signed with `AUTH_SECRET`, and marked secure in
+  production.
+- Protected routes use server-side role checks for user, manager, and admin
+  access.
+- Mutations validate form input with Zod and enforce business rules in service
+  functions, not UI components.
+- Approval and alternative acceptance re-check capacity inside backend
+  transactions before changing reservation status.
+- Keep `.env` and SQLite database files out of git and restrict file
+  permissions on production hosts.

@@ -9,7 +9,7 @@ import {
 } from "@/app/reservations/actions";
 import { DailyCapacityCalendar } from "@/components/calendar/daily-capacity-calendar";
 import { CreateReservationForm } from "@/components/reservation/create-reservation-form";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { requireCurrentUser } from "@/lib/auth";
 import { getSlotUsage } from "@/lib/capacity-service";
 import { db } from "@/lib/db";
@@ -164,10 +164,10 @@ function AlternativeList({
                       type="hidden"
                       value={alternative.id}
                     />
-                    <Button size="sm" type="submit">
+                    <SubmitButton pendingLabel="Accepting..." size="sm">
                       <Check className="h-4 w-4" />
                       Accept
-                    </Button>
+                    </SubmitButton>
                   </form>
                   <form action={rejectAlternativeAction}>
                     <input
@@ -175,10 +175,14 @@ function AlternativeList({
                       type="hidden"
                       value={alternative.id}
                     />
-                    <Button size="sm" type="submit" variant="outline">
+                    <SubmitButton
+                      pendingLabel="Rejecting..."
+                      size="sm"
+                      variant="outline"
+                    >
                       <X className="h-4 w-4" />
                       Reject
-                    </Button>
+                    </SubmitButton>
                   </form>
                 </div>
               ) : null}
@@ -237,10 +241,10 @@ function ReservationCard({
         {canCancel ? (
           <form action={cancelReservationByUserAction}>
             <input name="reservationId" type="hidden" value={reservation.id} />
-            <Button type="submit" variant="outline">
+            <SubmitButton pendingLabel="Cancelling..." variant="outline">
               <X className="h-4 w-4" />
               Cancel pending request
-            </Button>
+            </SubmitButton>
           </form>
         ) : null}
       </div>

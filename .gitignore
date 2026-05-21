@@ -3,6 +3,7 @@ node_modules
 .npm-cache
 out
 dist
+.test-build
 .env
 .env*.local
 dev.db
