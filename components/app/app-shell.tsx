@@ -1,9 +1,11 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { Bell } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { CurrentUser } from "@/lib/auth";
 import { logoutAction } from "@/app/login/actions";
+import { getUnreadNotificationCount } from "@/lib/notification-service";
 import { canAccessAdminArea, canAccessManagerArea } from "@/lib/permissions";
 
 type AppShellProps = {
@@ -12,7 +14,9 @@ type AppShellProps = {
   children: ReactNode;
 };
 
-export function AppShell({ user, title, children }: AppShellProps) {
+export async function AppShell({ user, title, children }: AppShellProps) {
+  const unreadNotificationCount = await getUnreadNotificationCount(user.id);
+
   return (
     <main className="min-h-screen bg-background">
       <header className="border-b bg-card">
@@ -29,6 +33,17 @@ export function AppShell({ user, title, children }: AppShellProps) {
             </Button>
             <Button variant="ghost" asChild>
               <Link href="/reservations">Reservations</Link>
+            </Button>
+            <Button variant="ghost" asChild>
+              <Link href="/notifications">
+                <Bell className="h-4 w-4" />
+                Notifications
+                {unreadNotificationCount > 0 ? (
+                  <span className="ml-1 rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
+                    {unreadNotificationCount}
+                  </span>
+                ) : null}
+              </Link>
             </Button>
             {canAccessManagerArea(user.role) ? (
               <Button variant="ghost" asChild>

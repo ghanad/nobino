@@ -85,7 +85,7 @@ The seed script creates:
 
 ## Phase Status
 
-Phase 8 is complete: seeded users can sign in, create hourly reservation requests, see their own reservations grouped by status, cancel pending requests, and accept or reject manager-proposed alternatives. Managers can approve, reject, and propose alternatives from `/manager`. Admins can manage resource pool capacity and active state, weekly working schedule rows, and Jalali date-specific schedule exceptions from `/admin`. Capacity reductions are blocked when future approved reservations would exceed the new capacity.
+Phase 10 is complete: seeded users can sign in, create hourly reservation requests, see their own reservations grouped by status, cancel pending requests, and accept or reject manager-proposed alternatives. Managers can approve, reject, and propose alternatives from `/manager`. Admins can manage resource pool capacity and active state, weekly working schedule rows, Jalali date-specific schedule exceptions, and users from `/admin`. Users and managers can review unread in-app notifications from `/notifications` and mark notifications as read. Capacity reductions are blocked when future approved reservations would exceed the new capacity.
 
 ## Auth Routes
 
@@ -93,6 +93,8 @@ Phase 8 is complete: seeded users can sign in, create hourly reservation request
 - `/dashboard` is available to all authenticated active users.
 - `/reservations` allows authenticated users to create pending reservation
   requests and review their recent requests.
+- `/notifications` allows authenticated users to review unread notification
+  events and mark them as read.
 - `/manager` is available to managers and admins.
 - `/admin` is available to admins only.
 
