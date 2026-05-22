@@ -28,6 +28,17 @@ type ManagerWeekDay = {
   slots: ManagerWeekSlot[];
 };
 
+type SlotReservationBlock = {
+  detail: SlotReservationDetail;
+  startHour: number;
+  endHour: number;
+};
+
+type PositionedReservationBlock = SlotReservationBlock & {
+  lane: number;
+  laneCount: number;
+};
+
 type ManagerWeeklyCalendarProps = {
   currentDateParam: string;
   emptyMessage: string;
@@ -104,42 +115,111 @@ function getDetailActionLabel(status: SlotReservationDetail["status"]): string {
   return "Approved";
 }
 
-function SlotDetails({ details }: { details: SlotReservationDetail[] }) {
-  if (details.length === 0) {
-    return null;
+function getReservationBlocks(day: ManagerWeekDay): SlotReservationBlock[] {
+  const blocksById = new Map<string, SlotReservationBlock>();
+
+  for (const slot of day.slots) {
+    for (const detail of slot.details) {
+      if (detail.status !== "PENDING") {
+        continue;
+      }
+
+      const current = blocksById.get(detail.id);
+
+      if (!current) {
+        blocksById.set(detail.id, {
+          detail,
+          startHour: slot.slotStartHour,
+          endHour: slot.slotEndHour,
+        });
+        continue;
+      }
+
+      current.startHour = Math.min(current.startHour, slot.slotStartHour);
+      current.endHour = Math.max(current.endHour, slot.slotEndHour);
+    }
+  }
+
+  return Array.from(blocksById.values());
+}
+
+function getPositionedReservationBlocks(
+  day: ManagerWeekDay,
+): PositionedReservationBlock[] {
+  const blocks = getReservationBlocks(day).sort(
+    (left, right) =>
+      left.startHour - right.startHour || left.endHour - right.endHour,
+  );
+  const laneEndHours: number[] = [];
+  const positionedBlocks = blocks.map((block) => {
+    const availableLane = laneEndHours.findIndex(
+      (endHour) => endHour <= block.startHour,
+    );
+    const lane = availableLane >= 0 ? availableLane : laneEndHours.length;
+    laneEndHours[lane] = block.endHour;
+
+    return {
+      ...block,
+      lane,
+      laneCount: 1,
+    };
+  });
+  const laneCount = Math.max(laneEndHours.length, 1);
+
+  return positionedBlocks.map((block) => ({
+    ...block,
+    laneCount,
+  }));
+}
+
+function getReservationBlockStyle(block: PositionedReservationBlock) {
+  const laneWidth = 100 / block.laneCount;
+
+  return {
+    marginLeft: `calc(${block.lane * laneWidth}% + 0.25rem)`,
+    width: `calc(${laneWidth}% - 0.5rem)`,
+  };
+}
+
+function ReservationBlock({
+  block,
+}: {
+  block: PositionedReservationBlock;
+}) {
+  const { detail } = block;
+  const className = `pointer-events-auto flex h-full min-w-0 items-start justify-between gap-2 rounded-md px-2 py-2 text-xs font-medium leading-5 shadow-sm ring-1 ${getDetailClass(
+    detail.status,
+  )}`;
+  const content = (
+    <>
+      <span className="min-w-0 truncate">{detail.userName}</span>
+      <span className="shrink-0 text-[10px] uppercase opacity-75">
+        {getDetailActionLabel(detail.status)}
+      </span>
+    </>
+  );
+
+  if (detail.href) {
+    return (
+      <a
+        className={`${className} transition-colors hover:bg-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`}
+        href={detail.href}
+        style={getReservationBlockStyle(block)}
+        title={detail.reason ?? undefined}
+      >
+        {content}
+      </a>
+    );
   }
 
   return (
-    <div className="mt-1 grid gap-1">
-      {details.map((detail) => {
-        const className = `inline-flex min-w-0 max-w-full items-center justify-between gap-1 rounded-sm px-1.5 py-1 text-[11px] font-medium leading-4 ring-1 ${getDetailClass(
-          detail.status,
-        )}`;
-        const content = (
-          <>
-            <span className="truncate">{detail.userName}</span>
-            <span className="shrink-0 text-[10px] opacity-75">
-              {getDetailActionLabel(detail.status)}
-            </span>
-          </>
-        );
-
-        return detail.href ? (
-          <a
-            className={`${className} transition-colors hover:bg-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`}
-            href={detail.href}
-            key={detail.id}
-            title={detail.reason ?? undefined}
-          >
-            {content}
-          </a>
-        ) : (
-          <span className={className} key={detail.id} title={detail.reason ?? undefined}>
-            {content}
-          </span>
-        );
-      })}
-    </div>
+    <span
+      className={className}
+      style={getReservationBlockStyle(block)}
+      title={detail.reason ?? undefined}
+    >
+      {content}
+    </span>
   );
 }
 
@@ -153,6 +233,10 @@ export function ManagerWeeklyCalendar({
   weekLabel,
 }: ManagerWeeklyCalendarProps) {
   const hours = getHourRange(weekDays);
+  const reservationBlocksByDate = new Map(
+    weekDays.map((day) => [day.dateParam, getPositionedReservationBlocks(day)]),
+  );
+  const firstHour = hours[0] ?? 0;
 
   return (
     <section className="rounded-lg border bg-card p-5 text-card-foreground">
@@ -232,17 +316,26 @@ export function ManagerWeeklyCalendar({
               </div>
 
               <div className="max-h-[560px] overflow-y-auto">
-                {hours.map((hour) => (
-                  <div
-                    className="grid min-h-24 grid-cols-[72px_repeat(7,minmax(124px,1fr))] border-b last:border-b-0"
-                    key={hour}
-                  >
-                    <div className="relative border-r bg-background">
+                <div
+                  className="grid grid-cols-[72px_repeat(7,minmax(124px,1fr))]"
+                  style={{
+                    gridTemplateRows: `repeat(${hours.length}, minmax(6rem, auto))`,
+                  }}
+                >
+                  {hours.map((hour, hourIndex) => (
+                    <div
+                      className="relative border-b border-r bg-background"
+                      key={`time-${hour}`}
+                      style={{ gridColumn: 1, gridRow: hourIndex + 1 }}
+                    >
                       <span className="absolute right-3 top-2 text-xs font-medium text-muted-foreground">
                         {formatHour(hour)}
                       </span>
                     </div>
-                    {weekDays.map((day) => {
+                  ))}
+
+                  {hours.map((hour, hourIndex) =>
+                    weekDays.map((day, dayIndex) => {
                       const slot = getSlotForHour(day, hour);
                       const available = slot
                         ? Math.max(slot.capacity - slot.approvedCount, 0)
@@ -251,18 +344,19 @@ export function ManagerWeeklyCalendar({
                       return (
                         <div
                           className={cn(
-                            "border-r p-2 text-left last:border-r-0",
+                            "border-b border-r p-2 text-left",
                             getCellTone(slot),
                           )}
                           key={`${day.dateParam}-${hour}`}
+                          style={{
+                            gridColumn: dayIndex + 2,
+                            gridRow: hourIndex + 1,
+                          }}
                         >
                           {slot ? (
                             <div className="grid min-h-20 content-start gap-1">
                               <div className="flex items-start justify-between gap-2 text-[11px] leading-4">
-                                <span className="font-medium">
-                                  {formatHour(slot.slotStartHour)}-
-                                  {formatHour(slot.slotEndHour)}
-                                </span>
+                                <span className="font-medium">Capacity</span>
                                 <span className="shrink-0 text-muted-foreground">
                                   {available}/{slot.capacity} open
                                 </span>
@@ -281,16 +375,37 @@ export function ManagerWeeklyCalendar({
                                   ) : null}
                                 </div>
                               ) : null}
-                              <SlotDetails details={slot.details} />
                             </div>
                           ) : (
                             <span className="sr-only">Not working hour</span>
                           )}
                         </div>
                       );
-                    })}
-                  </div>
-                ))}
+                    }),
+                  )}
+
+                  {weekDays.flatMap((day, dayIndex) =>
+                    (reservationBlocksByDate.get(day.dateParam) ?? []).map(
+                      (block) => {
+                        const startLine = block.startHour - firstHour + 1;
+                        const endLine = block.endHour - firstHour + 1;
+
+                        return (
+                          <div
+                            className="pointer-events-none z-10 p-2"
+                            key={`${day.dateParam}-${block.detail.id}`}
+                            style={{
+                              gridColumn: dayIndex + 2,
+                              gridRow: `${startLine} / ${endLine}`,
+                            }}
+                          >
+                            <ReservationBlock block={block} />
+                          </div>
+                        );
+                      },
+                    ),
+                  )}
+                </div>
               </div>
             </div>
           </div>

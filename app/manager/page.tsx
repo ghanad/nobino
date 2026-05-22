@@ -133,8 +133,12 @@ function buildExportHref(dateParam: string): string {
   return `/manager/export?date=${encodeURIComponent(dateParam)}`;
 }
 
-function buildQueueCardId(reservationId: string): string {
-  return `queue-reservation-${reservationId}`;
+function buildReviewModalId(reservationId: string): string {
+  return `review-reservation-${reservationId}`;
+}
+
+function buildManagerHref(dateParam: string): string {
+  return `/manager?date=${encodeURIComponent(dateParam)}`;
 }
 
 function formatNaturalJalaliDate(date: Date): string {
@@ -216,9 +220,11 @@ function CapacitySummary({ item }: { item: QueueItem }) {
 }
 
 function QueueCard({
+  fieldIdPrefix,
   item,
   dateParam,
 }: {
+  fieldIdPrefix: string;
   item: QueueItem;
   dateParam: string;
 }) {
@@ -226,12 +232,12 @@ function QueueCard({
   const requestedDate = formatJalaliDateParam(item.reservation.startAt);
   const defaultStartHour = item.reservation.startAt.getHours();
   const defaultEndHour = item.reservation.endAt.getHours();
+  const proposedDateId = `${fieldIdPrefix}-proposedDate-${item.reservation.id}`;
+  const proposedStartHourId = `${fieldIdPrefix}-proposedStartHour-${item.reservation.id}`;
+  const proposedEndHourId = `${fieldIdPrefix}-proposedEndHour-${item.reservation.id}`;
 
   return (
-    <article
-      className="scroll-mt-6 rounded-lg border bg-card p-5 text-card-foreground transition-shadow target:border-amber-300 target:ring-2 target:ring-amber-200"
-      id={buildQueueCardId(item.reservation.id)}
-    >
+    <article className="rounded-lg border bg-card p-5 text-card-foreground">
       <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
         <div className="grid gap-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -320,7 +326,7 @@ function QueueCard({
             <div className="grid gap-2">
               <label
                 className="text-xs font-medium text-muted-foreground"
-                htmlFor={`proposedDate-${item.reservation.id}`}
+                htmlFor={proposedDateId}
               >
                 Alternative date
               </label>
@@ -328,7 +334,7 @@ function QueueCard({
                 className="h-10 rounded-md border border-input bg-background px-3 text-sm"
                 defaultValue={requestedDate}
                 dir="ltr"
-                id={`proposedDate-${item.reservation.id}`}
+                id={proposedDateId}
                 name="proposedDate"
                 pattern="\d{4}[-/]\d{1,2}[-/]\d{1,2}"
                 placeholder={JALALI_DATE_INPUT_PLACEHOLDER}
@@ -340,14 +346,14 @@ function QueueCard({
               <div className="grid gap-2">
                 <label
                   className="text-xs font-medium text-muted-foreground"
-                  htmlFor={`proposedStartHour-${item.reservation.id}`}
+                  htmlFor={proposedStartHourId}
                 >
                   Start
                 </label>
                 <select
                   className="h-10 rounded-md border border-input bg-background px-3 text-sm"
                   defaultValue={defaultStartHour}
-                  id={`proposedStartHour-${item.reservation.id}`}
+                  id={proposedStartHourId}
                   name="proposedStartHour"
                 >
                   {hourOptions.slice(0, 23).map((hour) => (
@@ -360,14 +366,14 @@ function QueueCard({
               <div className="grid gap-2">
                 <label
                   className="text-xs font-medium text-muted-foreground"
-                  htmlFor={`proposedEndHour-${item.reservation.id}`}
+                  htmlFor={proposedEndHourId}
                 >
                   End
                 </label>
                 <select
                   className="h-10 rounded-md border border-input bg-background px-3 text-sm"
                   defaultValue={defaultEndHour}
-                  id={`proposedEndHour-${item.reservation.id}`}
+                  id={proposedEndHourId}
                   name="proposedEndHour"
                 >
                   {hourOptions.slice(1).map((hour) => (
@@ -390,6 +396,52 @@ function QueueCard({
         </div>
       </div>
     </article>
+  );
+}
+
+function ReviewModal({
+  item,
+  dateParam,
+}: {
+  item: QueueItem;
+  dateParam: string;
+}) {
+  return (
+    <div
+      aria-labelledby={`${buildReviewModalId(item.reservation.id)}-title`}
+      aria-modal="true"
+      className="fixed inset-0 z-50 hidden items-start justify-center overflow-y-auto bg-black/55 p-4 target:flex"
+      id={buildReviewModalId(item.reservation.id)}
+      role="dialog"
+    >
+      <a
+        aria-label="Close review dialog"
+        className="fixed inset-0 cursor-default"
+        href={buildManagerHref(dateParam)}
+      />
+      <div className="relative z-10 grid w-full max-w-5xl gap-3 py-8">
+        <div className="flex items-center justify-between gap-3 rounded-lg border bg-background px-4 py-3 shadow-lg">
+          <h2
+            className="text-sm font-medium"
+            id={`${buildReviewModalId(item.reservation.id)}-title`}
+          >
+            Review pending reservation
+          </h2>
+          <a
+            aria-label="Close review dialog"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-md border bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
+            href={buildManagerHref(dateParam)}
+          >
+            <X aria-hidden="true" className="h-4 w-4" />
+          </a>
+        </div>
+        <QueueCard
+          dateParam={dateParam}
+          fieldIdPrefix="modal"
+          item={item}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -473,7 +525,7 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
                   reason: reservation.reason,
                   href:
                     reservation.status === ReservationStatus.PENDING
-                      ? `#${buildQueueCardId(reservation.id)}`
+                      ? `#${buildReviewModalId(reservation.id)}`
                       : undefined,
                 }));
 
@@ -563,32 +615,23 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
           weekDays={weekDays}
           weekLabel={formatWeekLabel(weekDates[0], weekDates[6])}
         />
+        {queueItems.map((item) => (
+          <ReviewModal
+            dateParam={dateParam}
+            item={item}
+            key={`review-modal-${item.reservation.id}`}
+          />
+        ))}
       </section>
 
-      <section className="rounded-lg border bg-card p-5 text-card-foreground">
-        <h2 className="font-medium">Approval queue</h2>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          Click amber pending requests in the calendar to jump to their review
-          actions. Pending requests do not consume capacity; approval re-checks
-          availability before updating the request.
-        </p>
-
-        {queueItems.length === 0 ? (
+      {queueItems.length === 0 ? (
+        <section className="rounded-lg border bg-card p-5 text-card-foreground">
+          <h2 className="font-medium">Approval queue</h2>
           <p className="mt-5 rounded-md border bg-muted/40 p-4 text-sm text-muted-foreground">
             No pending reservation requests.
           </p>
-        ) : (
-          <div className="mt-5 grid gap-4">
-            {queueItems.map((item) => (
-              <QueueCard
-                dateParam={dateParam}
-                item={item}
-                key={item.reservation.id}
-              />
-            ))}
-          </div>
-        )}
-      </section>
+        </section>
+      ) : null}
     </div>
   );
 }
