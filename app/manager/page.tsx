@@ -15,6 +15,7 @@ import { db } from "@/lib/db";
 import {
   JALALI_DATE_INPUT_PLACEHOLDER,
   formatJalaliDate,
+  formatJalaliDateWithoutYear,
   formatJalaliDateParam,
   formatJalaliDateTime,
   formatLocalTime,
@@ -134,7 +135,7 @@ function formatWeekLabel(startDate: Date, endDate: Date): string {
 }
 
 function formatCalendarColumnLabel(date: Date): string {
-  return formatJalaliDate(date);
+  return formatJalaliDateWithoutYear(date);
 }
 
 function getQueueToast(params: Awaited<ManagerPageProps["searchParams"]>) {

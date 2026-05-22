@@ -23,6 +23,15 @@ const JALALI_DATE_WITHOUT_WEEKDAY_FORMATTER = new Intl.DateTimeFormat(
   },
 );
 
+const JALALI_DATE_WITHOUT_YEAR_FORMATTER = new Intl.DateTimeFormat(
+  "fa-IR-u-ca-persian",
+  {
+    day: "numeric",
+    month: "long",
+    weekday: "long",
+  },
+);
+
 const TIME_FORMATTER = new Intl.DateTimeFormat("fa-IR-u-nu-latn", {
   hour: "2-digit",
   hour12: false,
@@ -103,6 +112,13 @@ export function formatJalaliDateWithoutWeekday(date: Date): string {
   return formatNaturalDateParts(
     JALALI_DATE_WITHOUT_WEEKDAY_FORMATTER.formatToParts(date),
     false,
+  );
+}
+
+export function formatJalaliDateWithoutYear(date: Date): string {
+  return formatNaturalDateParts(
+    JALALI_DATE_WITHOUT_YEAR_FORMATTER.formatToParts(date),
+    true,
   );
 }
 

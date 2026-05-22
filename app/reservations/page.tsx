@@ -18,6 +18,7 @@ import { db } from "@/lib/db";
 import {
   formatJalaliDate,
   formatJalaliDateWithoutWeekday,
+  formatJalaliDateWithoutYear,
   formatJalaliDateParam,
   parseJalaliDateParam,
 } from "@/lib/jalali-date";
@@ -75,7 +76,7 @@ function formatWeekLabel(startDate: Date, endDate: Date): string {
 }
 
 function formatCalendarColumnLabel(date: Date): string {
-  return formatJalaliDate(date);
+  return formatJalaliDateWithoutYear(date);
 }
 
 function formatReservationDialogDate(date: Date): string {
