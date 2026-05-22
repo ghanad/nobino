@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { CalendarDays, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { SubmitButton } from "@/components/ui/submit-button";
 import { JALALI_DATE_INPUT_PLACEHOLDER } from "@/lib/jalali-date";
@@ -22,6 +22,7 @@ type RequestableSlot = {
 
 type WeekDay = {
   dateLabel: string;
+  modalDateLabel: string;
   dateParam: string;
   shortLabel: string;
   slots: RequestableSlot[];
@@ -54,6 +55,15 @@ type CellState = {
 
 function formatHour(hour: number): string {
   return `${hour.toString().padStart(2, "0")}:00`;
+}
+
+const PERSIAN_HOUR_FORMATTER = new Intl.NumberFormat("fa-IR", {
+  minimumIntegerDigits: 2,
+  useGrouping: false,
+});
+
+function formatPersianHour(hour: number): string {
+  return `${PERSIAN_HOUR_FORMATTER.format(hour)}:۰۰`;
 }
 
 function buildDateHref(dateParam: string): string {
@@ -173,12 +183,32 @@ export function CreateReservationForm({
   const defaultPool = resourcePools[0];
   const [selection, setSelection] = useState<Selection | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isReasonDialogOpen, setIsReasonDialogOpen] = useState(false);
+  const selectionRef = useRef<Selection | null>(null);
   const hours = useMemo(() => getHourRange(weekDays), [weekDays]);
   const weekKey = weekDays.map((day) => day.dateParam).join("|");
   useEffect(() => {
+    selectionRef.current = null;
     setSelection(null);
     setIsDragging(false);
+    setIsReasonDialogOpen(false);
   }, [weekKey]);
+
+  useEffect(() => {
+    if (!isReasonDialogOpen) {
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsReasonDialogOpen(false);
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isReasonDialogOpen]);
 
   function startSelection(
     dayIndex: number,
@@ -192,7 +222,10 @@ export function CreateReservationForm({
 
     target.setPointerCapture(pointerId);
     setIsDragging(true);
-    setSelection(buildSelection(weekDays, dayIndex, hour, hour));
+    setIsReasonDialogOpen(false);
+    const nextSelection = buildSelection(weekDays, dayIndex, hour, hour);
+    selectionRef.current = nextSelection;
+    setSelection(nextSelection);
   }
 
   function updateSelection(dayIndex: number, hour: number) {
@@ -201,8 +234,23 @@ export function CreateReservationForm({
         return current;
       }
 
-      return buildSelection(weekDays, dayIndex, current.anchorHour, hour);
+      const nextSelection = buildSelection(
+        weekDays,
+        dayIndex,
+        current.anchorHour,
+        hour,
+      );
+      selectionRef.current = nextSelection;
+      return nextSelection;
     });
+  }
+
+  function finishSelection() {
+    setIsDragging(false);
+
+    if (selectionRef.current) {
+      setIsReasonDialogOpen(true);
+    }
   }
 
   function updateSelectionFromPoint(clientX: number, clientY: number) {
@@ -299,7 +347,7 @@ export function CreateReservationForm({
             <div
               className="overflow-hidden rounded-lg border bg-background shadow-sm"
               onPointerLeave={() => setIsDragging(false)}
-              onPointerUp={() => setIsDragging(false)}
+              onPointerUp={finishSelection}
             >
               <div className="overflow-x-auto">
                 <div className="min-w-[920px]">
@@ -438,28 +486,73 @@ export function CreateReservationForm({
           )}
         </div>
 
-        <label className="grid gap-2 text-sm font-medium">
-          Reason
-          <textarea
-            className="min-h-24 rounded-md border border-input bg-background px-3 py-2 text-sm"
-            maxLength={500}
-            name="reason"
-            placeholder="Optional"
-          />
-        </label>
-
-        <div>
-          <SubmitButton
-            disabled={
-              !defaultPool ||
-              !selection ||
-              selection.startHour === selection.endHour
-            }
-            pendingLabel="Submitting..."
+        {isReasonDialogOpen ? (
+          <div
+            aria-labelledby="reservation-reason-dialog-title"
+            aria-modal="true"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4"
+            role="dialog"
           >
-            Submit request
-          </SubmitButton>
-        </div>
+            <button
+              aria-label="Close request dialog"
+              className="absolute inset-0 cursor-default"
+              onClick={() => setIsReasonDialogOpen(false)}
+              type="button"
+            />
+            <div className="relative z-10 grid w-full max-w-lg gap-5 rounded-lg border bg-background p-5 shadow-lg">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h3
+                    className="font-medium"
+                    id="reservation-reason-dialog-title"
+                  >
+                    Complete reservation request
+                  </h3>
+                  {selection ? (
+                    <p className="mt-1 text-sm text-muted-foreground" dir="rtl">
+                      {weekDays[selection.dayIndex]?.modalDateLabel ??
+                        selection.dateParam}
+                      ، {formatPersianHour(selection.startHour)} تا{" "}
+                      {formatPersianHour(selection.endHour)}
+                    </p>
+                  ) : null}
+                </div>
+                <button
+                  aria-label="Close request dialog"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-md border bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
+                  onClick={() => setIsReasonDialogOpen(false)}
+                  type="button"
+                >
+                  <X aria-hidden="true" className="h-4 w-4" />
+                </button>
+              </div>
+
+              <label className="grid gap-2 text-sm font-medium">
+                Reason
+                <textarea
+                  autoFocus
+                  className="min-h-28 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  maxLength={500}
+                  name="reason"
+                  placeholder="Optional"
+                />
+              </label>
+
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button
+                  className="inline-flex h-10 items-center justify-center rounded-md border bg-background px-4 text-sm font-medium hover:bg-accent"
+                  onClick={() => setIsReasonDialogOpen(false)}
+                  type="button"
+                >
+                  Cancel
+                </button>
+                <SubmitButton pendingLabel="Submitting...">
+                  Submit request
+                </SubmitButton>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </form>
     </>
   );

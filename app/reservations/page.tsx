@@ -74,6 +74,15 @@ const NATURAL_JALALI_DATE_FORMATTER = new Intl.DateTimeFormat(
   },
 );
 
+const MODAL_JALALI_DATE_FORMATTER = new Intl.DateTimeFormat(
+  "fa-IR-u-ca-persian",
+  {
+    day: "numeric",
+    month: "long",
+    weekday: "long",
+  },
+);
+
 function formatDateTime(date: Date): string {
   return formatJalaliDateTime(date);
 }
@@ -98,6 +107,10 @@ function formatCalendarColumnLabel(date: Date): string {
   return `${JALALI_WEEKDAY_FORMATTER.format(date)} ${JALALI_MONTH_DAY_FORMATTER.format(
     date,
   )}`;
+}
+
+function formatReservationDialogDate(date: Date): string {
+  return MODAL_JALALI_DATE_FORMATTER.format(date);
 }
 
 function getStatusClass(status: ReservationStatus): string {
@@ -428,6 +441,7 @@ export default async function ReservationsPage({
 
           return {
             dateLabel: formatJalaliDate(date),
+            modalDateLabel: formatReservationDialogDate(date),
             dateParam: formatJalaliDateParam(date),
             shortLabel: formatCalendarColumnLabel(date),
             slots: slots.map((slot) => {
@@ -451,6 +465,7 @@ export default async function ReservationsPage({
       )
     : weekDates.map((date) => ({
         dateLabel: formatJalaliDate(date),
+        modalDateLabel: formatReservationDialogDate(date),
         dateParam: formatJalaliDateParam(date),
         shortLabel: formatCalendarColumnLabel(date),
         slots: [],
