@@ -112,7 +112,7 @@ function getDetailActionLabel(status: SlotReservationDetail["status"]): string {
     return "Review";
   }
 
-  return "Approved";
+  return "Details";
 }
 
 function getReservationBlocks(day: ManagerWeekDay): SlotReservationBlock[] {
@@ -120,10 +120,6 @@ function getReservationBlocks(day: ManagerWeekDay): SlotReservationBlock[] {
 
   for (const slot of day.slots) {
     for (const detail of slot.details) {
-      if (detail.status !== "PENDING") {
-        continue;
-      }
-
       const current = blocksById.get(detail.id);
 
       if (!current) {
@@ -200,9 +196,12 @@ function ReservationBlock({
   );
 
   if (detail.href) {
+    const hoverClass =
+      detail.status === "APPROVED" ? "hover:bg-emerald-200" : "hover:bg-amber-200";
+
     return (
       <a
-        className={`${className} transition-colors hover:bg-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`}
+        className={`${className} transition-colors ${hoverClass} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`}
         href={detail.href}
         style={getReservationBlockStyle(block)}
         title={detail.reason ?? undefined}

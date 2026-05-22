@@ -3,6 +3,7 @@ import { CalendarClock, Check, Download, X } from "lucide-react";
 
 import {
   approveReservationAction,
+  cancelReservationByManagerAction,
   proposeAlternativeAction,
   rejectReservationAction,
 } from "@/app/manager/actions";
@@ -24,6 +25,7 @@ type ManagerPageProps = {
   searchParams?: Promise<{
     alternative?: string;
     approved?: string;
+    cancelled?: string;
     date?: string;
     error?: string;
     rejected?: string;
@@ -35,6 +37,7 @@ type QueueReservation = {
   resourcePoolId: string;
   startAt: Date;
   endAt: Date;
+  status: ReservationStatus;
   reason: string | null;
   createdAt: Date;
   user: {
@@ -174,12 +177,13 @@ function getQueueToast(params: Awaited<ManagerPageProps["searchParams"]>) {
 
   const successMessage =
     (params?.approved && "Reservation approved.") ||
+    (params?.cancelled && "Reservation cancelled.") ||
     (params?.rejected && "Reservation rejected.") ||
     (params?.alternative && "Alternative proposed.");
 
   return successMessage
     ? {
-        consumeKeys: ["approved", "rejected", "alternative"],
+        consumeKeys: ["approved", "cancelled", "rejected", "alternative"],
         message: successMessage,
         variant: "success" as const,
       }
@@ -235,6 +239,7 @@ function QueueCard({
   const proposedDateId = `${fieldIdPrefix}-proposedDate-${item.reservation.id}`;
   const proposedStartHourId = `${fieldIdPrefix}-proposedStartHour-${item.reservation.id}`;
   const proposedEndHourId = `${fieldIdPrefix}-proposedEndHour-${item.reservation.id}`;
+  const isPending = item.reservation.status === ReservationStatus.PENDING;
 
   return (
     <article className="rounded-lg border bg-card p-5 text-card-foreground">
@@ -247,8 +252,14 @@ function QueueCard({
                 {item.reservation.user.email}
               </p>
             </div>
-            <span className="inline-flex w-fit rounded-full bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800 ring-1 ring-amber-200">
-              PENDING
+            <span
+              className={`inline-flex w-fit rounded-full px-2 py-1 text-xs font-medium ring-1 ${
+                isPending
+                  ? "bg-amber-50 text-amber-800 ring-amber-200"
+                  : "bg-emerald-50 text-emerald-800 ring-emerald-200"
+              }`}
+            >
+              {item.reservation.status}
             </span>
           </div>
 
@@ -292,107 +303,140 @@ function QueueCard({
         </div>
 
         <div className="grid content-start gap-4">
-          <form action={approveReservationAction}>
-            <input name="reservationId" type="hidden" value={item.reservation.id} />
-            <input name="date" type="hidden" value={dateParam} />
-            <SubmitButton className="w-full" pendingLabel="Approving...">
-              <Check className="h-4 w-4" />
-              Approve
-            </SubmitButton>
-          </form>
+          {isPending ? (
+            <>
+              <form action={approveReservationAction}>
+                <input
+                  name="reservationId"
+                  type="hidden"
+                  value={item.reservation.id}
+                />
+                <input name="date" type="hidden" value={dateParam} />
+                <SubmitButton className="w-full" pendingLabel="Approving...">
+                  <Check className="h-4 w-4" />
+                  Approve
+                </SubmitButton>
+              </form>
 
-          <form action={rejectReservationAction} className="grid gap-2">
-            <input name="reservationId" type="hidden" value={item.reservation.id} />
-            <input name="date" type="hidden" value={dateParam} />
-            <textarea
-              className="min-h-20 rounded-md border border-input bg-background px-3 py-2 text-sm"
-              maxLength={500}
-              name="rejectionReason"
-              placeholder="Optional rejection reason"
-            />
-            <SubmitButton
-              className="w-full"
-              pendingLabel="Rejecting..."
-              variant="outline"
-            >
-              <X className="h-4 w-4" />
-              Reject
-            </SubmitButton>
-          </form>
+              <form action={rejectReservationAction} className="grid gap-2">
+                <input
+                  name="reservationId"
+                  type="hidden"
+                  value={item.reservation.id}
+                />
+                <input name="date" type="hidden" value={dateParam} />
+                <textarea
+                  className="min-h-20 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  maxLength={500}
+                  name="rejectionReason"
+                  placeholder="Optional rejection reason"
+                />
+                <SubmitButton
+                  className="w-full"
+                  pendingLabel="Rejecting..."
+                  variant="outline"
+                >
+                  <X className="h-4 w-4" />
+                  Reject
+                </SubmitButton>
+              </form>
 
-          <form action={proposeAlternativeAction} className="grid gap-3">
-            <input name="reservationId" type="hidden" value={item.reservation.id} />
-            <input name="date" type="hidden" value={dateParam} />
-            <div className="grid gap-2">
-              <label
-                className="text-xs font-medium text-muted-foreground"
-                htmlFor={proposedDateId}
-              >
-                Alternative date
-              </label>
+              <form action={proposeAlternativeAction} className="grid gap-3">
+                <input
+                  name="reservationId"
+                  type="hidden"
+                  value={item.reservation.id}
+                />
+                <input name="date" type="hidden" value={dateParam} />
+                <div className="grid gap-2">
+                  <label
+                    className="text-xs font-medium text-muted-foreground"
+                    htmlFor={proposedDateId}
+                  >
+                    Alternative date
+                  </label>
+                  <input
+                    className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                    defaultValue={requestedDate}
+                    dir="ltr"
+                    id={proposedDateId}
+                    name="proposedDate"
+                    pattern="\d{4}[-/]\d{1,2}[-/]\d{1,2}"
+                    placeholder={JALALI_DATE_INPUT_PLACEHOLDER}
+                    title={`Enter a Jalali date like ${JALALI_DATE_INPUT_PLACEHOLDER}`}
+                    type="text"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="grid gap-2">
+                    <label
+                      className="text-xs font-medium text-muted-foreground"
+                      htmlFor={proposedStartHourId}
+                    >
+                      Start
+                    </label>
+                    <select
+                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                      defaultValue={defaultStartHour}
+                      id={proposedStartHourId}
+                      name="proposedStartHour"
+                    >
+                      {hourOptions.slice(0, 23).map((hour) => (
+                        <option key={hour} value={hour}>
+                          {hour.toString().padStart(2, "0")}:00
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="grid gap-2">
+                    <label
+                      className="text-xs font-medium text-muted-foreground"
+                      htmlFor={proposedEndHourId}
+                    >
+                      End
+                    </label>
+                    <select
+                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                      defaultValue={defaultEndHour}
+                      id={proposedEndHourId}
+                      name="proposedEndHour"
+                    >
+                      {hourOptions.slice(1).map((hour) => (
+                        <option key={hour} value={hour}>
+                          {hour.toString().padStart(2, "0")}:00
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <SubmitButton
+                  className="w-full"
+                  pendingLabel="Proposing..."
+                  variant="secondary"
+                >
+                  <CalendarClock className="h-4 w-4" />
+                  Propose alternative
+                </SubmitButton>
+              </form>
+            </>
+          ) : (
+            <form action={cancelReservationByManagerAction}>
               <input
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                defaultValue={requestedDate}
-                dir="ltr"
-                id={proposedDateId}
-                name="proposedDate"
-                pattern="\d{4}[-/]\d{1,2}[-/]\d{1,2}"
-                placeholder={JALALI_DATE_INPUT_PLACEHOLDER}
-                title={`Enter a Jalali date like ${JALALI_DATE_INPUT_PLACEHOLDER}`}
-                type="text"
+                name="reservationId"
+                type="hidden"
+                value={item.reservation.id}
               />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="grid gap-2">
-                <label
-                  className="text-xs font-medium text-muted-foreground"
-                  htmlFor={proposedStartHourId}
-                >
-                  Start
-                </label>
-                <select
-                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                  defaultValue={defaultStartHour}
-                  id={proposedStartHourId}
-                  name="proposedStartHour"
-                >
-                  {hourOptions.slice(0, 23).map((hour) => (
-                    <option key={hour} value={hour}>
-                      {hour.toString().padStart(2, "0")}:00
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="grid gap-2">
-                <label
-                  className="text-xs font-medium text-muted-foreground"
-                  htmlFor={proposedEndHourId}
-                >
-                  End
-                </label>
-                <select
-                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                  defaultValue={defaultEndHour}
-                  id={proposedEndHourId}
-                  name="proposedEndHour"
-                >
-                  {hourOptions.slice(1).map((hour) => (
-                    <option key={hour} value={hour}>
-                      {hour.toString().padStart(2, "0")}:00
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <SubmitButton
-              className="w-full"
-              pendingLabel="Proposing..."
-              variant="secondary"
-            >
-              <CalendarClock className="h-4 w-4" />
-              Propose alternative
-            </SubmitButton>
-          </form>
+              <input name="date" type="hidden" value={dateParam} />
+              <SubmitButton
+                className="w-full"
+                pendingLabel="Cancelling..."
+                variant="outline"
+              >
+                <X className="h-4 w-4" />
+                Cancel reservation
+              </SubmitButton>
+            </form>
+          )}
         </div>
       </div>
     </article>
@@ -425,7 +469,9 @@ function ReviewModal({
             className="text-sm font-medium"
             id={`${buildReviewModalId(item.reservation.id)}-title`}
           >
-            Review pending reservation
+            {item.reservation.status === ReservationStatus.PENDING
+              ? "Review pending reservation"
+              : "Approved reservation details"}
           </h2>
           <a
             aria-label="Close review dialog"
@@ -477,11 +523,19 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
           orderBy: [{ startAt: "asc" }, { createdAt: "asc" }],
           select: {
             id: true,
+            resourcePoolId: true,
             startAt: true,
             endAt: true,
             status: true,
             reason: true,
+            createdAt: true,
             user: {
+              select: {
+                name: true,
+                email: true,
+              },
+            },
+            resourcePool: {
               select: {
                 name: true,
               },
@@ -523,10 +577,7 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
                       ? ("APPROVED" as const)
                       : ("PENDING" as const),
                   reason: reservation.reason,
-                  href:
-                    reservation.status === ReservationStatus.PENDING
-                      ? `#${buildReviewModalId(reservation.id)}`
-                      : undefined,
+                  href: `#${buildReviewModalId(reservation.id)}`,
                 }));
 
               return {
@@ -557,6 +608,7 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       resourcePoolId: true,
       startAt: true,
       endAt: true,
+      status: true,
       reason: true,
       createdAt: true,
       user: {
@@ -582,6 +634,19 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       }),
     })),
   );
+  const approvedCalendarItems: QueueItem[] = await Promise.all(
+    weekReservations
+      .filter((reservation) => reservation.status === ReservationStatus.APPROVED)
+      .map(async (reservation) => ({
+        reservation,
+        slots: await getSlotUsage({
+          resourcePoolId: reservation.resourcePoolId,
+          startAt: reservation.startAt,
+          endAt: reservation.endAt,
+        }),
+      })),
+  );
+  const modalItems = [...queueItems, ...approvedCalendarItems];
 
   return (
     <div className="grid gap-6">
@@ -615,7 +680,7 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
           weekDays={weekDays}
           weekLabel={formatWeekLabel(weekDates[0], weekDates[6])}
         />
-        {queueItems.map((item) => (
+        {modalItems.map((item) => (
           <ReviewModal
             dateParam={dateParam}
             item={item}

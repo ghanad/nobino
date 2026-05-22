@@ -423,6 +423,70 @@ export async function cancelReservationByUser(input: {
   });
 }
 
+export async function cancelReservationByManager(input: {
+  reservationId: string;
+  managerId: string;
+}) {
+  return db.$transaction(async (tx) => {
+    await assertManagerOrAdmin(input.managerId, tx);
+
+    const reservation = await tx.reservation.findUnique({
+      where: { id: input.reservationId },
+      select: {
+        id: true,
+        userId: true,
+        status: true,
+      },
+    });
+
+    if (!reservation) {
+      throw new ReservationTransitionError("Reservation was not found.");
+    }
+
+    if (reservation.status !== ReservationStatus.APPROVED) {
+      throw new ReservationTransitionError(
+        "Only approved reservations can be cancelled by a manager.",
+      );
+    }
+
+    const cancelledReservation = await tx.reservation.update({
+      where: { id: reservation.id },
+      data: {
+        status: ReservationStatus.CANCELLED_BY_ADMIN,
+        cancelledById: input.managerId,
+        cancelledAt: new Date(),
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorUserId: input.managerId,
+        entityType: "Reservation",
+        entityId: reservation.id,
+        action: "RESERVATION_CANCELLED",
+        oldValue: { status: reservation.status },
+        newValue: {
+          status: cancelledReservation.status,
+          cancelledById: cancelledReservation.cancelledById,
+          cancelledAt: cancelledReservation.cancelledAt?.toISOString() ?? null,
+        },
+      },
+    });
+
+    await tx.notification.create({
+      data: {
+        userId: reservation.userId,
+        reservationId: reservation.id,
+        type: "RESERVATION_CANCELLED",
+        title: "Reservation cancelled",
+        body: "A manager cancelled your approved reservation.",
+      },
+    });
+
+    return cancelledReservation;
+  });
+}
+
 export async function acceptAlternative(input: {
   alternativeId: string;
   userId: string;

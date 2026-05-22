@@ -14,6 +14,7 @@ import {
 import { CapacityUnavailableError, getSlotUsage } from "@/lib/capacity-service";
 import {
   approveReservation,
+  cancelReservationByManager,
   createReservationRequest,
   ReservationTransitionError,
 } from "@/lib/reservation-service";
@@ -245,6 +246,31 @@ test("normal users cannot approve their own reservation", async () => {
     () => approveReservation({ reservationId: pending.id, managerId: userId }),
     ReservationTransitionError,
   );
+});
+
+test("manager cancellation removes approved reservation from capacity", async () => {
+  const startAt = nextWorkingDateAtHour(9);
+  const endAt = addHours(startAt, 1);
+  const approved = await createReservation({
+    startAt,
+    endAt,
+    status: ReservationStatus.APPROVED,
+  });
+
+  await cancelReservationByManager({
+    reservationId: approved.id,
+    managerId,
+  });
+
+  const usage = await getSlotUsage({ resourcePoolId: poolId, startAt, endAt });
+  const cancelled = await db.reservation.findUniqueOrThrow({
+    where: { id: approved.id },
+    select: { cancelledById: true, status: true },
+  });
+
+  assert.equal(cancelled.status, ReservationStatus.CANCELLED_BY_ADMIN);
+  assert.equal(cancelled.cancelledById, managerId);
+  assert.equal(usage[0].approvedCount, 0);
 });
 
 test("admin cannot reduce capacity below future approved usage", async () => {

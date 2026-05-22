@@ -11,6 +11,7 @@ import {
 } from "@/lib/jalali-date";
 import {
   approveReservation,
+  cancelReservationByManager,
   proposeAlternative,
   rejectReservation,
   ReservationTransitionError,
@@ -151,4 +152,32 @@ export async function proposeAlternativeAction(
   }
 
   redirectToQueue({ date: parsed.data.date, alternative: "1" });
+}
+
+export async function cancelReservationByManagerAction(
+  formData: FormData,
+): Promise<void> {
+  const user = await requireCurrentUser();
+  const parsed = reservationIdSchema.safeParse({
+    reservationId: formData.get("reservationId"),
+    date: formData.get("date") || undefined,
+  });
+
+  if (!parsed.success) {
+    redirectToQueue({ error: "Choose a valid reservation to cancel." });
+  }
+
+  try {
+    await cancelReservationByManager({
+      reservationId: parsed.data.reservationId,
+      managerId: user.id,
+    });
+  } catch (error) {
+    redirectToQueue({
+      date: parsed.data.date,
+      error: getActionErrorMessage(error),
+    });
+  }
+
+  redirectToQueue({ date: parsed.data.date, cancelled: "1" });
 }
