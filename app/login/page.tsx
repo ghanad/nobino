@@ -17,7 +17,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   ]);
 
   if (currentUser) {
-    redirect("/dashboard");
+    redirect("/reservations");
   }
 
   const hasInvalidLogin = params.error === "invalid";

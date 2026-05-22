@@ -3,7 +3,6 @@ import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE_NAME } from "@/lib/session";
 
 const PROTECTED_PREFIXES = [
-  "/dashboard",
   "/reservations",
   "/notifications",
   "/manager",
@@ -30,7 +29,6 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/dashboard/:path*",
     "/reservations/:path*",
     "/notifications/:path*",
     "/manager/:path*",

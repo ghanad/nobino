@@ -37,9 +37,6 @@ export async function AppShell({ user, title, children }: AppShellProps) {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="ghost" asChild>
-              <Link href="/dashboard">Dashboard</Link>
-            </Button>
-            <Button variant="ghost" asChild>
               <Link href="/reservations">Reservations</Link>
             </Button>
             <Button variant="ghost" asChild>

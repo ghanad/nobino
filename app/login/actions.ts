@@ -39,7 +39,7 @@ export async function loginAction(formData: FormData): Promise<void> {
   }
 
   await createSession(user.id);
-  redirect("/dashboard");
+  redirect("/reservations");
 }
 
 export async function logoutAction(): Promise<void> {

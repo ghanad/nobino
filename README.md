@@ -97,7 +97,6 @@ Phase 12 is complete: seeded users can sign in, create hourly reservation reques
 ## Auth Routes
 
 - `/login` accepts seeded user credentials.
-- `/dashboard` is available to all authenticated active users.
 - `/reservations` allows authenticated users to create pending reservation
   requests and review their recent requests.
 - `/notifications` allows authenticated users to review unread notification

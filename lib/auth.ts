@@ -154,7 +154,7 @@ export async function requireRole(allowedRoles: UserRole[]): Promise<CurrentUser
   const user = await requireCurrentUser();
 
   if (!allowedRoles.includes(user.role)) {
-    redirect("/dashboard");
+    redirect("/reservations");
   }
 
   return user;
