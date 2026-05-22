@@ -17,6 +17,7 @@ type RequestableSlot = {
   slotStartHour: number;
   slotEndHour: number;
   isRequestable: boolean;
+  myReservationId: string | null;
   myReservationStatus: "APPROVED" | "PENDING" | null;
   unavailableReason: "full" | "past" | null;
 };
@@ -51,8 +52,21 @@ type Selection = {
 type CellState = {
   isRequestable: boolean;
   isWorkingHour: boolean;
+  myReservationId: string | null;
   myReservationStatus: "APPROVED" | "PENDING" | null;
   unavailableReason: "full" | "past" | null;
+};
+
+type MyReservationBlock = {
+  id: string;
+  status: "APPROVED" | "PENDING";
+  startHour: number;
+  endHour: number;
+};
+
+type FullCapacityBlock = {
+  endHour: number;
+  startHour: number;
 };
 
 function formatHour(hour: number): string {
@@ -94,6 +108,7 @@ function getCellState(day: WeekDay, hour: number): CellState {
     return {
       isRequestable: false,
       isWorkingHour: false,
+      myReservationId: null,
       myReservationStatus: null,
       unavailableReason: null,
     };
@@ -102,6 +117,7 @@ function getCellState(day: WeekDay, hour: number): CellState {
   return {
     isRequestable: slot.isRequestable,
     isWorkingHour: true,
+    myReservationId: slot.myReservationId,
     myReservationStatus: slot.myReservationStatus,
     unavailableReason: slot.unavailableReason,
   };
@@ -117,6 +133,97 @@ function getMyReservationLabel(status: CellState["myReservationStatus"]): string
   }
 
   return "";
+}
+
+function getUnavailableLabel(
+  reason: CellState["unavailableReason"],
+): string {
+  if (reason === "full") {
+    return "No system available";
+  }
+
+  if (reason === "past") {
+    return "Past time";
+  }
+
+  return "";
+}
+
+function getMyReservationBlocks(day: WeekDay): MyReservationBlock[] {
+  const blocksById = new Map<string, MyReservationBlock>();
+
+  for (const slot of day.slots) {
+    if (!slot.myReservationId || !slot.myReservationStatus) {
+      continue;
+    }
+
+    const current = blocksById.get(slot.myReservationId);
+
+    if (!current) {
+      blocksById.set(slot.myReservationId, {
+        id: slot.myReservationId,
+        status: slot.myReservationStatus,
+        startHour: slot.slotStartHour,
+        endHour: slot.slotEndHour,
+      });
+      continue;
+    }
+
+    current.startHour = Math.min(current.startHour, slot.slotStartHour);
+    current.endHour = Math.max(current.endHour, slot.slotEndHour);
+  }
+
+  return Array.from(blocksById.values()).sort(
+    (left, right) =>
+      left.startHour - right.startHour || left.endHour - right.endHour,
+  );
+}
+
+function getFullCapacityBlocks(day: WeekDay): FullCapacityBlock[] {
+  const blocks: FullCapacityBlock[] = [];
+
+  for (const slot of day.slots) {
+    if (slot.unavailableReason !== "full" || slot.myReservationStatus) {
+      continue;
+    }
+
+    const previous = blocks.at(-1);
+
+    if (previous && previous.endHour === slot.slotStartHour) {
+      previous.endHour = slot.slotEndHour;
+      continue;
+    }
+
+    blocks.push({
+      startHour: slot.slotStartHour,
+      endHour: slot.slotEndHour,
+    });
+  }
+
+  return blocks;
+}
+
+function MyReservationBlockView({ block }: { block: MyReservationBlock }) {
+  return (
+    <span
+      className={cn(
+        "flex h-full min-h-8 items-start justify-center rounded-md px-2 py-2 text-center text-xs font-semibold leading-4 shadow-sm ring-1",
+        block.status === "PENDING"
+          ? "bg-amber-100 text-amber-900 ring-amber-200"
+          : "bg-emerald-100 text-emerald-900 ring-emerald-200",
+      )}
+    >
+      {block.status === "PENDING" ? "My pending" : "My approved"}
+    </span>
+  );
+}
+
+function FullCapacityBlockView() {
+  return (
+    <span className="flex h-full min-h-8 items-start justify-center rounded-md bg-red-100 px-2 py-2 text-center text-xs font-semibold leading-4 text-red-800 shadow-sm ring-1 ring-red-200">
+      No system available
+    </span>
+  );
 }
 
 function selectionContainsHour(
@@ -202,6 +309,21 @@ export function CreateReservationForm({
   const [isReasonDialogOpen, setIsReasonDialogOpen] = useState(false);
   const selectionRef = useRef<Selection | null>(null);
   const hours = useMemo(() => getHourRange(weekDays), [weekDays]);
+  const firstHour = hours[0] ?? 0;
+  const myReservationBlocksByDate = useMemo(
+    () =>
+      new Map(
+        weekDays.map((day) => [day.dateParam, getMyReservationBlocks(day)]),
+      ),
+    [weekDays],
+  );
+  const fullCapacityBlocksByDate = useMemo(
+    () =>
+      new Map(
+        weekDays.map((day) => [day.dateParam, getFullCapacityBlocks(day)]),
+      ),
+    [weekDays],
+  );
   const weekKey = weekDays.map((day) => day.dateParam).join("|");
   useEffect(() => {
     selectionRef.current = null;
@@ -382,151 +504,189 @@ export function CreateReservationForm({
                   </div>
 
                   <div className="max-h-[460px] overflow-y-auto">
-                    <div className="touch-none select-none">
-                      {hours.map((hour) => (
+                    <div
+                      className="grid touch-none select-none grid-cols-[72px_repeat(7,minmax(116px,1fr))]"
+                      style={{
+                        gridTemplateRows: `repeat(${hours.length}, 3rem)`,
+                      }}
+                    >
+                      {hours.map((hour, hourIndex) => (
                         <div
-                          className="grid h-12 grid-cols-[72px_repeat(7,minmax(116px,1fr))] border-b last:border-b-0"
-                          key={hour}
+                          className="relative border-b border-r bg-background"
+                          key={`time-${hour}`}
+                          style={{ gridColumn: 1, gridRow: hourIndex + 1 }}
                         >
-                          <div className="relative border-r bg-background">
-                            <span className="absolute right-3 top-1 text-xs font-medium text-muted-foreground">
-                              {formatHour(hour)}
-                            </span>
-                          </div>
-                          {weekDays.map((day, dayIndex) => {
-                            const cell = getCellState(day, hour);
-                            const isSelected = selectionContainsHour(
-                              selection,
-                              dayIndex,
-                              hour,
-                            );
-                            const startsSelection = isSelectionStart(
-                              selection,
-                              dayIndex,
-                              hour,
-                            );
-                            const endsSelection = isSelectionEnd(
-                              selection,
-                              dayIndex,
-                              hour,
-                            );
-                            const myReservationLabel = getMyReservationLabel(
-                              cell.myReservationStatus,
-                            );
-
-                            return (
-                              <button
-                                aria-label={[
-                                  day.dateLabel,
-                                  formatHour(hour),
-                                  myReservationLabel,
-                                ]
-                                  .filter(Boolean)
-                                  .join(" ")}
-                                aria-pressed={isSelected}
-                                className={cn(
-                                  "relative border-r bg-background p-0 text-left last:border-r-0 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                                  !cell.isWorkingHour &&
-                                    "cursor-not-allowed bg-muted/30",
-                                  cell.isWorkingHour &&
-                                    cell.unavailableReason === "full" &&
-                                    "cursor-not-allowed bg-red-50/80 text-red-800",
-                                  cell.isWorkingHour &&
-                                    cell.unavailableReason === "past" &&
-                                    "cursor-not-allowed bg-muted/50 text-muted-foreground",
-                                  cell.isWorkingHour &&
-                                    cell.myReservationStatus === "PENDING" &&
-                                    "bg-amber-50/80 text-amber-900",
-                                  cell.isWorkingHour &&
-                                    cell.myReservationStatus === "APPROVED" &&
-                                    "bg-emerald-50/80 text-emerald-900",
-                                  cell.isRequestable && "hover:bg-sky-50/60",
-                                )}
-                                data-calendar-cell="true"
-                                data-day-index={dayIndex}
-                                data-hour={hour}
-                                disabled={!cell.isRequestable}
-                                key={`${day.dateParam}-${hour}`}
-                                onPointerDown={(event) =>
-                                  startSelection(
-                                    dayIndex,
-                                    hour,
-                                    event.pointerId,
-                                    event.currentTarget,
-                                  )
-                                }
-                                onPointerEnter={() => {
-                                  if (isDragging) {
-                                    updateSelection(dayIndex, hour);
-                                  }
-                                }}
-                                onPointerMove={(event) => {
-                                  if (isDragging) {
-                                    updateSelectionFromPoint(
-                                      event.clientX,
-                                      event.clientY,
-                                    );
-                                  }
-                                }}
-                                type="button"
-                              >
-                                {isSelected ? (
-                                  <span
-                                    className={cn(
-                                      "absolute inset-x-1 -top-px bottom-0 z-10 bg-sky-600/85 shadow-sm",
-                                      startsSelection && "rounded-t-md",
-                                      endsSelection && "rounded-b-md",
-                                    )}
-                                  >
-                                    {startsSelection && selection ? (
-                                      <span className="block px-2 py-1 text-xs font-medium text-white">
-                                        {formatHour(selection.startHour)} -{" "}
-                                        {formatHour(selection.endHour)}
-                                      </span>
-                                    ) : null}
-                                  </span>
-                                ) : null}
-
-                                {cell.isWorkingHour && cell.myReservationStatus ? (
-                                  <span
-                                    className={cn(
-                                      "absolute inset-x-1 top-2 z-20 rounded-sm px-1 py-1 text-center text-[11px] font-semibold leading-4 shadow-sm ring-1",
-                                      cell.myReservationStatus === "PENDING"
-                                        ? "bg-amber-100 text-amber-900 ring-amber-200"
-                                        : "bg-emerald-100 text-emerald-900 ring-emerald-200",
-                                    )}
-                                  >
-                                    {cell.myReservationStatus === "PENDING"
-                                      ? "My pending"
-                                      : "My approved"}
-                                  </span>
-                                ) : null}
-
-                                {cell.isWorkingHour &&
-                                cell.unavailableReason &&
-                                !cell.myReservationStatus ? (
-                                  <span
-                                    className={cn(
-                                      "absolute inset-x-1 top-2 z-10 rounded-sm px-1 py-1 text-center text-[11px] font-medium leading-4",
-                                      cell.unavailableReason === "full"
-                                        ? "bg-red-100 text-red-800"
-                                        : "bg-muted text-muted-foreground",
-                                    )}
-                                  >
-                                    {cell.unavailableReason === "full"
-                                      ? "No system available"
-                                      : "Past time"}
-                                  </span>
-                                ) : null}
-
-                                {!cell.isWorkingHour ? (
-                                  <span className="sr-only">Not working hour</span>
-                                ) : null}
-                              </button>
-                            );
-                          })}
+                          <span className="absolute right-3 top-1 text-xs font-medium text-muted-foreground">
+                            {formatHour(hour)}
+                          </span>
                         </div>
                       ))}
+
+                      {hours.map((hour, hourIndex) =>
+                        weekDays.map((day, dayIndex) => {
+                          const cell = getCellState(day, hour);
+                          const isSelected = selectionContainsHour(
+                            selection,
+                            dayIndex,
+                            hour,
+                          );
+                          const startsSelection = isSelectionStart(
+                            selection,
+                            dayIndex,
+                            hour,
+                          );
+                          const endsSelection = isSelectionEnd(
+                            selection,
+                            dayIndex,
+                            hour,
+                          );
+                          const myReservationLabel = getMyReservationLabel(
+                            cell.myReservationStatus,
+                          );
+                          const unavailableLabel = getUnavailableLabel(
+                            cell.myReservationStatus ? null : cell.unavailableReason,
+                          );
+
+                          return (
+                            <button
+                              aria-label={[
+                                day.dateLabel,
+                                formatHour(hour),
+                                myReservationLabel,
+                                unavailableLabel,
+                              ]
+                                .filter(Boolean)
+                                .join(" ")}
+                              aria-pressed={isSelected}
+                              className={cn(
+                                "relative border-b border-r bg-background p-0 text-left focus-visible:z-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                dayIndex === weekDays.length - 1 && "border-r-0",
+                                !cell.isWorkingHour &&
+                                  "cursor-not-allowed bg-muted/30",
+                                cell.isWorkingHour &&
+                                  cell.unavailableReason === "full" &&
+                                  "cursor-not-allowed bg-red-50/80 text-red-800",
+                                cell.isWorkingHour &&
+                                  cell.unavailableReason === "past" &&
+                                  "cursor-not-allowed bg-muted/50 text-muted-foreground",
+                                cell.isWorkingHour &&
+                                  cell.myReservationStatus === "PENDING" &&
+                                  "bg-amber-50/80 text-amber-900",
+                                cell.isWorkingHour &&
+                                  cell.myReservationStatus === "APPROVED" &&
+                                  "bg-emerald-50/80 text-emerald-900",
+                                cell.isRequestable && "hover:bg-sky-50/60",
+                              )}
+                              data-calendar-cell="true"
+                              data-day-index={dayIndex}
+                              data-hour={hour}
+                              disabled={!cell.isRequestable}
+                              key={`${day.dateParam}-${hour}`}
+                              onPointerDown={(event) =>
+                                startSelection(
+                                  dayIndex,
+                                  hour,
+                                  event.pointerId,
+                                  event.currentTarget,
+                                )
+                              }
+                              onPointerEnter={() => {
+                                if (isDragging) {
+                                  updateSelection(dayIndex, hour);
+                                }
+                              }}
+                              onPointerMove={(event) => {
+                                if (isDragging) {
+                                  updateSelectionFromPoint(
+                                    event.clientX,
+                                    event.clientY,
+                                  );
+                                }
+                              }}
+                              style={{
+                                gridColumn: dayIndex + 2,
+                                gridRow: hourIndex + 1,
+                              }}
+                              type="button"
+                            >
+                              {isSelected ? (
+                                <span
+                                  className={cn(
+                                    "absolute inset-x-1 -top-px bottom-0 z-20 bg-sky-600/85 shadow-sm",
+                                    startsSelection && "rounded-t-md",
+                                    endsSelection && "rounded-b-md",
+                                  )}
+                                >
+                                  {startsSelection && selection ? (
+                                    <span className="block px-2 py-1 text-xs font-medium text-white">
+                                      {formatHour(selection.startHour)} -{" "}
+                                      {formatHour(selection.endHour)}
+                                    </span>
+                                  ) : null}
+                                </span>
+                              ) : null}
+
+                              {cell.isWorkingHour &&
+                              cell.unavailableReason === "past" &&
+                              !cell.myReservationStatus ? (
+                                <span
+                                  className="absolute inset-x-1 top-2 z-10 rounded-sm bg-muted px-1 py-1 text-center text-[11px] font-medium leading-4 text-muted-foreground"
+                                >
+                                  Past time
+                                </span>
+                              ) : null}
+
+                              {!cell.isWorkingHour ? (
+                                <span className="sr-only">Not working hour</span>
+                              ) : null}
+                            </button>
+                          );
+                        }),
+                      )}
+
+                      {weekDays.flatMap((day, dayIndex) =>
+                        (fullCapacityBlocksByDate.get(day.dateParam) ?? []).map(
+                          (block) => {
+                            const startLine = block.startHour - firstHour + 1;
+                            const endLine = block.endHour - firstHour + 1;
+
+                            return (
+                              <div
+                                className="pointer-events-none z-10 p-1"
+                                key={`${day.dateParam}-full-${block.startHour}`}
+                                style={{
+                                  gridColumn: dayIndex + 2,
+                                  gridRow: `${startLine} / ${endLine}`,
+                                }}
+                              >
+                                <FullCapacityBlockView />
+                              </div>
+                            );
+                          },
+                        ),
+                      )}
+
+                      {weekDays.flatMap((day, dayIndex) =>
+                        (myReservationBlocksByDate.get(day.dateParam) ?? []).map(
+                          (block) => {
+                            const startLine = block.startHour - firstHour + 1;
+                            const endLine = block.endHour - firstHour + 1;
+
+                            return (
+                              <div
+                                className="pointer-events-none z-10 p-1"
+                                key={`${day.dateParam}-${block.id}`}
+                                style={{
+                                  gridColumn: dayIndex + 2,
+                                  gridRow: `${startLine} / ${endLine}`,
+                                }}
+                              >
+                                <MyReservationBlockView block={block} />
+                              </div>
+                            );
+                          },
+                        ),
+                      )}
                     </div>
                   </div>
                 </div>

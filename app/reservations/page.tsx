@@ -419,30 +419,40 @@ function buildDateAtTime(date: Date, time: string): Date {
   );
 }
 
-function getMyReservationStatusForSlot(
+function getMyReservationForSlot(
   reservations: MyReservation[],
   slotStart: Date,
   slotEnd: Date,
-): "APPROVED" | "PENDING" | null {
-  const hasApprovedReservation = reservations.some(
+): { id: string; status: "APPROVED" | "PENDING" } | null {
+  const approvedReservation = reservations.find(
     (reservation) =>
       reservation.status === ReservationStatus.APPROVED &&
       reservation.startAt < slotEnd &&
       reservation.endAt > slotStart,
   );
 
-  if (hasApprovedReservation) {
-    return "APPROVED";
+  if (approvedReservation) {
+    return {
+      id: approvedReservation.id,
+      status: "APPROVED",
+    };
   }
 
-  const hasPendingReservation = reservations.some(
+  const pendingReservation = reservations.find(
     (reservation) =>
       reservation.status === ReservationStatus.PENDING &&
       reservation.startAt < slotEnd &&
       reservation.endAt > slotStart,
   );
 
-  return hasPendingReservation ? "PENDING" : null;
+  if (pendingReservation) {
+    return {
+      id: pendingReservation.id,
+      status: "PENDING",
+    };
+  }
+
+  return null;
 }
 
 export default async function ReservationsPage({
@@ -571,15 +581,18 @@ export default async function ReservationsPage({
                   ? "full"
                   : null;
 
+              const myReservation = getMyReservationForSlot(
+                selectedPoolReservations,
+                slot.slotStart,
+                slot.slotEnd,
+              );
+
               return {
                 slotStartHour: slot.slotStart.getHours(),
                 slotEndHour: slot.slotEnd.getHours(),
                 isRequestable: !isPast && !isFull,
-                myReservationStatus: getMyReservationStatusForSlot(
-                  selectedPoolReservations,
-                  slot.slotStart,
-                  slot.slotEnd,
-                ),
+                myReservationId: myReservation?.id ?? null,
+                myReservationStatus: myReservation?.status ?? null,
                 unavailableReason,
               };
             }),
