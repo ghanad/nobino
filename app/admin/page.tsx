@@ -1,5 +1,13 @@
 import Link from "next/link";
-import { ClipboardList, KeyRound, Save, Trash2, UserPlus } from "lucide-react";
+import {
+  CalendarDays,
+  Database,
+  KeyRound,
+  Save,
+  Trash2,
+  UserPlus,
+  Users,
+} from "lucide-react";
 import { UserRole } from "@prisma/client";
 import type { ReactNode } from "react";
 
@@ -27,6 +35,7 @@ import {
 
 type AdminPageProps = {
   searchParams?: Promise<{
+    tab?: string;
     error?: string;
     capacityExceptionCreated?: string;
     capacityExceptionDeleted?: string;
@@ -42,6 +51,22 @@ type AdminPageProps = {
   }>;
 };
 
+const ADMIN_TABS = ["users", "capacity", "schedule"] as const;
+
+type AdminTab = (typeof ADMIN_TABS)[number];
+
+const ADMIN_TAB_LABELS: Record<AdminTab, string> = {
+  users: "Users",
+  capacity: "Capacity",
+  schedule: "Schedule",
+};
+
+const ADMIN_TAB_ICONS: Record<AdminTab, typeof Users> = {
+  users: Users,
+  capacity: Database,
+  schedule: CalendarDays,
+};
+
 const DAY_LABELS: Record<number, string> = {
   0: "Sunday",
   1: "Monday",
@@ -51,6 +76,36 @@ const DAY_LABELS: Record<number, string> = {
   5: "Friday",
   6: "Saturday",
 };
+
+function getActiveAdminTab(
+  params: Awaited<AdminPageProps["searchParams"]>,
+): AdminTab {
+  if (params?.tab && ADMIN_TABS.includes(params.tab as AdminTab)) {
+    return params.tab as AdminTab;
+  }
+
+  if (params?.poolUpdated || params?.capacityExceptionCreated) {
+    return "capacity";
+  }
+
+  if (
+    params?.capacityExceptionUpdated ||
+    params?.capacityExceptionDeleted ||
+    params?.scheduleUpdated ||
+    params?.exceptionCreated ||
+    params?.exceptionUpdated ||
+    params?.exceptionDeleted
+  ) {
+    return params?.scheduleUpdated ||
+      params?.exceptionCreated ||
+      params?.exceptionUpdated ||
+      params?.exceptionDeleted
+      ? "schedule"
+      : "capacity";
+  }
+
+  return "users";
+}
 
 function getAdminToast(params: Awaited<AdminPageProps["searchParams"]>) {
   if (params?.error) {
@@ -95,6 +150,36 @@ function getAdminToast(params: Awaited<AdminPageProps["searchParams"]>) {
     message: successMessage,
     variant: "success" as const,
   };
+}
+
+function AdminTabs({ activeTab }: { activeTab: AdminTab }) {
+  return (
+    <nav
+      aria-label="Admin sections"
+      className="grid gap-2 rounded-lg border bg-card p-2 text-card-foreground sm:grid-cols-3"
+    >
+      {ADMIN_TABS.map((tab) => {
+        const Icon = ADMIN_TAB_ICONS[tab];
+        const isActive = tab === activeTab;
+
+        return (
+          <Link
+            aria-current={isActive ? "page" : undefined}
+            className={
+              isActive
+                ? "inline-flex h-10 items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground"
+                : "inline-flex h-10 items-center justify-center gap-2 rounded-md px-3 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+            }
+            href={`/admin?tab=${tab}`}
+            key={tab}
+          >
+            <Icon className="h-4 w-4" />
+            {ADMIN_TAB_LABELS[tab]}
+          </Link>
+        );
+      })}
+    </nav>
+  );
 }
 
 function FieldLabel({
@@ -781,6 +866,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const currentAdmin = await requireRole([UserRole.ADMIN]);
   const params = await searchParams;
   const toast = getAdminToast(params);
+  const activeTab = getActiveAdminTab(params);
   const [resourcePools, capacityExceptions, schedules, exceptions, users] =
     await Promise.all([
     db.resourcePool.findMany({
@@ -845,31 +931,25 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   return (
     <div className="grid gap-6">
       {toast ? <UrlToast {...toast} /> : null}
-      <section className="rounded-lg border bg-card p-5 text-card-foreground">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="font-medium">Audit log</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Inspect reservation approvals, capacity changes, schedule changes,
-              and user-management events.
-            </p>
-          </div>
-          <Button asChild variant="outline">
-            <Link href="/admin/audit">
-              <ClipboardList className="h-4 w-4" />
-              Open audit log
-            </Link>
-          </Button>
-        </div>
-      </section>
-      <UserManagement currentAdminId={currentAdmin.id} users={users} />
-      <ResourcePoolSettings resourcePools={resourcePools} />
-      <CapacityExceptions
-        capacityExceptions={capacityExceptions}
-        resourcePools={resourcePools}
-      />
-      <WeeklyScheduleSettings schedules={schedules} />
-      <ScheduleExceptions exceptions={exceptions} />
+      <AdminTabs activeTab={activeTab} />
+      {activeTab === "users" ? (
+        <UserManagement currentAdminId={currentAdmin.id} users={users} />
+      ) : null}
+      {activeTab === "capacity" ? (
+        <>
+          <ResourcePoolSettings resourcePools={resourcePools} />
+          <CapacityExceptions
+            capacityExceptions={capacityExceptions}
+            resourcePools={resourcePools}
+          />
+        </>
+      ) : null}
+      {activeTab === "schedule" ? (
+        <>
+          <WeeklyScheduleSettings schedules={schedules} />
+          <ScheduleExceptions exceptions={exceptions} />
+        </>
+      ) : null}
     </div>
   );
 }

@@ -139,7 +139,10 @@ export async function updateResourcePoolAction(
   });
 
   if (!parsed.success) {
-    redirectToAdmin({ error: "Enter a valid resource pool name and capacity." });
+    redirectToAdmin({
+      error: "Enter a valid resource pool name and capacity.",
+      tab: "capacity",
+    });
   }
 
   try {
@@ -148,10 +151,10 @@ export async function updateResourcePoolAction(
       ...parsed.data,
     });
   } catch (error) {
-    redirectToAdmin({ error: getActionErrorMessage(error) });
+    redirectToAdmin({ error: getActionErrorMessage(error), tab: "capacity" });
   }
 
-  redirectToAdmin({ poolUpdated: "1" });
+  redirectToAdmin({ poolUpdated: "1", tab: "capacity" });
 }
 
 export async function createCapacityExceptionAction(
@@ -168,13 +171,17 @@ export async function createCapacityExceptionAction(
   if (!parsed.success) {
     redirectToAdmin({
       error: "Enter a valid resource pool, Jalali date, and capacity.",
+      tab: "capacity",
     });
   }
 
   const date = parseJalaliDateParam(parsed.data.date);
 
   if (!date) {
-    redirectToAdmin({ error: "Enter a valid Jalali capacity date." });
+    redirectToAdmin({
+      error: "Enter a valid Jalali capacity date.",
+      tab: "capacity",
+    });
   }
 
   try {
@@ -186,10 +193,10 @@ export async function createCapacityExceptionAction(
       reason: parsed.data.reason,
     });
   } catch (error) {
-    redirectToAdmin({ error: getActionErrorMessage(error) });
+    redirectToAdmin({ error: getActionErrorMessage(error), tab: "capacity" });
   }
 
-  redirectToAdmin({ capacityExceptionCreated: "1" });
+  redirectToAdmin({ capacityExceptionCreated: "1", tab: "capacity" });
 }
 
 export async function updateCapacityExceptionAction(
@@ -203,7 +210,10 @@ export async function updateCapacityExceptionAction(
   });
 
   if (!parsed.success) {
-    redirectToAdmin({ error: "Enter a valid daily capacity value." });
+    redirectToAdmin({
+      error: "Enter a valid daily capacity value.",
+      tab: "capacity",
+    });
   }
 
   try {
@@ -214,10 +224,10 @@ export async function updateCapacityExceptionAction(
       reason: parsed.data.reason,
     });
   } catch (error) {
-    redirectToAdmin({ error: getActionErrorMessage(error) });
+    redirectToAdmin({ error: getActionErrorMessage(error), tab: "capacity" });
   }
 
-  redirectToAdmin({ capacityExceptionUpdated: "1" });
+  redirectToAdmin({ capacityExceptionUpdated: "1", tab: "capacity" });
 }
 
 export async function deleteCapacityExceptionAction(
@@ -229,7 +239,10 @@ export async function deleteCapacityExceptionAction(
   });
 
   if (!parsed.success) {
-    redirectToAdmin({ error: "Choose a valid capacity exception to delete." });
+    redirectToAdmin({
+      error: "Choose a valid capacity exception to delete.",
+      tab: "capacity",
+    });
   }
 
   try {
@@ -238,10 +251,10 @@ export async function deleteCapacityExceptionAction(
       exceptionId: parsed.data.capacityExceptionId,
     });
   } catch (error) {
-    redirectToAdmin({ error: getActionErrorMessage(error) });
+    redirectToAdmin({ error: getActionErrorMessage(error), tab: "capacity" });
   }
 
-  redirectToAdmin({ capacityExceptionDeleted: "1" });
+  redirectToAdmin({ capacityExceptionDeleted: "1", tab: "capacity" });
 }
 
 export async function updateWeeklyScheduleAction(
@@ -256,7 +269,10 @@ export async function updateWeeklyScheduleAction(
   });
 
   if (!parsed.success) {
-    redirectToAdmin({ error: "Enter exact-hour schedule times like 09:00." });
+    redirectToAdmin({
+      error: "Enter exact-hour schedule times like 09:00.",
+      tab: "schedule",
+    });
   }
 
   try {
@@ -265,10 +281,10 @@ export async function updateWeeklyScheduleAction(
       ...parsed.data,
     });
   } catch (error) {
-    redirectToAdmin({ error: getActionErrorMessage(error) });
+    redirectToAdmin({ error: getActionErrorMessage(error), tab: "schedule" });
   }
 
-  redirectToAdmin({ scheduleUpdated: "1" });
+  redirectToAdmin({ scheduleUpdated: "1", tab: "schedule" });
 }
 
 export async function createScheduleExceptionAction(
@@ -284,13 +300,19 @@ export async function createScheduleExceptionAction(
   });
 
   if (!parsed.success) {
-    redirectToAdmin({ error: "Enter a valid Jalali exception date and hours." });
+    redirectToAdmin({
+      error: "Enter a valid Jalali exception date and hours.",
+      tab: "schedule",
+    });
   }
 
   const date = parseJalaliDateParam(parsed.data.date);
 
   if (!date) {
-    redirectToAdmin({ error: "Enter a valid Jalali exception date." });
+    redirectToAdmin({
+      error: "Enter a valid Jalali exception date.",
+      tab: "schedule",
+    });
   }
 
   try {
@@ -303,10 +325,10 @@ export async function createScheduleExceptionAction(
       reason: parsed.data.reason,
     });
   } catch (error) {
-    redirectToAdmin({ error: getActionErrorMessage(error) });
+    redirectToAdmin({ error: getActionErrorMessage(error), tab: "schedule" });
   }
 
-  redirectToAdmin({ exceptionCreated: "1" });
+  redirectToAdmin({ exceptionCreated: "1", tab: "schedule" });
 }
 
 export async function updateScheduleExceptionAction(
@@ -322,7 +344,10 @@ export async function updateScheduleExceptionAction(
   });
 
   if (!parsed.success) {
-    redirectToAdmin({ error: "Enter valid exact-hour exception settings." });
+    redirectToAdmin({
+      error: "Enter valid exact-hour exception settings.",
+      tab: "schedule",
+    });
   }
 
   try {
@@ -331,10 +356,10 @@ export async function updateScheduleExceptionAction(
       ...parsed.data,
     });
   } catch (error) {
-    redirectToAdmin({ error: getActionErrorMessage(error) });
+    redirectToAdmin({ error: getActionErrorMessage(error), tab: "schedule" });
   }
 
-  redirectToAdmin({ exceptionUpdated: "1" });
+  redirectToAdmin({ exceptionUpdated: "1", tab: "schedule" });
 }
 
 export async function deleteScheduleExceptionAction(
@@ -346,7 +371,10 @@ export async function deleteScheduleExceptionAction(
   });
 
   if (!parsed.success) {
-    redirectToAdmin({ error: "Choose a valid schedule exception to delete." });
+    redirectToAdmin({
+      error: "Choose a valid schedule exception to delete.",
+      tab: "schedule",
+    });
   }
 
   try {
@@ -355,10 +383,10 @@ export async function deleteScheduleExceptionAction(
       exceptionId: parsed.data.exceptionId,
     });
   } catch (error) {
-    redirectToAdmin({ error: getActionErrorMessage(error) });
+    redirectToAdmin({ error: getActionErrorMessage(error), tab: "schedule" });
   }
 
-  redirectToAdmin({ exceptionDeleted: "1" });
+  redirectToAdmin({ exceptionDeleted: "1", tab: "schedule" });
 }
 
 export async function createUserAction(formData: FormData): Promise<void> {
@@ -373,6 +401,7 @@ export async function createUserAction(formData: FormData): Promise<void> {
   if (!parsed.success) {
     redirectToAdmin({
       error: "Enter a valid user name, email, role, and temporary password.",
+      tab: "users",
     });
   }
 
@@ -382,10 +411,10 @@ export async function createUserAction(formData: FormData): Promise<void> {
       ...parsed.data,
     });
   } catch (error) {
-    redirectToAdmin({ error: getActionErrorMessage(error) });
+    redirectToAdmin({ error: getActionErrorMessage(error), tab: "users" });
   }
 
-  redirectToAdmin({ userCreated: "1" });
+  redirectToAdmin({ userCreated: "1", tab: "users" });
 }
 
 export async function updateUserAction(formData: FormData): Promise<void> {
@@ -398,7 +427,7 @@ export async function updateUserAction(formData: FormData): Promise<void> {
   });
 
   if (!parsed.success) {
-    redirectToAdmin({ error: "Enter valid user details." });
+    redirectToAdmin({ error: "Enter valid user details.", tab: "users" });
   }
 
   try {
@@ -407,10 +436,10 @@ export async function updateUserAction(formData: FormData): Promise<void> {
       ...parsed.data,
     });
   } catch (error) {
-    redirectToAdmin({ error: getActionErrorMessage(error) });
+    redirectToAdmin({ error: getActionErrorMessage(error), tab: "users" });
   }
 
-  redirectToAdmin({ userUpdated: "1" });
+  redirectToAdmin({ userUpdated: "1", tab: "users" });
 }
 
 export async function resetUserPasswordAction(
@@ -423,7 +452,10 @@ export async function resetUserPasswordAction(
   });
 
   if (!parsed.success) {
-    redirectToAdmin({ error: "Temporary password must be at least 8 characters." });
+    redirectToAdmin({
+      error: "Temporary password must be at least 8 characters.",
+      tab: "users",
+    });
   }
 
   try {
@@ -432,8 +464,8 @@ export async function resetUserPasswordAction(
       ...parsed.data,
     });
   } catch (error) {
-    redirectToAdmin({ error: getActionErrorMessage(error) });
+    redirectToAdmin({ error: getActionErrorMessage(error), tab: "users" });
   }
 
-  redirectToAdmin({ passwordReset: "1" });
+  redirectToAdmin({ passwordReset: "1", tab: "users" });
 }
