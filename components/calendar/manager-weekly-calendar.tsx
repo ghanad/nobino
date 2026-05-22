@@ -307,7 +307,7 @@ export function ManagerWeeklyCalendar({
         <div className="mt-5 overflow-hidden rounded-lg border bg-background shadow-sm">
           <div className="overflow-x-auto">
             <div className="min-w-[980px]">
-              <div className="max-h-[560px] overflow-y-auto">
+              <div>
                 <div className="sticky top-0 z-20 grid grid-cols-[72px_repeat(7,minmax(124px,1fr))] border-b bg-background">
                   <div className="border-r px-3 py-3 text-xs font-medium text-muted-foreground" />
                   {weekDays.map((day) => (
