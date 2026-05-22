@@ -89,3 +89,22 @@ For docs-only changes, typecheck/build are not required.
 - Add comments only for non-obvious business rules.
 - Preserve unrelated user changes in the worktree.
 - After coding, report files changed, commands run, manual test steps, and known limitations.
+
+
+
+## RTK Usage
+
+For all noisy terminal commands and large outputs, always use RTK wrappers.
+
+Examples:
+
+* use `rtk git diff` instead of `git diff`
+* use `rtk git status`
+* use `rtk test go test ./...`
+* use `rtk grep`
+* use `rtk find`
+* use `rtk docker logs`
+* use `rtk kubectl logs`
+
+Never dump large raw terminal outputs directly into context when RTK can summarize them.
+
