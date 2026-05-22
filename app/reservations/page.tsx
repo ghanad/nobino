@@ -64,8 +64,34 @@ const JALALI_MONTH_DAY_FORMATTER = new Intl.DateTimeFormat(
   },
 );
 
+const NATURAL_JALALI_DATE_FORMATTER = new Intl.DateTimeFormat(
+  "fa-IR-u-ca-persian",
+  {
+    day: "numeric",
+    month: "long",
+    weekday: "long",
+    year: "numeric",
+  },
+);
+
 function formatDateTime(date: Date): string {
   return formatJalaliDateTime(date);
+}
+
+function formatNaturalJalaliDate(date: Date): string {
+  const parts = NATURAL_JALALI_DATE_FORMATTER.formatToParts(date);
+  const weekday = parts.find((part) => part.type === "weekday")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const year = parts.find((part) => part.type === "year")?.value;
+
+  return [weekday, day, month, year].filter(Boolean).join(" ");
+}
+
+function formatWeekLabel(startDate: Date, endDate: Date): string {
+  return `${formatNaturalJalaliDate(startDate)} تا ${formatNaturalJalaliDate(
+    endDate,
+  )}`;
 }
 
 function formatCalendarColumnLabel(date: Date): string {
@@ -446,9 +472,7 @@ export default async function ReservationsPage({
         previousWeekDateParam={formatJalaliDateParam(addDays(weekStart, -7))}
         resourcePools={resourcePools}
         weekDays={weekDays}
-        weekLabel={`${formatJalaliDate(weekDates[0])} to ${formatJalaliDate(
-          weekDates[6],
-        )}`}
+        weekLabel={formatWeekLabel(weekDates[0], weekDates[6])}
       />
 
       <section className="rounded-lg border bg-card p-5">
