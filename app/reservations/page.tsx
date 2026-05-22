@@ -1,5 +1,6 @@
 import { AlternativeStatus, ReservationStatus } from "@prisma/client";
-import { Check, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, X } from "lucide-react";
+import Link from "next/link";
 
 import {
   acceptAlternativeAction,
@@ -8,6 +9,7 @@ import {
   rejectAlternativeAction,
 } from "@/app/reservations/actions";
 import { CreateReservationForm } from "@/components/reservation/create-reservation-form";
+import { Button } from "@/components/ui/button";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { UrlToast } from "@/components/ui/url-toast";
 import { requireCurrentUser } from "@/lib/auth";
@@ -16,7 +18,6 @@ import { db } from "@/lib/db";
 import {
   formatJalaliDate,
   formatJalaliDateParam,
-  formatJalaliDateTime,
   parseJalaliDateParam,
 } from "@/lib/jalali-date";
 import { getWorkingWindowForDate } from "@/lib/schedule";
@@ -29,6 +30,7 @@ type ReservationsPageProps = {
     created?: string;
     date?: string;
     error?: string;
+    reservationPage?: string;
   }>;
 };
 
@@ -84,9 +86,13 @@ const MODAL_JALALI_DATE_FORMATTER = new Intl.DateTimeFormat(
   },
 );
 
-function formatDateTime(date: Date): string {
-  return formatJalaliDateTime(date);
-}
+const DISPLAY_TIME_FORMATTER = new Intl.DateTimeFormat("fa-IR", {
+  hour: "2-digit",
+  hour12: false,
+  minute: "2-digit",
+});
+
+const MY_RESERVATIONS_PAGE_SIZE = 6;
 
 function formatNaturalJalaliDate(date: Date): string {
   const parts = NATURAL_JALALI_DATE_FORMATTER.formatToParts(date);
@@ -114,6 +120,10 @@ function formatReservationDialogDate(date: Date): string {
   return MODAL_JALALI_DATE_FORMATTER.format(date);
 }
 
+function formatDisplayTime(date: Date): string {
+  return DISPLAY_TIME_FORMATTER.format(date);
+}
+
 function getStatusClass(status: ReservationStatus): string {
   if (status === ReservationStatus.PENDING) {
     return "bg-amber-50 text-amber-800 ring-amber-200";
@@ -128,6 +138,65 @@ function getStatusClass(status: ReservationStatus): string {
 
 function getStatusLabel(status: ReservationStatus): string {
   return status.replaceAll("_", " ");
+}
+
+function createEmptyReservationGroups(): Record<ReservationStatus, MyReservation[]> {
+  return {
+    [ReservationStatus.PENDING]: [],
+    [ReservationStatus.ALTERNATIVE_PROPOSED]: [],
+    [ReservationStatus.APPROVED]: [],
+    [ReservationStatus.REJECTED]: [],
+    [ReservationStatus.CANCELLED_BY_USER]: [],
+    [ReservationStatus.CANCELLED_BY_ADMIN]: [],
+  };
+}
+
+function getReservationPage(value: string | undefined): number {
+  const parsedPage = Number(value);
+
+  if (!Number.isInteger(parsedPage) || parsedPage < 1) {
+    return 1;
+  }
+
+  return parsedPage;
+}
+
+function getReservationsPageHref(
+  params: Awaited<ReservationsPageProps["searchParams"]>,
+  page: number,
+): string {
+  const searchParams = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(params ?? {})) {
+    if (value) {
+      searchParams.set(key, value);
+    }
+  }
+
+  if (page <= 1) {
+    searchParams.delete("reservationPage");
+  } else {
+    searchParams.set("reservationPage", String(page));
+  }
+
+  const query = searchParams.toString();
+
+  return query ? `/reservations?${query}` : "/reservations";
+}
+
+function ReservationTimeRange({
+  endAt,
+  startAt,
+}: {
+  endAt: Date;
+  startAt: Date;
+}) {
+  return (
+    <span dir="rtl">
+      {formatNaturalJalaliDate(startAt)}، {formatDisplayTime(startAt)} تا{" "}
+      {formatDisplayTime(endAt)}
+    </span>
+  );
 }
 
 function getAlternativeStatusClass(status: AlternativeStatus): string {
@@ -187,7 +256,7 @@ function AlternativeList({
   }
 
   return (
-    <div className="grid gap-2">
+    <div className="grid gap-1.5">
       <p className="text-xs font-medium uppercase text-muted-foreground">
         Alternative proposals
       </p>
@@ -199,13 +268,15 @@ function AlternativeList({
 
           return (
             <div
-              className="grid gap-3 rounded-md border bg-muted/30 p-3 sm:grid-cols-[1fr_auto]"
+              className="grid gap-2 rounded-md border bg-muted/30 p-2.5 sm:grid-cols-[1fr_auto]"
               key={alternative.id}
             >
               <div className="grid gap-1 text-sm">
                 <div className="font-medium">
-                  {formatDateTime(alternative.proposedStartAt)} to{" "}
-                  {formatDateTime(alternative.proposedEndAt)}
+                  <ReservationTimeRange
+                    endAt={alternative.proposedEndAt}
+                    startAt={alternative.proposedStartAt}
+                  />
                 </div>
                 <div>
                   <span
@@ -264,13 +335,15 @@ function ReservationCard({
   const canCancel = reservation.status === ReservationStatus.PENDING;
 
   return (
-    <article className="rounded-lg border bg-card p-5 text-card-foreground">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <article className="rounded-md border bg-card p-3 text-card-foreground">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h3 className="font-medium">{reservation.resourcePool.name}</h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {formatDateTime(reservation.startAt)} to{" "}
-            {formatDateTime(reservation.endAt)}
+          <h3 className="text-sm font-medium">{reservation.resourcePool.name}</h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            <ReservationTimeRange
+              endAt={reservation.endAt}
+              startAt={reservation.startAt}
+            />
           </p>
         </div>
         <span
@@ -282,17 +355,17 @@ function ReservationCard({
         </span>
       </div>
 
-      <div className="mt-4 grid gap-4">
-        <dl className="grid gap-3 text-sm sm:grid-cols-2">
+      <div className="mt-3 grid gap-3">
+        <dl className="grid gap-2 text-xs sm:grid-cols-2">
           <div>
             <dt className="text-muted-foreground">Reason</dt>
-            <dd className="mt-1 leading-6">
+            <dd className="mt-1 leading-5">
               {reservation.reason || "No reason provided."}
             </dd>
           </div>
           <div>
             <dt className="text-muted-foreground">Rejection reason</dt>
-            <dd className="mt-1 leading-6">
+            <dd className="mt-1 leading-5">
               {reservation.rejectionReason || "-"}
             </dd>
           </div>
@@ -303,7 +376,7 @@ function ReservationCard({
         {canCancel ? (
           <form action={cancelReservationByUserAction}>
             <input name="reservationId" type="hidden" value={reservation.id} />
-            <SubmitButton pendingLabel="Cancelling..." variant="outline">
+            <SubmitButton pendingLabel="Cancelling..." size="sm" variant="outline">
               <X className="h-4 w-4" />
               Cancel pending request
             </SubmitButton>
@@ -420,15 +493,19 @@ export default async function ReservationsPage({
       },
     }),
   ]);
-  const emptyReservationGroups: Record<ReservationStatus, MyReservation[]> = {
-    [ReservationStatus.PENDING]: [],
-    [ReservationStatus.ALTERNATIVE_PROPOSED]: [],
-    [ReservationStatus.APPROVED]: [],
-    [ReservationStatus.REJECTED]: [],
-    [ReservationStatus.CANCELLED_BY_USER]: [],
-    [ReservationStatus.CANCELLED_BY_ADMIN]: [],
-  };
-  const reservationsByStatus = reservations.reduce<
+  const totalReservationPages = Math.max(
+    1,
+    Math.ceil(reservations.length / MY_RESERVATIONS_PAGE_SIZE),
+  );
+  const currentReservationPage = Math.min(
+    getReservationPage(params?.reservationPage),
+    totalReservationPages,
+  );
+  const paginatedReservations = reservations.slice(
+    (currentReservationPage - 1) * MY_RESERVATIONS_PAGE_SIZE,
+    currentReservationPage * MY_RESERVATIONS_PAGE_SIZE,
+  );
+  const reservationsByStatus = paginatedReservations.reduce<
     Record<ReservationStatus, MyReservation[]>
   >(
     (groups, reservation) => {
@@ -436,7 +513,15 @@ export default async function ReservationsPage({
 
       return groups;
     },
-    emptyReservationGroups,
+    createEmptyReservationGroups(),
+  );
+  const firstReservationNumber =
+    reservations.length === 0
+      ? 0
+      : (currentReservationPage - 1) * MY_RESERVATIONS_PAGE_SIZE + 1;
+  const lastReservationNumber = Math.min(
+    currentReservationPage * MY_RESERVATIONS_PAGE_SIZE,
+    reservations.length,
   );
   const statusSections = [
     ReservationStatus.PENDING,
@@ -542,11 +627,60 @@ export default async function ReservationsPage({
             No reservation requests yet.
           </p>
         ) : (
-          <div className="mt-5 grid gap-6">
+          <div className="mt-5 grid gap-4">
+            <div className="flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+              <p>
+                Showing {firstReservationNumber}-{lastReservationNumber} of{" "}
+                {reservations.length}
+              </p>
+              {totalReservationPages > 1 ? (
+                <div className="flex items-center gap-2">
+                  {currentReservationPage > 1 ? (
+                    <Button asChild size="sm" variant="outline">
+                      <Link
+                        href={getReservationsPageHref(
+                          params,
+                          currentReservationPage - 1,
+                        )}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        Previous
+                      </Link>
+                    </Button>
+                  ) : (
+                    <Button disabled size="sm" variant="outline">
+                      <ChevronLeft className="h-4 w-4" />
+                      Previous
+                    </Button>
+                  )}
+                  <span>
+                    Page {currentReservationPage} of {totalReservationPages}
+                  </span>
+                  {currentReservationPage < totalReservationPages ? (
+                    <Button asChild size="sm" variant="outline">
+                      <Link
+                        href={getReservationsPageHref(
+                          params,
+                          currentReservationPage + 1,
+                        )}
+                      >
+                        Next
+                        <ChevronRight className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                  ) : (
+                    <Button disabled size="sm" variant="outline">
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ) : null}
+            </div>
             {statusSections
               .filter((status) => reservationsByStatus[status].length > 0)
               .map((status) => (
-                <section className="grid gap-3" key={status}>
+                <section className="grid gap-2" key={status}>
                   <h3 className="text-sm font-medium text-muted-foreground">
                     {getStatusLabel(status)}
                   </h3>
