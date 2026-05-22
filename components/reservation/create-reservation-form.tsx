@@ -175,18 +175,6 @@ export function CreateReservationForm({
   const [isDragging, setIsDragging] = useState(false);
   const hours = useMemo(() => getHourRange(weekDays), [weekDays]);
   const weekKey = weekDays.map((day) => day.dateParam).join("|");
-  const selectedLabel = useMemo(() => {
-    if (!selection) {
-      return "No time selected";
-    }
-
-    const selectedDay = weekDays[selection.dayIndex];
-
-    return `${selectedDay.dateLabel}, ${formatHour(selection.startHour)}-${formatHour(
-      selection.endHour,
-    )}`;
-  }, [selection, weekDays]);
-
   useEffect(() => {
     setSelection(null);
     setIsDragging(false);
@@ -303,12 +291,6 @@ export function CreateReservationForm({
         <input name="endHour" type="hidden" value={selection?.endHour ?? ""} />
 
         <div className="grid gap-3">
-          <div className="flex justify-end">
-            <p className="rounded-md bg-muted px-3 py-2 text-sm font-medium">
-              {selectedLabel}
-            </p>
-          </div>
-
           {hours.length === 0 || !defaultPool ? (
             <p className="rounded-md border bg-muted/40 p-4 text-sm text-muted-foreground">
               {defaultPool ? emptyMessage : "No active resource pool is configured."}
