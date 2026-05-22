@@ -62,13 +62,13 @@ const deleteExceptionSchema = z.object({
 const createCapacityExceptionSchema = z.object({
   resourcePoolId: z.string().min(1),
   date: z.string().refine(isValidJalaliDateParam),
-  capacity: z.coerce.number().int().min(1).max(50),
+  capacity: z.coerce.number().int().min(0).max(50),
   reason: z.string().trim().max(200).optional(),
 });
 
 const updateCapacityExceptionSchema = z.object({
   capacityExceptionId: z.string().min(1),
-  capacity: z.coerce.number().int().min(1).max(50),
+  capacity: z.coerce.number().int().min(0).max(50),
   reason: z.string().trim().max(200).optional(),
 });
 

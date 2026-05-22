@@ -320,6 +320,36 @@ test("daily capacity exceptions override default capacity", async () => {
   assert.equal(usage[0].capacity, 1);
 });
 
+test("daily capacity exceptions can close capacity for a day", async () => {
+  await db.resourcePool.update({
+    where: { id: poolId },
+    data: { capacity: 2 },
+  });
+  const startAt = nextWorkingDateAtHour(9);
+  const endAt = addHours(startAt, 1);
+
+  await createCapacityException({
+    adminId,
+    resourcePoolId: poolId,
+    date: startAt,
+    capacity: 0,
+    reason: "Systems are unavailable.",
+  });
+
+  const usage = await getSlotUsage({ resourcePoolId: poolId, startAt, endAt });
+  const pending = await createReservation({
+    startAt,
+    endAt,
+    status: ReservationStatus.PENDING,
+  });
+
+  assert.equal(usage[0].capacity, 0);
+  await assert.rejects(
+    () => approveReservation({ reservationId: pending.id, managerId }),
+    CapacityUnavailableError,
+  );
+});
+
 test("admin cannot set daily capacity below approved usage for that day", async () => {
   await db.resourcePool.update({
     where: { id: poolId },

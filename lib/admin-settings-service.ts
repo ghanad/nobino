@@ -295,8 +295,8 @@ export async function createCapacityException(input: {
   capacity: number;
   reason?: string | null;
 }) {
-  if (input.capacity < 1 || input.capacity > 50) {
-    throw new AdminSettingsError("Capacity must be between 1 and 50.");
+  if (input.capacity < 0 || input.capacity > 50) {
+    throw new AdminSettingsError("Daily capacity must be between 0 and 50.");
   }
 
   const exceptionDate = startOfLocalDay(input.date);
@@ -379,8 +379,8 @@ export async function updateCapacityException(input: {
   capacity: number;
   reason?: string | null;
 }) {
-  if (input.capacity < 1 || input.capacity > 50) {
-    throw new AdminSettingsError("Capacity must be between 1 and 50.");
+  if (input.capacity < 0 || input.capacity > 50) {
+    throw new AdminSettingsError("Daily capacity must be between 0 and 50.");
   }
 
   return db.$transaction(async (tx) => {

@@ -526,7 +526,7 @@ function CapacityExceptions({
             id="capacity-exception-capacity"
             inputMode="numeric"
             max={50}
-            min={1}
+            min={0}
             name="capacity"
             required
             type="number"
@@ -579,7 +579,7 @@ function CapacityExceptions({
                   id={`capacity-exception-value-${exception.id}`}
                   inputMode="numeric"
                   max={50}
-                  min={1}
+                  min={0}
                   name="capacity"
                   required
                   type="number"
