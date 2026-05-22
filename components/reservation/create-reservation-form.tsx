@@ -326,18 +326,6 @@ export function CreateReservationForm({
                     ))}
                   </div>
 
-                  <div className="grid grid-cols-[72px_repeat(7,minmax(116px,1fr))] border-b bg-muted/20">
-                    <div className="border-r px-3 py-2 text-xs text-muted-foreground">
-                      all-day
-                    </div>
-                    {weekDays.map((day) => (
-                      <div
-                        className="min-h-10 border-r last:border-r-0"
-                        key={`${day.dateParam}-all-day`}
-                      />
-                    ))}
-                  </div>
-
                   <div className="max-h-[460px] overflow-y-auto">
                     <div className="touch-none select-none">
                       {hours.map((hour) => (
