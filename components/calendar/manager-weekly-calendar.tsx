@@ -183,13 +183,18 @@ function ReservationBlock({
   block: PositionedReservationBlock;
 }) {
   const { detail } = block;
-  const className = `pointer-events-auto flex h-full min-w-0 items-start justify-between gap-2 rounded-md px-2 py-2 text-xs font-medium leading-5 shadow-sm ring-1 ${getDetailClass(
+  const className = `pointer-events-auto flex h-full min-w-0 flex-col items-center justify-between gap-2 rounded-md px-1.5 py-2 text-xs font-medium leading-5 shadow-sm ring-1 ${getDetailClass(
     detail.status,
   )}`;
   const content = (
     <>
-      <span className="min-w-0 truncate">{detail.userName}</span>
-      <span className="shrink-0 text-[10px] uppercase opacity-75">
+      <span
+        className="min-h-0 max-h-full overflow-hidden text-center leading-4 [text-orientation:mixed] [writing-mode:vertical-rl]"
+        title={detail.userName}
+      >
+        {detail.userName}
+      </span>
+      <span className="shrink-0 text-[9px] uppercase leading-3 opacity-75">
         {getDetailActionLabel(detail.status)}
       </span>
     </>
