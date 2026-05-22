@@ -17,6 +17,7 @@ import {
   createScheduleExceptionAction,
   deleteCapacityExceptionAction,
   deleteScheduleExceptionAction,
+  importIranHolidaysAction,
   updateCapacityExceptionAction,
   resetUserPasswordAction,
   updateResourcePoolAction,
@@ -31,6 +32,7 @@ import { db } from "@/lib/db";
 import {
   JALALI_DATE_INPUT_PLACEHOLDER,
   formatJalaliDate,
+  formatJalaliDateParam,
 } from "@/lib/jalali-date";
 
 type AdminPageProps = {
@@ -43,6 +45,7 @@ type AdminPageProps = {
     exceptionCreated?: string;
     exceptionDeleted?: string;
     exceptionUpdated?: string;
+    holidayImported?: string;
     passwordReset?: string;
     poolUpdated?: string;
     scheduleUpdated?: string;
@@ -94,12 +97,14 @@ function getActiveAdminTab(
     params?.scheduleUpdated ||
     params?.exceptionCreated ||
     params?.exceptionUpdated ||
-    params?.exceptionDeleted
+    params?.exceptionDeleted ||
+    params?.holidayImported
   ) {
     return params?.scheduleUpdated ||
       params?.exceptionCreated ||
       params?.exceptionUpdated ||
-      params?.exceptionDeleted
+      params?.exceptionDeleted ||
+      params?.holidayImported
       ? "schedule"
       : "capacity";
   }
@@ -125,6 +130,8 @@ function getAdminToast(params: Awaited<AdminPageProps["searchParams"]>) {
     (params?.exceptionCreated && "Schedule exception created.") ||
     (params?.exceptionUpdated && "Schedule exception updated.") ||
     (params?.exceptionDeleted && "Schedule exception deleted.") ||
+    (params?.holidayImported &&
+      `${params.holidayImported} Iran holiday schedule exceptions imported.`) ||
     (params?.userCreated && "User created.") ||
     (params?.userUpdated && "User updated.") ||
     (params?.passwordReset && "Temporary password set.");
@@ -143,6 +150,7 @@ function getAdminToast(params: Awaited<AdminPageProps["searchParams"]>) {
       "exceptionCreated",
       "exceptionUpdated",
       "exceptionDeleted",
+      "holidayImported",
       "userCreated",
       "userUpdated",
       "passwordReset",
@@ -701,8 +709,10 @@ function WeeklyScheduleSettings({
 }
 
 function ScheduleExceptions({
+  currentJalaliYear,
   exceptions,
 }: {
+  currentJalaliYear: string;
   exceptions: Array<{
     id: string;
     date: Date;
@@ -720,6 +730,28 @@ function ScheduleExceptions({
           Exceptions override the weekly schedule for one Jalali date.
         </p>
       </div>
+
+      <form
+        action={importIranHolidaysAction}
+        className="mt-5 grid gap-3 rounded-md border bg-muted/20 p-4 sm:grid-cols-[160px_auto] sm:items-end"
+      >
+        <div className="grid gap-2">
+          <FieldLabel htmlFor="iran-holiday-year">Jalali year</FieldLabel>
+          <TextInput
+            defaultValue={currentJalaliYear}
+            id="iran-holiday-year"
+            inputMode="numeric"
+            max="1600"
+            min="1300"
+            name="year"
+            required
+            type="number"
+          />
+        </div>
+        <div className="flex items-end">
+          <Button type="submit">Import Iran holidays</Button>
+        </div>
+      </form>
 
       <form
         action={createScheduleExceptionAction}
@@ -867,6 +899,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const params = await searchParams;
   const toast = getAdminToast(params);
   const activeTab = getActiveAdminTab(params);
+  const currentJalaliYear = formatJalaliDateParam(new Date()).split("-")[0];
   const [resourcePools, capacityExceptions, schedules, exceptions, users] =
     await Promise.all([
     db.resourcePool.findMany({
@@ -947,7 +980,10 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       {activeTab === "schedule" ? (
         <>
           <WeeklyScheduleSettings schedules={schedules} />
-          <ScheduleExceptions exceptions={exceptions} />
+          <ScheduleExceptions
+            currentJalaliYear={currentJalaliYear}
+            exceptions={exceptions}
+          />
         </>
       ) : null}
     </div>

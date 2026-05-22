@@ -3,6 +3,7 @@ import "server-only";
 import { ReservationStatus, UserRole, type Prisma } from "@prisma/client";
 
 import { db } from "@/lib/db";
+import { getIranHolidaysForJalaliYear } from "@/lib/iran-holidays";
 import { formatJalaliDateTime } from "@/lib/jalali-date";
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
@@ -679,5 +680,76 @@ export async function deleteScheduleException(input: {
         },
       },
     });
+  });
+}
+
+export async function importIranHolidayScheduleExceptions(input: {
+  adminId: string;
+  year: number;
+}) {
+  if (input.year < 1300 || input.year > 1600) {
+    throw new AdminSettingsError("Enter a valid Jalali year.");
+  }
+
+  const holidays = await getIranHolidaysForJalaliYear(input.year);
+
+  return db.$transaction(async (tx) => {
+    await assertAdmin(input.adminId, tx);
+
+    const existingExceptions = await tx.scheduleException.findMany({
+      where: {
+        date: {
+          in: holidays.map((holiday) => startOfLocalDay(holiday.date)),
+        },
+      },
+      select: { date: true },
+    });
+    const existingDates = new Set(
+      existingExceptions.map((exception) => exception.date.toISOString()),
+    );
+    let createdCount = 0;
+
+    for (const holiday of holidays) {
+      const date = startOfLocalDay(holiday.date);
+
+      if (existingDates.has(date.toISOString())) {
+        continue;
+      }
+
+      const exception = await tx.scheduleException.create({
+        data: {
+          date,
+          isWorkingDay: false,
+          startTime: null,
+          endTime: null,
+          reason: holiday.title,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorUserId: input.adminId,
+          entityType: "ScheduleException",
+          entityId: exception.id,
+          action: "SCHEDULE_EXCEPTION_CREATED",
+          newValue: {
+            date: exception.date.toISOString(),
+            importedFrom: "iran_holidays",
+            isWorkingDay: exception.isWorkingDay,
+            startTime: exception.startTime,
+            endTime: exception.endTime,
+            reason: exception.reason,
+          },
+        },
+      });
+
+      createdCount += 1;
+    }
+
+    return {
+      createdCount,
+      skippedCount: holidays.length - createdCount,
+      totalCount: holidays.length,
+    };
   });
 }

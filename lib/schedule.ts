@@ -1,9 +1,11 @@
 import { db } from "@/lib/db";
+import { getIranHolidayForDate } from "@/lib/iran-holidays";
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
 export type WorkingWindow = {
   isWorkingDay: boolean;
+  reason: string | null;
   startTime: string | null;
   endTime: string | null;
 };
@@ -107,6 +109,7 @@ export async function getWorkingWindowForDate(
     },
     select: {
       isWorkingDay: true,
+      reason: true,
       startTime: true,
       endTime: true,
     },
@@ -115,8 +118,20 @@ export async function getWorkingWindowForDate(
   if (exception) {
     return {
       isWorkingDay: exception.isWorkingDay,
+      reason: exception.reason,
       startTime: exception.startTime,
       endTime: exception.endTime,
+    };
+  }
+
+  const officialHoliday = await getIranHolidayForDate(date);
+
+  if (officialHoliday) {
+    return {
+      isWorkingDay: false,
+      reason: officialHoliday.title,
+      startTime: null,
+      endTime: null,
     };
   }
 
@@ -132,12 +147,16 @@ export async function getWorkingWindowForDate(
   if (!weeklySchedule) {
     return {
       isWorkingDay: false,
+      reason: null,
       startTime: null,
       endTime: null,
     };
   }
 
-  return weeklySchedule;
+  return {
+    ...weeklySchedule,
+    reason: null,
+  };
 }
 
 export async function validateReservationTimeRange(input: {

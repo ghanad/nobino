@@ -10,6 +10,7 @@ import {
   createScheduleException,
   deleteCapacityException,
   deleteScheduleException,
+  importIranHolidayScheduleExceptions,
   updateCapacityException,
   updateResourcePoolSettings,
   updateScheduleException,
@@ -57,6 +58,10 @@ const updateExceptionSchema = createExceptionSchema.omit({ date: true }).extend(
 
 const deleteExceptionSchema = z.object({
   exceptionId: z.string().min(1),
+});
+
+const importIranHolidaysSchema = z.object({
+  year: z.coerce.number().int().min(1300).max(1600),
 });
 
 const createCapacityExceptionSchema = z.object({
@@ -387,6 +392,40 @@ export async function deleteScheduleExceptionAction(
   }
 
   redirectToAdmin({ exceptionDeleted: "1", tab: "schedule" });
+}
+
+export async function importIranHolidaysAction(
+  formData: FormData,
+): Promise<void> {
+  const admin = await requireRole([UserRole.ADMIN]);
+  const parsed = importIranHolidaysSchema.safeParse({
+    year: formData.get("year"),
+  });
+
+  if (!parsed.success) {
+    redirectToAdmin({
+      error: "Enter a valid Jalali year.",
+      tab: "schedule",
+    });
+  }
+
+  let createdCount = 0;
+
+  try {
+    const result = await importIranHolidayScheduleExceptions({
+      adminId: admin.id,
+      year: parsed.data.year,
+    });
+
+    createdCount = result.createdCount;
+  } catch (error) {
+    redirectToAdmin({ error: getActionErrorMessage(error), tab: "schedule" });
+  }
+
+  redirectToAdmin({
+    holidayImported: String(createdCount),
+    tab: "schedule",
+  });
 }
 
 export async function createUserAction(formData: FormData): Promise<void> {

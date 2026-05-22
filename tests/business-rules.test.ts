@@ -9,6 +9,7 @@ import {
 
 import {
   createCapacityException,
+  importIranHolidayScheduleExceptions,
   updateResourcePoolSettings,
 } from "@/lib/admin-settings-service";
 import { CapacityUnavailableError, getSlotUsage } from "@/lib/capacity-service";
@@ -18,6 +19,9 @@ import {
   createReservationRequest,
   ReservationTransitionError,
 } from "@/lib/reservation-service";
+import {
+  parseJalaliDateParam,
+} from "@/lib/jalali-date";
 import {
   ReservationTimeRangeError,
   validateReservationTimeRange,
@@ -210,6 +214,77 @@ test("reservation time range cannot span multiple calendar days", async () => {
     () => validateReservationTimeRange({ startAt, endAt }),
     ReservationTimeRangeError,
   );
+});
+
+test("official Iran holidays are non-working unless overridden", async () => {
+  const holidayDate = parseJalaliDateParam("1405-03-06");
+
+  assert.ok(holidayDate);
+
+  const startAt = new Date(
+    holidayDate.getFullYear(),
+    holidayDate.getMonth(),
+    holidayDate.getDate(),
+    9,
+    0,
+    0,
+    0,
+  );
+  const endAt = addHours(startAt, 1);
+
+  await assert.rejects(
+    () => validateReservationTimeRange({ startAt, endAt }),
+    ReservationTimeRangeError,
+  );
+});
+
+test("schedule exceptions can override official Iran holidays", async () => {
+  const holidayDate = parseJalaliDateParam("1405-03-06");
+
+  assert.ok(holidayDate);
+
+  await db.scheduleException.create({
+    data: {
+      date: holidayDate,
+      isWorkingDay: true,
+      startTime: "09:00",
+      endTime: "17:00",
+      reason: "Special working day.",
+    },
+  });
+
+  const startAt = new Date(
+    holidayDate.getFullYear(),
+    holidayDate.getMonth(),
+    holidayDate.getDate(),
+    9,
+    0,
+    0,
+    0,
+  );
+  const endAt = addHours(startAt, 1);
+
+  await assert.doesNotReject(() =>
+    validateReservationTimeRange({ startAt, endAt }),
+  );
+});
+
+test("imported Iran holiday titles use official overrides", async () => {
+  const result = await importIranHolidayScheduleExceptions({
+    adminId,
+    year: 1405,
+  });
+  const holidayDate = parseJalaliDateParam("1405-03-06");
+
+  assert.ok(holidayDate);
+  assert.ok(result.createdCount > 0);
+
+  const exception = await db.scheduleException.findUnique({
+    where: { date: holidayDate },
+  });
+
+  assert.equal(exception?.isWorkingDay, false);
+  assert.match(exception?.reason ?? "", /عید سعید قربان/);
 });
 
 test("reservation time range must start and end on exact hours", async () => {

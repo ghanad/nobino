@@ -531,6 +531,9 @@ export default async function ReservationsPage({
               : [];
 
           return {
+            closedReason: !workingWindow.isWorkingDay
+              ? workingWindow.reason ?? "Non-working day"
+              : null,
             dateLabel: formatJalaliDate(date),
             modalDateLabel: formatReservationDialogDate(date),
             dateParam: formatJalaliDateParam(date),
@@ -563,6 +566,7 @@ export default async function ReservationsPage({
         }),
       )
     : weekDates.map((date) => ({
+        closedReason: null,
         dateLabel: formatJalaliDate(date),
         modalDateLabel: formatReservationDialogDate(date),
         dateParam: formatJalaliDateParam(date),

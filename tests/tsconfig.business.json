@@ -23,6 +23,7 @@
     "../lib/db.ts",
     "../lib/jalali-date.ts",
     "../lib/reservation-service.ts",
-    "../lib/schedule.ts"
+    "../lib/schedule.ts",
+    "../types/pholiday.d.ts"
   ]
 }
