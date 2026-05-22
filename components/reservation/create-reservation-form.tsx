@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -238,47 +239,64 @@ export function CreateReservationForm({
     <>
       <form id="reservation-week-navigation" method="get" />
       <form action={action} className="grid gap-5 rounded-lg border bg-card p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <h2 className="font-medium">New reservation request</h2>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              Drag on the weekly calendar to select one or more available hours.
-              Requests stay pending until a manager approves them.
-            </p>
-          </div>
+        <div className="grid gap-4">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+            <div className="max-w-3xl">
+              <h2 className="font-medium">New reservation request</h2>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                Drag on the weekly calendar to select one or more available hours.
+                Requests stay pending until a manager approves them.
+              </p>
+            </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Link
-              className="inline-flex h-9 items-center rounded-md border px-3 text-sm font-medium hover:bg-accent"
-              href={buildDateHref(previousWeekDateParam)}
-            >
-              Previous week
-            </Link>
-            <div className="flex items-center gap-2">
-              <input
-                className="h-9 w-32 rounded-md border border-input bg-background px-3 text-sm"
-                defaultValue={currentDateParam}
-                dir="ltr"
-                form="reservation-week-navigation"
-                name="date"
-                pattern="\d{4}[-/]\d{1,2}[-/]\d{1,2}"
-                placeholder={JALALI_DATE_INPUT_PLACEHOLDER}
-                title={`Enter a Jalali date like ${JALALI_DATE_INPUT_PLACEHOLDER}`}
-                type="text"
-              />
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+              <div className="relative sm:w-44">
+                <CalendarDays
+                  aria-hidden="true"
+                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                />
+                <input
+                  className="h-10 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm"
+                  defaultValue={currentDateParam}
+                  dir="ltr"
+                  form="reservation-week-navigation"
+                  name="date"
+                  pattern="\d{4}[-/]\d{1,2}[-/]\d{1,2}"
+                  placeholder={JALALI_DATE_INPUT_PLACEHOLDER}
+                  title={`Enter a Jalali date like ${JALALI_DATE_INPUT_PLACEHOLDER}`}
+                  type="text"
+                />
+              </div>
               <button
-                className="inline-flex h-9 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
                 form="reservation-week-navigation"
                 type="submit"
               >
                 View
               </button>
             </div>
+          </div>
+
+          <div className="grid gap-3 rounded-md border bg-muted/30 p-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
             <Link
-              className="inline-flex h-9 items-center rounded-md border px-3 text-sm font-medium hover:bg-accent"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-md border bg-background px-3 text-sm font-medium hover:bg-accent sm:justify-self-start"
+              href={buildDateHref(previousWeekDateParam)}
+            >
+              <ChevronLeft aria-hidden="true" className="h-4 w-4" />
+              Previous week
+            </Link>
+            <div className="order-first text-center sm:order-none">
+              <p className="text-sm font-medium">{weekLabel}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                White slots are requestable. Past and full slots are blocked.
+              </p>
+            </div>
+            <Link
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-md border bg-background px-3 text-sm font-medium hover:bg-accent sm:justify-self-end"
               href={buildDateHref(nextWeekDateParam)}
             >
               Next week
+              <ChevronRight aria-hidden="true" className="h-4 w-4" />
             </Link>
           </div>
         </div>
@@ -289,13 +307,7 @@ export function CreateReservationForm({
         <input name="endHour" type="hidden" value={selection?.endHour ?? ""} />
 
         <div className="grid gap-3">
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-sm font-medium">{weekLabel}</p>
-              <p className="text-xs text-muted-foreground">
-                White slots are requestable. Past and full slots are blocked.
-              </p>
-            </div>
+          <div className="flex justify-end">
             <p className="rounded-md bg-muted px-3 py-2 text-sm font-medium">
               {selectedLabel}
             </p>

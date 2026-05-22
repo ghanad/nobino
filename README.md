@@ -90,9 +90,9 @@ The seed script creates:
 - Resource pool `Company Systems` with capacity `5`
 - Weekly schedule using JavaScript `Date.getDay()` values: Sunday through Thursday and Saturday are `09:00-17:00`; Friday is disabled.
 
-## Phase Status
+## Current Status
 
-Phase 12 is complete: seeded users can sign in, create hourly reservation requests, see their own reservations grouped by status, cancel pending requests, and accept or reject manager-proposed alternatives. Managers can approve, reject, and propose alternatives from `/manager`. Admins can manage resource pool capacity and active state, Jalali date-specific capacity exceptions, weekly working schedule rows, Jalali date-specific schedule exceptions, users from `/admin`, and audit history from `/admin/audit`. Users and managers can review unread in-app notifications from `/notifications` and mark notifications as read. Capacity reductions are blocked when future approved reservations would exceed the new effective capacity. Core service rules are covered by automated tests.
+The first operational version is implemented. Seeded users can sign in, create hourly reservation requests, see their own reservations grouped by status, cancel pending requests, and accept or reject manager-proposed alternatives. Managers can approve, reject, and propose alternatives from `/manager`. Admins can manage resource pool capacity and active state, Jalali date-specific capacity exceptions, weekly working schedule rows, Jalali date-specific schedule exceptions, users from `/admin`, and audit history from `/admin/audit`. Users and managers can review unread in-app notifications from `/notifications` and mark notifications as read. Capacity reductions are blocked when future approved reservations would exceed the new effective capacity. Core service rules are covered by automated tests.
 
 ## Auth Routes
 
