@@ -36,6 +36,7 @@ type MyReservation = {
   id: string;
   startAt: Date;
   endAt: Date;
+  resourcePoolId: string;
   status: ReservationStatus;
   reason: string | null;
   rejectionReason: string | null;
@@ -345,6 +346,32 @@ function buildDateAtTime(date: Date, time: string): Date {
   );
 }
 
+function getMyReservationStatusForSlot(
+  reservations: MyReservation[],
+  slotStart: Date,
+  slotEnd: Date,
+): "APPROVED" | "PENDING" | null {
+  const hasApprovedReservation = reservations.some(
+    (reservation) =>
+      reservation.status === ReservationStatus.APPROVED &&
+      reservation.startAt < slotEnd &&
+      reservation.endAt > slotStart,
+  );
+
+  if (hasApprovedReservation) {
+    return "APPROVED";
+  }
+
+  const hasPendingReservation = reservations.some(
+    (reservation) =>
+      reservation.status === ReservationStatus.PENDING &&
+      reservation.startAt < slotEnd &&
+      reservation.endAt > slotStart,
+  );
+
+  return hasPendingReservation ? "PENDING" : null;
+}
+
 export default async function ReservationsPage({
   searchParams,
 }: ReservationsPageProps) {
@@ -370,6 +397,7 @@ export default async function ReservationsPage({
         id: true,
         startAt: true,
         endAt: true,
+        resourcePoolId: true,
         status: true,
         reason: true,
         rejectionReason: true,
@@ -419,6 +447,11 @@ export default async function ReservationsPage({
     ReservationStatus.CANCELLED_BY_ADMIN,
   ];
   const selectedResourcePool = resourcePools[0];
+  const selectedPoolReservations = selectedResourcePool
+    ? reservations.filter(
+        (reservation) => reservation.resourcePoolId === selectedResourcePool.id,
+      )
+    : [];
   const now = new Date();
   const weekStart = getWeekStart(selectedDate);
   const weekDates = Array.from({ length: 7 }, (_, index) =>
@@ -457,6 +490,11 @@ export default async function ReservationsPage({
                 slotStartHour: slot.slotStart.getHours(),
                 slotEndHour: slot.slotEnd.getHours(),
                 isRequestable: !isPast && !isFull,
+                myReservationStatus: getMyReservationStatusForSlot(
+                  selectedPoolReservations,
+                  slot.slotStart,
+                  slot.slotEnd,
+                ),
                 unavailableReason,
               };
             }),

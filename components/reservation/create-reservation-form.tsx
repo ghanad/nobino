@@ -17,6 +17,7 @@ type RequestableSlot = {
   slotStartHour: number;
   slotEndHour: number;
   isRequestable: boolean;
+  myReservationStatus: "APPROVED" | "PENDING" | null;
   unavailableReason: "full" | "past" | null;
 };
 
@@ -50,6 +51,7 @@ type Selection = {
 type CellState = {
   isRequestable: boolean;
   isWorkingHour: boolean;
+  myReservationStatus: "APPROVED" | "PENDING" | null;
   unavailableReason: "full" | "past" | null;
 };
 
@@ -92,6 +94,7 @@ function getCellState(day: WeekDay, hour: number): CellState {
     return {
       isRequestable: false,
       isWorkingHour: false,
+      myReservationStatus: null,
       unavailableReason: null,
     };
   }
@@ -99,8 +102,21 @@ function getCellState(day: WeekDay, hour: number): CellState {
   return {
     isRequestable: slot.isRequestable,
     isWorkingHour: true,
+    myReservationStatus: slot.myReservationStatus,
     unavailableReason: slot.unavailableReason,
   };
+}
+
+function getMyReservationLabel(status: CellState["myReservationStatus"]): string {
+  if (status === "PENDING") {
+    return "Your request is pending";
+  }
+
+  if (status === "APPROVED") {
+    return "Your approved reservation";
+  }
+
+  return "";
 }
 
 function selectionContainsHour(
@@ -320,7 +336,8 @@ export function CreateReservationForm({
             <div className="order-first text-center sm:order-none">
               <p className="text-sm font-medium">{weekLabel}</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                White slots are requestable. Past and full slots are blocked.
+                White slots are requestable. Amber marks your pending requests;
+                green marks your approved reservations.
               </p>
             </div>
             <Link
@@ -393,10 +410,19 @@ export function CreateReservationForm({
                               dayIndex,
                               hour,
                             );
+                            const myReservationLabel = getMyReservationLabel(
+                              cell.myReservationStatus,
+                            );
 
                             return (
                               <button
-                                aria-label={`${day.dateLabel} ${formatHour(hour)}`}
+                                aria-label={[
+                                  day.dateLabel,
+                                  formatHour(hour),
+                                  myReservationLabel,
+                                ]
+                                  .filter(Boolean)
+                                  .join(" ")}
                                 aria-pressed={isSelected}
                                 className={cn(
                                   "relative border-r bg-background p-0 text-left last:border-r-0 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -408,6 +434,12 @@ export function CreateReservationForm({
                                   cell.isWorkingHour &&
                                     cell.unavailableReason === "past" &&
                                     "cursor-not-allowed bg-muted/50 text-muted-foreground",
+                                  cell.isWorkingHour &&
+                                    cell.myReservationStatus === "PENDING" &&
+                                    "bg-amber-50/80 text-amber-900",
+                                  cell.isWorkingHour &&
+                                    cell.myReservationStatus === "APPROVED" &&
+                                    "bg-emerald-50/80 text-emerald-900",
                                   cell.isRequestable && "hover:bg-sky-50/60",
                                 )}
                                 data-calendar-cell="true"
@@ -455,7 +487,24 @@ export function CreateReservationForm({
                                   </span>
                                 ) : null}
 
-                                {cell.isWorkingHour && cell.unavailableReason ? (
+                                {cell.isWorkingHour && cell.myReservationStatus ? (
+                                  <span
+                                    className={cn(
+                                      "absolute inset-x-1 top-2 z-20 rounded-sm px-1 py-1 text-center text-[11px] font-semibold leading-4 shadow-sm ring-1",
+                                      cell.myReservationStatus === "PENDING"
+                                        ? "bg-amber-100 text-amber-900 ring-amber-200"
+                                        : "bg-emerald-100 text-emerald-900 ring-emerald-200",
+                                    )}
+                                  >
+                                    {cell.myReservationStatus === "PENDING"
+                                      ? "My pending"
+                                      : "My approved"}
+                                  </span>
+                                ) : null}
+
+                                {cell.isWorkingHour &&
+                                cell.unavailableReason &&
+                                !cell.myReservationStatus ? (
                                   <span
                                     className={cn(
                                       "absolute inset-x-1 top-2 z-10 rounded-sm px-1 py-1 text-center text-[11px] font-medium leading-4",
