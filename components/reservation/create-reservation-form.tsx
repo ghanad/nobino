@@ -243,10 +243,6 @@ export function CreateReservationForm({
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
             <div className="max-w-3xl">
               <h2 className="font-medium">New reservation request</h2>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                Drag on the weekly calendar to select one or more available hours.
-                Requests stay pending until a manager approves them.
-              </p>
             </div>
 
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
