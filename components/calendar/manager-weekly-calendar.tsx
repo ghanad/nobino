@@ -22,6 +22,7 @@ type ManagerWeekSlot = {
 };
 
 type ManagerWeekDay = {
+  closedReason: string | null;
   dateLabel: string;
   dateParam: string;
   shortLabel: string;
@@ -314,7 +315,12 @@ export function ManagerWeeklyCalendar({
                     key={day.dateParam}
                     title={day.dateLabel}
                   >
-                    {day.shortLabel}
+                    <span>{day.shortLabel}</span>
+                    {day.closedReason ? (
+                      <span className="mt-1 block text-[11px] font-medium leading-4 text-red-700">
+                        {day.closedReason}
+                      </span>
+                    ) : null}
                   </div>
                 ))}
               </div>

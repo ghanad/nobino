@@ -531,6 +531,9 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
               : [];
 
           return {
+            closedReason: !workingWindow.isWorkingDay
+              ? workingWindow.reason ?? "Non-working day"
+              : null,
             dateLabel: formatNaturalJalaliDate(date),
             dateParam: formatJalaliDateParam(date),
             shortLabel: formatCalendarColumnLabel(date),
@@ -565,6 +568,7 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
         }),
       )
     : weekDates.map((date) => ({
+        closedReason: null,
         dateLabel: formatNaturalJalaliDate(date),
         dateParam: formatJalaliDateParam(date),
         shortLabel: formatCalendarColumnLabel(date),
