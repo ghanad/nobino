@@ -307,25 +307,25 @@ export function ManagerWeeklyCalendar({
         <div className="mt-5 overflow-hidden rounded-lg border bg-background shadow-sm">
           <div className="overflow-x-auto">
             <div className="min-w-[980px]">
-              <div className="grid grid-cols-[72px_repeat(7,minmax(124px,1fr))] border-b bg-background">
-                <div className="border-r px-3 py-3 text-xs font-medium text-muted-foreground" />
-                {weekDays.map((day) => (
-                  <div
-                    className="border-r px-3 py-3 text-center text-sm font-semibold last:border-r-0"
-                    key={day.dateParam}
-                    title={day.dateLabel}
-                  >
-                    <span>{day.shortLabel}</span>
-                    {day.closedReason ? (
-                      <span className="mt-1 block text-[11px] font-medium leading-4 text-red-700">
-                        {day.closedReason}
-                      </span>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-
               <div className="max-h-[560px] overflow-y-auto">
+                <div className="sticky top-0 z-20 grid grid-cols-[72px_repeat(7,minmax(124px,1fr))] border-b bg-background">
+                  <div className="border-r px-3 py-3 text-xs font-medium text-muted-foreground" />
+                  {weekDays.map((day) => (
+                    <div
+                      className="border-r px-3 py-3 text-center text-sm font-semibold last:border-r-0"
+                      key={day.dateParam}
+                      title={day.dateLabel}
+                    >
+                      <span>{day.shortLabel}</span>
+                      {day.closedReason ? (
+                        <span className="mt-1 block text-[11px] font-medium leading-4 text-red-700">
+                          {day.closedReason}
+                        </span>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+
                 <div
                   className="grid grid-cols-[72px_repeat(7,minmax(124px,1fr))]"
                   style={{
