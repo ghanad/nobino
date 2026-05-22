@@ -14,6 +14,7 @@ import { getSlotUsage } from "@/lib/capacity-service";
 import { db } from "@/lib/db";
 import {
   JALALI_DATE_INPUT_PLACEHOLDER,
+  formatJalaliDate,
   formatJalaliDateParam,
   formatJalaliDateTime,
   formatLocalTime,
@@ -59,28 +60,6 @@ type QueueItem = {
     capacity: number;
   }>;
 };
-
-const JALALI_WEEKDAY_FORMATTER = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
-  weekday: "long",
-});
-
-const JALALI_MONTH_DAY_FORMATTER = new Intl.DateTimeFormat(
-  "fa-IR-u-ca-persian-nu-latn",
-  {
-    day: "numeric",
-    month: "numeric",
-  },
-);
-
-const NATURAL_JALALI_DATE_FORMATTER = new Intl.DateTimeFormat(
-  "fa-IR-u-ca-persian",
-  {
-    day: "numeric",
-    month: "long",
-    weekday: "long",
-    year: "numeric",
-  },
-);
 
 function addDays(date: Date, days: number): Date {
   return new Date(
@@ -145,13 +124,7 @@ function buildManagerHref(dateParam: string): string {
 }
 
 function formatNaturalJalaliDate(date: Date): string {
-  const parts = NATURAL_JALALI_DATE_FORMATTER.formatToParts(date);
-  const weekday = parts.find((part) => part.type === "weekday")?.value;
-  const day = parts.find((part) => part.type === "day")?.value;
-  const month = parts.find((part) => part.type === "month")?.value;
-  const year = parts.find((part) => part.type === "year")?.value;
-
-  return [weekday, day, month, year].filter(Boolean).join(" ");
+  return formatJalaliDate(date);
 }
 
 function formatWeekLabel(startDate: Date, endDate: Date): string {
@@ -161,9 +134,7 @@ function formatWeekLabel(startDate: Date, endDate: Date): string {
 }
 
 function formatCalendarColumnLabel(date: Date): string {
-  return `${JALALI_WEEKDAY_FORMATTER.format(date)} ${JALALI_MONTH_DAY_FORMATTER.format(
-    date,
-  )}`;
+  return formatJalaliDate(date);
 }
 
 function getQueueToast(params: Awaited<ManagerPageProps["searchParams"]>) {

@@ -17,6 +17,7 @@ import { getSlotUsage } from "@/lib/capacity-service";
 import { db } from "@/lib/db";
 import {
   formatJalaliDate,
+  formatJalaliDateWithoutWeekday,
   formatJalaliDateParam,
   parseJalaliDateParam,
 } from "@/lib/jalali-date";
@@ -55,37 +56,6 @@ type MyReservation = {
   }>;
 };
 
-const JALALI_WEEKDAY_FORMATTER = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
-  weekday: "long",
-});
-
-const JALALI_MONTH_DAY_FORMATTER = new Intl.DateTimeFormat(
-  "fa-IR-u-ca-persian-nu-latn",
-  {
-    day: "numeric",
-    month: "numeric",
-  },
-);
-
-const NATURAL_JALALI_DATE_FORMATTER = new Intl.DateTimeFormat(
-  "fa-IR-u-ca-persian",
-  {
-    day: "numeric",
-    month: "long",
-    weekday: "long",
-    year: "numeric",
-  },
-);
-
-const MODAL_JALALI_DATE_FORMATTER = new Intl.DateTimeFormat(
-  "fa-IR-u-ca-persian",
-  {
-    day: "numeric",
-    month: "long",
-    weekday: "long",
-  },
-);
-
 const DISPLAY_TIME_FORMATTER = new Intl.DateTimeFormat("fa-IR", {
   hour: "2-digit",
   hour12: false,
@@ -95,13 +65,7 @@ const DISPLAY_TIME_FORMATTER = new Intl.DateTimeFormat("fa-IR", {
 const MY_RESERVATIONS_PAGE_SIZE = 6;
 
 function formatNaturalJalaliDate(date: Date): string {
-  const parts = NATURAL_JALALI_DATE_FORMATTER.formatToParts(date);
-  const weekday = parts.find((part) => part.type === "weekday")?.value;
-  const day = parts.find((part) => part.type === "day")?.value;
-  const month = parts.find((part) => part.type === "month")?.value;
-  const year = parts.find((part) => part.type === "year")?.value;
-
-  return [weekday, day, month, year].filter(Boolean).join(" ");
+  return formatJalaliDate(date);
 }
 
 function formatWeekLabel(startDate: Date, endDate: Date): string {
@@ -111,13 +75,11 @@ function formatWeekLabel(startDate: Date, endDate: Date): string {
 }
 
 function formatCalendarColumnLabel(date: Date): string {
-  return `${JALALI_WEEKDAY_FORMATTER.format(date)} ${JALALI_MONTH_DAY_FORMATTER.format(
-    date,
-  )}`;
+  return formatJalaliDate(date);
 }
 
 function formatReservationDialogDate(date: Date): string {
-  return MODAL_JALALI_DATE_FORMATTER.format(date);
+  return formatJalaliDateWithoutWeekday(date);
 }
 
 function formatDisplayTime(date: Date): string {

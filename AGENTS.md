@@ -20,6 +20,7 @@ Model systems as one capacity-based `ResourcePool`, not as physical devices. A r
 - Reservations cannot span multiple calendar days.
 - Working days/hours and date-specific exceptions must remain configurable.
 - All user-facing reservation dates, date inputs, calendar navigation, URL date params, and visible date formatting must use Persian/Jalali dates.
+- Visible Jalali date labels should use natural Persian order: weekday when useful, then day, month, year; for example `پنج شنبه ۳۱ اردیبهشت ۱۴۰۵`. If weekday is not useful, use `۳۱ اردیبهشت ۱۴۰۵`.
 - Do not use browser-native Gregorian date pickers for product date input.
 
 ## Out Of Scope Unless Explicitly Requested

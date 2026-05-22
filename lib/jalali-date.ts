@@ -14,11 +14,12 @@ const JALALI_DATE_FORMATTER = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
   year: "numeric",
 });
 
-const JALALI_DATE_TIME_FORMATTER = new Intl.DateTimeFormat(
+const JALALI_DATE_WITHOUT_WEEKDAY_FORMATTER = new Intl.DateTimeFormat(
   "fa-IR-u-ca-persian",
   {
-    dateStyle: "medium",
-    timeStyle: "short",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
   },
 );
 
@@ -28,8 +29,22 @@ const TIME_FORMATTER = new Intl.DateTimeFormat("fa-IR-u-nu-latn", {
   minute: "2-digit",
 });
 
+const DISPLAY_TIME_FORMATTER = new Intl.DateTimeFormat("fa-IR", {
+  hour: "2-digit",
+  hour12: false,
+  minute: "2-digit",
+});
+
 const PERSIAN_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
 const ARABIC_DIGITS = "٠١٢٣٤٥٦٧٨٩";
+const WEEKDAY_LABELS: Record<string, string> = {
+  یکشنبه: "یک شنبه",
+  دوشنبه: "دو شنبه",
+  سه‌شنبه: "سه شنبه",
+  سهشنبه: "سه شنبه",
+  چهارشنبه: "چهار شنبه",
+  پنجشنبه: "پنج شنبه",
+};
 
 export const JALALI_DATE_INPUT_PLACEHOLDER = "1405-02-31";
 
@@ -81,11 +96,18 @@ export function formatJalaliDateParam(date: Date): string {
 }
 
 export function formatJalaliDate(date: Date): string {
-  return JALALI_DATE_FORMATTER.format(date);
+  return formatNaturalDateParts(JALALI_DATE_FORMATTER.formatToParts(date), true);
+}
+
+export function formatJalaliDateWithoutWeekday(date: Date): string {
+  return formatNaturalDateParts(
+    JALALI_DATE_WITHOUT_WEEKDAY_FORMATTER.formatToParts(date),
+    false,
+  );
 }
 
 export function formatJalaliDateTime(date: Date): string {
-  return JALALI_DATE_TIME_FORMATTER.format(date);
+  return `${formatJalaliDate(date)}، ${DISPLAY_TIME_FORMATTER.format(date)}`;
 }
 
 export function formatLocalTime(date: Date): string {
@@ -143,6 +165,24 @@ export function parseJalaliDateParam(value: string | undefined): Date | null {
   }
 
   return null;
+}
+
+function formatNaturalDateParts(
+  parts: Intl.DateTimeFormatPart[],
+  includeWeekday: boolean,
+): string {
+  const rawWeekday = parts.find((part) => part.type === "weekday")?.value;
+  const weekday = rawWeekday ? WEEKDAY_LABELS[rawWeekday] ?? rawWeekday : null;
+  const day = parts.find((part) => part.type === "day")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const year = parts.find((part) => part.type === "year")?.value;
+
+  return [
+    includeWeekday ? weekday : null,
+    day,
+    month,
+    year,
+  ].filter(Boolean).join(" ");
 }
 
 export function isValidJalaliDateParam(value: string | undefined): value is string {
