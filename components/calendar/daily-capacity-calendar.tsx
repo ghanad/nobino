@@ -15,6 +15,7 @@ type SlotReservationDetail = {
   userName: string;
   status: "APPROVED" | "PENDING";
   reason: string | null;
+  href?: string;
 };
 
 type DailyCapacityCalendarProps = {
@@ -55,7 +56,15 @@ function getDetailClass(status: SlotReservationDetail["status"]): string {
     return "bg-emerald-50 text-emerald-900 ring-emerald-200";
   }
 
-  return "bg-amber-50 text-amber-900 ring-amber-200";
+  return "bg-amber-100 text-amber-950 ring-amber-300";
+}
+
+function getDetailActionLabel(status: SlotReservationDetail["status"]): string {
+  if (status === "PENDING") {
+    return "Review";
+  }
+
+  return status;
 }
 
 export function DailyCapacityCalendar({
@@ -189,20 +198,38 @@ export function DailyCapacityCalendar({
 
                 {details.length > 0 ? (
                   <div className="mt-4 flex flex-wrap gap-2">
-                    {details.map((detail) => (
-                      <span
-                        className={`inline-flex max-w-full items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ring-1 ${getDetailClass(
-                          detail.status,
-                        )}`}
-                        key={`${slotKey}-${detail.id}`}
-                        title={detail.reason ?? undefined}
-                      >
-                        <span>{detail.userName}</span>
-                        <span className="text-[10px] opacity-75">
-                          {detail.status}
+                    {details.map((detail) => {
+                      const className = `inline-flex max-w-full items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ring-1 ${getDetailClass(
+                        detail.status,
+                      )}`;
+                      const content = (
+                        <>
+                          <span className="truncate">{detail.userName}</span>
+                          <span className="shrink-0 text-[10px] opacity-75">
+                            {getDetailActionLabel(detail.status)}
+                          </span>
+                        </>
+                      );
+
+                      return detail.href ? (
+                        <a
+                          className={`${className} transition-colors hover:bg-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`}
+                          href={detail.href}
+                          key={`${slotKey}-${detail.id}`}
+                          title={detail.reason ?? undefined}
+                        >
+                          {content}
+                        </a>
+                      ) : (
+                        <span
+                          className={className}
+                          key={`${slotKey}-${detail.id}`}
+                          title={detail.reason ?? undefined}
+                        >
+                          {content}
                         </span>
-                      </span>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : null}
               </div>

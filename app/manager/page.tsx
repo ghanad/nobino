@@ -6,7 +6,7 @@ import {
   proposeAlternativeAction,
   rejectReservationAction,
 } from "@/app/manager/actions";
-import { DailyCapacityCalendar } from "@/components/calendar/daily-capacity-calendar";
+import { ManagerWeeklyCalendar } from "@/components/calendar/manager-weekly-calendar";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { UrlToast } from "@/components/ui/url-toast";
 import { getSlotUsage } from "@/lib/capacity-service";
@@ -57,6 +57,28 @@ type QueueItem = {
   }>;
 };
 
+const JALALI_WEEKDAY_FORMATTER = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
+  weekday: "long",
+});
+
+const JALALI_MONTH_DAY_FORMATTER = new Intl.DateTimeFormat(
+  "fa-IR-u-ca-persian-nu-latn",
+  {
+    day: "numeric",
+    month: "numeric",
+  },
+);
+
+const NATURAL_JALALI_DATE_FORMATTER = new Intl.DateTimeFormat(
+  "fa-IR-u-ca-persian",
+  {
+    day: "numeric",
+    month: "long",
+    weekday: "long",
+    year: "numeric",
+  },
+);
+
 function addDays(date: Date, days: number): Date {
   return new Date(
     date.getFullYear(),
@@ -67,6 +89,12 @@ function addDays(date: Date, days: number): Date {
     0,
     0,
   );
+}
+
+function getWeekStart(date: Date): Date {
+  const daysSinceSaturday = (date.getDay() + 1) % 7;
+
+  return addDays(date, -daysSinceSaturday);
 }
 
 function buildDateAtTime(date: Date, time: string): Date {
@@ -103,6 +131,32 @@ function buildHourOptions() {
 
 function buildExportHref(dateParam: string): string {
   return `/manager/export?date=${encodeURIComponent(dateParam)}`;
+}
+
+function buildQueueCardId(reservationId: string): string {
+  return `queue-reservation-${reservationId}`;
+}
+
+function formatNaturalJalaliDate(date: Date): string {
+  const parts = NATURAL_JALALI_DATE_FORMATTER.formatToParts(date);
+  const weekday = parts.find((part) => part.type === "weekday")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const year = parts.find((part) => part.type === "year")?.value;
+
+  return [weekday, day, month, year].filter(Boolean).join(" ");
+}
+
+function formatWeekLabel(startDate: Date, endDate: Date): string {
+  return `${formatNaturalJalaliDate(startDate)} تا ${formatNaturalJalaliDate(
+    endDate,
+  )}`;
+}
+
+function formatCalendarColumnLabel(date: Date): string {
+  return `${JALALI_WEEKDAY_FORMATTER.format(date)} ${JALALI_MONTH_DAY_FORMATTER.format(
+    date,
+  )}`;
 }
 
 function getQueueToast(params: Awaited<ManagerPageProps["searchParams"]>) {
@@ -174,7 +228,10 @@ function QueueCard({
   const defaultEndHour = item.reservation.endAt.getHours();
 
   return (
-    <article className="rounded-lg border bg-card p-5 text-card-foreground">
+    <article
+      className="scroll-mt-6 rounded-lg border bg-card p-5 text-card-foreground transition-shadow target:border-amber-300 target:ring-2 target:ring-amber-200"
+      id={buildQueueCardId(item.reservation.id)}
+    >
       <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
         <div className="grid gap-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -341,6 +398,11 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
   const toast = getQueueToast(params);
   const selectedDate = parseJalaliDateParam(params?.date) ?? new Date();
   const dateParam = formatJalaliDateParam(selectedDate);
+  const weekStart = getWeekStart(selectedDate);
+  const weekDates = Array.from({ length: 7 }, (_, index) =>
+    addDays(weekStart, index),
+  );
+  const weekRangeEnd = addDays(weekStart, 7);
   const resourcePool = await db.resourcePool.findFirst({
     where: { active: true },
     orderBy: { name: "asc" },
@@ -349,32 +411,13 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       name: true,
     },
   });
-  const workingWindow = await getWorkingWindowForDate(selectedDate);
-  const range =
-    resourcePool &&
-    workingWindow.isWorkingDay &&
-    workingWindow.startTime &&
-    workingWindow.endTime
-      ? {
-          startAt: buildDateAtTime(selectedDate, workingWindow.startTime),
-          endAt: buildDateAtTime(selectedDate, workingWindow.endTime),
-        }
-      : null;
-  const slots =
-    resourcePool && range
-      ? await getSlotUsage({
-          resourcePoolId: resourcePool.id,
-          startAt: range.startAt,
-          endAt: range.endAt,
-        })
-      : [];
-  const reservations =
-    resourcePool && range
+  const weekReservations =
+    resourcePool
       ? await db.reservation.findMany({
           where: {
             resourcePoolId: resourcePool.id,
-            startAt: { lt: range.endAt },
-            endAt: { gt: range.startAt },
+            startAt: { lt: weekRangeEnd },
+            endAt: { gt: weekStart },
             status: {
               in: [ReservationStatus.APPROVED, ReservationStatus.PENDING],
             },
@@ -394,6 +437,64 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
           },
         })
       : [];
+  const weekDays = resourcePool
+    ? await Promise.all(
+        weekDates.map(async (date) => {
+          const workingWindow = await getWorkingWindowForDate(date);
+          const slots =
+            workingWindow.isWorkingDay &&
+            workingWindow.startTime &&
+            workingWindow.endTime
+              ? await getSlotUsage({
+                  resourcePoolId: resourcePool.id,
+                  startAt: buildDateAtTime(date, workingWindow.startTime),
+                  endAt: buildDateAtTime(date, workingWindow.endTime),
+                })
+              : [];
+
+          return {
+            dateLabel: formatNaturalJalaliDate(date),
+            dateParam: formatJalaliDateParam(date),
+            shortLabel: formatCalendarColumnLabel(date),
+            slots: slots.map((slot) => {
+              const details = weekReservations
+                .filter(
+                  (reservation) =>
+                    reservation.startAt < slot.slotEnd &&
+                    reservation.endAt > slot.slotStart,
+                )
+                .map((reservation) => ({
+                  id: reservation.id,
+                  userName: reservation.user.name,
+                  status:
+                    reservation.status === ReservationStatus.APPROVED
+                      ? ("APPROVED" as const)
+                      : ("PENDING" as const),
+                  reason: reservation.reason,
+                  href:
+                    reservation.status === ReservationStatus.PENDING
+                      ? `#${buildQueueCardId(reservation.id)}`
+                      : undefined,
+                }));
+
+              return {
+                slotStartHour: slot.slotStart.getHours(),
+                slotEndHour: slot.slotEnd.getHours(),
+                approvedCount: slot.approvedCount,
+                pendingCount: slot.pendingCount,
+                capacity: slot.capacity,
+                details,
+              };
+            }),
+          };
+        }),
+      )
+    : weekDates.map((date) => ({
+        dateLabel: formatNaturalJalaliDate(date),
+        dateParam: formatJalaliDateParam(date),
+        shortLabel: formatCalendarColumnLabel(date),
+        slots: [],
+      }));
   const pendingReservations: QueueReservation[] = await db.reservation.findMany({
     where: {
       status: ReservationStatus.PENDING,
@@ -429,36 +530,6 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       }),
     })),
   );
-  const detailsBySlotStart = new Map<
-    string,
-    Array<{
-      id: string;
-      userName: string;
-      status: "APPROVED" | "PENDING";
-      reason: string | null;
-    }>
-  >();
-
-  for (const slot of slots) {
-    const details = reservations
-      .filter(
-        (reservation) =>
-          reservation.startAt < slot.slotEnd && reservation.endAt > slot.slotStart,
-      )
-      .map((reservation) => ({
-        id: reservation.id,
-        userName: reservation.user.name,
-        status:
-          reservation.status === ReservationStatus.APPROVED
-            ? ReservationStatus.APPROVED
-            : ReservationStatus.PENDING,
-        reason: reservation.reason,
-      }));
-
-    if (details.length > 0) {
-      detailsBySlotStart.set(slot.slotStart.toISOString(), details);
-    }
-  }
 
   return (
     <div className="grid gap-6">
@@ -475,31 +546,31 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
           </a>
         </div>
 
-        <DailyCapacityCalendar
-          date={selectedDate}
-          dateParam={dateParam}
-          detailsBySlotStart={detailsBySlotStart}
+        <ManagerWeeklyCalendar
+          currentDateParam={dateParam}
           emptyMessage={
             resourcePool
-              ? "No working-hour slots are configured for this date."
+              ? "No working-hour slots are configured for this week."
               : "No active resource pool is configured."
           }
-          nextDateParam={formatJalaliDateParam(addDays(selectedDate, 1))}
-          previousDateParam={formatJalaliDateParam(addDays(selectedDate, -1))}
-          slots={slots}
+          nextWeekDateParam={formatJalaliDateParam(addDays(weekStart, 7))}
+          previousWeekDateParam={formatJalaliDateParam(addDays(weekStart, -7))}
           title={
             resourcePool
-              ? `${resourcePool.name} manager availability`
-              : "Manager availability"
+              ? `${resourcePool.name} weekly approval calendar`
+              : "Manager weekly approval calendar"
           }
+          weekDays={weekDays}
+          weekLabel={formatWeekLabel(weekDates[0], weekDates[6])}
         />
       </section>
 
       <section className="rounded-lg border bg-card p-5 text-card-foreground">
         <h2 className="font-medium">Approval queue</h2>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          Pending requests do not consume capacity. Approval checks confirmed
-          capacity again before updating the request.
+          Click amber pending requests in the calendar to jump to their review
+          actions. Pending requests do not consume capacity; approval re-checks
+          availability before updating the request.
         </p>
 
         {queueItems.length === 0 ? (
