@@ -2,7 +2,13 @@ import type { Prisma } from "@prisma/client";
 import { UserRole } from "@prisma/client";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { CalendarClock, Filter, RotateCcw } from "lucide-react";
+import {
+  CalendarClock,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
+  RotateCcw,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { requireRole } from "@/lib/auth";
@@ -19,6 +25,7 @@ type AuditPageProps = {
     actorId?: string;
     entityType?: string;
     from?: string;
+    page?: string;
     to?: string;
   }>;
 };
@@ -121,6 +128,7 @@ const DATE_RANGE_FIELDS = new Set([
   "proposedStartAt",
   "startAt",
 ]);
+const AUDIT_PAGE_SIZE = 25;
 
 function FieldLabel({
   children,
@@ -363,6 +371,37 @@ function shortId(value: string): string {
   return value.length > 10 ? `${value.slice(0, 8)}...` : value;
 }
 
+function getAuditPage(value: string | undefined): number {
+  const parsedPage = Number(value);
+
+  if (!Number.isInteger(parsedPage) || parsedPage < 1) {
+    return 1;
+  }
+
+  return parsedPage;
+}
+
+function getAuditPageHref(
+  params: Awaited<AuditPageProps["searchParams"]>,
+  page: number,
+): string {
+  const searchParams = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(params ?? {})) {
+    if (value && key !== "page") {
+      searchParams.set(key, value);
+    }
+  }
+
+  if (page > 1) {
+    searchParams.set("page", String(page));
+  }
+
+  const query = searchParams.toString();
+
+  return query ? `/admin/audit?${query}` : "/admin/audit";
+}
+
 function AuditFilters({
   actions,
   actors,
@@ -538,6 +577,54 @@ function AuditLogCard({ log }: { log: AuditLogRow }) {
   );
 }
 
+function AuditPagination({
+  currentPage,
+  params,
+  totalPages,
+}: {
+  currentPage: number;
+  params: Awaited<AuditPageProps["searchParams"]>;
+  totalPages: number;
+}) {
+  if (totalPages <= 1) {
+    return null;
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      {currentPage > 1 ? (
+        <Button asChild size="sm" variant="outline">
+          <Link href={getAuditPageHref(params, currentPage - 1)}>
+            <ChevronLeft className="h-4 w-4" />
+            Previous
+          </Link>
+        </Button>
+      ) : (
+        <Button disabled size="sm" variant="outline">
+          <ChevronLeft className="h-4 w-4" />
+          Previous
+        </Button>
+      )}
+      <span>
+        Page {currentPage} of {totalPages}
+      </span>
+      {currentPage < totalPages ? (
+        <Button asChild size="sm" variant="outline">
+          <Link href={getAuditPageHref(params, currentPage + 1)}>
+            Next
+            <ChevronRight className="h-4 w-4" />
+          </Link>
+        </Button>
+      ) : (
+        <Button disabled size="sm" variant="outline">
+          Next
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      )}
+    </div>
+  );
+}
+
 function uniqueSorted(values: string[]): string[] {
   return [...new Set(values)].sort((left, right) => left.localeCompare(right));
 }
@@ -548,28 +635,8 @@ export default async function AuditPage({ searchParams }: AuditPageProps) {
   const params = await searchParams;
   const where = buildAuditWhere(params);
 
-  const [logs, filterSource, actors] = await Promise.all([
-    db.auditLog.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      take: 100,
-      select: {
-        id: true,
-        entityType: true,
-        entityId: true,
-        action: true,
-        oldValue: true,
-        newValue: true,
-        createdAt: true,
-        actor: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
-    }),
+  const [totalLogs, filterSource, actors] = await Promise.all([
+    db.auditLog.count({ where }),
     db.auditLog.findMany({
       orderBy: [{ entityType: "asc" }, { action: "asc" }],
       select: {
@@ -586,6 +653,33 @@ export default async function AuditPage({ searchParams }: AuditPageProps) {
       },
     }),
   ]);
+  const totalPages = Math.max(1, Math.ceil(totalLogs / AUDIT_PAGE_SIZE));
+  const currentPage = Math.min(getAuditPage(params?.page), totalPages);
+  const firstEventNumber =
+    totalLogs === 0 ? 0 : (currentPage - 1) * AUDIT_PAGE_SIZE + 1;
+  const lastEventNumber = Math.min(currentPage * AUDIT_PAGE_SIZE, totalLogs);
+  const logs = await db.auditLog.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    skip: (currentPage - 1) * AUDIT_PAGE_SIZE,
+    take: AUDIT_PAGE_SIZE,
+    select: {
+      id: true,
+      entityType: true,
+      entityId: true,
+      action: true,
+      oldValue: true,
+      newValue: true,
+      createdAt: true,
+      actor: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+  });
 
   const entityTypes = uniqueSorted(filterSource.map((log) => log.entityType));
   const actions = uniqueSorted(filterSource.map((log) => log.action));
@@ -613,11 +707,17 @@ export default async function AuditPage({ searchParams }: AuditPageProps) {
       />
 
       <section className="grid gap-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-2 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
           <p className="inline-flex items-center gap-2 text-sm text-muted-foreground">
             <CalendarClock className="h-4 w-4" />
-            Latest {logs.length} matching events
+            Showing {firstEventNumber}-{lastEventNumber} of {totalLogs} matching
+            events
           </p>
+          <AuditPagination
+            currentPage={currentPage}
+            params={params}
+            totalPages={totalPages}
+          />
         </div>
 
         {logs.length === 0 ? (
@@ -627,6 +727,12 @@ export default async function AuditPage({ searchParams }: AuditPageProps) {
         ) : (
           logs.map((log) => <AuditLogCard key={log.id} log={log} />)
         )}
+
+        <AuditPagination
+          currentPage={currentPage}
+          params={params}
+          totalPages={totalPages}
+        />
       </section>
     </div>
   );
