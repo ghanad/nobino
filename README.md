@@ -153,21 +153,39 @@ Use `.env.example` as the source of truth for required settings:
 
 ## Production Deployment
 
-Minimum deployment flow for the current SQLite-backed version:
+The project includes a production Docker image and a compose file. Runtime
+startup runs `prisma migrate deploy`, so a newly mounted SQLite database is
+created and migrated before the app starts.
+
+Build locally:
 
 ```bash
-npm ci
-npm run prisma:generate
-npx prisma migrate deploy
-npm run test
-npm run build
-npm run start
+docker build -t ghanad/nobino:latest .
 ```
 
-Set `NODE_ENV=production`, provide a strong `AUTH_SECRET`, and place the SQLite
-database on persistent storage. Do not deploy with the seeded demo passwords in
-a real environment; create operational admin and manager accounts, then replace
-or deactivate seed users.
+Run with compose:
+
+```bash
+mkdir -p data
+AUTH_SECRET="replace-with-a-long-random-secret" \
+docker compose up -d
+```
+
+The compose file mounts `${NOBINO_DATA_DIR:-./data}` to `/data` inside the
+container and uses `DATABASE_URL=file:/data/nobino.sqlite`, so the SQLite
+database stays outside the container image. Back up this mounted directory.
+
+For GitHub Actions to publish to Docker Hub on every push to `main`, configure
+these repository secrets:
+
+- `DOCKERHUB_USERNAME`: Docker Hub username.
+- `DOCKERHUB_TOKEN`: Docker Hub access token.
+
+The workflow always publishes to `ghanad/nobino` with `latest` and
+`main-<git-sha>` tags. Set
+`NODE_ENV=production`, provide a strong `AUTH_SECRET`, and do not deploy with
+the seeded demo passwords in a real environment; create operational admin and
+manager accounts, then replace or deactivate seed users.
 
 ## SQLite Backup And Recovery
 
