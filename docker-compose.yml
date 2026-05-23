@@ -1,21 +1,23 @@
+version: "2.2"
+
 services:
   nobino:
-    image: ${DOCKER_IMAGE:-ghanad/nobino:latest}
+    image: ghanad/nobino:latest
     restart: unless-stopped
     ports:
-      - "${APP_PORT:-3000}:3000"
+      - "3000:3000"
     environment:
       NODE_ENV: production
       TZ: Asia/Tehran
       APP_TIMEZONE: Asia/Tehran
       DATABASE_URL: file:/data/nobino.sqlite
-      AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET is required}
-      NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-Nobino Reservations}
+      AUTH_SECRET: ${AUTH_SECRET}
+      SESSION_COOKIE_SECURE: "false"
+      NEXT_PUBLIC_APP_NAME: Nobino Reservations
     volumes:
-      - ${NOBINO_DATA_DIR:-./data}:/data
+      - ./data:/data
     healthcheck:
       test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 30s

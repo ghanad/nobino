@@ -32,6 +32,14 @@ function getSessionSecret(): string {
   return "dev-only-nobino-session-secret-change-me";
 }
 
+function shouldUseSecureSessionCookie(): boolean {
+  if (process.env.SESSION_COOKIE_SECURE === "false") {
+    return false;
+  }
+
+  return process.env.NODE_ENV === "production";
+}
+
 function encodeBase64Url(value: string): string {
   return Buffer.from(value).toString("base64url");
 }
@@ -102,7 +110,7 @@ export async function createSession(userId: string): Promise<void> {
   cookieStore.set(SESSION_COOKIE_NAME, createSessionToken({ userId, expiresAt }), {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: shouldUseSecureSessionCookie(),
     path: "/",
     maxAge: SESSION_TTL_SECONDS,
   });

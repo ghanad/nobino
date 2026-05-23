@@ -171,9 +171,24 @@ AUTH_SECRET="replace-with-a-long-random-secret" \
 docker compose up -d
 ```
 
-The compose file mounts `${NOBINO_DATA_DIR:-./data}` to `/data` inside the
-container and uses `DATABASE_URL=file:/data/nobino.sqlite`, so the SQLite
-database stays outside the container image. Back up this mounted directory.
+For a fresh database, create the initial demo/admin records once:
+
+```bash
+docker compose exec nobino npm run prisma:seed
+```
+
+The compose file uses format version `2.2` so it remains compatible with older
+`docker-compose` installations such as `1.25.0`. It mounts `./data` to `/data`
+inside the container and uses `DATABASE_URL=file:/data/nobino.sqlite`, so the
+SQLite database stays outside the container image. Back up this mounted
+directory.
+`AUTH_SECRET` must be set before starting compose; the production app refuses
+to start without it.
+
+The default compose file sets `SESSION_COOKIE_SECURE=false` so login works when
+the app is served directly over plain HTTP during initial deployment. When the
+app is placed behind HTTPS, remove that line or set it to `true` so session
+cookies are marked secure.
 
 For GitHub Actions to publish to Docker Hub on every push to `main`, configure
 these repository secrets:
