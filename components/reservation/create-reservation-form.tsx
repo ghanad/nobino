@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarDays, ChevronLeft, ChevronRight, X } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Hourglass,
+  X,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -69,6 +75,8 @@ type CellState = {
   unavailableReason: "full" | "past" | null;
 };
 
+type CapacityDotTone = "approved" | "free" | "mine" | "pending";
+
 function formatHour(hour: number): string {
   return `${hour.toString().padStart(2, "0")}:00`;
 }
@@ -78,8 +86,16 @@ const PERSIAN_HOUR_FORMATTER = new Intl.NumberFormat("fa-IR", {
   useGrouping: false,
 });
 
+const PERSIAN_NUMBER_FORMATTER = new Intl.NumberFormat("fa-IR", {
+  useGrouping: false,
+});
+
 function formatPersianHour(hour: number): string {
   return `${PERSIAN_HOUR_FORMATTER.format(hour)}:۰۰`;
+}
+
+function formatPersianNumber(value: number): string {
+  return PERSIAN_NUMBER_FORMATTER.format(value);
 }
 
 function buildDateHref(dateParam: string): string {
@@ -131,60 +147,143 @@ function getCellState(day: WeekDay, hour: number): CellState {
   };
 }
 
-function getMyReservationLabel(status: CellState["myReservationStatus"]): string {
+function buildCapacityDots(cell: CellState): CapacityDotTone[] {
+  if (cell.unavailableReason === "past") {
+    return Array<CapacityDotTone>(cell.capacity).fill("approved");
+  }
+
+  const myApprovedCount = cell.myReservationStatus === "APPROVED" ? 1 : 0;
+  const approvedOtherCount = Math.max(cell.approvedCount - myApprovedCount, 0);
+  const pendingCount = Math.min(
+    cell.pendingCount,
+    Math.max(cell.capacity - myApprovedCount - approvedOtherCount, 0),
+  );
+  const freeCount = Math.max(
+    cell.capacity - myApprovedCount - approvedOtherCount - pendingCount,
+    0,
+  );
+
+  return [
+    ...Array<CapacityDotTone>(myApprovedCount).fill("mine"),
+    ...Array<CapacityDotTone>(pendingCount).fill("pending"),
+    ...Array<CapacityDotTone>(freeCount).fill("free"),
+    ...Array<CapacityDotTone>(approvedOtherCount).fill("approved"),
+  ];
+}
+
+function getCapacityDotClass(tone: CapacityDotTone): string {
+  if (tone === "mine") {
+    return "border-sky-600 bg-sky-500";
+  }
+
+  if (tone === "pending") {
+    return "border-amber-500 bg-amber-400";
+  }
+
+  if (tone === "approved") {
+    return "border-slate-500 bg-slate-400 opacity-75";
+  }
+
+  return "border-emerald-600 bg-emerald-500";
+}
+
+function CapacityDot({ tone }: { tone: CapacityDotTone }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "h-3 w-3 rounded-full border shadow-[inset_0_0_0_1px_rgba(255,255,255,0.55)]",
+        getCapacityDotClass(tone),
+      )}
+    />
+  );
+}
+
+function CapacityDots({ cell }: { cell: CellState }) {
+  const dots = buildCapacityDots(cell);
+
+  return (
+    <span className="absolute inset-x-2 top-1/2 z-10 flex -translate-y-1/2 flex-wrap items-center justify-center gap-1.5">
+      {dots.map((tone, index) => (
+        <CapacityDot key={`${tone}-${index}`} tone={tone} />
+      ))}
+    </span>
+  );
+}
+
+function CalendarLegend() {
+  return (
+    <div
+      className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border bg-background px-3 py-2 text-xs text-muted-foreground"
+      dir="rtl"
+    >
+      <span className="inline-flex items-center gap-1.5">
+        <CapacityDot tone="free" />
+        آزاد
+      </span>
+      <span className="inline-flex items-center gap-1.5">
+        <CapacityDot tone="pending" />
+        در انتظار تایید
+      </span>
+      <span className="inline-flex items-center gap-1.5">
+        <CapacityDot tone="mine" />
+        رزرو تاییدشده شما
+      </span>
+      <span className="inline-flex items-center gap-1.5">
+        <CapacityDot tone="approved" />
+        رزروشده / غیرفعال
+      </span>
+      <span className="inline-flex items-center gap-1.5">
+        <Hourglass aria-hidden="true" className="h-3.5 w-3.5 text-amber-700" />
+        درخواست شما در انتظار تایید است
+      </span>
+    </div>
+  );
+}
+
+function getPersianUserStatusLabel(
+  status: CellState["myReservationStatus"],
+): string | null {
   if (status === "PENDING") {
-    return "Your request is pending";
+    return "وضعیت شما در انتظار تایید مدیر";
   }
 
   if (status === "APPROVED") {
-    return "Your approved reservation";
+    return "وضعیت شما رزرو تاییدشده";
   }
 
-  return "";
+  return null;
 }
 
-function getUnavailableLabel(reason: CellState["unavailableReason"]): string {
+function getPersianUnavailableLabel(
+  reason: CellState["unavailableReason"],
+): string | null {
   if (reason === "full") {
-    return "No system available";
+    return "ظرفیت این ساعت تکمیل است";
   }
 
   if (reason === "past") {
-    return "Past time";
+    return "این ساعت گذشته و غیرفعال است";
   }
 
-  return "";
+  return null;
 }
 
-function SlotAvailabilityText({ cell }: { cell: CellState }) {
-  return (
-    <span className="absolute inset-x-1 top-1 z-10 grid gap-0.5 rounded-sm px-1 py-1 text-center text-[11px] font-semibold leading-4">
-      <span
-        className={cn(
-          cell.availableCount > 0 ? "text-emerald-800" : "text-red-800",
-        )}
-      >
-        {cell.availableCount} free
-      </span>
-      <span
-        className={cn(
-          cell.pendingCount > 0 ? "text-amber-800" : "text-muted-foreground",
-        )}
-      >
-        {cell.pendingCount} pending
-      </span>
-      {cell.myReservationStatus ? (
-        <span
-          className={cn(
-            cell.myReservationStatus === "PENDING"
-              ? "text-amber-900"
-              : "text-emerald-900",
-          )}
-        >
-          {cell.myReservationStatus === "PENDING" ? "My pending" : "My approved"}
-        </span>
-      ) : null}
-    </span>
-  );
+function buildSlotAriaLabel(day: WeekDay, hour: number, cell: CellState): string {
+  const parts = [
+    day.dateLabel,
+    `ساعت ${formatPersianHour(hour)}`,
+    `ظرفیت آزاد ${formatPersianNumber(cell.availableCount)} از ${formatPersianNumber(
+      cell.capacity,
+    )}`,
+    `${formatPersianNumber(cell.pendingCount)} درخواست در انتظار تایید`,
+    getPersianUserStatusLabel(cell.myReservationStatus),
+    cell.myReservationStatus
+      ? null
+      : getPersianUnavailableLabel(cell.unavailableReason),
+  ];
+
+  return parts.filter(Boolean).join("، ");
 }
 
 function selectionContainsHour(
@@ -422,9 +521,8 @@ export function CreateReservationForm({
             </Link>
             <div className="order-first text-center sm:order-none">
               <p className="text-sm font-medium">{weekLabel}</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Each working slot shows free capacity and pending requests.
-                Red slots have no approved capacity left and cannot be selected.
+              <p className="mt-1 text-xs text-muted-foreground" dir="rtl">
+                راهنمای وضعیت ظرفیت هر ساعت پایین تقویم آمده است.
               </p>
             </div>
             <Link
@@ -435,6 +533,8 @@ export function CreateReservationForm({
               <ChevronRight aria-hidden="true" className="h-4 w-4" />
             </Link>
           </div>
+
+          <CalendarLegend />
         </div>
 
         <input name="resourcePoolId" type="hidden" value={defaultPool?.id ?? ""} />
@@ -477,7 +577,7 @@ export function CreateReservationForm({
                     <div
                       className="grid touch-none select-none grid-cols-[72px_repeat(7,minmax(116px,1fr))]"
                       style={{
-                        gridTemplateRows: `repeat(${hours.length}, 4.25rem)`,
+                        gridTemplateRows: `repeat(${hours.length}, 3.25rem)`,
                       }}
                     >
                       {hours.map((hour, hourIndex) => (
@@ -510,29 +610,11 @@ export function CreateReservationForm({
                             dayIndex,
                             hour,
                           );
-                          const myReservationLabel = getMyReservationLabel(
-                            cell.myReservationStatus,
-                          );
-                          const unavailableLabel = getUnavailableLabel(
-                            cell.myReservationStatus ? null : cell.unavailableReason,
-                          );
+                          const slotLabel = buildSlotAriaLabel(day, hour, cell);
 
                           return (
                             <button
-                              aria-label={[
-                                day.dateLabel,
-                                formatHour(hour),
-                                cell.isWorkingHour
-                                  ? `${cell.availableCount} free`
-                                  : "",
-                                cell.isWorkingHour
-                                  ? `${cell.pendingCount} pending`
-                                  : "",
-                                myReservationLabel,
-                                unavailableLabel,
-                              ]
-                                .filter(Boolean)
-                                .join(" ")}
+                              aria-label={slotLabel}
                               aria-pressed={isSelected}
                               className={cn(
                                 "relative border-b border-r bg-background p-0 text-left focus-visible:z-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -548,10 +630,10 @@ export function CreateReservationForm({
                                   "cursor-not-allowed bg-muted/50 text-muted-foreground",
                                 cell.isWorkingHour &&
                                   cell.myReservationStatus === "PENDING" &&
-                                  "bg-amber-50/80 text-amber-900",
+                                  "border-amber-300 bg-amber-50/90 text-amber-900 ring-1 ring-inset ring-amber-300",
                                 cell.isWorkingHour &&
                                   cell.myReservationStatus === "APPROVED" &&
-                                  "bg-emerald-50/80 text-emerald-900",
+                                  "border-sky-300 bg-sky-50/80 text-sky-900 ring-1 ring-inset ring-sky-300",
                                 cell.isRequestable && "hover:bg-sky-50/60",
                               )}
                               data-calendar-cell="true"
@@ -584,6 +666,7 @@ export function CreateReservationForm({
                                 gridColumn: dayIndex + 2,
                                 gridRow: hourIndex + 1,
                               }}
+                              title={slotLabel}
                               type="button"
                             >
                               {isSelected ? (
@@ -604,7 +687,22 @@ export function CreateReservationForm({
                               ) : null}
 
                               {cell.isWorkingHour ? (
-                                <SlotAvailabilityText cell={cell} />
+                                <CapacityDots cell={cell} />
+                              ) : null}
+
+                              {cell.myReservationStatus === "PENDING" ? (
+                                <Hourglass
+                                  aria-hidden="true"
+                                  className="absolute right-[6px] top-1 z-10 h-3.5 w-3.5 text-amber-700"
+                                  style={{
+                                    color: "rgb(180 83 9)",
+                                    height: 14,
+                                    position: "absolute",
+                                    right: 6,
+                                    top: 4,
+                                    width: 14,
+                                  }}
+                                />
                               ) : null}
 
                               {!cell.isWorkingHour ? (
