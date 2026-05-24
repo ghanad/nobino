@@ -123,6 +123,7 @@ async function resetDatabase() {
     data: {
       id: "default",
       dailyUserHourLimit: 3,
+      oneReservationPerDayEnabled: true,
     },
   });
 
@@ -410,6 +411,12 @@ test("users cannot request more than the configured daily hour limit", async () 
   const secondStartAt = addHours(firstStartAt, 2);
   const secondEndAt = addHours(secondStartAt, 2);
 
+  await updateReservationPolicy({
+    adminId,
+    dailyUserHourLimit: 3,
+    oneReservationPerDayEnabled: false,
+  });
+
   await createReservationRequest({
     userId,
     resourcePoolId: poolId,
@@ -438,6 +445,7 @@ test("admin can change the daily user hour limit", async () => {
   await updateReservationPolicy({
     adminId,
     dailyUserHourLimit: 4,
+    oneReservationPerDayEnabled: false,
   });
 
   await createReservationRequest({
@@ -456,11 +464,92 @@ test("admin can change the daily user hour limit", async () => {
   );
 });
 
+test("users cannot create more than one active reservation per day when enabled", async () => {
+  const firstStartAt = nextWorkingDateAtHour(9);
+  const firstEndAt = addHours(firstStartAt, 1);
+  const secondStartAt = addHours(firstStartAt, 1);
+  const secondEndAt = addHours(secondStartAt, 1);
+
+  await createReservationRequest({
+    userId,
+    resourcePoolId: poolId,
+    startAt: firstStartAt,
+    endAt: firstEndAt,
+  });
+
+  await assert.rejects(
+    () =>
+      createReservationRequest({
+        userId,
+        resourcePoolId: poolId,
+        startAt: secondStartAt,
+        endAt: secondEndAt,
+      }),
+    ReservationTransitionError,
+  );
+});
+
+test("users can create multiple same-day reservations when one-per-day policy is disabled", async () => {
+  const firstStartAt = nextWorkingDateAtHour(9);
+  const firstEndAt = addHours(firstStartAt, 1);
+  const secondStartAt = addHours(firstStartAt, 1);
+  const secondEndAt = addHours(secondStartAt, 1);
+
+  await updateReservationPolicy({
+    adminId,
+    dailyUserHourLimit: 3,
+    oneReservationPerDayEnabled: false,
+  });
+
+  await createReservationRequest({
+    userId,
+    resourcePoolId: poolId,
+    startAt: firstStartAt,
+    endAt: firstEndAt,
+  });
+
+  await assert.doesNotReject(() =>
+    createReservationRequest({
+      userId,
+      resourcePoolId: poolId,
+      startAt: secondStartAt,
+      endAt: secondEndAt,
+    }),
+  );
+});
+
 test("approval re-checks approved daily user hour limit", async () => {
   const firstStartAt = nextWorkingDateAtHour(9);
   const firstEndAt = addHours(firstStartAt, 2);
   const secondStartAt = addHours(firstStartAt, 2);
   const secondEndAt = addHours(secondStartAt, 2);
+  await updateReservationPolicy({
+    adminId,
+    dailyUserHourLimit: 3,
+    oneReservationPerDayEnabled: false,
+  });
+  await createReservation({
+    startAt: firstStartAt,
+    endAt: firstEndAt,
+    status: ReservationStatus.APPROVED,
+  });
+  const pending = await createReservation({
+    startAt: secondStartAt,
+    endAt: secondEndAt,
+    status: ReservationStatus.PENDING,
+  });
+
+  await assert.rejects(
+    () => approveReservation({ reservationId: pending.id, managerId }),
+    ReservationTransitionError,
+  );
+});
+
+test("approval re-checks one active approved reservation per day", async () => {
+  const firstStartAt = nextWorkingDateAtHour(9);
+  const firstEndAt = addHours(firstStartAt, 1);
+  const secondStartAt = addHours(firstStartAt, 1);
+  const secondEndAt = addHours(secondStartAt, 1);
   await createReservation({
     startAt: firstStartAt,
     endAt: firstEndAt,

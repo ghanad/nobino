@@ -14,6 +14,7 @@ import { validateReservationTimeRange } from "@/lib/schedule";
 type DbClient = typeof db | Prisma.TransactionClient;
 const ONE_HOUR_MS = 60 * 60 * 1000;
 const DEFAULT_DAILY_USER_HOUR_LIMIT = 3;
+const DEFAULT_ONE_RESERVATION_PER_DAY_ENABLED = true;
 const ACTIVE_REQUEST_STATUSES = [
   ReservationStatus.PENDING,
   ReservationStatus.APPROVED,
@@ -65,23 +66,35 @@ function reservationHours(startAt: Date, endAt: Date): number {
   return (endAt.getTime() - startAt.getTime()) / ONE_HOUR_MS;
 }
 
-async function getDailyUserHourLimit(client: DbClient): Promise<number> {
+async function getReservationPolicy(client: DbClient): Promise<{
+  dailyUserHourLimit: number;
+  oneReservationPerDayEnabled: boolean;
+}> {
   const policy = await client.reservationPolicy.findUnique({
     where: { id: "default" },
-    select: { dailyUserHourLimit: true },
+    select: {
+      dailyUserHourLimit: true,
+      oneReservationPerDayEnabled: true,
+    },
   });
 
-  return policy?.dailyUserHourLimit ?? DEFAULT_DAILY_USER_HOUR_LIMIT;
+  return {
+    dailyUserHourLimit:
+      policy?.dailyUserHourLimit ?? DEFAULT_DAILY_USER_HOUR_LIMIT,
+    oneReservationPerDayEnabled:
+      policy?.oneReservationPerDayEnabled ??
+      DEFAULT_ONE_RESERVATION_PER_DAY_ENABLED,
+  };
 }
 
-async function assertDailyUserReservationLimit(input: {
+async function assertDailyUserReservationPolicy(input: {
   userId: string;
   startAt: Date;
   endAt: Date;
   statuses: ReservationStatus[];
   excludeReservationId?: string;
 }, client: DbClient): Promise<void> {
-  const dailyUserHourLimit = await getDailyUserHourLimit(client);
+  const policy = await getReservationPolicy(client);
   const dayStart = startOfLocalDay(input.startAt);
   const dayEnd = endOfLocalDay(input.startAt);
   const reservations = await client.reservation.findMany({
@@ -99,6 +112,13 @@ async function assertDailyUserReservationLimit(input: {
       endAt: true,
     },
   });
+
+  if (policy.oneReservationPerDayEnabled && reservations.length > 0) {
+    throw new ReservationTransitionError(
+      "Users can have only one reservation per day.",
+    );
+  }
+
   const existingHours = reservations.reduce(
     (total, reservation) =>
       total + reservationHours(reservation.startAt, reservation.endAt),
@@ -106,9 +126,9 @@ async function assertDailyUserReservationLimit(input: {
   );
   const requestedHours = reservationHours(input.startAt, input.endAt);
 
-  if (existingHours + requestedHours > dailyUserHourLimit) {
+  if (existingHours + requestedHours > policy.dailyUserHourLimit) {
     throw new ReservationTransitionError(
-      `Users can reserve at most ${dailyUserHourLimit} hours per day.`,
+      `Users can reserve at most ${policy.dailyUserHourLimit} hours per day.`,
     );
   }
 }
@@ -134,7 +154,7 @@ export async function createReservationRequest(input: {
   });
 
   return db.$transaction(async (tx) => {
-    await assertDailyUserReservationLimit(
+    await assertDailyUserReservationPolicy(
       {
         userId: input.userId,
         startAt: input.startAt,
@@ -238,7 +258,7 @@ export async function approveReservation(input: {
       tx,
     );
 
-    await assertDailyUserReservationLimit(
+    await assertDailyUserReservationPolicy(
       {
         userId: reservation.userId,
         startAt: reservation.startAt,
@@ -399,7 +419,7 @@ export async function proposeAlternative(input: {
       tx,
     );
 
-    await assertDailyUserReservationLimit(
+    await assertDailyUserReservationPolicy(
       {
         userId: reservation.userId,
         startAt: input.proposedStartAt,
@@ -652,7 +672,7 @@ export async function acceptAlternative(input: {
       tx,
     );
 
-    await assertDailyUserReservationLimit(
+    await assertDailyUserReservationPolicy(
       {
         userId: alternative.reservation.userId,
         startAt: alternative.proposedStartAt,

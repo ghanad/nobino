@@ -69,10 +69,12 @@ async function main() {
     where: { id: "default" },
     update: {
       dailyUserHourLimit: 3,
+      oneReservationPerDayEnabled: true,
     },
     create: {
       id: "default",
       dailyUserHourLimit: 3,
+      oneReservationPerDayEnabled: true,
     },
   });
 

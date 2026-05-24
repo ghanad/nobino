@@ -481,8 +481,10 @@ function ResourcePoolSettings({
 
 function ReservationPolicySettings({
   dailyUserHourLimit,
+  oneReservationPerDayEnabled,
 }: {
   dailyUserHourLimit: number;
+  oneReservationPerDayEnabled: boolean;
 }) {
   return (
     <section className="rounded-lg border bg-card p-5 text-card-foreground">
@@ -495,7 +497,7 @@ function ReservationPolicySettings({
 
       <form
         action={updateReservationPolicyAction}
-        className="mt-5 grid gap-4 rounded-md border bg-muted/20 p-4 sm:grid-cols-[180px_auto] sm:items-end"
+        className="mt-5 grid gap-4 rounded-md border bg-muted/20 p-4 sm:grid-cols-[180px_minmax(220px,1fr)_auto] sm:items-end"
       >
         <div className="grid gap-2">
           <FieldLabel htmlFor="daily-user-hour-limit">
@@ -512,6 +514,15 @@ function ReservationPolicySettings({
             type="number"
           />
         </div>
+        <label className="flex min-h-10 items-center gap-3 rounded-md border bg-background px-3 py-2 text-sm">
+          <input
+            className="h-4 w-4 rounded border-input"
+            defaultChecked={oneReservationPerDayEnabled}
+            name="oneReservationPerDayEnabled"
+            type="checkbox"
+          />
+          <span>Only one reservation per user per day</span>
+        </label>
         <div className="flex items-end">
           <Button type="submit">
             <Save className="h-4 w-4" />
@@ -973,6 +984,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       where: { id: "default" },
       select: {
         dailyUserHourLimit: true,
+        oneReservationPerDayEnabled: true,
       },
     }),
     db.resourcePoolCapacityException.findMany({
@@ -1037,6 +1049,9 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           <ResourcePoolSettings resourcePools={resourcePools} />
           <ReservationPolicySettings
             dailyUserHourLimit={reservationPolicy?.dailyUserHourLimit ?? 3}
+            oneReservationPerDayEnabled={
+              reservationPolicy?.oneReservationPerDayEnabled ?? true
+            }
           />
           <CapacityExceptions
             capacityExceptions={capacityExceptions}

@@ -292,6 +292,7 @@ export async function updateResourcePoolSettings(input: {
 export async function updateReservationPolicy(input: {
   adminId: string;
   dailyUserHourLimit: number;
+  oneReservationPerDayEnabled: boolean;
 }) {
   if (input.dailyUserHourLimit < 1 || input.dailyUserHourLimit > 24) {
     throw new AdminSettingsError(
@@ -305,12 +306,19 @@ export async function updateReservationPolicy(input: {
     const current = await tx.reservationPolicy.upsert({
       where: { id: "default" },
       update: {},
-      create: { id: "default", dailyUserHourLimit: 3 },
+      create: {
+        id: "default",
+        dailyUserHourLimit: 3,
+        oneReservationPerDayEnabled: true,
+      },
     });
 
     const updated = await tx.reservationPolicy.update({
       where: { id: current.id },
-      data: { dailyUserHourLimit: input.dailyUserHourLimit },
+      data: {
+        dailyUserHourLimit: input.dailyUserHourLimit,
+        oneReservationPerDayEnabled: input.oneReservationPerDayEnabled,
+      },
     });
 
     await tx.auditLog.create({
@@ -321,9 +329,11 @@ export async function updateReservationPolicy(input: {
         action: "RESERVATION_POLICY_CHANGED",
         oldValue: {
           dailyUserHourLimit: current.dailyUserHourLimit,
+          oneReservationPerDayEnabled: current.oneReservationPerDayEnabled,
         },
         newValue: {
           dailyUserHourLimit: updated.dailyUserHourLimit,
+          oneReservationPerDayEnabled: updated.oneReservationPerDayEnabled,
         },
       },
     });

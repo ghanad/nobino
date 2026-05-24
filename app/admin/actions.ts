@@ -40,6 +40,7 @@ const resourcePoolSchema = z.object({
 
 const reservationPolicySchema = z.object({
   dailyUserHourLimit: z.coerce.number().int().min(1).max(24),
+  oneReservationPerDayEnabled: z.coerce.boolean(),
 });
 
 const weeklyScheduleSchema = z.object({
@@ -173,6 +174,9 @@ export async function updateReservationPolicyAction(
   const admin = await requireRole([UserRole.ADMIN]);
   const parsed = reservationPolicySchema.safeParse({
     dailyUserHourLimit: formData.get("dailyUserHourLimit"),
+    oneReservationPerDayEnabled: checkboxToBoolean(
+      formData.get("oneReservationPerDayEnabled"),
+    ),
   });
 
   if (!parsed.success) {
@@ -186,6 +190,7 @@ export async function updateReservationPolicyAction(
     await updateReservationPolicy({
       adminId: admin.id,
       dailyUserHourLimit: parsed.data.dailyUserHourLimit,
+      oneReservationPerDayEnabled: parsed.data.oneReservationPerDayEnabled,
     });
   } catch (error) {
     redirectToAdmin({ error: getActionErrorMessage(error), tab: "capacity" });

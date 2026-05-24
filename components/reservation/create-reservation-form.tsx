@@ -34,10 +34,12 @@ type WeekDay = {
 type CreateReservationFormProps = {
   action: (formData: FormData) => Promise<void>;
   currentDateParam: string;
+  dailyActiveReservationCountByDate: Record<string, number>;
   dailyReservedHoursByDate: Record<string, number>;
   dailyUserHourLimit: number;
   emptyMessage: string;
   nextWeekDateParam: string;
+  oneReservationPerDayEnabled: boolean;
   previousWeekDateParam: string;
   resourcePools: ResourcePoolOption[];
   weekDays: WeekDay[];
@@ -299,10 +301,12 @@ function buildSelection(
 export function CreateReservationForm({
   action,
   currentDateParam,
+  dailyActiveReservationCountByDate,
   dailyReservedHoursByDate,
   dailyUserHourLimit,
   emptyMessage,
   nextWeekDateParam,
+  oneReservationPerDayEnabled,
   previousWeekDateParam,
   resourcePools,
   weekDays,
@@ -337,6 +341,13 @@ export function CreateReservationForm({
   const selectedDailyTotal = reservedHoursForSelectedDay + selectedHours;
   const isSelectionOverDailyLimit =
     Boolean(selection) && selectedDailyTotal > dailyUserHourLimit;
+  const hasActiveReservationForSelectedDay =
+    selection
+      ? oneReservationPerDayEnabled &&
+        (dailyActiveReservationCountByDate[selection.dateParam] ?? 0) > 0
+      : false;
+  const isSelectionBlocked =
+    isSelectionOverDailyLimit || hasActiveReservationForSelectedDay;
 
   useEffect(() => {
     selectionRef.current = null;
@@ -771,6 +782,15 @@ export function CreateReservationForm({
                 </p>
               ) : null}
 
+              {hasActiveReservationForSelectedDay ? (
+                <p
+                  className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
+                  role="alert"
+                >
+                  You already have an active reservation request on this day.
+                </p>
+              ) : null}
+
               <label className="grid gap-2 text-sm font-medium">
                 Reason
                 <textarea
@@ -791,7 +811,7 @@ export function CreateReservationForm({
                   Cancel
                 </button>
                 <SubmitButton
-                  disabled={isSelectionOverDailyLimit}
+                  disabled={isSelectionBlocked}
                   pendingLabel="Submitting..."
                 >
                   Submit request

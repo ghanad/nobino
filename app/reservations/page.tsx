@@ -444,6 +444,7 @@ export default async function ReservationsPage({
       where: { id: "default" },
       select: {
         dailyUserHourLimit: true,
+        oneReservationPerDayEnabled: true,
       },
     }),
     db.reservation.findMany({
@@ -516,6 +517,8 @@ export default async function ReservationsPage({
   ];
   const selectedResourcePool = resourcePools[0];
   const dailyUserHourLimit = reservationPolicy?.dailyUserHourLimit ?? 3;
+  const oneReservationPerDayEnabled =
+    reservationPolicy?.oneReservationPerDayEnabled ?? true;
   const dailyReservedHoursByDate = reservations.reduce<Record<string, number>>(
     (hoursByDate, reservation) => {
       if (
@@ -531,6 +534,23 @@ export default async function ReservationsPage({
         (hoursByDate[date] ?? 0) + getReservationDurationHours(reservation);
 
       return hoursByDate;
+    },
+    {},
+  );
+  const dailyActiveReservationCountByDate = reservations.reduce<Record<string, number>>(
+    (countByDate, reservation) => {
+      if (
+        reservation.status !== ReservationStatus.PENDING &&
+        reservation.status !== ReservationStatus.APPROVED &&
+        reservation.status !== ReservationStatus.ALTERNATIVE_PROPOSED
+      ) {
+        return countByDate;
+      }
+
+      const date = formatJalaliDateParam(reservation.startAt);
+      countByDate[date] = (countByDate[date] ?? 0) + 1;
+
+      return countByDate;
     },
     {},
   );
@@ -610,6 +630,7 @@ export default async function ReservationsPage({
       <CreateReservationForm
         action={createReservationAction}
         currentDateParam={dateParam}
+        dailyActiveReservationCountByDate={dailyActiveReservationCountByDate}
         dailyReservedHoursByDate={dailyReservedHoursByDate}
         dailyUserHourLimit={dailyUserHourLimit}
         emptyMessage={
@@ -619,6 +640,7 @@ export default async function ReservationsPage({
         }
         nextWeekDateParam={formatJalaliDateParam(addDays(weekStart, 7))}
         previousWeekDateParam={formatJalaliDateParam(addDays(weekStart, -7))}
+        oneReservationPerDayEnabled={oneReservationPerDayEnabled}
         resourcePools={resourcePools}
         weekDays={weekDays}
         weekLabel={formatWeekLabel(weekDates[0], weekDates[6])}
