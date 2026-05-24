@@ -18,6 +18,8 @@ type AppShellProps = {
   children: ReactNode;
 };
 
+const PERSIAN_NUMBER_FORMATTER = new Intl.NumberFormat("fa-IR");
+
 export async function AppShell({ user, title, children }: AppShellProps) {
   const [unreadNotificationCount, latestUnreadNotification] = await Promise.all([
     getUnreadNotificationCount(user.id),
@@ -42,10 +44,10 @@ export async function AppShell({ user, title, children }: AppShellProps) {
             <Button variant="ghost" asChild>
               <Link href="/notifications">
                 <Bell className="h-4 w-4" />
-                Notifications
+                اعلان‌ها
                 {unreadNotificationCount > 0 ? (
                   <span className="ml-1 rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
-                    {unreadNotificationCount}
+                    {PERSIAN_NUMBER_FORMATTER.format(unreadNotificationCount)}
                   </span>
                 ) : null}
               </Link>

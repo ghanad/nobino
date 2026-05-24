@@ -42,7 +42,8 @@ export function UnreadNotificationToast({
 
   return (
     <div
-      className="fixed right-6 top-24 z-50 w-[min(420px,calc(100vw-3rem))] rounded-lg border border-sky-200 bg-background p-4 text-sm text-foreground shadow-lg"
+      className="fixed right-6 top-24 z-50 w-[min(420px,calc(100vw-3rem))] rounded-lg border border-sky-200 bg-background p-4 text-right text-sm text-foreground shadow-lg"
+      dir="rtl"
       role="status"
     >
       <div className="flex items-start gap-3">
@@ -56,7 +57,7 @@ export function UnreadNotificationToast({
             className="mt-3 inline-flex text-sm font-medium text-primary hover:underline"
             href="/notifications"
           >
-            View notifications
+            مشاهده اعلان‌ها
           </Link>
         </div>
       </div>

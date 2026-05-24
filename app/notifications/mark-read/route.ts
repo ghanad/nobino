@@ -13,9 +13,11 @@ const markReadSchema = z.discriminatedUnion("mode", [
   z.object({
     mode: z.literal("single"),
     notificationId: z.string().min(1),
+    page: z.string().optional(),
   }),
   z.object({
     mode: z.literal("all"),
+    page: z.string().optional(),
   }),
 ]);
 
@@ -40,13 +42,16 @@ export async function POST(request: NextRequest) {
   const parsed = markReadSchema.safeParse({
     mode: formData.get("mode"),
     notificationId: formData.get("notificationId"),
+    page: formData.get("page") || undefined,
   });
 
   if (!parsed.success) {
     return redirectToNotifications(request, {
-      error: "Choose a valid notification.",
+      error: "اعلان معتبر انتخاب نشده است.",
     });
   }
+
+  const page = parsed.data.page;
 
   try {
     if (parsed.data.mode === "single") {
@@ -56,16 +61,16 @@ export async function POST(request: NextRequest) {
       });
       revalidatePath("/notifications");
 
-      return redirectToNotifications(request, { read: "1" });
+      return redirectToNotifications(request, { page, read: "1" });
     }
 
     await markAllNotificationsAsRead(user.id);
     revalidatePath("/notifications");
 
-    return redirectToNotifications(request, { allRead: "1" });
+    return redirectToNotifications(request, { allRead: "1", page });
   } catch (error) {
     if (error instanceof NotificationError) {
-      return redirectToNotifications(request, { error: error.message });
+      return redirectToNotifications(request, { error: error.message, page });
     }
 
     throw error;
