@@ -11,6 +11,7 @@ import {
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { PageHeader } from "@/components/app/page-header";
 import { Button } from "@/components/ui/button";
 import { UrlToast } from "@/components/ui/url-toast";
 import { requireCurrentUser } from "@/lib/auth";
@@ -617,13 +618,18 @@ export default async function NotificationsPage({
 
   return (
     <div className="grid gap-6 text-right" dir="rtl">
+      <PageHeader
+        subtitle="پیگیری تغییرات و وضعیت درخواست‌های رزرو"
+        title="اعلان‌ها"
+      />
+
       {toast ? <UrlToast {...toast} /> : null}
 
       <section className="grid gap-5 rounded-lg border bg-card p-5 text-card-foreground">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h2 className="text-xl font-semibold tracking-normal">اعلان‌ها</h2>
-            <p className="mt-2 text-sm text-muted-foreground">
+            <h2 className="font-medium">مرکز اعلان‌ها</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
               {formatPersianNumber(unreadCount)} اعلان خوانده‌نشده دارید.
             </p>
           </div>

@@ -34,7 +34,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html dir="rtl" lang="fa">
       <body className={iranSansX.className}>{children}</body>
     </html>
   );

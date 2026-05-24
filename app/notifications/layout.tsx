@@ -10,9 +10,5 @@ export default async function NotificationsLayout({
 }) {
   const user = await requireCurrentUser();
 
-  return (
-    <AppShell user={user} title="اعلان‌ها">
-      {children}
-    </AppShell>
-  );
+  return <AppShell user={user}>{children}</AppShell>;
 }

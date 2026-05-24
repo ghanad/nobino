@@ -10,9 +10,5 @@ export default async function ReservationsLayout({
 }) {
   const user = await requireCurrentUser();
 
-  return (
-    <AppShell user={user} title="رزروها">
-      {children}
-    </AppShell>
-  );
+  return <AppShell user={user}>{children}</AppShell>;
 }

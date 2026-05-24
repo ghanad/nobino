@@ -7,6 +7,7 @@ import {
   proposeAlternativeAction,
   rejectReservationAction,
 } from "@/app/manager/actions";
+import { PageHeader } from "@/components/app/page-header";
 import { ManagerWeeklyCalendar } from "@/components/calendar/manager-weekly-calendar";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { UrlToast } from "@/components/ui/url-toast";
@@ -626,19 +627,23 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
 
   return (
     <div className="grid gap-6">
-      {toast ? <UrlToast {...toast} /> : null}
-
-      <section className="grid gap-3">
-        <div className="flex justify-end">
+      <PageHeader
+        actions={
           <a
             className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-input bg-background px-4 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
             href={buildExportHref(dateParam)}
           >
             <Download className="h-4 w-4" />
-            Export CSV
+            دریافت CSV
           </a>
-        </div>
+        }
+        subtitle="درخواست‌های رزرو را بررسی، تایید یا رد کنید"
+        title="بررسی درخواست‌ها"
+      />
 
+      {toast ? <UrlToast {...toast} /> : null}
+
+      <section className="grid gap-3">
         <ManagerWeeklyCalendar
           currentDateParam={dateParam}
           emptyMessage={

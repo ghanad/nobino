@@ -8,6 +8,7 @@ import {
   createReservationAction,
   rejectAlternativeAction,
 } from "@/app/reservations/actions";
+import { PageHeader } from "@/components/app/page-header";
 import { CreateReservationForm } from "@/components/reservation/create-reservation-form";
 import { Button } from "@/components/ui/button";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -762,6 +763,11 @@ export default async function ReservationsPage({
 
   return (
     <div className="grid gap-6">
+      <PageHeader
+        subtitle="درخواست رزرو جدید و مشاهده ظرفیت سیستم‌ها"
+        title="رزروها"
+      />
+
       {toast ? <UrlToast {...toast} /> : null}
 
       <CreateReservationForm

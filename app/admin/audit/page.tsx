@@ -10,6 +10,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 
+import { PageHeader } from "@/components/app/page-header";
 import { Button } from "@/components/ui/button";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -686,18 +687,15 @@ export default async function AuditPage({ searchParams }: AuditPageProps) {
 
   return (
     <div className="grid gap-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold tracking-normal">Audit log</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Compact history of reservations, capacity, schedule, and user
-            changes.
-          </p>
-        </div>
-        <Button asChild variant="outline">
-          <Link href="/admin">Back to admin</Link>
-        </Button>
-      </div>
+      <PageHeader
+        actions={
+          <Button asChild variant="outline">
+            <Link href="/admin">بازگشت به کاربران و سیستم‌ها</Link>
+          </Button>
+        }
+        subtitle="تاریخچه تغییرات رزروها، ظرفیت، برنامه کاری و کاربران"
+        title="گزارش فعالیت‌ها"
+      />
 
       <AuditFilters
         actions={actions}

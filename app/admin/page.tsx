@@ -26,6 +26,7 @@ import {
   updateUserAction,
   updateWeeklyScheduleAction,
 } from "@/app/admin/actions";
+import { PageHeader } from "@/components/app/page-header";
 import { Button } from "@/components/ui/button";
 import { UrlToast } from "@/components/ui/url-toast";
 import { requireRole } from "@/lib/auth";
@@ -1039,6 +1040,11 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
 
   return (
     <div className="grid gap-6">
+      <PageHeader
+        subtitle="مدیریت کاربران، ظرفیت سیستم‌ها، روزهای کاری و تنظیمات رزرو"
+        title="کاربران و سیستم‌ها"
+      />
+
       {toast ? <UrlToast {...toast} /> : null}
       <AdminTabs activeTab={activeTab} />
       {activeTab === "users" ? (
