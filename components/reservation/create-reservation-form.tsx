@@ -769,17 +769,20 @@ export function CreateReservationForm({
             </div>
           </div>
 
-          <div className="grid gap-3 rounded-md border bg-muted/30 p-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
+          <div
+            className="grid gap-3 rounded-md border bg-muted/30 p-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center"
+            dir="ltr"
+          >
             <Link
               className="inline-flex h-10 items-center justify-center gap-2 rounded-md border bg-background px-3 text-sm font-medium hover:bg-accent sm:justify-self-start"
               href={buildDateHref(previousWeekDateParam)}
             >
               <ChevronLeft aria-hidden="true" className="h-4 w-4" />
-              هفته قبل
+              <span dir="rtl">هفته قبل</span>
             </Link>
-            <div className="order-first text-center sm:order-none">
+            <div className="order-first text-center sm:order-none" dir="rtl">
               <p className="text-sm font-medium">{weekLabel}</p>
-              <p className="mt-1 text-xs text-muted-foreground" dir="rtl">
+              <p className="mt-1 text-xs text-muted-foreground">
                 راهنمای وضعیت ظرفیت هر ساعت پایین تقویم آمده است.
               </p>
             </div>
@@ -787,7 +790,7 @@ export function CreateReservationForm({
               className="inline-flex h-10 items-center justify-center gap-2 rounded-md border bg-background px-3 text-sm font-medium hover:bg-accent sm:justify-self-end"
               href={buildDateHref(nextWeekDateParam)}
             >
-              هفته بعد
+              <span dir="rtl">هفته بعد</span>
               <ChevronRight aria-hidden="true" className="h-4 w-4" />
             </Link>
           </div>
@@ -808,6 +811,7 @@ export function CreateReservationForm({
           ) : (
             <div
               className="overflow-hidden rounded-lg border border-slate-200 bg-background shadow-sm"
+              dir="ltr"
               onPointerLeave={() => setIsDragging(false)}
               onPointerUp={finishSelection}
             >
@@ -827,6 +831,7 @@ export function CreateReservationForm({
                             ? `${day.dateLabel}، ${day.closedReason}، این روز قابل رزرو نیست`
                             : day.dateLabel
                         }
+                        dir="rtl"
                       >
                         <span>{day.shortLabel}</span>
                         {day.closedReason ? (

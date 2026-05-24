@@ -274,7 +274,10 @@ export function ManagerWeeklyCalendar({
           </form>
         </div>
 
-        <div className="grid gap-3 rounded-md border bg-muted/30 p-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
+        <div
+          className="grid gap-3 rounded-md border bg-muted/30 p-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center"
+          dir="ltr"
+        >
           <Link
             className="inline-flex h-10 items-center justify-center gap-2 rounded-md border bg-background px-3 text-sm font-medium hover:bg-accent sm:justify-self-start"
             href={buildDateHref(previousWeekDateParam)}
@@ -304,7 +307,10 @@ export function ManagerWeeklyCalendar({
           {emptyMessage}
         </p>
       ) : (
-        <div className="mt-5 overflow-hidden rounded-lg border bg-background shadow-sm">
+        <div
+          className="mt-5 overflow-hidden rounded-lg border bg-background shadow-sm"
+          dir="ltr"
+        >
           <div className="overflow-x-auto">
             <div className="min-w-[980px]">
               <div>
@@ -315,6 +321,7 @@ export function ManagerWeeklyCalendar({
                       className="border-r px-3 py-3 text-center text-sm font-semibold last:border-r-0"
                       key={day.dateParam}
                       title={day.dateLabel}
+                      dir="rtl"
                     >
                       <span>{day.shortLabel}</span>
                       {day.closedReason ? (
