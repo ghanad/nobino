@@ -23,6 +23,7 @@ import {
   parseJalaliDateParam,
 } from "@/lib/jalali-date";
 import { getWorkingWindowForDate } from "@/lib/schedule";
+import { cn } from "@/lib/utils";
 
 type ReservationsPageProps = {
   searchParams?: Promise<{
@@ -340,8 +341,10 @@ function ReservationCard({
 }: {
   reservation: MyReservation;
 }) {
-  const canCancel = reservation.status === ReservationStatus.PENDING;
+  const isPending = reservation.status === ReservationStatus.PENDING;
+  const canCancel = isPending;
   const showReason = Boolean(reservation.reason?.trim());
+  const hasShortReason = (reservation.reason?.trim().length ?? 0) <= 90;
   const showRejectionReason =
     reservation.status === ReservationStatus.REJECTED &&
     Boolean(reservation.rejectionReason?.trim());
@@ -350,40 +353,79 @@ function ReservationCard({
       reservation.status === ReservationStatus.REJECTED) &&
     reservation.alternatives.length > 0;
   const showCardBody =
-    showReason || showRejectionReason || showAlternatives || canCancel;
+    showReason || showRejectionReason || showAlternatives || isPending;
 
   return (
     <article
-      className="rounded-md border bg-card p-3 text-right text-card-foreground"
+      className={cn(
+        "rounded-md border bg-card p-3 text-right text-card-foreground",
+        isPending && "border-amber-200 bg-amber-50/40",
+      )}
       dir="rtl"
     >
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div>
+      <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-start">
+        <div className="min-w-0">
           <h3 className="text-sm font-medium">{reservation.resourcePool.name}</h3>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="mt-0.5 text-xs text-muted-foreground">
             <ReservationTimeRange
               endAt={reservation.endAt}
               startAt={reservation.startAt}
             />
           </p>
         </div>
-        <span
-          className={`inline-flex w-fit rounded-full px-2 py-1 text-xs font-medium ring-1 ${getStatusClass(
-            reservation.status,
-          )}`}
-        >
-          {getStatusLabel(reservation.status)}
-        </span>
+        <div className="flex flex-wrap items-center gap-2 sm:flex-col sm:items-end">
+          <span
+            className={`inline-flex w-fit rounded-full px-2 py-1 text-xs font-medium ring-1 ${getStatusClass(
+              reservation.status,
+            )}`}
+          >
+            {getStatusLabel(reservation.status)}
+          </span>
+
+          {canCancel ? (
+            <form action={cancelReservationByUserAction}>
+              <input name="reservationId" type="hidden" value={reservation.id} />
+              <SubmitButton
+                className="h-8 px-2.5 text-xs"
+                pendingLabel="در حال لغو..."
+                size="sm"
+                variant="outline"
+              >
+                <X className="h-3.5 w-3.5" />
+                لغو درخواست
+              </SubmitButton>
+            </form>
+          ) : null}
+        </div>
       </div>
 
       {showCardBody ? (
-        <div className="mt-3 grid gap-3">
+        <div className="mt-2 grid gap-2">
+          {isPending ? (
+            <p className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 text-xs text-amber-900">
+              این درخواست منتظر تایید مدیر است؛ تا قبل از تایید می‌توانید آن را لغو کنید.
+            </p>
+          ) : null}
+
           {showReason || showRejectionReason ? (
-            <dl className="grid gap-2 text-xs">
+            <dl className="grid gap-1.5 text-xs">
               {showReason ? (
-                <div>
-                  <dt className="text-muted-foreground">دلیل درخواست</dt>
-                  <dd className="mt-1 leading-5">{reservation.reason}</dd>
+                <div
+                  className={cn(
+                    hasShortReason && "flex min-w-0 items-baseline gap-2",
+                  )}
+                >
+                  <dt className="shrink-0 text-muted-foreground">دلیل درخواست</dt>
+                  <dd
+                    className={cn(
+                      "leading-5",
+                      hasShortReason
+                        ? "min-w-0 truncate"
+                        : "mt-1",
+                    )}
+                  >
+                    {reservation.reason}
+                  </dd>
                 </div>
               ) : null}
               {showRejectionReason ? (
@@ -398,20 +440,6 @@ function ReservationCard({
           ) : null}
 
           <AlternativeList reservation={reservation} />
-
-          {canCancel ? (
-            <form action={cancelReservationByUserAction}>
-              <input name="reservationId" type="hidden" value={reservation.id} />
-              <SubmitButton
-                pendingLabel="در حال لغو..."
-                size="sm"
-                variant="outline"
-              >
-                <X className="h-4 w-4" />
-                لغو درخواست
-              </SubmitButton>
-            </form>
-          ) : null}
         </div>
       ) : null}
     </article>
@@ -766,7 +794,7 @@ export default async function ReservationsPage({
           <Button asChild size="sm" variant="outline">
             <Link href="/reservations/history">
               <History className="h-4 w-4" />
-              مشاهده همه رزروها
+              مشاهده تاریخچه رزروها
             </Link>
           </Button>
         </div>
