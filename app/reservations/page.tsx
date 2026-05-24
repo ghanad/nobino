@@ -650,7 +650,7 @@ export default async function ReservationsPage({
 
           return {
             closedReason: !workingWindow.isWorkingDay
-              ? workingWindow.reason ?? "Non-working day"
+              ? workingWindow.reason ?? "روز غیرکاری"
               : null,
             dateLabel: formatJalaliDate(date),
             modalDateLabel: formatReservationDialogDate(date),

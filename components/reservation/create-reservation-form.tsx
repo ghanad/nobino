@@ -88,7 +88,7 @@ type CellState = {
   unavailableReason: "full" | "past" | null;
 };
 
-type CapacityDotTone = "approved" | "disabled" | "free" | "mine" | "pending";
+type CapacityDotTone = "approved" | "free" | "mine" | "pending";
 
 type SlotReservationDetail = {
   email: string | null;
@@ -178,7 +178,7 @@ function getCellState(day: WeekDay, hour: number): CellState {
 
 function buildCapacityDots(cell: CellState): CapacityDotTone[] {
   if (cell.unavailableReason === "past") {
-    return Array<CapacityDotTone>(cell.capacity).fill("disabled");
+    return [];
   }
 
   const myApprovedCount = cell.myReservationStatus === "APPROVED" ? 1 : 0;
@@ -207,10 +207,6 @@ function getCapacityDotClass(tone: CapacityDotTone): string {
 
   if (tone === "approved") {
     return "border-slate-400 bg-slate-300";
-  }
-
-  if (tone === "disabled") {
-    return "border-slate-200 bg-slate-100";
   }
 
   return "border-emerald-600 bg-emerald-500";
@@ -468,7 +464,7 @@ function CalendarLegend() {
       </span>
       <span className="inline-flex items-center gap-1.5">
         <CapacityDot tone="mine" />
-        رزرو تاییدشده شما
+        رزرو شما
       </span>
       <span className="inline-flex items-center gap-1.5">
         <CapacityDot tone="approved" />
@@ -504,13 +500,29 @@ function getPersianUnavailableLabel(
   }
 
   if (reason === "past") {
-    return "این ساعت گذشته و غیرفعال است";
+    return "این زمان گذشته و قابل رزرو نیست";
   }
 
   return null;
 }
 
 function buildSlotAriaLabel(day: WeekDay, hour: number, cell: CellState): string {
+  if (day.closedReason || !cell.isWorkingHour) {
+    return [
+      day.dateLabel,
+      day.closedReason ?? "روز غیرکاری",
+      "این روز قابل رزرو نیست",
+    ].join("، ");
+  }
+
+  if (cell.unavailableReason === "past") {
+    return [
+      day.dateLabel,
+      `ساعت ${formatPersianHour(hour)}`,
+      "این زمان گذشته و قابل رزرو نیست",
+    ].join("، ");
+  }
+
   const parts = [
     day.dateLabel,
     `ساعت ${formatPersianHour(hour)}`,
@@ -726,7 +738,7 @@ export function CreateReservationForm({
         <div className="grid gap-4">
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
             <div className="max-w-3xl">
-              <h2 className="font-medium">New reservation request</h2>
+              <h2 className="font-medium">درخواست رزرو جدید</h2>
             </div>
 
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
@@ -752,7 +764,7 @@ export function CreateReservationForm({
                 form="reservation-week-navigation"
                 type="submit"
               >
-                View
+                نمایش
               </button>
             </div>
           </div>
@@ -763,7 +775,7 @@ export function CreateReservationForm({
               href={buildDateHref(previousWeekDateParam)}
             >
               <ChevronLeft aria-hidden="true" className="h-4 w-4" />
-              Previous week
+              هفته قبل
             </Link>
             <div className="order-first text-center sm:order-none">
               <p className="text-sm font-medium">{weekLabel}</p>
@@ -775,7 +787,7 @@ export function CreateReservationForm({
               className="inline-flex h-10 items-center justify-center gap-2 rounded-md border bg-background px-3 text-sm font-medium hover:bg-accent sm:justify-self-end"
               href={buildDateHref(nextWeekDateParam)}
             >
-              Next week
+              هفته بعد
               <ChevronRight aria-hidden="true" className="h-4 w-4" />
             </Link>
           </div>
@@ -805,9 +817,16 @@ export function CreateReservationForm({
                     <div className="border-r border-slate-100 px-3 py-3 text-xs font-medium text-muted-foreground" />
                     {weekDays.map((day) => (
                       <div
-                        className="border-r border-slate-100 px-3 py-3 text-center text-sm font-semibold last:border-r-0"
+                        className={cn(
+                          "border-r border-slate-100 px-3 py-3 text-center text-sm font-semibold last:border-r-0",
+                          day.closedReason && "bg-slate-100/80 text-slate-500",
+                        )}
                         key={day.dateParam}
-                        title={day.dateLabel}
+                        title={
+                          day.closedReason
+                            ? `${day.dateLabel}، ${day.closedReason}، این روز قابل رزرو نیست`
+                            : day.dateLabel
+                        }
                       >
                         <span>{day.shortLabel}</span>
                         {day.closedReason ? (
@@ -863,6 +882,7 @@ export function CreateReservationForm({
                               cell={cell}
                               className={cn(
                                 "border-b border-r border-slate-100 bg-background",
+                                day.closedReason && "bg-slate-50/80",
                                 dayIndex === weekDays.length - 1 && "border-r-0",
                               )}
                               isDragging={isDragging}
@@ -880,6 +900,8 @@ export function CreateReservationForm({
                                   "relative h-full w-full bg-background p-0 text-left transition-colors focus-visible:z-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                                   !cell.isRequestable && "cursor-not-allowed",
                                   cell.isRequestable && "cursor-pointer",
+                                  day.closedReason &&
+                                    "cursor-not-allowed bg-slate-50/80 text-slate-400",
                                   !cell.isWorkingHour &&
                                     "cursor-not-allowed bg-slate-50 text-slate-400",
                                   cell.isWorkingHour &&
@@ -966,7 +988,9 @@ export function CreateReservationForm({
                                 </span>
                               ) : null}
 
-                              {cell.isWorkingHour ? (
+                              {cell.isWorkingHour &&
+                              !day.closedReason &&
+                              cell.unavailableReason !== "past" ? (
                                 <CapacityDots cell={cell} />
                               ) : null}
 
@@ -978,7 +1002,7 @@ export function CreateReservationForm({
                               ) : null}
 
                               {!cell.isWorkingHour ? (
-                                <span className="sr-only">Not working hour</span>
+                                <span className="sr-only">روز غیرکاری</span>
                               ) : null}
                               </div>
                             </SlotDetailsPopover>
