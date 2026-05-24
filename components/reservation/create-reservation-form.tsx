@@ -6,9 +6,19 @@ import {
   ChevronLeft,
   ChevronRight,
   Hourglass,
+  Info,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
+import { createPortal } from "react-dom";
 
 import { SubmitButton } from "@/components/ui/submit-button";
 import { JALALI_DATE_INPUT_PLACEHOLDER } from "@/lib/jalali-date";
@@ -23,7 +33,9 @@ type RequestableSlot = {
   slotStartHour: number;
   slotEndHour: number;
   approvedCount: number;
+  approvedReservations: SlotReservationDetail[];
   pendingCount: number;
+  pendingReservations: SlotReservationDetail[];
   capacity: number;
   isRequestable: boolean;
   myReservationId: string | null;
@@ -65,6 +77,7 @@ type Selection = {
 
 type CellState = {
   approvedCount: number;
+  approvedReservations: SlotReservationDetail[];
   availableCount: number;
   capacity: number;
   isRequestable: boolean;
@@ -72,10 +85,23 @@ type CellState = {
   myReservationId: string | null;
   myReservationStatus: "APPROVED" | "PENDING" | null;
   pendingCount: number;
+  pendingReservations: SlotReservationDetail[];
   unavailableReason: "full" | "past" | null;
 };
 
 type CapacityDotTone = "approved" | "free" | "mine" | "pending";
+
+type SlotReservationDetail = {
+  email: string | null;
+  id: string;
+  userId: string;
+  userName: string | null;
+};
+
+type PopoverPosition = {
+  left: number;
+  top: number;
+};
 
 function formatHour(hour: number): string {
   return `${hour.toString().padStart(2, "0")}:00`;
@@ -123,6 +149,7 @@ function getCellState(day: WeekDay, hour: number): CellState {
   if (!slot) {
     return {
       approvedCount: 0,
+      approvedReservations: [],
       availableCount: 0,
       capacity: 0,
       isRequestable: false,
@@ -130,12 +157,14 @@ function getCellState(day: WeekDay, hour: number): CellState {
       myReservationId: null,
       myReservationStatus: null,
       pendingCount: 0,
+      pendingReservations: [],
       unavailableReason: null,
     };
   }
 
   return {
     approvedCount: slot.approvedCount,
+    approvedReservations: slot.approvedReservations,
     availableCount: Math.max(slot.capacity - slot.approvedCount, 0),
     capacity: slot.capacity,
     isRequestable: slot.isRequestable,
@@ -143,6 +172,7 @@ function getCellState(day: WeekDay, hour: number): CellState {
     myReservationId: slot.myReservationId,
     myReservationStatus: slot.myReservationStatus,
     pendingCount: slot.pendingCount,
+    pendingReservations: slot.pendingReservations,
     unavailableReason: slot.unavailableReason,
   };
 }
@@ -154,20 +184,16 @@ function buildCapacityDots(cell: CellState): CapacityDotTone[] {
 
   const myApprovedCount = cell.myReservationStatus === "APPROVED" ? 1 : 0;
   const approvedOtherCount = Math.max(cell.approvedCount - myApprovedCount, 0);
-  const pendingCount = Math.min(
-    cell.pendingCount,
-    Math.max(cell.capacity - myApprovedCount - approvedOtherCount, 0),
-  );
   const freeCount = Math.max(
-    cell.capacity - myApprovedCount - approvedOtherCount - pendingCount,
+    cell.capacity - myApprovedCount - approvedOtherCount,
     0,
   );
 
   return [
     ...Array<CapacityDotTone>(myApprovedCount).fill("mine"),
-    ...Array<CapacityDotTone>(pendingCount).fill("pending"),
     ...Array<CapacityDotTone>(freeCount).fill("free"),
     ...Array<CapacityDotTone>(approvedOtherCount).fill("approved"),
+    ...Array<CapacityDotTone>(cell.pendingCount).fill("pending"),
   ];
 }
 
@@ -208,6 +234,314 @@ function CapacityDots({ cell }: { cell: CellState }) {
         <CapacityDot key={`${tone}-${index}`} tone={tone} />
       ))}
     </span>
+  );
+}
+
+function getReservationDisplayName(reservation: SlotReservationDetail): string {
+  return reservation.userName || reservation.email || "کاربر نامشخص";
+}
+
+function getCurrentUserStatusText(status: CellState["myReservationStatus"]) {
+  if (status === "PENDING") {
+    return "در انتظار تایید مدیر";
+  }
+
+  if (status === "APPROVED") {
+    return "تایید شده";
+  }
+
+  return null;
+}
+
+function ReservationCountBadge({ count }: { count: number }) {
+  if (count === 0) {
+    return null;
+  }
+
+  return (
+    <span
+      aria-hidden="true"
+      className="absolute left-1.5 top-1 z-20 inline-flex min-w-5 items-center justify-center rounded-full border bg-background/95 px-1.5 py-0.5 text-[10px] font-medium leading-none text-muted-foreground shadow-sm"
+    >
+      {formatPersianNumber(count)}
+    </span>
+  );
+}
+
+function ReservationUserList({
+  currentUserReservationId,
+  currentUserStatus,
+  reservations,
+  tone,
+}: {
+  currentUserReservationId?: string | null;
+  currentUserStatus?: CellState["myReservationStatus"];
+  reservations: SlotReservationDetail[];
+  tone: "approved" | "pending";
+}) {
+  if (reservations.length === 0) {
+    return <p className="text-xs text-muted-foreground">موردی وجود ندارد</p>;
+  }
+
+  return (
+    <ul className="grid gap-1.5">
+      {reservations.map((reservation) => {
+        const isCurrentUserApproved =
+          tone === "approved" &&
+          currentUserStatus === "APPROVED" &&
+          currentUserReservationId === reservation.id;
+
+        return (
+          <li
+            className="flex min-w-0 items-center gap-2 text-xs leading-5"
+            key={reservation.id}
+          >
+            <span
+              aria-hidden="true"
+              className={cn(
+                "h-2.5 w-2.5 shrink-0 rounded-full border",
+                tone === "pending" && "border-amber-500 bg-amber-400",
+                tone === "approved" &&
+                  isCurrentUserApproved &&
+                  "border-sky-600 bg-sky-500",
+                tone === "approved" &&
+                  !isCurrentUserApproved &&
+                  "border-slate-500 bg-slate-400",
+              )}
+            />
+            <span className="truncate">{getReservationDisplayName(reservation)}</span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function SlotDetailsPopover({
+  cell,
+  children,
+  className,
+  day,
+  hour,
+  isDragging,
+  style,
+}: {
+  cell: CellState;
+  children: ReactNode;
+  className?: string;
+  day: WeekDay;
+  hour: number;
+  isDragging: boolean;
+  style?: CSSProperties;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isPinned, setIsPinned] = useState(false);
+  const [position, setPosition] = useState<PopoverPosition | null>(null);
+  const triggerRef = useRef<HTMLDivElement | null>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const contentId = useId();
+  const peopleCount = cell.approvedReservations.length + cell.pendingReservations.length;
+  const currentUserStatusText = getCurrentUserStatusText(cell.myReservationStatus);
+
+  function updatePosition() {
+    const trigger = triggerRef.current;
+
+    if (!trigger || typeof window === "undefined") {
+      return;
+    }
+
+    const rect = trigger.getBoundingClientRect();
+    const width = Math.min(340, window.innerWidth - 24);
+    const left = Math.min(
+      Math.max(rect.left + rect.width / 2 - width / 2, 12),
+      window.innerWidth - width - 12,
+    );
+    const top =
+      rect.bottom + 10 + 280 > window.innerHeight
+        ? Math.max(rect.top - 10, 12)
+        : rect.bottom + 10;
+
+    setPosition({ left, top });
+  }
+
+  function openPopover({ pinned = false }: { pinned?: boolean } = {}) {
+    if (isDragging || !cell.isWorkingHour) {
+      return;
+    }
+
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+
+    updatePosition();
+    setIsPinned(pinned);
+    setIsOpen(true);
+  }
+
+  function closePopover() {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+
+    setIsOpen(false);
+    setIsPinned(false);
+  }
+
+  function cancelScheduledClose() {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  }
+
+  function scheduleClosePopover() {
+    if (isPinned) {
+      return;
+    }
+
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+    }
+
+    closeTimerRef.current = setTimeout(closePopover, 150);
+  }
+
+  function togglePopover() {
+    if (isOpen) {
+      closePopover();
+      return;
+    }
+
+    openPopover({ pinned: true });
+  }
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) {
+        clearTimeout(closeTimerRef.current);
+      }
+    };
+  }, []);
+
+  return (
+    <>
+      <div
+        aria-describedby={isOpen ? contentId : undefined}
+        className={cn("relative", className)}
+        onBlur={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget)) {
+            closePopover();
+          }
+        }}
+        onFocus={() => openPopover()}
+        onMouseEnter={() => openPopover()}
+        onMouseLeave={scheduleClosePopover}
+        ref={triggerRef}
+        style={style}
+      >
+        {children}
+        {cell.isWorkingHour ? (
+          <button
+            aria-label="نمایش جزئیات رزروهای این ساعت"
+            className={cn(
+              "absolute left-1.5 bottom-1 z-30 inline-flex h-5 w-5 items-center justify-center rounded-full border bg-background/95 text-muted-foreground shadow-sm transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              peopleCount === 0 && "opacity-70",
+            )}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              togglePopover();
+            }}
+            onPointerDown={(event) => {
+              event.stopPropagation();
+              openPopover({ pinned: true });
+            }}
+            type="button"
+          >
+            <Info aria-hidden="true" className="h-3.5 w-3.5" />
+          </button>
+        ) : null}
+      </div>
+
+      {isOpen && position
+        ? createPortal(
+            <div
+              className="fixed z-[80] max-h-[70vh] w-[min(340px,calc(100vw-24px))] overflow-y-auto rounded-lg border border-slate-200 bg-white p-3 text-slate-950 shadow-xl"
+              dir="rtl"
+              id={contentId}
+              onMouseEnter={cancelScheduledClose}
+              onMouseLeave={scheduleClosePopover}
+              role="tooltip"
+              style={{ left: position.left, top: position.top }}
+            >
+              <div className="grid gap-3 text-right">
+                <div>
+                  <p className="text-sm font-semibold">{day.dateLabel}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    ساعت {formatPersianHour(hour)} تا{" "}
+                    {formatPersianHour(hour + 1)}
+                  </p>
+                </div>
+
+                <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+                  <dt className="text-muted-foreground">ظرفیت کل:</dt>
+                  <dd>{formatPersianNumber(cell.capacity)}</dd>
+                  <dt className="text-muted-foreground">ظرفیت آزاد قطعی:</dt>
+                  <dd>{formatPersianNumber(cell.availableCount)}</dd>
+                  <dt className="text-muted-foreground">رزرو تاییدشده:</dt>
+                  <dd>{formatPersianNumber(cell.approvedCount)}</dd>
+                  <dt className="text-muted-foreground">در انتظار تایید:</dt>
+                  <dd>{formatPersianNumber(cell.pendingCount)}</dd>
+                </dl>
+
+                <div className="grid gap-1.5">
+                  <h3 className="text-xs font-semibold">رزروهای تاییدشده:</h3>
+                  <ReservationUserList
+                    currentUserReservationId={cell.myReservationId}
+                    currentUserStatus={cell.myReservationStatus}
+                    reservations={cell.approvedReservations}
+                    tone="approved"
+                  />
+                </div>
+
+                <div className="grid gap-1.5">
+                  <h3 className="text-xs font-semibold">
+                    درخواست‌های در انتظار تایید:
+                  </h3>
+                  <ReservationUserList
+                    reservations={cell.pendingReservations}
+                    tone="pending"
+                  />
+                </div>
+
+                {currentUserStatusText ? (
+                  <p className="rounded-md border bg-muted/30 px-2 py-1.5 text-xs">
+                    وضعیت شما: {currentUserStatusText}
+                  </p>
+                ) : null}
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
+    </>
   );
 }
 
@@ -276,6 +610,7 @@ function buildSlotAriaLabel(day: WeekDay, hour: number, cell: CellState): string
     `ظرفیت آزاد ${formatPersianNumber(cell.availableCount)} از ${formatPersianNumber(
       cell.capacity,
     )}`,
+    `${formatPersianNumber(cell.approvedCount)} رزرو تاییدشده`,
     `${formatPersianNumber(cell.pendingCount)} درخواست در انتظار تایید`,
     getPersianUserStatusLabel(cell.myReservationStatus),
     cell.myReservationStatus
@@ -448,6 +783,10 @@ export function CreateReservationForm({
   }
 
   function finishSelection() {
+    if (!isDragging) {
+      return;
+    }
+
     setIsDragging(false);
 
     if (selectionRef.current) {
@@ -613,12 +952,30 @@ export function CreateReservationForm({
                           const slotLabel = buildSlotAriaLabel(day, hour, cell);
 
                           return (
-                            <button
-                              aria-label={slotLabel}
-                              aria-pressed={isSelected}
+                            <SlotDetailsPopover
+                              cell={cell}
                               className={cn(
-                                "relative border-b border-r bg-background p-0 text-left focus-visible:z-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                "border-b border-r bg-background",
                                 dayIndex === weekDays.length - 1 && "border-r-0",
+                              )}
+                              day={day}
+                              hour={hour}
+                              isDragging={isDragging}
+                              key={`${day.dateParam}-${hour}`}
+                              style={{
+                                gridColumn: dayIndex + 2,
+                                gridRow: hourIndex + 1,
+                              }}
+                            >
+                              <div
+                                aria-disabled={!cell.isRequestable}
+                                aria-label={slotLabel}
+                                aria-pressed={isSelected}
+                                className={cn(
+                                  "relative h-full w-full bg-background p-0 text-left focus-visible:z-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                  !cell.isRequestable &&
+                                    "cursor-not-allowed",
+                                  cell.isRequestable && "cursor-pointer",
                                 !cell.isWorkingHour &&
                                   "cursor-not-allowed bg-muted/30",
                                 cell.isWorkingHour &&
@@ -635,40 +992,58 @@ export function CreateReservationForm({
                                   cell.myReservationStatus === "APPROVED" &&
                                   "border-sky-300 bg-sky-50/80 text-sky-900 ring-1 ring-inset ring-sky-300",
                                 cell.isRequestable && "hover:bg-sky-50/60",
-                              )}
-                              data-calendar-cell="true"
-                              data-day-index={dayIndex}
-                              data-hour={hour}
-                              disabled={!cell.isRequestable}
-                              key={`${day.dateParam}-${hour}`}
-                              onPointerDown={(event) =>
-                                startSelection(
-                                  dayIndex,
-                                  hour,
-                                  event.pointerId,
-                                  event.currentTarget,
-                                )
-                              }
-                              onPointerEnter={() => {
-                                if (isDragging) {
-                                  updateSelection(dayIndex, hour);
-                                }
-                              }}
-                              onPointerMove={(event) => {
-                                if (isDragging) {
-                                  updateSelectionFromPoint(
-                                    event.clientX,
-                                    event.clientY,
+                                )}
+                                data-calendar-cell="true"
+                                data-day-index={dayIndex}
+                                data-hour={hour}
+                                onKeyDown={(event) => {
+                                  if (
+                                    event.key !== "Enter" &&
+                                    event.key !== " "
+                                  ) {
+                                    return;
+                                  }
+
+                                  event.preventDefault();
+
+                                  if (!cell.isRequestable) {
+                                    return;
+                                  }
+
+                                  const nextSelection = buildSelection(
+                                    weekDays,
+                                    dayIndex,
+                                    hour,
+                                    hour,
                                   );
+                                  selectionRef.current = nextSelection;
+                                  setSelection(nextSelection);
+                                  setIsReasonDialogOpen(true);
+                                }}
+                                onPointerDown={(event) =>
+                                  startSelection(
+                                    dayIndex,
+                                    hour,
+                                    event.pointerId,
+                                    event.currentTarget,
+                                  )
                                 }
-                              }}
-                              style={{
-                                gridColumn: dayIndex + 2,
-                                gridRow: hourIndex + 1,
-                              }}
-                              title={slotLabel}
-                              type="button"
-                            >
+                                onPointerEnter={() => {
+                                  if (isDragging) {
+                                    updateSelection(dayIndex, hour);
+                                  }
+                                }}
+                                onPointerMove={(event) => {
+                                  if (isDragging) {
+                                    updateSelectionFromPoint(
+                                      event.clientX,
+                                      event.clientY,
+                                    );
+                                  }
+                                }}
+                                role="button"
+                                tabIndex={0}
+                              >
                               {isSelected ? (
                                 <span
                                   className={cn(
@@ -687,7 +1062,15 @@ export function CreateReservationForm({
                               ) : null}
 
                               {cell.isWorkingHour ? (
-                                <CapacityDots cell={cell} />
+                                <>
+                                  <CapacityDots cell={cell} />
+                                  <ReservationCountBadge
+                                    count={
+                                      cell.approvedReservations.length +
+                                      cell.pendingReservations.length
+                                    }
+                                  />
+                                </>
                               ) : null}
 
                               {cell.myReservationStatus === "PENDING" ? (
@@ -708,7 +1091,8 @@ export function CreateReservationForm({
                               {!cell.isWorkingHour ? (
                                 <span className="sr-only">Not working hour</span>
                               ) : null}
-                            </button>
+                              </div>
+                            </SlotDetailsPopover>
                           );
                         }),
                       )}

@@ -57,6 +57,16 @@ type MyReservation = {
   }>;
 };
 
+type CalendarReservationDetail = {
+  email: string | null;
+  id: string;
+  startAt: Date;
+  endAt: Date;
+  status: ReservationStatus;
+  userId: string;
+  userName: string | null;
+};
+
 const DISPLAY_TIME_FORMATTER = new Intl.DateTimeFormat("fa-IR", {
   hour: "2-digit",
   hour12: false,
@@ -418,6 +428,27 @@ function getMyReservationForSlot(
   return null;
 }
 
+function getReservationDetailsForSlot(
+  reservations: CalendarReservationDetail[],
+  slotStart: Date,
+  slotEnd: Date,
+  status: ReservationStatus,
+) {
+  return reservations
+    .filter(
+      (reservation) =>
+        reservation.status === status &&
+        reservation.startAt < slotEnd &&
+        reservation.endAt > slotStart,
+    )
+    .map((reservation) => ({
+      email: reservation.email,
+      id: reservation.id,
+      userId: reservation.userId,
+      userName: reservation.userName,
+    }));
+}
+
 function getReservationDurationHours(reservation: Pick<MyReservation, "startAt" | "endAt">): number {
   return (reservation.endAt.getTime() - reservation.startAt.getTime()) / (60 * 60 * 1000);
 }
@@ -430,6 +461,11 @@ export default async function ReservationsPage({
   const toast = getReservationsToast(params);
   const selectedDate = parseJalaliDateParam(params?.date) ?? new Date();
   const dateParam = formatJalaliDateParam(selectedDate);
+  const weekStart = getWeekStart(selectedDate);
+  const weekEnd = addDays(weekStart, 7);
+  const weekDates = Array.from({ length: 7 }, (_, index) =>
+    addDays(weekStart, index),
+  );
   const [resourcePools, reservationPolicy, reservations] = await Promise.all([
     db.resourcePool.findMany({
       where: { active: true },
@@ -559,11 +595,44 @@ export default async function ReservationsPage({
         (reservation) => reservation.resourcePoolId === selectedResourcePool.id,
       )
     : [];
+  const selectedPoolCalendarReservations: CalendarReservationDetail[] =
+    selectedResourcePool
+      ? await db.reservation.findMany({
+          where: {
+            resourcePoolId: selectedResourcePool.id,
+            startAt: { lt: weekEnd },
+            endAt: { gt: weekStart },
+            status: {
+              in: [ReservationStatus.APPROVED, ReservationStatus.PENDING],
+            },
+          },
+          orderBy: [{ startAt: "asc" }, { createdAt: "asc" }],
+          select: {
+            id: true,
+            startAt: true,
+            endAt: true,
+            status: true,
+            userId: true,
+            user: {
+              select: {
+                email: true,
+                name: true,
+              },
+            },
+          },
+        }).then((items) =>
+          items.map((reservation) => ({
+            email: reservation.user.email,
+            id: reservation.id,
+            startAt: reservation.startAt,
+            endAt: reservation.endAt,
+            status: reservation.status,
+            userId: reservation.userId,
+            userName: reservation.user.name,
+          })),
+        )
+      : [];
   const now = new Date();
-  const weekStart = getWeekStart(selectedDate);
-  const weekDates = Array.from({ length: 7 }, (_, index) =>
-    addDays(weekStart, index),
-  );
   const weekDays = selectedResourcePool
     ? await Promise.all(
         weekDates.map(async (date) => {
@@ -606,7 +675,19 @@ export default async function ReservationsPage({
                 slotStartHour: slot.slotStart.getHours(),
                 slotEndHour: slot.slotEnd.getHours(),
                 approvedCount: slot.approvedCount,
+                approvedReservations: getReservationDetailsForSlot(
+                  selectedPoolCalendarReservations,
+                  slot.slotStart,
+                  slot.slotEnd,
+                  ReservationStatus.APPROVED,
+                ),
                 pendingCount: slot.pendingCount,
+                pendingReservations: getReservationDetailsForSlot(
+                  selectedPoolCalendarReservations,
+                  slot.slotStart,
+                  slot.slotEnd,
+                  ReservationStatus.PENDING,
+                ),
                 capacity: slot.capacity,
                 isRequestable: !isPast && !isFull,
                 myReservationId: myReservation?.id ?? null,
