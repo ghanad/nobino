@@ -12,7 +12,7 @@ export default async function AdminLayout({
   const user = await requireRole([UserRole.ADMIN]);
 
   return (
-    <AppShell user={user} title="Admin Area">
+    <AppShell user={user} title="ادمین">
       {children}
     </AppShell>
   );

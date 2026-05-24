@@ -39,7 +39,7 @@ export async function AppShell({ user, title, children }: AppShellProps) {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="ghost" asChild>
-              <Link href="/reservations">Reservations</Link>
+              <Link href="/reservations">رزروها</Link>
             </Button>
             <Button variant="ghost" asChild>
               <Link href="/notifications">
@@ -54,22 +54,22 @@ export async function AppShell({ user, title, children }: AppShellProps) {
             </Button>
             {canAccessManagerArea(user.role) ? (
               <Button variant="ghost" asChild>
-                <Link href="/manager">Manager</Link>
+                <Link href="/manager">مدیریت</Link>
               </Button>
             ) : null}
             {canAccessAdminArea(user.role) ? (
               <>
                 <Button variant="ghost" asChild>
-                  <Link href="/admin">Admin</Link>
+                  <Link href="/admin">ادمین</Link>
                 </Button>
                 <Button variant="ghost" asChild>
-                  <Link href="/admin/audit">Audit</Link>
+                  <Link href="/admin/audit">گزارش فعالیت‌ها</Link>
                 </Button>
               </>
             ) : null}
             <form action={logoutAction}>
               <Button type="submit" variant="outline">
-                Log out
+                خروج
               </Button>
             </form>
           </div>

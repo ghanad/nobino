@@ -12,7 +12,7 @@ export default async function ManagerLayout({
   const user = await requireRole([UserRole.MANAGER, UserRole.ADMIN]);
 
   return (
-    <AppShell user={user} title="Manager Area">
+    <AppShell user={user} title="مدیریت">
       {children}
     </AppShell>
   );

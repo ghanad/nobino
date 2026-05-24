@@ -1,36 +1,67 @@
-import { Check, CheckCheck, ChevronLeft, ChevronRight } from "lucide-react";
+import { ReservationStatus, UserRole, type Prisma } from "@prisma/client";
+import {
+  Bell,
+  CalendarClock,
+  Check,
+  CheckCheck,
+  ChevronLeft,
+  ChevronRight,
+  Circle,
+} from "lucide-react";
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { UrlToast } from "@/components/ui/url-toast";
 import { requireCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { formatJalaliDateTime } from "@/lib/jalali-date";
-import { getNotificationDisplayText } from "@/lib/notification-service";
+import {
+  formatJalaliDate,
+  formatJalaliDateParam,
+} from "@/lib/jalali-date";
+import { cn } from "@/lib/utils";
 
 const NOTIFICATIONS_PAGE_SIZE = 10;
 const PERSIAN_NUMBER_FORMATTER = new Intl.NumberFormat("fa-IR");
+const DISPLAY_TIME_FORMATTER = new Intl.DateTimeFormat("fa-IR", {
+  hour: "2-digit",
+  hour12: false,
+  minute: "2-digit",
+});
+const NOTIFICATION_FILTERS = [
+  "all",
+  "unread",
+  "actionable",
+  "reservations",
+] as const;
 
 type NotificationsPageProps = {
   searchParams?: Promise<{
     allRead?: string;
     error?: string;
+    filter?: string;
     page?: string;
     read?: string;
   }>;
 };
 
+type NotificationFilter = (typeof NOTIFICATION_FILTERS)[number];
+
 type NotificationItem = {
   id: string;
   type: string;
-  title: string;
   body: string;
   readAt: Date | null;
   createdAt: Date;
   reservation: {
+    id: string;
     startAt: Date;
     endAt: Date;
+    status: ReservationStatus;
     resourcePool: {
+      name: string;
+    };
+    user: {
       name: string;
     };
   } | null;
@@ -66,6 +97,10 @@ function formatPersianNumber(value: number): string {
   return PERSIAN_NUMBER_FORMATTER.format(value);
 }
 
+function formatDisplayTime(date: Date): string {
+  return DISPLAY_TIME_FORMATTER.format(date);
+}
+
 function getNotificationsPage(value: string | undefined): number {
   const parsedPage = Number(value);
 
@@ -76,19 +111,29 @@ function getNotificationsPage(value: string | undefined): number {
   return parsedPage;
 }
 
-function getNotificationsPageHref(page: number): string {
-  if (page <= 1) {
-    return "/notifications";
+function getNotificationsPageHref(page: number, filter: NotificationFilter): string {
+  const params = new URLSearchParams();
+
+  if (filter !== "all") {
+    params.set("filter", filter);
   }
 
-  return `/notifications?page=${page}`;
+  if (page > 1) {
+    params.set("page", page.toString());
+  }
+
+  const query = params.toString();
+
+  return query ? `/notifications?${query}` : "/notifications";
 }
 
 function NotificationsPagination({
   currentPage,
+  filter,
   totalPages,
 }: {
   currentPage: number;
+  filter: NotificationFilter;
   totalPages: number;
 }) {
   if (totalPages <= 1) {
@@ -99,7 +144,7 @@ function NotificationsPagination({
     <div className="flex flex-wrap items-center gap-2 text-sm">
       {currentPage > 1 ? (
         <Button asChild size="sm" variant="outline">
-          <Link href={getNotificationsPageHref(currentPage - 1)}>
+          <Link href={getNotificationsPageHref(currentPage - 1, filter)}>
             <ChevronRight className="h-4 w-4" />
             صفحه قبل
           </Link>
@@ -116,7 +161,7 @@ function NotificationsPagination({
       </span>
       {currentPage < totalPages ? (
         <Button asChild size="sm" variant="outline">
-          <Link href={getNotificationsPageHref(currentPage + 1)}>
+          <Link href={getNotificationsPageHref(currentPage + 1, filter)}>
             صفحه بعد
             <ChevronLeft className="h-4 w-4" />
           </Link>
@@ -131,74 +176,372 @@ function NotificationsPagination({
   );
 }
 
+function getActiveFilter(value: string | undefined): NotificationFilter {
+  return NOTIFICATION_FILTERS.includes(value as NotificationFilter)
+    ? (value as NotificationFilter)
+    : "all";
+}
+
+function buildNotificationsWhere(
+  filter: NotificationFilter,
+  userId: string,
+): Prisma.NotificationWhereInput {
+  const where: Prisma.NotificationWhereInput = { userId };
+
+  if (filter === "unread") {
+    where.readAt = null;
+  }
+
+  if (filter === "reservations") {
+    where.reservationId = { not: null };
+  }
+
+  if (filter === "actionable") {
+    where.OR = [
+      {
+        type: "NEW_PENDING_RESERVATION",
+        reservation: { status: ReservationStatus.PENDING },
+      },
+      {
+        type: "ALTERNATIVE_PROPOSED",
+        reservation: { status: ReservationStatus.ALTERNATIVE_PROPOSED },
+      },
+    ];
+  }
+
+  return where;
+}
+
+function getFilterLabel(filter: NotificationFilter): string {
+  if (filter === "unread") {
+    return "خوانده‌نشده";
+  }
+
+  if (filter === "actionable") {
+    return "نیازمند اقدام";
+  }
+
+  if (filter === "reservations") {
+    return "رزروها";
+  }
+
+  return "همه";
+}
+
+function NotificationFilters({
+  activeFilter,
+}: {
+  activeFilter: NotificationFilter;
+}) {
+  return (
+    <nav aria-label="فیلتر اعلان‌ها" className="flex flex-wrap gap-2">
+      {NOTIFICATION_FILTERS.map((filter) => {
+        const isActive = filter === activeFilter;
+
+        return (
+          <Link
+            className={cn(
+              "inline-flex h-9 items-center rounded-md border px-3 text-sm font-medium transition-colors",
+              isActive
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-input bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+            )}
+            href={getNotificationsPageHref(1, filter)}
+            key={filter}
+          >
+            {getFilterLabel(filter)}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+function getTypeBadge(notification: NotificationItem): {
+  className: string;
+  label: string;
+} {
+  if (notification.type === "NEW_PENDING_RESERVATION") {
+    return {
+      className: "bg-amber-50 text-amber-800 ring-amber-200",
+      label: "درخواست جدید",
+    };
+  }
+
+  if (notification.type === "RESERVATION_APPROVED") {
+    return {
+      className: "bg-emerald-50 text-emerald-800 ring-emerald-200",
+      label: "رزرو تایید شد",
+    };
+  }
+
+  if (notification.type === "RESERVATION_REJECTED") {
+    return {
+      className: "bg-rose-50 text-rose-800 ring-rose-200",
+      label: "رزرو رد شد",
+    };
+  }
+
+  if (notification.type === "RESERVATION_CANCELLED") {
+    return {
+      className: "bg-slate-100 text-slate-700 ring-slate-200",
+      label: "رزرو لغو شد",
+    };
+  }
+
+  if (
+    notification.type === "ALTERNATIVE_PROPOSED" ||
+    notification.type === "ALTERNATIVE_ACCEPTED" ||
+    notification.type === "ALTERNATIVE_REJECTED"
+  ) {
+    return {
+      className: "bg-sky-50 text-sky-800 ring-sky-200",
+      label:
+        notification.type === "ALTERNATIVE_PROPOSED"
+          ? "زمان جایگزین پیشنهاد شد"
+          : notification.type === "ALTERNATIVE_ACCEPTED"
+            ? "زمان پیشنهادی پذیرفته شد"
+            : "زمان پیشنهادی رد شد",
+    };
+  }
+
+  return {
+    className: "bg-muted text-muted-foreground ring-border",
+    label: "اعلان سیستمی",
+  };
+}
+
+function formatReservationInfo(notification: NotificationItem): string | null {
+  if (!notification.reservation) {
+    return null;
+  }
+
+  return `${notification.reservation.resourcePool.name} · ${formatJalaliDate(
+    notification.reservation.startAt,
+  )} · ${formatDisplayTime(notification.reservation.startAt)} تا ${formatDisplayTime(
+    notification.reservation.endAt,
+  )}`;
+}
+
+function getNotificationMessage(notification: NotificationItem): ReactNode {
+  const poolName = notification.reservation?.resourcePool.name;
+  const requesterName = notification.reservation?.user.name;
+
+  if (
+    notification.type === "NEW_PENDING_RESERVATION" &&
+    poolName &&
+    requesterName
+  ) {
+    return (
+      <>
+        <bdi>{requesterName}</bdi> برای <bdi>{poolName}</bdi> درخواست رزرو ثبت کرده
+        است.
+      </>
+    );
+  }
+
+  if (notification.type === "RESERVATION_APPROVED" && poolName) {
+    return (
+      <>
+        رزرو شما برای <bdi>{poolName}</bdi> تایید شد.
+      </>
+    );
+  }
+
+  if (notification.type === "RESERVATION_REJECTED" && poolName) {
+    return (
+      <>
+        درخواست رزرو شما برای <bdi>{poolName}</bdi> رد شد.
+      </>
+    );
+  }
+
+  if (notification.type === "RESERVATION_CANCELLED" && poolName) {
+    return (
+      <>
+        رزرو مربوط به <bdi>{poolName}</bdi> لغو شد.
+      </>
+    );
+  }
+
+  if (notification.type === "ALTERNATIVE_PROPOSED" && poolName) {
+    return (
+      <>
+        مدیر برای رزرو <bdi>{poolName}</bdi> یک زمان جایگزین پیشنهاد داده است.
+      </>
+    );
+  }
+
+  if (notification.type === "ALTERNATIVE_ACCEPTED" && poolName && requesterName) {
+    return (
+      <>
+        <bdi>{requesterName}</bdi> زمان جایگزین پیشنهادی برای <bdi>{poolName}</bdi>{" "}
+        را پذیرفت.
+      </>
+    );
+  }
+
+  if (notification.type === "ALTERNATIVE_REJECTED" && poolName && requesterName) {
+    return (
+      <>
+        <bdi>{requesterName}</bdi> زمان جایگزین پیشنهادی برای <bdi>{poolName}</bdi>{" "}
+        را رد کرد.
+      </>
+    );
+  }
+
+  return notification.body;
+}
+
+function getNotificationAction(
+  notification: NotificationItem,
+  role: UserRole,
+): { href: string; label: string } | null {
+  if (!notification.reservation) {
+    return null;
+  }
+
+  const reservationDate = formatJalaliDateParam(notification.reservation.startAt);
+
+  if (
+    (role === UserRole.MANAGER || role === UserRole.ADMIN) &&
+    notification.type === "NEW_PENDING_RESERVATION" &&
+    notification.reservation.status === ReservationStatus.PENDING
+  ) {
+    return {
+      href: `/manager?date=${encodeURIComponent(reservationDate)}#review-reservation-${
+        notification.reservation.id
+      }`,
+      label: "بررسی درخواست",
+    };
+  }
+
+  if (
+    notification.type === "ALTERNATIVE_PROPOSED" &&
+    notification.reservation.status === ReservationStatus.ALTERNATIVE_PROPOSED
+  ) {
+    return {
+      href: "/reservations",
+      label: "بررسی پیشنهاد",
+    };
+  }
+
+  if (role === UserRole.USER) {
+    return {
+      href: "/reservations/history",
+      label: "مشاهده رزرو",
+    };
+  }
+
+  if (
+    notification.reservation.status === ReservationStatus.PENDING ||
+    notification.reservation.status === ReservationStatus.APPROVED
+  ) {
+    return {
+      href: `/manager?date=${encodeURIComponent(reservationDate)}#review-reservation-${
+        notification.reservation.id
+      }`,
+      label: "مشاهده رزرو",
+    };
+  }
+
+  return null;
+}
+
 function NotificationCard({
+  filter,
   notification,
   page,
+  userRole,
 }: {
+  filter: NotificationFilter;
   notification: NotificationItem;
   page: number;
+  userRole: UserRole;
 }) {
-  const displayText = getNotificationDisplayText(notification);
+  const badge = getTypeBadge(notification);
+  const action = getNotificationAction(notification, userRole);
+  const reservationInfo = formatReservationInfo(notification);
+  const isUnread = !notification.readAt;
 
   return (
     <article
-      className={`rounded-lg border p-5 text-right ${
-        notification.readAt ? "bg-card" : "border-sky-200 bg-sky-50/60"
-      }`}
+      className={cn(
+        "rounded-lg border p-4 text-right shadow-sm transition-colors",
+        isUnread ? "border-sky-200 bg-sky-50/60" : "bg-card",
+      )}
       dir="rtl"
     >
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="grid gap-2">
+      <div className="grid gap-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="font-medium">{displayText.title}</h3>
-            {notification.readAt ? null : (
-              <span className="rounded-full bg-sky-100 px-2 py-1 text-xs font-medium text-sky-800 ring-1 ring-sky-200">
-                خوانده نشده
-              </span>
-            )}
-          </div>
-          <p className="text-sm leading-6 text-muted-foreground">
-            {displayText.body}
-          </p>
-          <dl className="grid gap-2 text-sm sm:grid-cols-2">
-            <div>
-              <dt className="text-muted-foreground">زمان ایجاد</dt>
-              <dd className="mt-1 font-medium">
-                {formatJalaliDateTime(notification.createdAt)}
-              </dd>
-            </div>
-            {notification.reservation ? (
-              <div>
-                <dt className="text-muted-foreground">رزرو</dt>
-                <dd className="mt-1 font-medium">
-                  {notification.reservation.resourcePool.name}، از{" "}
-                  {formatJalaliDateTime(notification.reservation.startAt)} تا{" "}
-                  {formatJalaliDateTime(notification.reservation.endAt)}
-                </dd>
-              </div>
+            {isUnread ? (
+              <Circle className="h-2.5 w-2.5 fill-sky-600 text-sky-600" />
             ) : null}
-          </dl>
+            <span
+              className={cn(
+                "inline-flex w-fit items-center rounded-full px-2 py-1 text-xs font-medium ring-1",
+                badge.className,
+              )}
+            >
+              {badge.label}
+            </span>
+            {isUnread ? (
+              <span className="inline-flex w-fit rounded-full bg-background px-2 py-1 text-xs font-medium text-sky-800 ring-1 ring-sky-200">
+                خوانده‌نشده
+              </span>
+            ) : null}
+          </div>
+          <time
+            className="text-xs leading-5 text-muted-foreground"
+            dateTime={notification.createdAt.toISOString()}
+          >
+            {formatJalaliDate(notification.createdAt)} ·{" "}
+            {formatDisplayTime(notification.createdAt)}
+          </time>
         </div>
 
-        {notification.readAt ? (
-          <span className="text-sm text-muted-foreground">
-            خوانده شده در {formatJalaliDateTime(notification.readAt)}
-          </span>
-        ) : (
-          <form action="/notifications/mark-read" method="post">
-            <input name="mode" type="hidden" value="single" />
-            <input name="page" type="hidden" value={page} />
-            <input
-              name="notificationId"
-              type="hidden"
-              value={notification.id}
-            />
-            <Button type="submit" variant="outline">
-              <Check className="h-4 w-4" />
-              خواندم
-            </Button>
-          </form>
-        )}
+        <div className="grid gap-1">
+          <h3 className="font-medium">{getTypeBadge(notification).label}</h3>
+          <p className="text-sm leading-6 text-foreground">
+            {getNotificationMessage(notification)}
+          </p>
+          {reservationInfo ? (
+            <p className="flex flex-wrap items-center gap-1 text-sm text-muted-foreground">
+              <CalendarClock className="h-4 w-4" />
+              <span dir="auto">{reservationInfo}</span>
+            </p>
+          ) : null}
+        </div>
+
+        {(action || isUnread) ? (
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            {action ? (
+              <Button asChild size="sm">
+                <Link href={action.href}>
+                  <Bell className="h-4 w-4" />
+                  {action.label}
+                </Link>
+              </Button>
+            ) : null}
+            {isUnread ? (
+              <form action="/notifications/mark-read" method="post">
+                <input name="mode" type="hidden" value="single" />
+                <input name="page" type="hidden" value={page} />
+                <input name="filter" type="hidden" value={filter} />
+                <input
+                  name="notificationId"
+                  type="hidden"
+                  value={notification.id}
+                />
+                <Button size="sm" type="submit" variant="outline">
+                  <Check className="h-4 w-4" />
+                  خواندم
+                </Button>
+              </form>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </article>
   );
@@ -210,40 +553,48 @@ export default async function NotificationsPage({
   const user = await requireCurrentUser();
   const params = await searchParams;
   const requestedPage = getNotificationsPage(params?.page);
-  const [totalNotifications, unreadCount] = await Promise.all([
-    db.notification.count({ where: { userId: user.id } }),
+  const activeFilter = getActiveFilter(params?.filter);
+  const where = buildNotificationsWhere(activeFilter, user.id);
+  const [unreadCount, filteredNotifications] = await Promise.all([
     db.notification.count({ where: { userId: user.id, readAt: null } }),
+    db.notification.count({ where }),
   ]);
   const totalPages = Math.max(
     1,
-    Math.ceil(totalNotifications / NOTIFICATIONS_PAGE_SIZE),
+    Math.ceil(filteredNotifications / NOTIFICATIONS_PAGE_SIZE),
   );
   const currentPage = Math.min(requestedPage, totalPages);
   const firstNotificationNumber =
-    totalNotifications === 0
+    filteredNotifications === 0
       ? 0
       : (currentPage - 1) * NOTIFICATIONS_PAGE_SIZE + 1;
   const lastNotificationNumber = Math.min(
     currentPage * NOTIFICATIONS_PAGE_SIZE,
-    totalNotifications,
+    filteredNotifications,
   );
   const notifications = await db.notification.findMany({
-    where: { userId: user.id },
+    where,
     orderBy: [{ readAt: "asc" }, { createdAt: "desc" }],
     skip: (currentPage - 1) * NOTIFICATIONS_PAGE_SIZE,
     take: NOTIFICATIONS_PAGE_SIZE,
     select: {
       id: true,
       type: true,
-      title: true,
       body: true,
       readAt: true,
       createdAt: true,
       reservation: {
         select: {
+          id: true,
           startAt: true,
           endAt: true,
+          status: true,
           resourcePool: {
+            select: {
+              name: true,
+            },
+          },
+          user: {
             select: {
               name: true,
             },
@@ -258,18 +609,19 @@ export default async function NotificationsPage({
     <div className="grid gap-6 text-right" dir="rtl">
       {toast ? <UrlToast {...toast} /> : null}
 
-      <section className="rounded-lg border bg-card p-5 text-card-foreground">
+      <section className="grid gap-5 rounded-lg border bg-card p-5 text-card-foreground">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h2 className="font-medium">اعلان‌ها</h2>
+            <h2 className="text-xl font-semibold tracking-normal">اعلان‌ها</h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              {formatPersianNumber(unreadCount)} اعلان خوانده نشده دارید.
+              {formatPersianNumber(unreadCount)} اعلان خوانده‌نشده دارید.
             </p>
           </div>
           {unreadCount > 0 ? (
             <form action="/notifications/mark-read" method="post">
               <input name="mode" type="hidden" value="all" />
               <input name="page" type="hidden" value={currentPage} />
+              <input name="filter" type="hidden" value={activeFilter} />
               <Button type="submit" variant="outline">
                 <CheckCheck className="h-4 w-4" />
                 همه را خواندم
@@ -278,36 +630,46 @@ export default async function NotificationsPage({
           ) : null}
         </div>
 
+        <NotificationFilters activeFilter={activeFilter} />
+
         {notifications.length === 0 ? (
-          <p className="mt-5 rounded-md border bg-muted/40 p-4 text-sm text-muted-foreground">
-            هنوز اعلانی ندارید.
-          </p>
+          <div className="rounded-md border bg-muted/30 p-4 text-sm text-muted-foreground">
+            <p className="font-medium text-foreground">
+              {activeFilter === "unread"
+                ? "اعلان خوانده‌نشده‌ای ندارید."
+                : "اعلانی وجود ندارد."}
+            </p>
+            {activeFilter === "unread" ? null : (
+              <p className="mt-1">
+                وقتی وضعیت رزروها تغییر کند، اینجا نمایش داده می‌شود.
+              </p>
+            )}
+          </div>
         ) : (
-          <div className="mt-5 grid gap-4">
-            <div className="flex flex-col gap-2 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+          <div className="grid gap-4">
+            <div className="text-sm text-muted-foreground">
               <p>
                 نمایش {formatPersianNumber(firstNotificationNumber)} تا{" "}
                 {formatPersianNumber(lastNotificationNumber)} از{" "}
-                {formatPersianNumber(totalNotifications)} اعلان
+                {formatPersianNumber(filteredNotifications)} اعلان
               </p>
-              <NotificationsPagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-              />
             </div>
 
             <div className="grid gap-3">
               {notifications.map((notification) => (
                 <NotificationCard
+                  filter={activeFilter}
                   key={notification.id}
                   notification={notification}
                   page={currentPage}
+                  userRole={user.role}
                 />
               ))}
             </div>
 
             <NotificationsPagination
               currentPage={currentPage}
+              filter={activeFilter}
               totalPages={totalPages}
             />
           </div>

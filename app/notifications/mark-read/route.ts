@@ -9,14 +9,20 @@ import {
   NotificationError,
 } from "@/lib/notification-service";
 
+const notificationFilterSchema = z
+  .enum(["all", "unread", "actionable", "reservations"])
+  .optional();
+
 const markReadSchema = z.discriminatedUnion("mode", [
   z.object({
     mode: z.literal("single"),
     notificationId: z.string().min(1),
+    filter: notificationFilterSchema,
     page: z.string().optional(),
   }),
   z.object({
     mode: z.literal("all"),
+    filter: notificationFilterSchema,
     page: z.string().optional(),
   }),
 ]);
@@ -41,6 +47,7 @@ export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const parsed = markReadSchema.safeParse({
     mode: formData.get("mode"),
+    filter: formData.get("filter") || undefined,
     notificationId: formData.get("notificationId"),
     page: formData.get("page") || undefined,
   });
@@ -52,6 +59,7 @@ export async function POST(request: NextRequest) {
   }
 
   const page = parsed.data.page;
+  const filter = parsed.data.filter === "all" ? undefined : parsed.data.filter;
 
   try {
     if (parsed.data.mode === "single") {
@@ -61,16 +69,20 @@ export async function POST(request: NextRequest) {
       });
       revalidatePath("/notifications");
 
-      return redirectToNotifications(request, { page, read: "1" });
+      return redirectToNotifications(request, { filter, page, read: "1" });
     }
 
     await markAllNotificationsAsRead(user.id);
     revalidatePath("/notifications");
 
-    return redirectToNotifications(request, { allRead: "1", page });
+    return redirectToNotifications(request, { allRead: "1", filter, page });
   } catch (error) {
     if (error instanceof NotificationError) {
-      return redirectToNotifications(request, { error: error.message, page });
+      return redirectToNotifications(request, {
+        error: error.message,
+        filter,
+        page,
+      });
     }
 
     throw error;
