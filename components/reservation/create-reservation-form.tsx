@@ -88,7 +88,7 @@ type CellState = {
   unavailableReason: "full" | "past" | null;
 };
 
-type CapacityDotTone = "approved" | "free" | "mine" | "pending";
+type CapacityDotTone = "approved" | "disabled" | "free" | "mine" | "pending";
 
 type SlotReservationDetail = {
   email: string | null;
@@ -178,7 +178,7 @@ function getCellState(day: WeekDay, hour: number): CellState {
 
 function buildCapacityDots(cell: CellState): CapacityDotTone[] {
   if (cell.unavailableReason === "past") {
-    return Array<CapacityDotTone>(cell.capacity).fill("approved");
+    return Array<CapacityDotTone>(cell.capacity).fill("disabled");
   }
 
   const myApprovedCount = cell.myReservationStatus === "APPROVED" ? 1 : 0;
@@ -206,7 +206,11 @@ function getCapacityDotClass(tone: CapacityDotTone): string {
   }
 
   if (tone === "approved") {
-    return "border-slate-500 bg-slate-400 opacity-75";
+    return "border-slate-400 bg-slate-300";
+  }
+
+  if (tone === "disabled") {
+    return "border-slate-200 bg-slate-100";
   }
 
   return "border-emerald-600 bg-emerald-500";
@@ -217,7 +221,7 @@ function CapacityDot({ tone }: { tone: CapacityDotTone }) {
     <span
       aria-hidden="true"
       className={cn(
-        "h-3 w-3 rounded-full border shadow-[inset_0_0_0_1px_rgba(255,255,255,0.55)]",
+        "h-2 w-2 shrink-0 rounded-full border shadow-[inset_0_0_0_1px_rgba(255,255,255,0.45)]",
         getCapacityDotClass(tone),
       )}
     />
@@ -451,7 +455,7 @@ function SlotDetailsPopover({
 function CalendarLegend() {
   return (
     <div
-      className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border bg-background px-3 py-2 text-xs text-muted-foreground"
+      className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 shadow-sm"
       dir="rtl"
     >
       <span className="inline-flex items-center gap-1.5">
@@ -468,11 +472,11 @@ function CalendarLegend() {
       </span>
       <span className="inline-flex items-center gap-1.5">
         <CapacityDot tone="approved" />
-        رزروشده / غیرفعال
+        رزروشده
       </span>
       <span className="inline-flex items-center gap-1.5">
-        <Hourglass aria-hidden="true" className="h-3.5 w-3.5 text-amber-700" />
-        درخواست شما در انتظار تایید است
+        <Hourglass aria-hidden="true" className="h-3.5 w-3.5 text-amber-600" />
+        درخواست شما
       </span>
     </div>
   );
@@ -791,17 +795,17 @@ export function CreateReservationForm({
             </p>
           ) : (
             <div
-              className="overflow-hidden rounded-lg border bg-background shadow-sm"
+              className="overflow-hidden rounded-lg border border-slate-200 bg-background shadow-sm"
               onPointerLeave={() => setIsDragging(false)}
               onPointerUp={finishSelection}
             >
               <div className="overflow-x-auto">
                 <div className="min-w-[920px]">
-                  <div className="grid grid-cols-[72px_repeat(7,minmax(116px,1fr))] border-b bg-background">
-                    <div className="border-r px-3 py-3 text-xs font-medium text-muted-foreground" />
+                  <div className="grid grid-cols-[72px_repeat(7,minmax(116px,1fr))] border-b border-slate-100 bg-slate-50/70">
+                    <div className="border-r border-slate-100 px-3 py-3 text-xs font-medium text-muted-foreground" />
                     {weekDays.map((day) => (
                       <div
-                        className="border-r px-3 py-3 text-center text-sm font-semibold last:border-r-0"
+                        className="border-r border-slate-100 px-3 py-3 text-center text-sm font-semibold last:border-r-0"
                         key={day.dateParam}
                         title={day.dateLabel}
                       >
@@ -824,7 +828,7 @@ export function CreateReservationForm({
                     >
                       {hours.map((hour, hourIndex) => (
                         <div
-                          className="relative border-b border-r bg-background"
+                          className="relative border-b border-r border-slate-100 bg-slate-50/40"
                           key={`time-${hour}`}
                           style={{ gridColumn: 1, gridRow: hourIndex + 1 }}
                         >
@@ -858,7 +862,7 @@ export function CreateReservationForm({
                             <SlotDetailsPopover
                               cell={cell}
                               className={cn(
-                                "border-b border-r bg-background",
+                                "border-b border-r border-slate-100 bg-background",
                                 dayIndex === weekDays.length - 1 && "border-r-0",
                               )}
                               isDragging={isDragging}
@@ -873,30 +877,30 @@ export function CreateReservationForm({
                                 aria-label={slotLabel}
                                 aria-pressed={isSelected}
                                 className={cn(
-                                  "relative h-full w-full bg-background p-0 text-left focus-visible:z-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                                  !cell.isRequestable &&
-                                    "cursor-not-allowed",
+                                  "relative h-full w-full bg-background p-0 text-left transition-colors focus-visible:z-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                  !cell.isRequestable && "cursor-not-allowed",
                                   cell.isRequestable && "cursor-pointer",
-                                !cell.isWorkingHour &&
-                                  "cursor-not-allowed bg-muted/30",
-                                cell.isWorkingHour &&
-                                  cell.availableCount <= 0 &&
-                                  "cursor-not-allowed bg-red-50/80 text-red-800",
-                                cell.isWorkingHour &&
-                                  cell.unavailableReason === "past" &&
-                                  cell.availableCount > 0 &&
-                                  "cursor-not-allowed bg-muted/50 text-muted-foreground",
-                                cell.isWorkingHour &&
-                                  cell.myReservationStatus === "PENDING" &&
-                                  "border-amber-300 bg-amber-50/90 text-amber-900 ring-1 ring-inset ring-amber-300",
-                                cell.isWorkingHour &&
-                                  cell.myReservationStatus === "APPROVED" &&
-                                  "border-sky-300 bg-sky-50/80 text-sky-900 ring-1 ring-inset ring-sky-300",
-                                cell.isRequestable && "hover:bg-sky-50/60",
+                                  !cell.isWorkingHour &&
+                                    "cursor-not-allowed bg-slate-50 text-slate-400",
+                                  cell.isWorkingHour &&
+                                    cell.availableCount <= 0 &&
+                                    cell.unavailableReason !== "past" &&
+                                    "cursor-not-allowed bg-slate-50 text-slate-500",
+                                  cell.isWorkingHour &&
+                                    cell.unavailableReason === "past" &&
+                                    "cursor-not-allowed bg-slate-100/70 text-slate-400",
+                                  cell.isWorkingHour &&
+                                    cell.myReservationStatus === "PENDING" &&
+                                    "bg-amber-50/70 text-amber-900 ring-1 ring-inset ring-amber-200",
+                                  cell.isWorkingHour &&
+                                    cell.myReservationStatus === "APPROVED" &&
+                                    "bg-sky-50/70 text-sky-900 ring-1 ring-inset ring-sky-200",
+                                  cell.isRequestable && "hover:bg-sky-50/50",
                                 )}
                                 data-calendar-cell="true"
                                 data-day-index={dayIndex}
                                 data-hour={hour}
+                                title={slotLabel}
                                 onKeyDown={(event) => {
                                   if (
                                     event.key !== "Enter" &&
@@ -969,15 +973,7 @@ export function CreateReservationForm({
                               {cell.myReservationStatus === "PENDING" ? (
                                 <Hourglass
                                   aria-hidden="true"
-                                  className="absolute right-[6px] top-1 z-10 h-3.5 w-3.5 text-amber-700"
-                                  style={{
-                                    color: "rgb(180 83 9)",
-                                    height: 14,
-                                    position: "absolute",
-                                    right: 6,
-                                    top: 4,
-                                    width: 14,
-                                  }}
+                                  className="absolute right-2 top-1.5 z-10 h-3.5 w-3.5 text-amber-600"
                                 />
                               ) : null}
 
