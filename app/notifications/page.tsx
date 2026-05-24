@@ -311,16 +311,27 @@ function getTypeBadge(notification: NotificationItem): {
   };
 }
 
-function formatReservationInfo(notification: NotificationItem): string | null {
+function ReservationInfo({ notification }: { notification: NotificationItem }) {
   if (!notification.reservation) {
     return null;
   }
 
-  return `${notification.reservation.resourcePool.name} · ${formatJalaliDate(
-    notification.reservation.startAt,
-  )} · ${formatDisplayTime(notification.reservation.startAt)} تا ${formatDisplayTime(
-    notification.reservation.endAt,
-  )}`;
+  return (
+    <p className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-xs leading-5 text-muted-foreground sm:text-sm">
+      <CalendarClock className="h-3.5 w-3.5 shrink-0" />
+      <bdi className="min-w-0 truncate" dir="auto">
+        {notification.reservation.resourcePool.name}
+      </bdi>
+      <span aria-hidden="true">·</span>
+      <span>{formatJalaliDate(notification.reservation.startAt)}</span>
+      <span aria-hidden="true">·</span>
+      <span className="inline-flex flex-row items-center gap-1" dir="ltr">
+        <span>{formatDisplayTime(notification.reservation.startAt)}</span>
+        <span dir="rtl">تا</span>
+        <span>{formatDisplayTime(notification.reservation.endAt)}</span>
+      </span>
+    </p>
+  );
 }
 
 function getNotificationMessage(notification: NotificationItem): ReactNode {
@@ -396,7 +407,7 @@ function getNotificationMessage(notification: NotificationItem): ReactNode {
 function getNotificationAction(
   notification: NotificationItem,
   role: UserRole,
-): { href: string; label: string } | null {
+): { href: string; label: string; variant: "default" | "outline" } | null {
   if (!notification.reservation) {
     return null;
   }
@@ -413,6 +424,7 @@ function getNotificationAction(
         notification.reservation.id
       }`,
       label: "بررسی درخواست",
+      variant: "default",
     };
   }
 
@@ -423,6 +435,7 @@ function getNotificationAction(
     return {
       href: "/reservations",
       label: "بررسی پیشنهاد",
+      variant: "default",
     };
   }
 
@@ -430,6 +443,7 @@ function getNotificationAction(
     return {
       href: "/reservations/history",
       label: "مشاهده رزرو",
+      variant: "outline",
     };
   }
 
@@ -442,6 +456,7 @@ function getNotificationAction(
         notification.reservation.id
       }`,
       label: "مشاهده رزرو",
+      variant: "outline",
     };
   }
 
@@ -461,33 +476,34 @@ function NotificationCard({
 }) {
   const badge = getTypeBadge(notification);
   const action = getNotificationAction(notification, userRole);
-  const reservationInfo = formatReservationInfo(notification);
   const isUnread = !notification.readAt;
 
   return (
     <article
       className={cn(
-        "rounded-lg border p-4 text-right shadow-sm transition-colors",
-        isUnread ? "border-sky-200 bg-sky-50/60" : "bg-card",
+        "rounded-lg border p-3 text-right transition-colors sm:p-3.5",
+        isUnread
+          ? "border-sky-300 border-r-4 bg-sky-50/80 shadow-sm"
+          : "bg-card",
       )}
       dir="rtl"
     >
-      <div className="grid gap-3">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex flex-wrap items-center gap-2">
+      <div className="grid gap-2">
+        <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-1.5">
             {isUnread ? (
-              <Circle className="h-2.5 w-2.5 fill-sky-600 text-sky-600" />
+              <Circle className="h-3 w-3 fill-sky-600 text-sky-600" />
             ) : null}
             <span
               className={cn(
-                "inline-flex w-fit items-center rounded-full px-2 py-1 text-xs font-medium ring-1",
+                "inline-flex w-fit items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1",
                 badge.className,
               )}
             >
               {badge.label}
             </span>
             {isUnread ? (
-              <span className="inline-flex w-fit rounded-full bg-background px-2 py-1 text-xs font-medium text-sky-800 ring-1 ring-sky-200">
+              <span className="inline-flex w-fit rounded-full bg-sky-600 px-2 py-0.5 text-xs font-medium text-white">
                 خوانده‌نشده
               </span>
             ) : null}
@@ -501,23 +517,17 @@ function NotificationCard({
           </time>
         </div>
 
-        <div className="grid gap-1">
-          <h3 className="font-medium">{getTypeBadge(notification).label}</h3>
+        <div className="grid gap-1.5">
           <p className="text-sm leading-6 text-foreground">
             {getNotificationMessage(notification)}
           </p>
-          {reservationInfo ? (
-            <p className="flex flex-wrap items-center gap-1 text-sm text-muted-foreground">
-              <CalendarClock className="h-4 w-4" />
-              <span dir="auto">{reservationInfo}</span>
-            </p>
-          ) : null}
+          <ReservationInfo notification={notification} />
         </div>
 
         {(action || isUnread) ? (
-          <div className="flex flex-wrap items-center gap-2 pt-1">
+          <div className="flex flex-wrap items-center gap-2">
             {action ? (
-              <Button asChild size="sm">
+              <Button asChild size="sm" variant={action.variant}>
                 <Link href={action.href}>
                   <Bell className="h-4 w-4" />
                   {action.label}
@@ -534,7 +544,7 @@ function NotificationCard({
                   type="hidden"
                   value={notification.id}
                 />
-                <Button size="sm" type="submit" variant="outline">
+                <Button size="sm" type="submit" variant="ghost">
                   <Check className="h-4 w-4" />
                   خواندم
                 </Button>
