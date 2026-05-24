@@ -605,6 +605,9 @@ export default async function ReservationsPage({
               return {
                 slotStartHour: slot.slotStart.getHours(),
                 slotEndHour: slot.slotEnd.getHours(),
+                approvedCount: slot.approvedCount,
+                pendingCount: slot.pendingCount,
+                capacity: slot.capacity,
                 isRequestable: !isPast && !isFull,
                 myReservationId: myReservation?.id ?? null,
                 myReservationStatus: myReservation?.status ?? null,

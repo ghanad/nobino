@@ -16,6 +16,9 @@ type ResourcePoolOption = {
 type RequestableSlot = {
   slotStartHour: number;
   slotEndHour: number;
+  approvedCount: number;
+  pendingCount: number;
+  capacity: number;
   isRequestable: boolean;
   myReservationId: string | null;
   myReservationStatus: "APPROVED" | "PENDING" | null;
@@ -55,23 +58,15 @@ type Selection = {
 };
 
 type CellState = {
+  approvedCount: number;
+  availableCount: number;
+  capacity: number;
   isRequestable: boolean;
   isWorkingHour: boolean;
   myReservationId: string | null;
   myReservationStatus: "APPROVED" | "PENDING" | null;
+  pendingCount: number;
   unavailableReason: "full" | "past" | null;
-};
-
-type MyReservationBlock = {
-  id: string;
-  status: "APPROVED" | "PENDING";
-  startHour: number;
-  endHour: number;
-};
-
-type FullCapacityBlock = {
-  endHour: number;
-  startHour: number;
 };
 
 function formatHour(hour: number): string {
@@ -111,19 +106,27 @@ function getCellState(day: WeekDay, hour: number): CellState {
 
   if (!slot) {
     return {
+      approvedCount: 0,
+      availableCount: 0,
+      capacity: 0,
       isRequestable: false,
       isWorkingHour: false,
       myReservationId: null,
       myReservationStatus: null,
+      pendingCount: 0,
       unavailableReason: null,
     };
   }
 
   return {
+    approvedCount: slot.approvedCount,
+    availableCount: Math.max(slot.capacity - slot.approvedCount, 0),
+    capacity: slot.capacity,
     isRequestable: slot.isRequestable,
     isWorkingHour: true,
     myReservationId: slot.myReservationId,
     myReservationStatus: slot.myReservationStatus,
+    pendingCount: slot.pendingCount,
     unavailableReason: slot.unavailableReason,
   };
 }
@@ -140,9 +143,7 @@ function getMyReservationLabel(status: CellState["myReservationStatus"]): string
   return "";
 }
 
-function getUnavailableLabel(
-  reason: CellState["unavailableReason"],
-): string {
+function getUnavailableLabel(reason: CellState["unavailableReason"]): string {
   if (reason === "full") {
     return "No system available";
   }
@@ -154,79 +155,34 @@ function getUnavailableLabel(
   return "";
 }
 
-function getMyReservationBlocks(day: WeekDay): MyReservationBlock[] {
-  const blocksById = new Map<string, MyReservationBlock>();
-
-  for (const slot of day.slots) {
-    if (!slot.myReservationId || !slot.myReservationStatus) {
-      continue;
-    }
-
-    const current = blocksById.get(slot.myReservationId);
-
-    if (!current) {
-      blocksById.set(slot.myReservationId, {
-        id: slot.myReservationId,
-        status: slot.myReservationStatus,
-        startHour: slot.slotStartHour,
-        endHour: slot.slotEndHour,
-      });
-      continue;
-    }
-
-    current.startHour = Math.min(current.startHour, slot.slotStartHour);
-    current.endHour = Math.max(current.endHour, slot.slotEndHour);
-  }
-
-  return Array.from(blocksById.values()).sort(
-    (left, right) =>
-      left.startHour - right.startHour || left.endHour - right.endHour,
-  );
-}
-
-function getFullCapacityBlocks(day: WeekDay): FullCapacityBlock[] {
-  const blocks: FullCapacityBlock[] = [];
-
-  for (const slot of day.slots) {
-    if (slot.unavailableReason !== "full" || slot.myReservationStatus) {
-      continue;
-    }
-
-    const previous = blocks.at(-1);
-
-    if (previous && previous.endHour === slot.slotStartHour) {
-      previous.endHour = slot.slotEndHour;
-      continue;
-    }
-
-    blocks.push({
-      startHour: slot.slotStartHour,
-      endHour: slot.slotEndHour,
-    });
-  }
-
-  return blocks;
-}
-
-function MyReservationBlockView({ block }: { block: MyReservationBlock }) {
+function SlotAvailabilityText({ cell }: { cell: CellState }) {
   return (
-    <span
-      className={cn(
-        "flex h-full min-h-8 items-start justify-center rounded-md px-2 py-2 text-center text-xs font-semibold leading-4 shadow-sm ring-1",
-        block.status === "PENDING"
-          ? "bg-amber-100 text-amber-900 ring-amber-200"
-          : "bg-emerald-100 text-emerald-900 ring-emerald-200",
-      )}
-    >
-      {block.status === "PENDING" ? "My pending" : "My approved"}
-    </span>
-  );
-}
-
-function FullCapacityBlockView() {
-  return (
-    <span className="flex h-full min-h-8 items-start justify-center rounded-md bg-red-100 px-2 py-2 text-center text-xs font-semibold leading-4 text-red-800 shadow-sm ring-1 ring-red-200">
-      No system available
+    <span className="absolute inset-x-1 top-1 z-10 grid gap-0.5 rounded-sm px-1 py-1 text-center text-[11px] font-semibold leading-4">
+      <span
+        className={cn(
+          cell.availableCount > 0 ? "text-emerald-800" : "text-red-800",
+        )}
+      >
+        {cell.availableCount} free
+      </span>
+      <span
+        className={cn(
+          cell.pendingCount > 0 ? "text-amber-800" : "text-muted-foreground",
+        )}
+      >
+        {cell.pendingCount} pending
+      </span>
+      {cell.myReservationStatus ? (
+        <span
+          className={cn(
+            cell.myReservationStatus === "PENDING"
+              ? "text-amber-900"
+              : "text-emerald-900",
+          )}
+        >
+          {cell.myReservationStatus === "PENDING" ? "My pending" : "My approved"}
+        </span>
+      ) : null}
     </span>
   );
 }
@@ -318,21 +274,6 @@ export function CreateReservationForm({
   const [isReasonDialogOpen, setIsReasonDialogOpen] = useState(false);
   const selectionRef = useRef<Selection | null>(null);
   const hours = useMemo(() => getHourRange(weekDays), [weekDays]);
-  const firstHour = hours[0] ?? 0;
-  const myReservationBlocksByDate = useMemo(
-    () =>
-      new Map(
-        weekDays.map((day) => [day.dateParam, getMyReservationBlocks(day)]),
-      ),
-    [weekDays],
-  );
-  const fullCapacityBlocksByDate = useMemo(
-    () =>
-      new Map(
-        weekDays.map((day) => [day.dateParam, getFullCapacityBlocks(day)]),
-      ),
-    [weekDays],
-  );
   const weekKey = weekDays.map((day) => day.dateParam).join("|");
   const selectedHours = selection ? selection.endHour - selection.startHour : 0;
   const reservedHoursForSelectedDay = selection
@@ -482,8 +423,8 @@ export function CreateReservationForm({
             <div className="order-first text-center sm:order-none">
               <p className="text-sm font-medium">{weekLabel}</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                White slots are requestable. Amber marks your pending requests;
-                green marks your approved reservations.
+                Each working slot shows free capacity and pending requests.
+                Red slots have no approved capacity left and cannot be selected.
               </p>
             </div>
             <Link
@@ -536,7 +477,7 @@ export function CreateReservationForm({
                     <div
                       className="grid touch-none select-none grid-cols-[72px_repeat(7,minmax(116px,1fr))]"
                       style={{
-                        gridTemplateRows: `repeat(${hours.length}, 3rem)`,
+                        gridTemplateRows: `repeat(${hours.length}, 4.25rem)`,
                       }}
                     >
                       {hours.map((hour, hourIndex) => (
@@ -581,6 +522,12 @@ export function CreateReservationForm({
                               aria-label={[
                                 day.dateLabel,
                                 formatHour(hour),
+                                cell.isWorkingHour
+                                  ? `${cell.availableCount} free`
+                                  : "",
+                                cell.isWorkingHour
+                                  ? `${cell.pendingCount} pending`
+                                  : "",
                                 myReservationLabel,
                                 unavailableLabel,
                               ]
@@ -593,10 +540,11 @@ export function CreateReservationForm({
                                 !cell.isWorkingHour &&
                                   "cursor-not-allowed bg-muted/30",
                                 cell.isWorkingHour &&
-                                  cell.unavailableReason === "full" &&
+                                  cell.availableCount <= 0 &&
                                   "cursor-not-allowed bg-red-50/80 text-red-800",
                                 cell.isWorkingHour &&
                                   cell.unavailableReason === "past" &&
+                                  cell.availableCount > 0 &&
                                   "cursor-not-allowed bg-muted/50 text-muted-foreground",
                                 cell.isWorkingHour &&
                                   cell.myReservationStatus === "PENDING" &&
@@ -655,14 +603,8 @@ export function CreateReservationForm({
                                 </span>
                               ) : null}
 
-                              {cell.isWorkingHour &&
-                              cell.unavailableReason === "past" &&
-                              !cell.myReservationStatus ? (
-                                <span
-                                  className="absolute inset-x-1 top-2 z-10 rounded-sm bg-muted px-1 py-1 text-center text-[11px] font-medium leading-4 text-muted-foreground"
-                                >
-                                  Past time
-                                </span>
+                              {cell.isWorkingHour ? (
+                                <SlotAvailabilityText cell={cell} />
                               ) : null}
 
                               {!cell.isWorkingHour ? (
@@ -671,50 +613,6 @@ export function CreateReservationForm({
                             </button>
                           );
                         }),
-                      )}
-
-                      {weekDays.flatMap((day, dayIndex) =>
-                        (fullCapacityBlocksByDate.get(day.dateParam) ?? []).map(
-                          (block) => {
-                            const startLine = block.startHour - firstHour + 1;
-                            const endLine = block.endHour - firstHour + 1;
-
-                            return (
-                              <div
-                                className="pointer-events-none z-10 p-1"
-                                key={`${day.dateParam}-full-${block.startHour}`}
-                                style={{
-                                  gridColumn: dayIndex + 2,
-                                  gridRow: `${startLine} / ${endLine}`,
-                                }}
-                              >
-                                <FullCapacityBlockView />
-                              </div>
-                            );
-                          },
-                        ),
-                      )}
-
-                      {weekDays.flatMap((day, dayIndex) =>
-                        (myReservationBlocksByDate.get(day.dateParam) ?? []).map(
-                          (block) => {
-                            const startLine = block.startHour - firstHour + 1;
-                            const endLine = block.endHour - firstHour + 1;
-
-                            return (
-                              <div
-                                className="pointer-events-none z-10 p-1"
-                                key={`${day.dateParam}-${block.id}`}
-                                style={{
-                                  gridColumn: dayIndex + 2,
-                                  gridRow: `${startLine} / ${endLine}`,
-                                }}
-                              >
-                                <MyReservationBlockView block={block} />
-                              </div>
-                            );
-                          },
-                        ),
                       )}
                     </div>
                   </div>

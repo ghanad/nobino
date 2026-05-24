@@ -1,9 +1,5 @@
 import { Check, CheckCheck } from "lucide-react";
 
-import {
-  markAllNotificationsAsReadAction,
-  markNotificationAsReadAction,
-} from "@/app/notifications/actions";
 import { Button } from "@/components/ui/button";
 import { UrlToast } from "@/components/ui/url-toast";
 import { requireCurrentUser } from "@/lib/auth";
@@ -108,7 +104,8 @@ function NotificationCard({
             Read {formatJalaliDateTime(notification.readAt)}
           </span>
         ) : (
-          <form action={markNotificationAsReadAction}>
+          <form action="/notifications/mark-read" method="post">
+            <input name="mode" type="hidden" value="single" />
             <input
               name="notificationId"
               type="hidden"
@@ -171,7 +168,8 @@ export default async function NotificationsPage({
             </p>
           </div>
           {unreadCount > 0 ? (
-            <form action={markAllNotificationsAsReadAction}>
+            <form action="/notifications/mark-read" method="post">
+              <input name="mode" type="hidden" value="all" />
               <Button type="submit" variant="outline">
                 <CheckCheck className="h-4 w-4" />
                 Mark all read
