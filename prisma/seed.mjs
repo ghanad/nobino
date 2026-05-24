@@ -65,6 +65,17 @@ async function main() {
     },
   });
 
+  await prisma.reservationPolicy.upsert({
+    where: { id: "default" },
+    update: {
+      dailyUserHourLimit: 3,
+    },
+    create: {
+      id: "default",
+      dailyUserHourLimit: 3,
+    },
+  });
+
   const weeklySchedule = [
     { dayOfWeek: 0, isWorkingDay: true, startTime: "09:00", endTime: "17:00" },
     { dayOfWeek: 1, isWorkingDay: true, startTime: "09:00", endTime: "17:00" },

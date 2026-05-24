@@ -34,6 +34,8 @@ type WeekDay = {
 type CreateReservationFormProps = {
   action: (formData: FormData) => Promise<void>;
   currentDateParam: string;
+  dailyReservedHoursByDate: Record<string, number>;
+  dailyUserHourLimit: number;
   emptyMessage: string;
   nextWeekDateParam: string;
   previousWeekDateParam: string;
@@ -297,6 +299,8 @@ function buildSelection(
 export function CreateReservationForm({
   action,
   currentDateParam,
+  dailyReservedHoursByDate,
+  dailyUserHourLimit,
   emptyMessage,
   nextWeekDateParam,
   previousWeekDateParam,
@@ -326,6 +330,14 @@ export function CreateReservationForm({
     [weekDays],
   );
   const weekKey = weekDays.map((day) => day.dateParam).join("|");
+  const selectedHours = selection ? selection.endHour - selection.startHour : 0;
+  const reservedHoursForSelectedDay = selection
+    ? dailyReservedHoursByDate[selection.dateParam] ?? 0
+    : 0;
+  const selectedDailyTotal = reservedHoursForSelectedDay + selectedHours;
+  const isSelectionOverDailyLimit =
+    Boolean(selection) && selectedDailyTotal > dailyUserHourLimit;
+
   useEffect(() => {
     selectionRef.current = null;
     setSelection(null);
@@ -724,12 +736,18 @@ export function CreateReservationForm({
                     Complete reservation request
                   </h3>
                   {selection ? (
-                    <p className="mt-1 text-sm text-muted-foreground" dir="rtl">
-                      {weekDays[selection.dayIndex]?.modalDateLabel ??
-                        selection.dateParam}
-                      ، {formatPersianHour(selection.startHour)} تا{" "}
-                      {formatPersianHour(selection.endHour)}
-                    </p>
+                    <div className="mt-1 grid gap-1 text-sm text-muted-foreground">
+                      <p dir="rtl">
+                        {weekDays[selection.dayIndex]?.modalDateLabel ??
+                          selection.dateParam}
+                        ، {formatPersianHour(selection.startHour)} تا{" "}
+                        {formatPersianHour(selection.endHour)}
+                      </p>
+                      <p>
+                        Daily total: {selectedDailyTotal} of{" "}
+                        {dailyUserHourLimit} hours
+                      </p>
+                    </div>
                   ) : null}
                 </div>
                 <button
@@ -741,6 +759,17 @@ export function CreateReservationForm({
                   <X aria-hidden="true" className="h-4 w-4" />
                 </button>
               </div>
+
+              {isSelectionOverDailyLimit ? (
+                <p
+                  className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
+                  role="alert"
+                >
+                  This request exceeds your daily limit of {dailyUserHourLimit}{" "}
+                  hours. You already have {reservedHoursForSelectedDay} hours on
+                  this day.
+                </p>
+              ) : null}
 
               <label className="grid gap-2 text-sm font-medium">
                 Reason
@@ -761,7 +790,10 @@ export function CreateReservationForm({
                 >
                   Cancel
                 </button>
-                <SubmitButton pendingLabel="Submitting...">
+                <SubmitButton
+                  disabled={isSelectionOverDailyLimit}
+                  pendingLabel="Submitting..."
+                >
                   Submit request
                 </SubmitButton>
               </div>

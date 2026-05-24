@@ -10,6 +10,7 @@ import {
 import {
   createCapacityException,
   importIranHolidayScheduleExceptions,
+  updateReservationPolicy,
   updateResourcePoolSettings,
 } from "@/lib/admin-settings-service";
 import { CapacityUnavailableError, getSlotUsage } from "@/lib/capacity-service";
@@ -73,6 +74,7 @@ async function resetDatabase() {
   await db.scheduleException.deleteMany();
   await db.workingSchedule.deleteMany();
   await db.resourcePool.deleteMany();
+  await db.reservationPolicy.deleteMany();
   await db.user.deleteMany();
 
   await db.user.createMany({
@@ -114,6 +116,13 @@ async function resetDatabase() {
       name: "Company Systems",
       capacity: 1,
       active: true,
+    },
+  });
+
+  await db.reservationPolicy.create({
+    data: {
+      id: "default",
+      dailyUserHourLimit: 3,
     },
   });
 
@@ -393,6 +402,80 @@ test("daily capacity exceptions override default capacity", async () => {
   const usage = await getSlotUsage({ resourcePoolId: poolId, startAt, endAt });
 
   assert.equal(usage[0].capacity, 1);
+});
+
+test("users cannot request more than the configured daily hour limit", async () => {
+  const firstStartAt = nextWorkingDateAtHour(9);
+  const firstEndAt = addHours(firstStartAt, 2);
+  const secondStartAt = addHours(firstStartAt, 2);
+  const secondEndAt = addHours(secondStartAt, 2);
+
+  await createReservationRequest({
+    userId,
+    resourcePoolId: poolId,
+    startAt: firstStartAt,
+    endAt: firstEndAt,
+  });
+
+  await assert.rejects(
+    () =>
+      createReservationRequest({
+        userId,
+        resourcePoolId: poolId,
+        startAt: secondStartAt,
+        endAt: secondEndAt,
+      }),
+    ReservationTransitionError,
+  );
+});
+
+test("admin can change the daily user hour limit", async () => {
+  const firstStartAt = nextWorkingDateAtHour(9);
+  const firstEndAt = addHours(firstStartAt, 2);
+  const secondStartAt = addHours(firstStartAt, 2);
+  const secondEndAt = addHours(secondStartAt, 2);
+
+  await updateReservationPolicy({
+    adminId,
+    dailyUserHourLimit: 4,
+  });
+
+  await createReservationRequest({
+    userId,
+    resourcePoolId: poolId,
+    startAt: firstStartAt,
+    endAt: firstEndAt,
+  });
+  await assert.doesNotReject(() =>
+    createReservationRequest({
+      userId,
+      resourcePoolId: poolId,
+      startAt: secondStartAt,
+      endAt: secondEndAt,
+    }),
+  );
+});
+
+test("approval re-checks approved daily user hour limit", async () => {
+  const firstStartAt = nextWorkingDateAtHour(9);
+  const firstEndAt = addHours(firstStartAt, 2);
+  const secondStartAt = addHours(firstStartAt, 2);
+  const secondEndAt = addHours(secondStartAt, 2);
+  await createReservation({
+    startAt: firstStartAt,
+    endAt: firstEndAt,
+    status: ReservationStatus.APPROVED,
+  });
+  const pending = await createReservation({
+    startAt: secondStartAt,
+    endAt: secondEndAt,
+    status: ReservationStatus.PENDING,
+  });
+
+  await assert.rejects(
+    () => approveReservation({ reservationId: pending.id, managerId }),
+    ReservationTransitionError,
+  );
 });
 
 test("daily capacity exceptions can close capacity for a day", async () => {

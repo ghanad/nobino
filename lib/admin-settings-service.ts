@@ -289,6 +289,49 @@ export async function updateResourcePoolSettings(input: {
   });
 }
 
+export async function updateReservationPolicy(input: {
+  adminId: string;
+  dailyUserHourLimit: number;
+}) {
+  if (input.dailyUserHourLimit < 1 || input.dailyUserHourLimit > 24) {
+    throw new AdminSettingsError(
+      "Daily user reservation limit must be between 1 and 24 hours.",
+    );
+  }
+
+  return db.$transaction(async (tx) => {
+    await assertAdmin(input.adminId, tx);
+
+    const current = await tx.reservationPolicy.upsert({
+      where: { id: "default" },
+      update: {},
+      create: { id: "default", dailyUserHourLimit: 3 },
+    });
+
+    const updated = await tx.reservationPolicy.update({
+      where: { id: current.id },
+      data: { dailyUserHourLimit: input.dailyUserHourLimit },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorUserId: input.adminId,
+        entityType: "ReservationPolicy",
+        entityId: updated.id,
+        action: "RESERVATION_POLICY_CHANGED",
+        oldValue: {
+          dailyUserHourLimit: current.dailyUserHourLimit,
+        },
+        newValue: {
+          dailyUserHourLimit: updated.dailyUserHourLimit,
+        },
+      },
+    });
+
+    return updated;
+  });
+}
+
 export async function createCapacityException(input: {
   adminId: string;
   resourcePoolId: string;

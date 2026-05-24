@@ -19,6 +19,7 @@ import {
   deleteScheduleExceptionAction,
   importIranHolidaysAction,
   updateCapacityExceptionAction,
+  updateReservationPolicyAction,
   resetUserPasswordAction,
   updateResourcePoolAction,
   updateScheduleExceptionAction,
@@ -48,6 +49,7 @@ type AdminPageProps = {
     holidayImported?: string;
     passwordReset?: string;
     poolUpdated?: string;
+    reservationPolicyUpdated?: string;
     scheduleUpdated?: string;
     userCreated?: string;
     userUpdated?: string;
@@ -87,7 +89,11 @@ function getActiveAdminTab(
     return params.tab as AdminTab;
   }
 
-  if (params?.poolUpdated || params?.capacityExceptionCreated) {
+  if (
+    params?.poolUpdated ||
+    params?.reservationPolicyUpdated ||
+    params?.capacityExceptionCreated
+  ) {
     return "capacity";
   }
 
@@ -123,6 +129,7 @@ function getAdminToast(params: Awaited<AdminPageProps["searchParams"]>) {
 
   const successMessage =
     (params?.poolUpdated && "Resource pool settings updated.") ||
+    (params?.reservationPolicyUpdated && "Reservation policy updated.") ||
     (params?.capacityExceptionCreated && "Daily capacity exception created.") ||
     (params?.capacityExceptionUpdated && "Daily capacity exception updated.") ||
     (params?.capacityExceptionDeleted && "Daily capacity exception deleted.") ||
@@ -143,6 +150,7 @@ function getAdminToast(params: Awaited<AdminPageProps["searchParams"]>) {
   return {
     consumeKeys: [
       "poolUpdated",
+      "reservationPolicyUpdated",
       "capacityExceptionCreated",
       "capacityExceptionUpdated",
       "capacityExceptionDeleted",
@@ -467,6 +475,50 @@ function ResourcePoolSettings({
           ))}
         </div>
       )}
+    </section>
+  );
+}
+
+function ReservationPolicySettings({
+  dailyUserHourLimit,
+}: {
+  dailyUserHourLimit: number;
+}) {
+  return (
+    <section className="rounded-lg border bg-card p-5 text-card-foreground">
+      <div className="flex flex-col gap-1">
+        <h2 className="font-medium">Reservation policy</h2>
+        <p className="text-sm text-muted-foreground">
+          Limit how many approved or pending hours each user can hold on one day.
+        </p>
+      </div>
+
+      <form
+        action={updateReservationPolicyAction}
+        className="mt-5 grid gap-4 rounded-md border bg-muted/20 p-4 sm:grid-cols-[180px_auto] sm:items-end"
+      >
+        <div className="grid gap-2">
+          <FieldLabel htmlFor="daily-user-hour-limit">
+            Daily user hours
+          </FieldLabel>
+          <TextInput
+            defaultValue={dailyUserHourLimit}
+            id="daily-user-hour-limit"
+            inputMode="numeric"
+            max={24}
+            min={1}
+            name="dailyUserHourLimit"
+            required
+            type="number"
+          />
+        </div>
+        <div className="flex items-end">
+          <Button type="submit">
+            <Save className="h-4 w-4" />
+            Save
+          </Button>
+        </div>
+      </form>
     </section>
   );
 }
@@ -900,8 +952,14 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const toast = getAdminToast(params);
   const activeTab = getActiveAdminTab(params);
   const currentJalaliYear = formatJalaliDateParam(new Date()).split("-")[0];
-  const [resourcePools, capacityExceptions, schedules, exceptions, users] =
-    await Promise.all([
+  const [
+    resourcePools,
+    reservationPolicy,
+    capacityExceptions,
+    schedules,
+    exceptions,
+    users,
+  ] = await Promise.all([
     db.resourcePool.findMany({
       orderBy: { name: "asc" },
       select: {
@@ -909,6 +967,12 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         name: true,
         capacity: true,
         active: true,
+      },
+    }),
+    db.reservationPolicy.findUnique({
+      where: { id: "default" },
+      select: {
+        dailyUserHourLimit: true,
       },
     }),
     db.resourcePoolCapacityException.findMany({
@@ -971,6 +1035,9 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       {activeTab === "capacity" ? (
         <>
           <ResourcePoolSettings resourcePools={resourcePools} />
+          <ReservationPolicySettings
+            dailyUserHourLimit={reservationPolicy?.dailyUserHourLimit ?? 3}
+          />
           <CapacityExceptions
             capacityExceptions={capacityExceptions}
             resourcePools={resourcePools}

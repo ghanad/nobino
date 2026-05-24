@@ -12,6 +12,13 @@ import { db } from "@/lib/db";
 import { validateReservationTimeRange } from "@/lib/schedule";
 
 type DbClient = typeof db | Prisma.TransactionClient;
+const ONE_HOUR_MS = 60 * 60 * 1000;
+const DEFAULT_DAILY_USER_HOUR_LIMIT = 3;
+const ACTIVE_REQUEST_STATUSES = [
+  ReservationStatus.PENDING,
+  ReservationStatus.APPROVED,
+  ReservationStatus.ALTERNATIVE_PROPOSED,
+];
 
 export class ReservationTransitionError extends Error {
   constructor(message: string) {
@@ -32,6 +39,76 @@ async function assertManagerOrAdmin(userId: string, client: DbClient = db) {
   ) {
     throw new ReservationTransitionError(
       "Only managers or admins can perform this action.",
+    );
+  }
+}
+
+function startOfLocalDay(date: Date): Date {
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    0,
+    0,
+    0,
+    0,
+  );
+}
+
+function endOfLocalDay(date: Date): Date {
+  const dayStart = startOfLocalDay(date);
+
+  return new Date(dayStart.getTime() + 24 * ONE_HOUR_MS);
+}
+
+function reservationHours(startAt: Date, endAt: Date): number {
+  return (endAt.getTime() - startAt.getTime()) / ONE_HOUR_MS;
+}
+
+async function getDailyUserHourLimit(client: DbClient): Promise<number> {
+  const policy = await client.reservationPolicy.findUnique({
+    where: { id: "default" },
+    select: { dailyUserHourLimit: true },
+  });
+
+  return policy?.dailyUserHourLimit ?? DEFAULT_DAILY_USER_HOUR_LIMIT;
+}
+
+async function assertDailyUserReservationLimit(input: {
+  userId: string;
+  startAt: Date;
+  endAt: Date;
+  statuses: ReservationStatus[];
+  excludeReservationId?: string;
+}, client: DbClient): Promise<void> {
+  const dailyUserHourLimit = await getDailyUserHourLimit(client);
+  const dayStart = startOfLocalDay(input.startAt);
+  const dayEnd = endOfLocalDay(input.startAt);
+  const reservations = await client.reservation.findMany({
+    where: {
+      userId: input.userId,
+      startAt: { lt: dayEnd },
+      endAt: { gt: dayStart },
+      status: { in: input.statuses },
+      id: input.excludeReservationId
+        ? { not: input.excludeReservationId }
+        : undefined,
+    },
+    select: {
+      startAt: true,
+      endAt: true,
+    },
+  });
+  const existingHours = reservations.reduce(
+    (total, reservation) =>
+      total + reservationHours(reservation.startAt, reservation.endAt),
+    0,
+  );
+  const requestedHours = reservationHours(input.startAt, input.endAt);
+
+  if (existingHours + requestedHours > dailyUserHourLimit) {
+    throw new ReservationTransitionError(
+      `Users can reserve at most ${dailyUserHourLimit} hours per day.`,
     );
   }
 }
@@ -57,6 +134,16 @@ export async function createReservationRequest(input: {
   });
 
   return db.$transaction(async (tx) => {
+    await assertDailyUserReservationLimit(
+      {
+        userId: input.userId,
+        startAt: input.startAt,
+        endAt: input.endAt,
+        statuses: ACTIVE_REQUEST_STATUSES,
+      },
+      tx,
+    );
+
     const reservation = await tx.reservation.create({
       data: {
         userId: input.userId,
@@ -146,6 +233,17 @@ export async function approveReservation(input: {
         resourcePoolId: reservation.resourcePoolId,
         startAt: reservation.startAt,
         endAt: reservation.endAt,
+        excludeReservationId: reservation.id,
+      },
+      tx,
+    );
+
+    await assertDailyUserReservationLimit(
+      {
+        userId: reservation.userId,
+        startAt: reservation.startAt,
+        endAt: reservation.endAt,
+        statuses: [ReservationStatus.APPROVED],
         excludeReservationId: reservation.id,
       },
       tx,
@@ -297,6 +395,17 @@ export async function proposeAlternative(input: {
         resourcePoolId: reservation.resourcePoolId,
         startAt: input.proposedStartAt,
         endAt: input.proposedEndAt,
+      },
+      tx,
+    );
+
+    await assertDailyUserReservationLimit(
+      {
+        userId: reservation.userId,
+        startAt: input.proposedStartAt,
+        endAt: input.proposedEndAt,
+        statuses: ACTIVE_REQUEST_STATUSES,
+        excludeReservationId: reservation.id,
       },
       tx,
     );
@@ -538,6 +647,17 @@ export async function acceptAlternative(input: {
         resourcePoolId: alternative.reservation.resourcePoolId,
         startAt: alternative.proposedStartAt,
         endAt: alternative.proposedEndAt,
+        excludeReservationId: alternative.reservation.id,
+      },
+      tx,
+    );
+
+    await assertDailyUserReservationLimit(
+      {
+        userId: alternative.reservation.userId,
+        startAt: alternative.proposedStartAt,
+        endAt: alternative.proposedEndAt,
+        statuses: [ReservationStatus.APPROVED],
         excludeReservationId: alternative.reservation.id,
       },
       tx,

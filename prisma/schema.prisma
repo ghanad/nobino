@@ -99,6 +99,13 @@ model ScheduleException {
   updatedAt    DateTime @updatedAt
 }
 
+model ReservationPolicy {
+  id                 String   @id @default("default")
+  dailyUserHourLimit Int      @default(3)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
 model Reservation {
   id              String            @id @default(cuid())
   userId          String

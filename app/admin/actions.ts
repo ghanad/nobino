@@ -12,6 +12,7 @@ import {
   deleteScheduleException,
   importIranHolidayScheduleExceptions,
   updateCapacityException,
+  updateReservationPolicy,
   updateResourcePoolSettings,
   updateScheduleException,
   updateWeeklySchedule,
@@ -35,6 +36,10 @@ const resourcePoolSchema = z.object({
   name: z.string().trim().min(1).max(100),
   capacity: z.coerce.number().int().min(1).max(50),
   active: z.coerce.boolean(),
+});
+
+const reservationPolicySchema = z.object({
+  dailyUserHourLimit: z.coerce.number().int().min(1).max(24),
 });
 
 const weeklyScheduleSchema = z.object({
@@ -160,6 +165,33 @@ export async function updateResourcePoolAction(
   }
 
   redirectToAdmin({ poolUpdated: "1", tab: "capacity" });
+}
+
+export async function updateReservationPolicyAction(
+  formData: FormData,
+): Promise<void> {
+  const admin = await requireRole([UserRole.ADMIN]);
+  const parsed = reservationPolicySchema.safeParse({
+    dailyUserHourLimit: formData.get("dailyUserHourLimit"),
+  });
+
+  if (!parsed.success) {
+    redirectToAdmin({
+      error: "Enter a valid daily user reservation limit.",
+      tab: "capacity",
+    });
+  }
+
+  try {
+    await updateReservationPolicy({
+      adminId: admin.id,
+      dailyUserHourLimit: parsed.data.dailyUserHourLimit,
+    });
+  } catch (error) {
+    redirectToAdmin({ error: getActionErrorMessage(error), tab: "capacity" });
+  }
+
+  redirectToAdmin({ reservationPolicyUpdated: "1", tab: "capacity" });
 }
 
 export async function createCapacityExceptionAction(

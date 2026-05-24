@@ -101,14 +101,7 @@ export async function createReservationAction(
       reason: parsed.data.reason,
     });
   } catch (error) {
-    if (
-      error instanceof ReservationTimeRangeError ||
-      error instanceof CapacityUnavailableError
-    ) {
-      redirectWithError(error.message, dateParam);
-    }
-
-    throw error;
+    redirectWithError(getActionErrorMessage(error), dateParam);
   }
 
   redirect(`/reservations?created=1&date=${dateParam}`);

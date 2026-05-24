@@ -418,6 +418,10 @@ function getMyReservationForSlot(
   return null;
 }
 
+function getReservationDurationHours(reservation: Pick<MyReservation, "startAt" | "endAt">): number {
+  return (reservation.endAt.getTime() - reservation.startAt.getTime()) / (60 * 60 * 1000);
+}
+
 export default async function ReservationsPage({
   searchParams,
 }: ReservationsPageProps) {
@@ -426,7 +430,7 @@ export default async function ReservationsPage({
   const toast = getReservationsToast(params);
   const selectedDate = parseJalaliDateParam(params?.date) ?? new Date();
   const dateParam = formatJalaliDateParam(selectedDate);
-  const [resourcePools, reservations] = await Promise.all([
+  const [resourcePools, reservationPolicy, reservations] = await Promise.all([
     db.resourcePool.findMany({
       where: { active: true },
       orderBy: { name: "asc" },
@@ -434,6 +438,12 @@ export default async function ReservationsPage({
         id: true,
         name: true,
         capacity: true,
+      },
+    }),
+    db.reservationPolicy.findUnique({
+      where: { id: "default" },
+      select: {
+        dailyUserHourLimit: true,
       },
     }),
     db.reservation.findMany({
@@ -505,6 +515,25 @@ export default async function ReservationsPage({
     ReservationStatus.CANCELLED_BY_ADMIN,
   ];
   const selectedResourcePool = resourcePools[0];
+  const dailyUserHourLimit = reservationPolicy?.dailyUserHourLimit ?? 3;
+  const dailyReservedHoursByDate = reservations.reduce<Record<string, number>>(
+    (hoursByDate, reservation) => {
+      if (
+        reservation.status !== ReservationStatus.PENDING &&
+        reservation.status !== ReservationStatus.APPROVED &&
+        reservation.status !== ReservationStatus.ALTERNATIVE_PROPOSED
+      ) {
+        return hoursByDate;
+      }
+
+      const date = formatJalaliDateParam(reservation.startAt);
+      hoursByDate[date] =
+        (hoursByDate[date] ?? 0) + getReservationDurationHours(reservation);
+
+      return hoursByDate;
+    },
+    {},
+  );
   const selectedPoolReservations = selectedResourcePool
     ? reservations.filter(
         (reservation) => reservation.resourcePoolId === selectedResourcePool.id,
@@ -581,6 +610,8 @@ export default async function ReservationsPage({
       <CreateReservationForm
         action={createReservationAction}
         currentDateParam={dateParam}
+        dailyReservedHoursByDate={dailyReservedHoursByDate}
+        dailyUserHourLimit={dailyUserHourLimit}
         emptyMessage={
           selectedResourcePool
             ? "No working-hour slots are configured for this week."
