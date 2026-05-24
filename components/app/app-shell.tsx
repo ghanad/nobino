@@ -29,9 +29,9 @@ export async function AppShell({ user, title, children }: AppShellProps) {
   return (
     <main className="min-h-screen bg-background">
       <UnreadNotificationToast notification={latestUnreadNotification} />
-      <header className="border-b bg-card">
+      <header className="border-b bg-card" dir="rtl">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-6 py-4 md:flex-row md:items-center md:justify-between">
-          <div>
+          <div className="text-right">
             <p className="text-sm text-muted-foreground">
               Nobino Reservations
             </p>
@@ -46,7 +46,7 @@ export async function AppShell({ user, title, children }: AppShellProps) {
                 <Bell className="h-4 w-4" />
                 اعلان‌ها
                 {unreadNotificationCount > 0 ? (
-                  <span className="ml-1 rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
+                  <span className="ms-1 rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
                     {PERSIAN_NUMBER_FORMATTER.format(unreadNotificationCount)}
                   </span>
                 ) : null}
