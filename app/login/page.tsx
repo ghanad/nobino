@@ -23,53 +23,53 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const hasInvalidLogin = params.error === "invalid";
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-muted/30 px-6 py-12">
-      <section className="w-full max-w-sm rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
-        <div>
+    <main
+      dir="rtl"
+      className="flex min-h-screen items-center justify-center bg-muted/30 px-6 py-12"
+    >
+      <section className="w-full max-w-sm rounded-lg border bg-card p-6 text-right text-card-foreground shadow-sm">
+        <div className="text-center">
           <p className="text-sm font-medium text-muted-foreground">
-            Nobino Reservations
+            نوبینو
           </p>
           <h1 className="mt-2 text-2xl font-semibold tracking-normal">
-            Sign in
+            ورود به سامانه
           </h1>
         </div>
 
         {hasInvalidLogin ? (
           <div className="mt-5 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            Invalid email or password.
+            ایمیل یا رمز عبور نادرست است.
           </div>
         ) : null}
 
         <form action={loginAction} className="mt-6 grid gap-4">
           <label className="grid gap-2 text-sm font-medium">
-            Email
+            ایمیل
             <input
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="h-10 rounded-md border border-input bg-background px-3 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
               name="email"
               type="email"
               autoComplete="email"
+              dir="ltr"
               required
             />
           </label>
           <label className="grid gap-2 text-sm font-medium">
-            Password
+            رمز عبور
             <input
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="h-10 rounded-md border border-input bg-background px-3 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
               name="password"
               type="password"
               autoComplete="current-password"
+              dir="ltr"
               required
             />
           </label>
           <Button type="submit" className="w-full">
-            Sign in
+            ورود
           </Button>
         </form>
-
-        <div className="mt-6 rounded-md bg-muted/60 p-3 text-xs leading-5 text-muted-foreground">
-          Seeded users: admin@nobino.local, manager@nobino.local, and
-          user@nobino.local.
-        </div>
       </section>
     </main>
   );
