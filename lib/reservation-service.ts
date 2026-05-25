@@ -15,6 +15,9 @@ type DbClient = typeof db | Prisma.TransactionClient;
 const ONE_HOUR_MS = 60 * 60 * 1000;
 const DEFAULT_DAILY_USER_HOUR_LIMIT = 3;
 const DEFAULT_ONE_RESERVATION_PER_DAY_ENABLED = true;
+const PERSIAN_NUMBER_FORMATTER = new Intl.NumberFormat("fa-IR", {
+  useGrouping: false,
+});
 const ACTIVE_REQUEST_STATUSES = [
   ReservationStatus.PENDING,
   ReservationStatus.APPROVED,
@@ -128,7 +131,9 @@ async function assertDailyUserReservationPolicy(input: {
 
   if (existingHours + requestedHours > policy.dailyUserHourLimit) {
     throw new ReservationTransitionError(
-      `Users can reserve at most ${policy.dailyUserHourLimit} hours per day.`,
+      `هر کاربر حداکثر می‌تواند ${PERSIAN_NUMBER_FORMATTER.format(
+        policy.dailyUserHourLimit,
+      )} ساعت در یک روز رزرو کند.`,
     );
   }
 }

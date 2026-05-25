@@ -1030,7 +1030,7 @@ export function CreateReservationForm({
             role="dialog"
           >
             <button
-              aria-label="Close request dialog"
+              aria-label="بستن فرم درخواست"
               className="absolute inset-0 cursor-default"
               onClick={() => setIsReasonDialogOpen(false)}
               type="button"
@@ -1042,7 +1042,7 @@ export function CreateReservationForm({
                     className="font-medium"
                     id="reservation-reason-dialog-title"
                   >
-                    Complete reservation request
+                    تکمیل درخواست رزرو
                   </h3>
                   {selection ? (
                     <div className="mt-1 grid gap-1 text-sm text-muted-foreground">
@@ -1053,14 +1053,14 @@ export function CreateReservationForm({
                         {formatPersianHour(selection.endHour)}
                       </p>
                       <p>
-                        Daily total: {selectedDailyTotal} of{" "}
-                        {dailyUserHourLimit} hours
+                        مجموع امروز: {formatPersianNumber(selectedDailyTotal)} از{" "}
+                        {formatPersianNumber(dailyUserHourLimit)} ساعت
                       </p>
                     </div>
                   ) : null}
                 </div>
                 <button
-                  aria-label="Close request dialog"
+                  aria-label="بستن فرم درخواست"
                   className="inline-flex h-9 w-9 items-center justify-center rounded-md border bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
                   onClick={() => setIsReasonDialogOpen(false)}
                   type="button"
@@ -1074,9 +1074,11 @@ export function CreateReservationForm({
                   className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
                   role="alert"
                 >
-                  This request exceeds your daily limit of {dailyUserHourLimit}{" "}
-                  hours. You already have {reservedHoursForSelectedDay} hours on
-                  this day.
+                  شما نمی‌توانید بیش از{" "}
+                  {formatPersianNumber(dailyUserHourLimit)} ساعت در یک روز رزرو
+                  کنید. در این روز قبلا{" "}
+                  {formatPersianNumber(reservedHoursForSelectedDay)} ساعت رزرو
+                  فعال دارید.
                 </p>
               ) : null}
 
@@ -1085,18 +1087,21 @@ export function CreateReservationForm({
                   className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
                   role="alert"
                 >
-                  You already have an active reservation request on this day.
+                  شما در این روز یک درخواست رزرو فعال دارید.
                 </p>
               ) : null}
 
               <label className="grid gap-2 text-sm font-medium">
-                Reason
+                <span>
+                  دلیل درخواست{" "}
+                  <span className="text-muted-foreground">(اختیاری)</span>
+                </span>
                 <textarea
                   autoFocus
                   className="min-h-28 rounded-md border border-input bg-background px-3 py-2 text-sm"
                   maxLength={500}
                   name="reason"
-                  placeholder="Optional"
+                  placeholder="توضیح کوتاهی درباره درخواست بنویسید"
                 />
               </label>
 
@@ -1106,13 +1111,13 @@ export function CreateReservationForm({
                   onClick={() => setIsReasonDialogOpen(false)}
                   type="button"
                 >
-                  Cancel
+                  انصراف
                 </button>
                 <SubmitButton
                   disabled={isSelectionBlocked}
-                  pendingLabel="Submitting..."
+                  pendingLabel="در حال ثبت..."
                 >
-                  Submit request
+                  ثبت درخواست
                 </SubmitButton>
               </div>
             </div>
