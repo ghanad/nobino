@@ -40,6 +40,7 @@ type QueueReservation = {
   resourcePoolId: string;
   startAt: Date;
   endAt: Date;
+  partySize: number;
   status: ReservationStatus;
   reason: string | null;
   createdAt: Date;
@@ -279,6 +280,12 @@ function QueueCard({
               <dt className="text-muted-foreground">Duration</dt>
               <dd className="mt-1 font-medium">
                 {formatDuration(item.reservation.startAt, item.reservation.endAt)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">People</dt>
+              <dd className="mt-1 font-medium">
+                {item.reservation.partySize}
               </dd>
             </div>
             <div>
@@ -545,6 +552,7 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
             resourcePoolId: true,
             startAt: true,
             endAt: true,
+            partySize: true,
             status: true,
             reason: true,
             createdAt: true,
@@ -607,6 +615,7 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
                 .map((reservation) => ({
                   id: reservation.reservation.id,
                   userName: reservation.reservation.user.name,
+                  partySize: reservation.reservation.partySize,
                   status:
                     reservation.reservation.status === ReservationStatus.APPROVED
                       ? ("APPROVED" as const)
@@ -651,6 +660,7 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       resourcePoolId: true,
       startAt: true,
       endAt: true,
+      partySize: true,
       status: true,
       reason: true,
       createdAt: true,

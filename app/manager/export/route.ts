@@ -45,7 +45,7 @@ function escapeCsvCell(value: string | number | null | undefined): string {
   return `"${text.replace(/"/g, '""')}"`;
 }
 
-function buildCsv(rows: string[][]): string {
+function buildCsv(rows: Array<Array<string | number>>): string {
   return rows
     .map((row) => row.map((cell) => escapeCsvCell(cell)).join(","))
     .join("\r\n");
@@ -83,6 +83,7 @@ export async function GET(request: Request): Promise<Response> {
       id: true,
       startAt: true,
       endAt: true,
+      partySize: true,
       status: true,
       reason: true,
       rejectionReason: true,
@@ -122,6 +123,7 @@ export async function GET(request: Request): Promise<Response> {
       "Status",
       "Start",
       "End",
+      "People",
       "Start Hour",
       "End Hour",
       "Reason",
@@ -140,6 +142,7 @@ export async function GET(request: Request): Promise<Response> {
       statusLabel(reservation.status),
       formatJalaliDateTime(reservation.startAt),
       formatJalaliDateTime(reservation.endAt),
+      reservation.partySize,
       formatLocalTime(reservation.startAt),
       formatLocalTime(reservation.endAt),
       reservation.reason ?? "",

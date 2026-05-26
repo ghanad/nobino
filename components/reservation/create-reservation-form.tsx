@@ -93,6 +93,7 @@ type CapacityDotTone = "approved" | "free" | "mine" | "pending";
 type SlotReservationDetail = {
   email: string | null;
   id: string;
+  partySize: number;
   userId: string;
   userName: string | null;
 };
@@ -240,6 +241,10 @@ function getReservationDisplayName(reservation: SlotReservationDetail): string {
   return reservation.userName || reservation.email || "کاربر نامشخص";
 }
 
+function formatPartySize(partySize: number): string {
+  return `${formatPersianNumber(partySize)} نفر`;
+}
+
 function ReservationUserList({
   currentUserReservationId,
   currentUserStatus,
@@ -281,7 +286,12 @@ function ReservationUserList({
                   "border-slate-500 bg-slate-400",
               )}
             />
-            <span className="truncate">{getReservationDisplayName(reservation)}</span>
+            <span className="min-w-0 flex-1 truncate">
+              {getReservationDisplayName(reservation)}
+            </span>
+            <span className="shrink-0 rounded-sm bg-slate-100 px-1.5 py-0.5 text-xs text-slate-700">
+              {formatPartySize(reservation.partySize)}
+            </span>
           </li>
         );
       })}
@@ -1098,6 +1108,20 @@ export function CreateReservationForm({
                   شما در این روز یک درخواست رزرو فعال دارید.
                 </p>
               ) : null}
+
+              <label className="grid gap-2 text-sm font-medium">
+                <span>تعداد نفرات</span>
+                <input
+                  className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  defaultValue={1}
+                  inputMode="numeric"
+                  max={20}
+                  min={1}
+                  name="partySize"
+                  required
+                  type="number"
+                />
+              </label>
 
               <label className="grid gap-2 text-sm font-medium">
                 <span>

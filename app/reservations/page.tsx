@@ -40,6 +40,7 @@ type MyReservation = {
   id: string;
   startAt: Date;
   endAt: Date;
+  partySize: number;
   resourcePoolId: string;
   status: ReservationStatus;
   reason: string | null;
@@ -64,6 +65,7 @@ type CalendarReservationDetail = {
   id: string;
   startAt: Date;
   endAt: Date;
+  partySize: number;
   status: ReservationStatus;
   userId: string;
   userName: string | null;
@@ -570,6 +572,7 @@ function getReservationDetailsForSlot(
     .map((reservation) => ({
       email: reservation.email,
       id: reservation.id,
+      partySize: reservation.partySize,
       userId: reservation.userId,
       userName: reservation.userName,
     }));
@@ -616,6 +619,7 @@ export default async function ReservationsPage({
         id: true,
         startAt: true,
         endAt: true,
+        partySize: true,
         resourcePoolId: true,
         status: true,
         reason: true,
@@ -717,6 +721,7 @@ export default async function ReservationsPage({
             id: true,
             startAt: true,
             endAt: true,
+            partySize: true,
             status: true,
             userId: true,
             user: {
@@ -744,6 +749,7 @@ export default async function ReservationsPage({
                 id: reservation.id,
                 startAt: reservation.startAt,
                 endAt: reservation.endAt,
+                partySize: reservation.partySize,
                 status: reservation.status,
                 userId: reservation.userId,
                 userName: reservation.user.name,
@@ -756,6 +762,7 @@ export default async function ReservationsPage({
                 id: source.id,
                 startAt: range.startAt,
                 endAt: range.endAt,
+                partySize: source.partySize,
                 status: source.status,
                 userId: source.userId,
                 userName: source.userName,

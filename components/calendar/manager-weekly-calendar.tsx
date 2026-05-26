@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Users } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition, type DragEvent } from "react";
 
@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 
 type SlotReservationDetail = {
   id: string;
+  partySize: number;
   userName: string;
   status: "ALTERNATIVE_PROPOSED" | "APPROVED" | "PENDING";
   reason: string | null;
@@ -239,9 +240,13 @@ function ReservationBlock({
     <>
       <span
         className="min-h-0 max-h-full overflow-hidden text-center leading-4 [text-orientation:mixed] [writing-mode:vertical-rl]"
-        title={detail.userName}
+        title={`${detail.userName} - ${detail.partySize} people`}
       >
         {detail.userName}
+      </span>
+      <span className="inline-flex shrink-0 items-center gap-0.5 text-[9px] leading-3 opacity-80">
+        <Users aria-hidden="true" className="h-2.5 w-2.5" />
+        {detail.partySize}
       </span>
       <span className="shrink-0 text-[9px] uppercase leading-3 opacity-75">
         {canDrag ? "Drag" : getDetailActionLabel(detail.status)}
@@ -266,7 +271,7 @@ function ReservationBlock({
         title={
           canDrag
             ? "Drag to a working hour to update this pending request time"
-            : detail.reason ?? undefined
+            : `${detail.partySize} people${detail.reason ? ` - ${detail.reason}` : ""}`
         }
       >
         {content}
@@ -279,7 +284,7 @@ function ReservationBlock({
       className={className}
       {...dragProps}
       style={getReservationBlockStyle(block)}
-      title={detail.reason ?? undefined}
+      title={`${detail.partySize} people${detail.reason ? ` - ${detail.reason}` : ""}`}
     >
       {content}
     </span>

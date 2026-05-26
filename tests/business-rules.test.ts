@@ -78,6 +78,25 @@ function startOfLocalDay(date: Date): Date {
   );
 }
 
+async function markDateWorkingForTest(date: Date) {
+  await db.scheduleException.upsert({
+    where: { date: startOfLocalDay(date) },
+    update: {
+      isWorkingDay: true,
+      startTime: "09:00",
+      endTime: "17:00",
+      reason: "Test working day",
+    },
+    create: {
+      date: startOfLocalDay(date),
+      isWorkingDay: true,
+      startTime: "09:00",
+      endTime: "17:00",
+      reason: "Test working day",
+    },
+  });
+}
+
 async function resetDatabase() {
   await db.notification.deleteMany();
   await db.auditLog.deleteMany();
@@ -154,6 +173,7 @@ async function createReservation(input: {
   userId?: string;
   startAt: Date;
   endAt: Date;
+  partySize?: number;
   status: ReservationStatus;
 }) {
   return db.reservation.create({
@@ -162,6 +182,7 @@ async function createReservation(input: {
       resourcePoolId: poolId,
       startAt: input.startAt,
       endAt: input.endAt,
+      partySize: input.partySize ?? 1,
       status: input.status,
     },
   });
@@ -182,6 +203,38 @@ test("pending reservations are visible but do not consume approved capacity", as
 
   assert.equal(usage[0].approvedCount, 0);
   assert.equal(usage[0].pendingCount, 1);
+  assert.equal(usage[0].capacity, 1);
+});
+
+test("reservation requests store the requested people count", async () => {
+  const startAt = nextWorkingDateAtHour(9);
+  const endAt = addHours(startAt, 1);
+  await markDateWorkingForTest(startAt);
+
+  const reservation = await createReservationRequest({
+    userId,
+    resourcePoolId: poolId,
+    startAt,
+    endAt,
+    partySize: 3,
+  });
+
+  assert.equal(reservation.partySize, 3);
+});
+
+test("reservation people count does not consume additional capacity", async () => {
+  const startAt = nextWorkingDateAtHour(9);
+  const endAt = addHours(startAt, 1);
+  await createReservation({
+    startAt,
+    endAt,
+    partySize: 3,
+    status: ReservationStatus.APPROVED,
+  });
+
+  const usage = await getSlotUsage({ resourcePoolId: poolId, startAt, endAt });
+
+  assert.equal(usage[0].approvedCount, 1);
   assert.equal(usage[0].capacity, 1);
 });
 
@@ -464,6 +517,7 @@ test("users cannot request more than the configured daily hour limit", async () 
   const firstEndAt = addHours(firstStartAt, 2);
   const secondStartAt = addHours(firstStartAt, 2);
   const secondEndAt = addHours(secondStartAt, 2);
+  await markDateWorkingForTest(firstStartAt);
 
   await updateReservationPolicy({
     adminId,
@@ -495,6 +549,7 @@ test("admin can change the daily user hour limit", async () => {
   const firstEndAt = addHours(firstStartAt, 2);
   const secondStartAt = addHours(firstStartAt, 2);
   const secondEndAt = addHours(secondStartAt, 2);
+  await markDateWorkingForTest(firstStartAt);
 
   await updateReservationPolicy({
     adminId,
@@ -523,6 +578,7 @@ test("users cannot create more than one active reservation per day when enabled"
   const firstEndAt = addHours(firstStartAt, 1);
   const secondStartAt = addHours(firstStartAt, 1);
   const secondEndAt = addHours(secondStartAt, 1);
+  await markDateWorkingForTest(firstStartAt);
 
   await createReservationRequest({
     userId,
@@ -548,6 +604,7 @@ test("users can create multiple same-day reservations when one-per-day policy is
   const firstEndAt = addHours(firstStartAt, 1);
   const secondStartAt = addHours(firstStartAt, 1);
   const secondEndAt = addHours(secondStartAt, 1);
+  await markDateWorkingForTest(firstStartAt);
 
   await updateReservationPolicy({
     adminId,

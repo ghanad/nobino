@@ -22,6 +22,7 @@ const reservationFormSchema = z.object({
   date: z.string().refine(isValidJalaliDateParam),
   startHour: z.coerce.number().int().min(0).max(23),
   endHour: z.coerce.number().int().min(1).max(23),
+  partySize: z.coerce.number().int().min(1).max(20),
   reason: z.string().trim().max(500).optional(),
 });
 
@@ -72,11 +73,14 @@ export async function createReservationAction(
     date: formData.get("date"),
     startHour: formData.get("startHour"),
     endHour: formData.get("endHour"),
+    partySize: formData.get("partySize"),
     reason: formData.get("reason") || undefined,
   });
 
   if (!parsed.success) {
-    redirectWithError("Enter a valid Jalali date, start hour, and end hour.");
+    redirectWithError(
+      "Enter a valid Jalali date, start hour, end hour, and people count.",
+    );
   }
 
   const dateParam = formatJalaliDateParam(
@@ -92,6 +96,7 @@ export async function createReservationAction(
         parsed.data.startHour,
       ),
       endAt: buildLocalDateAtHourFromJalali(parsed.data.date, parsed.data.endHour),
+      partySize: parsed.data.partySize,
       reason: parsed.data.reason,
     });
   } catch (error) {

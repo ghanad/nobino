@@ -143,8 +143,17 @@ export async function createReservationRequest(input: {
   resourcePoolId: string;
   startAt: Date;
   endAt: Date;
+  partySize?: number;
   reason?: string;
 }) {
+  const partySize = input.partySize ?? 1;
+
+  if (!Number.isInteger(partySize) || partySize < 1 || partySize > 20) {
+    throw new ReservationTransitionError(
+      "Reservation people count must be between 1 and 20.",
+    );
+  }
+
   await validateReservationTimeRange({
     startAt: input.startAt,
     endAt: input.endAt,
@@ -175,6 +184,7 @@ export async function createReservationRequest(input: {
         resourcePoolId: input.resourcePoolId,
         startAt: input.startAt,
         endAt: input.endAt,
+        partySize,
         status: ReservationStatus.PENDING,
         reason: input.reason?.trim() || null,
       },
@@ -191,6 +201,7 @@ export async function createReservationRequest(input: {
           resourcePoolId: reservation.resourcePoolId,
           startAt: reservation.startAt.toISOString(),
           endAt: reservation.endAt.toISOString(),
+          partySize: reservation.partySize,
           status: reservation.status,
           reason: reservation.reason,
         },
