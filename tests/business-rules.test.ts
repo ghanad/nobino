@@ -18,6 +18,7 @@ import {
   approveReservation,
   cancelReservationByManager,
   createReservationRequest,
+  proposeAlternative,
   ReservationTransitionError,
 } from "@/lib/reservation-service";
 import {
@@ -63,6 +64,18 @@ function previousWorkingDateAtHour(hour: number): Date {
 
 function addHours(date: Date, hours: number): Date {
   return new Date(date.getTime() + hours * 60 * 60 * 1000);
+}
+
+function startOfLocalDay(date: Date): Date {
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    0,
+    0,
+    0,
+    0,
+  );
 }
 
 async function resetDatabase() {
@@ -202,6 +215,47 @@ test("approval fails when any requested hour is already full", async () => {
     () => approveReservation({ reservationId: pending.id, managerId }),
     CapacityUnavailableError,
   );
+});
+
+test("manager time updates keep reservations pending", async () => {
+  const startAt = nextWorkingDateAtHour(9);
+  const endAt = addHours(startAt, 1);
+  const proposedStartAt = addHours(startAt, 2);
+  const proposedEndAt = addHours(proposedStartAt, 1);
+  await db.scheduleException.create({
+    data: {
+      date: startOfLocalDay(startAt),
+      isWorkingDay: true,
+      startTime: "09:00",
+      endTime: "17:00",
+      reason: "Test working day",
+    },
+  });
+  const pending = await createReservation({
+    startAt,
+    endAt,
+    status: ReservationStatus.PENDING,
+  });
+
+  const updated = await proposeAlternative({
+    reservationId: pending.id,
+    managerId,
+    proposedStartAt,
+    proposedEndAt,
+  });
+
+  assert.equal(updated.status, ReservationStatus.PENDING);
+  assert.equal(updated.startAt.getTime(), proposedStartAt.getTime());
+  assert.equal(updated.endAt.getTime(), proposedEndAt.getTime());
+
+  const usage = await getSlotUsage({
+    resourcePoolId: poolId,
+    startAt: proposedStartAt,
+    endAt: proposedEndAt,
+  });
+
+  assert.equal(usage[0].approvedCount, 0);
+  assert.equal(usage[0].pendingCount, 1);
 });
 
 test("reservation requests outside working hours are rejected", async () => {

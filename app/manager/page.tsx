@@ -1,4 +1,4 @@
-import { ReservationStatus } from "@prisma/client";
+import { AlternativeStatus, ReservationStatus } from "@prisma/client";
 import { CalendarClock, Check, Download, X } from "lucide-react";
 
 import {
@@ -50,6 +50,14 @@ type QueueReservation = {
   resourcePool: {
     name: string;
   };
+};
+
+type CalendarReservation = QueueReservation & {
+  alternatives: Array<{
+    proposedStartAt: Date;
+    proposedEndAt: Date;
+    status: AlternativeStatus;
+  }>;
 };
 
 type QueueItem = {
@@ -139,6 +147,30 @@ function formatCalendarColumnLabel(date: Date): string {
   return formatJalaliDateWithoutYear(date);
 }
 
+function getCalendarReservationRange(reservation: CalendarReservation): {
+  endAt: Date;
+  startAt: Date;
+} {
+  const proposedAlternative = reservation.alternatives.find(
+    (alternative) => alternative.status === AlternativeStatus.PROPOSED,
+  );
+
+  if (
+    reservation.status === ReservationStatus.ALTERNATIVE_PROPOSED &&
+    proposedAlternative
+  ) {
+    return {
+      startAt: proposedAlternative.proposedStartAt,
+      endAt: proposedAlternative.proposedEndAt,
+    };
+  }
+
+  return {
+    startAt: reservation.startAt,
+    endAt: reservation.endAt,
+  };
+}
+
 function getQueueToast(params: Awaited<ManagerPageProps["searchParams"]>) {
   if (params?.error) {
     return {
@@ -152,7 +184,7 @@ function getQueueToast(params: Awaited<ManagerPageProps["searchParams"]>) {
     (params?.approved && "Reservation approved.") ||
     (params?.cancelled && "Reservation cancelled.") ||
     (params?.rejected && "Reservation rejected.") ||
-    (params?.alternative && "Alternative proposed.");
+    (params?.alternative && "Reservation time updated.");
 
   return successMessage
     ? {
@@ -326,7 +358,7 @@ function QueueCard({
                     className="text-xs font-medium text-muted-foreground"
                     htmlFor={proposedDateId}
                   >
-                    Alternative date
+                    New date
                   </label>
                   <input
                     className="h-10 rounded-md border border-input bg-background px-3 text-sm"
@@ -384,11 +416,11 @@ function QueueCard({
                 </div>
                 <SubmitButton
                   className="w-full"
-                  pendingLabel="Proposing..."
+                  pendingLabel="Applying..."
                   variant="secondary"
                 >
                   <CalendarClock className="h-4 w-4" />
-                  Propose alternative
+                  Update pending time
                 </SubmitButton>
               </form>
             </>
@@ -482,16 +514,30 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       name: true,
     },
   });
-  const weekReservations =
+  const weekReservations: CalendarReservation[] =
     resourcePool
       ? await db.reservation.findMany({
           where: {
             resourcePoolId: resourcePool.id,
-            startAt: { lt: weekRangeEnd },
-            endAt: { gt: weekStart },
-            status: {
-              in: [ReservationStatus.APPROVED, ReservationStatus.PENDING],
-            },
+            OR: [
+              {
+                startAt: { lt: weekRangeEnd },
+                endAt: { gt: weekStart },
+                status: {
+                  in: [ReservationStatus.APPROVED, ReservationStatus.PENDING],
+                },
+              },
+              {
+                status: ReservationStatus.ALTERNATIVE_PROPOSED,
+                alternatives: {
+                  some: {
+                    status: AlternativeStatus.PROPOSED,
+                    proposedStartAt: { lt: weekRangeEnd },
+                    proposedEndAt: { gt: weekStart },
+                  },
+                },
+              },
+            ],
           },
           orderBy: [{ startAt: "asc" }, { createdAt: "asc" }],
           select: {
@@ -511,6 +557,16 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
             resourcePool: {
               select: {
                 name: true,
+              },
+            },
+            alternatives: {
+              where: { status: AlternativeStatus.PROPOSED },
+              orderBy: { createdAt: "desc" },
+              take: 1,
+              select: {
+                proposedStartAt: true,
+                proposedEndAt: true,
+                status: true,
               },
             },
           },
@@ -540,20 +596,30 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
             shortLabel: formatCalendarColumnLabel(date),
             slots: slots.map((slot) => {
               const details = weekReservations
+                .map((reservation) => ({
+                  reservation,
+                  range: getCalendarReservationRange(reservation),
+                }))
                 .filter(
-                  (reservation) =>
-                    reservation.startAt < slot.slotEnd &&
-                    reservation.endAt > slot.slotStart,
+                  ({ range }) =>
+                    range.startAt < slot.slotEnd && range.endAt > slot.slotStart,
                 )
                 .map((reservation) => ({
-                  id: reservation.id,
-                  userName: reservation.user.name,
+                  id: reservation.reservation.id,
+                  userName: reservation.reservation.user.name,
                   status:
-                    reservation.status === ReservationStatus.APPROVED
+                    reservation.reservation.status === ReservationStatus.APPROVED
                       ? ("APPROVED" as const)
-                      : ("PENDING" as const),
-                  reason: reservation.reason,
-                  href: `#${buildReviewModalId(reservation.id)}`,
+                      : reservation.reservation.status ===
+                          ReservationStatus.ALTERNATIVE_PROPOSED
+                        ? ("ALTERNATIVE_PROPOSED" as const)
+                        : ("PENDING" as const),
+                  reason: reservation.reservation.reason,
+                  href:
+                    reservation.reservation.status ===
+                    ReservationStatus.ALTERNATIVE_PROPOSED
+                      ? undefined
+                      : `#${buildReviewModalId(reservation.reservation.id)}`,
                 }));
 
               return {

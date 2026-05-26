@@ -38,7 +38,7 @@ type RequestableSlot = {
   capacity: number;
   isRequestable: boolean;
   myReservationId: string | null;
-  myReservationStatus: "APPROVED" | "PENDING" | null;
+  myReservationStatus: "ALTERNATIVE_PROPOSED" | "APPROVED" | "PENDING" | null;
   unavailableReason: "full" | "past" | null;
 };
 
@@ -82,7 +82,7 @@ type CellState = {
   isRequestable: boolean;
   isWorkingHour: boolean;
   myReservationId: string | null;
-  myReservationStatus: "APPROVED" | "PENDING" | null;
+  myReservationStatus: "ALTERNATIVE_PROPOSED" | "APPROVED" | "PENDING" | null;
   pendingCount: number;
   pendingReservations: SlotReservationDetail[];
   unavailableReason: "full" | "past" | null;
@@ -481,6 +481,10 @@ function CalendarLegend() {
 function getPersianUserStatusLabel(
   status: CellState["myReservationStatus"],
 ): string | null {
+  if (status === "ALTERNATIVE_PROPOSED") {
+    return "وضعیت شما نیازمند بررسی زمان پیشنهادی مدیر";
+  }
+
   if (status === "PENDING") {
     return "وضعیت شما در انتظار تایید مدیر";
   }
@@ -917,7 +921,9 @@ export function CreateReservationForm({
                                     cell.unavailableReason === "past" &&
                                     "cursor-not-allowed bg-slate-100/70 text-slate-400",
                                   cell.isWorkingHour &&
-                                    cell.myReservationStatus === "PENDING" &&
+                                    (cell.myReservationStatus === "PENDING" ||
+                                      cell.myReservationStatus ===
+                                        "ALTERNATIVE_PROPOSED") &&
                                     "bg-amber-50/70 text-amber-900 ring-1 ring-inset ring-amber-200",
                                   cell.isWorkingHour &&
                                     cell.myReservationStatus === "APPROVED" &&
@@ -999,7 +1005,9 @@ export function CreateReservationForm({
                                 <CapacityDots cell={cell} />
                               ) : null}
 
-                              {cell.myReservationStatus === "PENDING" ? (
+                              {cell.myReservationStatus === "PENDING" ||
+                              cell.myReservationStatus ===
+                                "ALTERNATIVE_PROPOSED" ? (
                                 <Hourglass
                                   aria-hidden="true"
                                   className="absolute right-2 top-1.5 z-10 h-3.5 w-3.5 text-amber-600"

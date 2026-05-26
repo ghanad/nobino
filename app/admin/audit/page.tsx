@@ -60,6 +60,7 @@ const ACTION_LABELS: Record<string, string> = {
   RESERVATION_CANCELLED: "Reservation cancelled",
   RESERVATION_CREATED: "Reservation requested",
   RESERVATION_REJECTED: "Reservation rejected",
+  RESERVATION_TIME_UPDATED: "Reservation time updated",
   SCHEDULE_EXCEPTION_CREATED: "Schedule exception added",
   SCHEDULE_EXCEPTION_DELETED: "Schedule exception removed",
   SCHEDULE_EXCEPTION_UPDATED: "Schedule exception updated",

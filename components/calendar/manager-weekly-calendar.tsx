@@ -1,13 +1,17 @@
+"use client";
+
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { useState, useTransition, type DragEvent } from "react";
 
+import { proposeAlternativeDropAction } from "@/app/manager/actions";
 import { JALALI_DATE_INPUT_PLACEHOLDER } from "@/lib/jalali-date";
 import { cn } from "@/lib/utils";
 
 type SlotReservationDetail = {
   id: string;
   userName: string;
-  status: "APPROVED" | "PENDING";
+  status: "ALTERNATIVE_PROPOSED" | "APPROVED" | "PENDING";
   reason: string | null;
   href?: string;
 };
@@ -38,6 +42,12 @@ type SlotReservationBlock = {
 type PositionedReservationBlock = SlotReservationBlock & {
   lane: number;
   laneCount: number;
+};
+
+type DraggedReservation = {
+  durationHours: number;
+  reservationId: string;
+  status: SlotReservationDetail["status"];
 };
 
 type ManagerWeeklyCalendarProps = {
@@ -105,12 +115,20 @@ function getDetailClass(status: SlotReservationDetail["status"]): string {
     return "bg-emerald-100 text-emerald-900 ring-emerald-200";
   }
 
+  if (status === "ALTERNATIVE_PROPOSED") {
+    return "bg-sky-100 text-sky-900 ring-sky-300";
+  }
+
   return "bg-amber-100 text-amber-950 ring-amber-300";
 }
 
 function getDetailActionLabel(status: SlotReservationDetail["status"]): string {
   if (status === "PENDING") {
     return "Review";
+  }
+
+  if (status === "ALTERNATIVE_PROPOSED") {
+    return "Proposed";
   }
 
   return "Details";
@@ -180,13 +198,43 @@ function getReservationBlockStyle(block: PositionedReservationBlock) {
 
 function ReservationBlock({
   block,
+  isDragging,
+  onDragEnd,
+  onDragStart,
 }: {
   block: PositionedReservationBlock;
+  isDragging: boolean;
+  onDragEnd: () => void;
+  onDragStart: (block: PositionedReservationBlock) => void;
 }) {
   const { detail } = block;
-  const className = `pointer-events-auto flex h-full min-w-0 flex-col items-center justify-between gap-2 rounded-md px-1.5 py-2 text-xs font-medium leading-5 shadow-sm ring-1 ${getDetailClass(
-    detail.status,
-  )}`;
+  const canDrag = detail.status === "PENDING";
+  const className = cn(
+    "pointer-events-auto flex h-full min-w-0 flex-col items-center justify-between gap-2 rounded-md px-1.5 py-2 text-xs font-medium leading-5 shadow-sm ring-1 transition",
+    getDetailClass(detail.status),
+    canDrag ? "cursor-grab active:cursor-grabbing" : null,
+    isDragging ? "opacity-45" : null,
+  );
+  const dragProps = canDrag
+    ? {
+        draggable: true,
+        onDragEnd,
+        onDragStart: (event: DragEvent<HTMLElement>) => {
+          const payload: DraggedReservation = {
+            durationHours: block.endHour - block.startHour,
+            reservationId: detail.id,
+            status: detail.status,
+          };
+
+          event.dataTransfer.effectAllowed = "move";
+          event.dataTransfer.setData(
+            "application/x-nobino-reservation",
+            JSON.stringify(payload),
+          );
+          onDragStart(block);
+        },
+      }
+    : {};
   const content = (
     <>
       <span
@@ -196,7 +244,7 @@ function ReservationBlock({
         {detail.userName}
       </span>
       <span className="shrink-0 text-[9px] uppercase leading-3 opacity-75">
-        {getDetailActionLabel(detail.status)}
+        {canDrag ? "Drag" : getDetailActionLabel(detail.status)}
       </span>
     </>
   );
@@ -207,10 +255,19 @@ function ReservationBlock({
 
     return (
       <a
-        className={`${className} transition-colors ${hoverClass} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`}
+        className={cn(
+          className,
+          hoverClass,
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        )}
         href={detail.href}
+        {...dragProps}
         style={getReservationBlockStyle(block)}
-        title={detail.reason ?? undefined}
+        title={
+          canDrag
+            ? "Drag to a working hour to update this pending request time"
+            : detail.reason ?? undefined
+        }
       >
         {content}
       </a>
@@ -220,6 +277,7 @@ function ReservationBlock({
   return (
     <span
       className={className}
+      {...dragProps}
       style={getReservationBlockStyle(block)}
       title={detail.reason ?? undefined}
     >
@@ -237,11 +295,75 @@ export function ManagerWeeklyCalendar({
   weekDays,
   weekLabel,
 }: ManagerWeeklyCalendarProps) {
+  const [draggedReservation, setDraggedReservation] =
+    useState<DraggedReservation | null>(null);
+  const [dragOverSlotKey, setDragOverSlotKey] = useState<string | null>(null);
+  const [dropError, setDropError] = useState<string | null>(null);
+  const [isDropPending, startDropTransition] = useTransition();
   const hours = getHourRange(weekDays);
   const reservationBlocksByDate = new Map(
     weekDays.map((day) => [day.dateParam, getPositionedReservationBlocks(day)]),
   );
   const firstHour = hours[0] ?? 0;
+
+  function readDraggedReservation(
+    event: DragEvent<HTMLElement>,
+  ): DraggedReservation | null {
+    if (draggedReservation) {
+      return draggedReservation;
+    }
+
+    const rawPayload = event.dataTransfer.getData(
+      "application/x-nobino-reservation",
+    );
+
+    if (!rawPayload) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(rawPayload) as DraggedReservation;
+    } catch {
+      return null;
+    }
+  }
+
+  function handleDrop(
+    event: DragEvent<HTMLDivElement>,
+    day: ManagerWeekDay,
+    slot: ManagerWeekSlot | null,
+  ) {
+    event.preventDefault();
+    setDragOverSlotKey(null);
+
+    const dragged = readDraggedReservation(event);
+
+    if (!slot || !dragged || dragged.status !== "PENDING") {
+      return;
+    }
+
+    const proposedEndHour = slot.slotStartHour + dragged.durationHours;
+    const formData = new FormData();
+
+    formData.set("reservationId", dragged.reservationId);
+    formData.set("proposedDate", day.dateParam);
+    formData.set("proposedStartHour", slot.slotStartHour.toString());
+    formData.set("proposedEndHour", proposedEndHour.toString());
+    formData.set("date", currentDateParam);
+
+    startDropTransition(async () => {
+      const result = await proposeAlternativeDropAction(formData);
+
+      if (!result.ok) {
+        setDropError(result.error);
+        return;
+      }
+
+      const searchParams = new URLSearchParams({ date: currentDateParam });
+      searchParams.set("alternative", "1");
+      window.location.href = `/manager?${searchParams.toString()}`;
+    });
+  }
 
   return (
     <section className="rounded-lg border bg-card p-5 text-card-foreground">
@@ -289,7 +411,8 @@ export function ManagerWeeklyCalendar({
             <p className="text-sm font-medium">Approval calendar</p>
             <p className="mt-1 text-xs text-muted-foreground">
               Amber requests are pending review; green reservations are approved
-              and consume capacity.
+              and consume capacity. Drag amber requests onto another working
+              hour to update their pending time.
             </p>
           </div>
           <Link
@@ -301,6 +424,15 @@ export function ManagerWeeklyCalendar({
           </Link>
         </div>
       </div>
+
+      {dropError ? (
+        <div
+          className="mt-4 rounded-md border border-destructive/30 bg-background p-3 text-sm leading-6 text-destructive"
+          role="alert"
+        >
+          {dropError}
+        </div>
+      ) : null}
 
       {hours.length === 0 ? (
         <p className="mt-5 rounded-md border bg-muted/40 p-4 text-sm text-muted-foreground">
@@ -361,9 +493,26 @@ export function ManagerWeeklyCalendar({
                       return (
                         <div
                           className={cn(
-                            "border-b border-r p-2 text-left",
+                            "border-b border-r p-2 text-left transition-colors",
                             getCellTone(slot),
+                            draggedReservation && slot
+                              ? "outline-offset-[-2px]"
+                              : null,
+                            dragOverSlotKey === `${day.dateParam}-${hour}`
+                              ? "outline outline-2 outline-sky-500"
+                              : null,
                           )}
+                          onDragLeave={() => setDragOverSlotKey(null)}
+                          onDragOver={(event) => {
+                            if (!slot || !draggedReservation || isDropPending) {
+                              return;
+                            }
+
+                            event.preventDefault();
+                            event.dataTransfer.dropEffect = "move";
+                            setDragOverSlotKey(`${day.dateParam}-${hour}`);
+                          }}
+                          onDrop={(event) => handleDrop(event, day, slot)}
                           key={`${day.dateParam}-${hour}`}
                           style={{
                             gridColumn: dayIndex + 2,
@@ -416,7 +565,26 @@ export function ManagerWeeklyCalendar({
                               gridRow: `${startLine} / ${endLine}`,
                             }}
                           >
-                            <ReservationBlock block={block} />
+                            <ReservationBlock
+                              block={block}
+                              isDragging={
+                                draggedReservation?.reservationId ===
+                                block.detail.id
+                              }
+                              onDragEnd={() => {
+                                setDraggedReservation(null);
+                                setDragOverSlotKey(null);
+                              }}
+                              onDragStart={(dragBlock) => {
+                                setDropError(null);
+                                setDraggedReservation({
+                                  durationHours:
+                                    dragBlock.endHour - dragBlock.startHour,
+                                  reservationId: dragBlock.detail.id,
+                                  status: dragBlock.detail.status,
+                                });
+                              }}
+                            />
                           </div>
                         );
                       },

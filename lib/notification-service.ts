@@ -27,6 +27,7 @@ const NOTIFICATION_TITLE_LABELS: Record<string, string> = {
   RESERVATION_APPROVED: "رزرو تایید شد",
   RESERVATION_CANCELLED: "رزرو لغو شد",
   RESERVATION_REJECTED: "رزرو رد شد",
+  RESERVATION_TIME_UPDATED: "زمان رزرو تغییر کرد",
 };
 
 const NOTIFICATION_BODY_LABELS: Record<string, string> = {
@@ -34,6 +35,8 @@ const NOTIFICATION_BODY_LABELS: Record<string, string> = {
     "مدیر رزرو تاییدشده شما را لغو کرد.",
   "A manager proposed an alternative time for your reservation.":
     "مدیر یک زمان جایگزین برای رزرو شما پیشنهاد کرده است.",
+  "A manager changed the time for your pending reservation.":
+    "مدیر زمان درخواست رزرو شما را تغییر داد. درخواست هنوز در انتظار تایید است.",
   "A requester accepted your proposed alternative time.":
     "درخواست کننده زمان جایگزین پیشنهادی شما را پذیرفت.",
   "A requester cancelled a pending reservation.":

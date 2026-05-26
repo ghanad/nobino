@@ -1,12 +1,10 @@
 import { AlternativeStatus, ReservationStatus } from "@prisma/client";
-import { Check, History, X } from "lucide-react";
+import { History, X } from "lucide-react";
 import Link from "next/link";
 
 import {
-  acceptAlternativeAction,
   cancelReservationByUserAction,
   createReservationAction,
-  rejectAlternativeAction,
 } from "@/app/reservations/actions";
 import { PageHeader } from "@/components/app/page-header";
 import { CreateReservationForm } from "@/components/reservation/create-reservation-form";
@@ -69,6 +67,14 @@ type CalendarReservationDetail = {
   status: ReservationStatus;
   userId: string;
   userName: string | null;
+};
+
+type CalendarReservationSource = CalendarReservationDetail & {
+  alternatives: Array<{
+    proposedStartAt: Date;
+    proposedEndAt: Date;
+    status: AlternativeStatus;
+  }>;
 };
 
 const DISPLAY_TIME_FORMATTER = new Intl.DateTimeFormat("fa-IR", {
@@ -194,6 +200,50 @@ function hasPendingAlternative(reservation: MyReservation): boolean {
   );
 }
 
+function getProposedAlternative(
+  reservation: {
+    alternatives: Array<{
+      proposedStartAt: Date;
+      proposedEndAt: Date;
+      status: AlternativeStatus;
+    }>;
+  },
+) {
+  return reservation.alternatives.find(
+    (alternative) => alternative.status === AlternativeStatus.PROPOSED,
+  );
+}
+
+function getActiveReservationRange(
+  reservation: {
+    alternatives: Array<{
+      proposedStartAt: Date;
+      proposedEndAt: Date;
+      status: AlternativeStatus;
+    }>;
+    endAt: Date;
+    startAt: Date;
+    status: ReservationStatus;
+  },
+): { endAt: Date; startAt: Date } {
+  const proposedAlternative = getProposedAlternative(reservation);
+
+  if (
+    reservation.status === ReservationStatus.ALTERNATIVE_PROPOSED &&
+    proposedAlternative
+  ) {
+    return {
+      startAt: proposedAlternative.proposedStartAt,
+      endAt: proposedAlternative.proposedEndAt,
+    };
+  }
+
+  return {
+    startAt: reservation.startAt,
+    endAt: reservation.endAt,
+  };
+}
+
 function isActiveReservation(reservation: MyReservation, now: Date): boolean {
   if (reservation.status === ReservationStatus.PENDING) {
     return true;
@@ -272,13 +322,9 @@ function AlternativeList({
       </p>
       <div className="grid gap-2">
         {reservation.alternatives.map((alternative) => {
-          const canRespond =
-            reservation.status === ReservationStatus.ALTERNATIVE_PROPOSED &&
-            alternative.status === AlternativeStatus.PROPOSED;
-
           return (
             <div
-              className="grid gap-2 rounded-md border bg-muted/30 p-2.5 sm:grid-cols-[1fr_auto]"
+              className="grid gap-2 rounded-md border bg-muted/30 p-2.5"
               key={alternative.id}
             >
               <div className="grid gap-1 text-sm">
@@ -298,37 +344,6 @@ function AlternativeList({
                   </span>
                 </div>
               </div>
-
-              {canRespond ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  <form action={acceptAlternativeAction}>
-                    <input
-                      name="alternativeId"
-                      type="hidden"
-                      value={alternative.id}
-                    />
-                    <SubmitButton pendingLabel="در حال ثبت..." size="sm">
-                      <Check className="h-4 w-4" />
-                      قبول زمان پیشنهادی
-                    </SubmitButton>
-                  </form>
-                  <form action={rejectAlternativeAction}>
-                    <input
-                      name="alternativeId"
-                      type="hidden"
-                      value={alternative.id}
-                    />
-                    <SubmitButton
-                      pendingLabel="در حال ثبت..."
-                      size="sm"
-                      variant="outline"
-                    >
-                      <X className="h-4 w-4" />
-                      انتخاب زمان دیگر
-                    </SubmitButton>
-                  </form>
-                </div>
-              ) : null}
             </div>
           );
         })}
@@ -477,12 +492,20 @@ function getMyReservationForSlot(
   reservations: MyReservation[],
   slotStart: Date,
   slotEnd: Date,
-): { id: string; status: "APPROVED" | "PENDING" } | null {
+): {
+  id: string;
+  status: "ALTERNATIVE_PROPOSED" | "APPROVED" | "PENDING";
+} | null {
   const approvedReservation = reservations.find(
-    (reservation) =>
-      reservation.status === ReservationStatus.APPROVED &&
-      reservation.startAt < slotEnd &&
-      reservation.endAt > slotStart,
+    (reservation) => {
+      const range = getActiveReservationRange(reservation);
+
+      return (
+        reservation.status === ReservationStatus.APPROVED &&
+        range.startAt < slotEnd &&
+        range.endAt > slotStart
+      );
+    },
   );
 
   if (approvedReservation) {
@@ -493,16 +516,38 @@ function getMyReservationForSlot(
   }
 
   const pendingReservation = reservations.find(
-    (reservation) =>
-      reservation.status === ReservationStatus.PENDING &&
-      reservation.startAt < slotEnd &&
-      reservation.endAt > slotStart,
+    (reservation) => {
+      const range = getActiveReservationRange(reservation);
+
+      return (
+        reservation.status === ReservationStatus.PENDING &&
+        range.startAt < slotEnd &&
+        range.endAt > slotStart
+      );
+    },
   );
 
   if (pendingReservation) {
     return {
       id: pendingReservation.id,
       status: "PENDING",
+    };
+  }
+
+  const proposedReservation = reservations.find((reservation) => {
+    const range = getActiveReservationRange(reservation);
+
+    return (
+      reservation.status === ReservationStatus.ALTERNATIVE_PROPOSED &&
+      range.startAt < slotEnd &&
+      range.endAt > slotStart
+    );
+  });
+
+  if (proposedReservation) {
+    return {
+      id: proposedReservation.id,
+      status: "ALTERNATIVE_PROPOSED",
     };
   }
 
@@ -610,9 +655,10 @@ export default async function ReservationsPage({
         return hoursByDate;
       }
 
-      const date = formatJalaliDateParam(reservation.startAt);
+      const range = getActiveReservationRange(reservation);
+      const date = formatJalaliDateParam(range.startAt);
       hoursByDate[date] =
-        (hoursByDate[date] ?? 0) + getReservationDurationHours(reservation);
+        (hoursByDate[date] ?? 0) + getReservationDurationHours(range);
 
       return hoursByDate;
     },
@@ -628,7 +674,8 @@ export default async function ReservationsPage({
         return countByDate;
       }
 
-      const date = formatJalaliDateParam(reservation.startAt);
+      const range = getActiveReservationRange(reservation);
+      const date = formatJalaliDateParam(range.startAt);
       countByDate[date] = (countByDate[date] ?? 0) + 1;
 
       return countByDate;
@@ -645,11 +692,25 @@ export default async function ReservationsPage({
       ? await db.reservation.findMany({
           where: {
             resourcePoolId: selectedResourcePool.id,
-            startAt: { lt: weekEnd },
-            endAt: { gt: weekStart },
-            status: {
-              in: [ReservationStatus.APPROVED, ReservationStatus.PENDING],
-            },
+            OR: [
+              {
+                startAt: { lt: weekEnd },
+                endAt: { gt: weekStart },
+                status: {
+                  in: [ReservationStatus.APPROVED, ReservationStatus.PENDING],
+                },
+              },
+              {
+                status: ReservationStatus.ALTERNATIVE_PROPOSED,
+                alternatives: {
+                  some: {
+                    status: AlternativeStatus.PROPOSED,
+                    proposedStartAt: { lt: weekEnd },
+                    proposedEndAt: { gt: weekStart },
+                  },
+                },
+              },
+            ],
           },
           orderBy: [{ startAt: "asc" }, { createdAt: "asc" }],
           select: {
@@ -664,17 +725,46 @@ export default async function ReservationsPage({
                 name: true,
               },
             },
+            alternatives: {
+              where: { status: AlternativeStatus.PROPOSED },
+              orderBy: { createdAt: "desc" },
+              take: 1,
+              select: {
+                proposedStartAt: true,
+                proposedEndAt: true,
+                status: true,
+              },
+            },
           },
         }).then((items) =>
-          items.map((reservation) => ({
-            email: reservation.user.email,
-            id: reservation.id,
-            startAt: reservation.startAt,
-            endAt: reservation.endAt,
-            status: reservation.status,
-            userId: reservation.userId,
-            userName: reservation.user.name,
-          })),
+          items
+            .map((reservation) => {
+              const source: CalendarReservationSource = {
+                email: reservation.user.email,
+                id: reservation.id,
+                startAt: reservation.startAt,
+                endAt: reservation.endAt,
+                status: reservation.status,
+                userId: reservation.userId,
+                userName: reservation.user.name,
+                alternatives: reservation.alternatives,
+              };
+              const range = getActiveReservationRange(source);
+
+              return {
+                email: source.email,
+                id: source.id,
+                startAt: range.startAt,
+                endAt: range.endAt,
+                status: source.status,
+                userId: source.userId,
+                userName: source.userName,
+              };
+            })
+            .filter(
+              (reservation) =>
+                reservation.startAt < weekEnd && reservation.endAt > weekStart,
+            ),
         )
       : [];
   const now = new Date();
@@ -718,6 +808,12 @@ export default async function ReservationsPage({
                 slot.slotStart,
                 slot.slotEnd,
               );
+              const proposedReservations = getReservationDetailsForSlot(
+                selectedPoolCalendarReservations,
+                slot.slotStart,
+                slot.slotEnd,
+                ReservationStatus.ALTERNATIVE_PROPOSED,
+              );
 
               return {
                 slotStartHour: slot.slotStart.getHours(),
@@ -729,13 +825,16 @@ export default async function ReservationsPage({
                   slot.slotEnd,
                   ReservationStatus.APPROVED,
                 ),
-                pendingCount: slot.pendingCount,
-                pendingReservations: getReservationDetailsForSlot(
-                  selectedPoolCalendarReservations,
-                  slot.slotStart,
-                  slot.slotEnd,
-                  ReservationStatus.PENDING,
-                ),
+                pendingCount: slot.pendingCount + proposedReservations.length,
+                pendingReservations: [
+                  ...getReservationDetailsForSlot(
+                    selectedPoolCalendarReservations,
+                    slot.slotStart,
+                    slot.slotEnd,
+                    ReservationStatus.PENDING,
+                  ),
+                  ...proposedReservations,
+                ],
                 capacity: slot.capacity,
                 isRequestable: !isPast && !isFull,
                 myReservationId: myReservation?.id ?? null,

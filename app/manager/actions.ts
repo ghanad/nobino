@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { CapacityUnavailableError } from "@/lib/capacity-service";
@@ -32,6 +33,13 @@ const alternativeSchema = reservationIdSchema.extend({
   proposedStartHour: z.coerce.number().int().min(0).max(23),
   proposedEndHour: z.coerce.number().int().min(1).max(23),
 });
+
+type ManagerActionResult =
+  | { ok: true }
+  | {
+      ok: false;
+      error: string;
+    };
 
 function redirectToQueue(params: Record<string, string | undefined>): never {
   const searchParams = new URLSearchParams();
@@ -152,6 +160,50 @@ export async function proposeAlternativeAction(
   }
 
   redirectToQueue({ date: parsed.data.date, alternative: "1" });
+}
+
+export async function proposeAlternativeDropAction(
+  formData: FormData,
+): Promise<ManagerActionResult> {
+  const user = await requireCurrentUser();
+  const parsed = alternativeSchema.safeParse({
+    reservationId: formData.get("reservationId"),
+    proposedDate: formData.get("proposedDate"),
+    proposedStartHour: formData.get("proposedStartHour"),
+    proposedEndHour: formData.get("proposedEndHour"),
+    date: formData.get("date") || undefined,
+  });
+
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: "Enter a valid Jalali alternative date and hours.",
+    };
+  }
+
+  try {
+    await proposeAlternative({
+      reservationId: parsed.data.reservationId,
+      managerId: user.id,
+      proposedStartAt: buildLocalDateAtHourFromJalali(
+        parsed.data.proposedDate,
+        parsed.data.proposedStartHour,
+      ),
+      proposedEndAt: buildLocalDateAtHourFromJalali(
+        parsed.data.proposedDate,
+        parsed.data.proposedEndHour,
+      ),
+    });
+  } catch (error) {
+    return {
+      ok: false,
+      error: getActionErrorMessage(error),
+    };
+  }
+
+  revalidatePath("/manager");
+
+  return { ok: true };
 }
 
 export async function cancelReservationByManagerAction(

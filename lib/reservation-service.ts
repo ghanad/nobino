@@ -401,6 +401,8 @@ export async function proposeAlternative(input: {
         id: true,
         userId: true,
         resourcePoolId: true,
+        startAt: true,
+        endAt: true,
         status: true,
       },
     });
@@ -409,9 +411,12 @@ export async function proposeAlternative(input: {
       throw new ReservationTransitionError("Reservation was not found.");
     }
 
-    if (reservation.status !== ReservationStatus.PENDING) {
+    if (
+      reservation.status !== ReservationStatus.PENDING &&
+      reservation.status !== ReservationStatus.ALTERNATIVE_PROPOSED
+    ) {
       throw new ReservationTransitionError(
-        "Only pending reservations can receive an alternative proposal.",
+        "Only pending or alternative-proposed reservations can receive an alternative time.",
       );
     }
 
@@ -420,6 +425,7 @@ export async function proposeAlternative(input: {
         resourcePoolId: reservation.resourcePoolId,
         startAt: input.proposedStartAt,
         endAt: input.proposedEndAt,
+        excludeReservationId: reservation.id,
       },
       tx,
     );
@@ -429,25 +435,33 @@ export async function proposeAlternative(input: {
         userId: reservation.userId,
         startAt: input.proposedStartAt,
         endAt: input.proposedEndAt,
-        statuses: ACTIVE_REQUEST_STATUSES,
+        statuses: [ReservationStatus.APPROVED],
         excludeReservationId: reservation.id,
       },
       tx,
     );
 
-    const alternative = await tx.reservationAlternative.create({
-      data: {
+    await tx.reservationAlternative.updateMany({
+      where: {
         reservationId: reservation.id,
-        proposedStartAt: input.proposedStartAt,
-        proposedEndAt: input.proposedEndAt,
-        proposedById: input.managerId,
         status: AlternativeStatus.PROPOSED,
+      },
+      data: {
+        status: AlternativeStatus.EXPIRED,
+        respondedAt: new Date(),
       },
     });
 
-    await tx.reservation.update({
+    const updatedReservation = await tx.reservation.update({
       where: { id: reservation.id },
-      data: { status: ReservationStatus.ALTERNATIVE_PROPOSED },
+      data: {
+        startAt: input.proposedStartAt,
+        endAt: input.proposedEndAt,
+        status: ReservationStatus.PENDING,
+        approvedById: null,
+        approvedAt: null,
+        rejectionReason: null,
+      },
     });
 
     await tx.auditLog.create({
@@ -455,12 +469,16 @@ export async function proposeAlternative(input: {
         actorUserId: input.managerId,
         entityType: "Reservation",
         entityId: reservation.id,
-        action: "ALTERNATIVE_PROPOSED",
-        oldValue: { status: reservation.status },
+        action: "RESERVATION_TIME_UPDATED",
+        oldValue: {
+          status: reservation.status,
+          startAt: reservation.startAt.toISOString(),
+          endAt: reservation.endAt.toISOString(),
+        },
         newValue: {
-          status: ReservationStatus.ALTERNATIVE_PROPOSED,
-          proposedStartAt: alternative.proposedStartAt.toISOString(),
-          proposedEndAt: alternative.proposedEndAt.toISOString(),
+          status: updatedReservation.status,
+          startAt: updatedReservation.startAt.toISOString(),
+          endAt: updatedReservation.endAt.toISOString(),
         },
       },
     });
@@ -469,13 +487,13 @@ export async function proposeAlternative(input: {
       data: {
         userId: reservation.userId,
         reservationId: reservation.id,
-        type: "ALTERNATIVE_PROPOSED",
-        title: "Alternative proposed",
-        body: "A manager proposed an alternative time for your reservation.",
+        type: "RESERVATION_TIME_UPDATED",
+        title: "Reservation time updated",
+        body: "A manager changed the time for your pending reservation.",
       },
     });
 
-    return alternative;
+    return updatedReservation;
   });
 }
 

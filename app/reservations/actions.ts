@@ -11,10 +11,8 @@ import {
   isValidJalaliDateParam,
 } from "@/lib/jalali-date";
 import {
-  acceptAlternative,
   cancelReservationByUser,
   createReservationRequest,
-  rejectAlternative,
   ReservationTransitionError,
 } from "@/lib/reservation-service";
 import { ReservationTimeRangeError } from "@/lib/schedule";
@@ -29,10 +27,6 @@ const reservationFormSchema = z.object({
 
 const reservationIdSchema = z.object({
   reservationId: z.string().min(1),
-});
-
-const alternativeIdSchema = z.object({
-  alternativeId: z.string().min(1),
 });
 
 function redirectWithError(message: string, date?: string): never {
@@ -129,56 +123,4 @@ export async function cancelReservationByUserAction(
   }
 
   redirectToReservations({ cancelled: "1" });
-}
-
-export async function acceptAlternativeAction(
-  formData: FormData,
-): Promise<void> {
-  const user = await requireCurrentUser();
-  const parsed = alternativeIdSchema.safeParse({
-    alternativeId: formData.get("alternativeId"),
-  });
-
-  if (!parsed.success) {
-    redirectToReservations({
-      error: "Choose a valid alternative proposal to accept.",
-    });
-  }
-
-  try {
-    await acceptAlternative({
-      alternativeId: parsed.data.alternativeId,
-      userId: user.id,
-    });
-  } catch (error) {
-    redirectToReservations({ error: getActionErrorMessage(error) });
-  }
-
-  redirectToReservations({ alternativeAccepted: "1" });
-}
-
-export async function rejectAlternativeAction(
-  formData: FormData,
-): Promise<void> {
-  const user = await requireCurrentUser();
-  const parsed = alternativeIdSchema.safeParse({
-    alternativeId: formData.get("alternativeId"),
-  });
-
-  if (!parsed.success) {
-    redirectToReservations({
-      error: "Choose a valid alternative proposal to reject.",
-    });
-  }
-
-  try {
-    await rejectAlternative({
-      alternativeId: parsed.data.alternativeId,
-      userId: user.id,
-    });
-  } catch (error) {
-    redirectToReservations({ error: getActionErrorMessage(error) });
-  }
-
-  redirectToReservations({ alternativeRejected: "1" });
 }
