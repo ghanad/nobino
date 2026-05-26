@@ -354,7 +354,7 @@ function ReservationCard({
       reservation.status === ReservationStatus.REJECTED) &&
     reservation.alternatives.length > 0;
   const showCardBody =
-    showReason || showRejectionReason || showAlternatives || isPending;
+    showReason || showRejectionReason || showAlternatives;
 
   return (
     <article
@@ -402,12 +402,6 @@ function ReservationCard({
 
       {showCardBody ? (
         <div className="mt-2 grid gap-2">
-          {isPending ? (
-            <p className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 text-xs text-amber-900">
-              این درخواست منتظر تایید مدیر است؛ تا قبل از تایید می‌توانید آن را لغو کنید.
-            </p>
-          ) : null}
-
           {showReason || showRejectionReason ? (
             <dl className="grid gap-1.5 text-xs">
               {showReason ? (
