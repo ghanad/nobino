@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bell, ChevronDown, LogOut, Menu } from "lucide-react";
@@ -68,24 +69,79 @@ function NavLink({
 }
 
 function UserMenu({ userName }: { userName: string | null }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      if (
+        menuRef.current &&
+        event.target instanceof Node &&
+        !menuRef.current.contains(event.target)
+      ) {
+        setIsOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
+
   return (
-    <details className="group relative">
-      <summary className="inline-flex h-8 cursor-pointer list-none items-center gap-1.5 rounded-full border border-transparent bg-background px-2.5 text-sm font-medium text-slate-700 transition-colors hover:border-slate-200 hover:bg-slate-50 hover:text-slate-950 group-open:border-slate-200 group-open:bg-slate-50 group-open:text-slate-950 [&::-webkit-details-marker]:hidden">
+    <div className="relative" ref={menuRef}>
+      <button
+        aria-expanded={isOpen}
+        aria-haspopup="menu"
+        className={cn(
+          "inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border bg-background px-2.5 text-sm font-medium text-slate-700 transition-colors hover:border-slate-200 hover:bg-slate-50 hover:text-slate-950",
+          isOpen
+            ? "border-slate-200 bg-slate-50 text-slate-950"
+            : "border-transparent",
+        )}
+        onClick={() => setIsOpen((current) => !current)}
+        type="button"
+      >
         <span className="max-w-32 truncate">{userName ?? "حساب کاربری"}</span>
-        <ChevronDown className="h-3.5 w-3.5 text-slate-500 transition-transform group-open:rotate-180" />
-      </summary>
-      <div className="absolute left-0 z-20 mt-1.5 w-36 rounded-md border border-slate-200 bg-card p-1 text-card-foreground shadow-sm">
-        <form action={logoutAction}>
-          <button
-            className="inline-flex h-8 w-full items-center justify-start gap-1.5 rounded-sm px-2 text-xs font-medium text-red-700 transition-colors hover:bg-red-50"
-            type="submit"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-            خروج
-          </button>
-        </form>
-      </div>
-    </details>
+        <ChevronDown
+          className={cn(
+            "h-3.5 w-3.5 text-slate-500 transition-transform",
+            isOpen ? "rotate-180" : "",
+          )}
+        />
+      </button>
+      {isOpen ? (
+        <div
+          className="absolute left-0 z-20 mt-1.5 w-36 rounded-md border border-slate-200 bg-card p-1 text-card-foreground shadow-sm"
+          role="menu"
+        >
+          <form action={logoutAction}>
+            <button
+              className="inline-flex h-8 w-full items-center justify-start gap-1.5 rounded-sm px-2 text-xs font-medium text-red-700 transition-colors hover:bg-red-50"
+              role="menuitem"
+              type="submit"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              خروج
+            </button>
+          </form>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
