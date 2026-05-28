@@ -7,6 +7,7 @@ import {
   proposeAlternativeAction,
   rejectReservationAction,
 } from "@/app/manager/actions";
+import { PendingReviewModalContent } from "@/app/manager/pending-review-modal-content";
 import { PageHeader } from "@/components/app/page-header";
 import { ManagerWeeklyCalendar } from "@/components/calendar/manager-weekly-calendar";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -72,6 +73,13 @@ type QueueItem = {
   }>;
 };
 
+const PERSIAN_NUMBER_FORMATTER = new Intl.NumberFormat("fa-IR");
+const PERSIAN_TIME_FORMATTER = new Intl.DateTimeFormat("fa-IR", {
+  hour: "2-digit",
+  hour12: false,
+  minute: "2-digit",
+});
+
 function addDays(date: Date, days: number): Date {
   return new Date(
     date.getFullYear(),
@@ -115,7 +123,15 @@ function formatHour(date: Date): string {
 function formatDuration(startAt: Date, endAt: Date): string {
   const hours = Math.round((endAt.getTime() - startAt.getTime()) / 3_600_000);
 
-  return `${hours} ${hours === 1 ? "hour" : "hours"}`;
+  return `${formatPersianNumber(hours)} ساعت`;
+}
+
+function formatPersianNumber(value: number): string {
+  return PERSIAN_NUMBER_FORMATTER.format(value);
+}
+
+function formatPersianTime(date: Date): string {
+  return PERSIAN_TIME_FORMATTER.format(date);
 }
 
 function buildHourOptions() {
@@ -462,42 +478,71 @@ function ReviewModal({
   item: QueueItem;
   dateParam: string;
 }) {
+  const isPending = item.reservation.status === ReservationStatus.PENDING;
+  const modalTitle = isPending
+    ? "بررسی درخواست رزرو"
+    : "جزئیات رزرو تاییدشده";
+
   return (
     <div
       aria-labelledby={`${buildReviewModalId(item.reservation.id)}-title`}
       aria-modal="true"
       className="fixed inset-0 z-50 hidden items-start justify-center overflow-y-auto bg-black/55 p-4 target:flex"
+      dir="rtl"
       id={buildReviewModalId(item.reservation.id)}
       role="dialog"
     >
       <a
-        aria-label="Close review dialog"
+        aria-label="بستن پنجره بررسی"
         className="fixed inset-0 cursor-default"
         href={buildManagerHref(dateParam)}
       />
-      <div className="relative z-10 grid w-full max-w-5xl gap-3 py-8">
-        <div className="flex items-center justify-between gap-3 rounded-lg border bg-background px-4 py-3 shadow-lg">
+      <div className="relative z-10 w-full max-w-3xl overflow-hidden rounded-lg border bg-background text-right shadow-lg">
+        <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
           <h2
-            className="text-sm font-medium"
+            className="text-base font-semibold"
             id={`${buildReviewModalId(item.reservation.id)}-title`}
           >
-            {item.reservation.status === ReservationStatus.PENDING
-              ? "Review pending reservation"
-              : "Approved reservation details"}
+            {modalTitle}
           </h2>
           <a
-            aria-label="Close review dialog"
+            aria-label="بستن پنجره بررسی"
             className="inline-flex h-9 w-9 items-center justify-center rounded-md border bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
             href={buildManagerHref(dateParam)}
           >
             <X aria-hidden="true" className="h-4 w-4" />
           </a>
         </div>
-        <QueueCard
-          dateParam={dateParam}
-          fieldIdPrefix="modal"
-          item={item}
-        />
+        {isPending ? (
+          <PendingReviewModalContent
+            dateParam={dateParam}
+            defaultEndHour={item.reservation.endAt.getHours()}
+            defaultStartHour={item.reservation.startAt.getHours()}
+            durationLabel={formatDuration(
+              item.reservation.startAt,
+              item.reservation.endAt,
+            )}
+            hourOptions={buildHourOptions()}
+            partySizeLabel={formatPersianNumber(item.reservation.partySize)}
+            reason={item.reservation.reason}
+            requestedDate={formatJalaliDateParam(item.reservation.startAt)}
+            requestedDateLabel={formatJalaliDate(item.reservation.startAt)}
+            requestedEndTimeLabel={formatPersianTime(item.reservation.endAt)}
+            requestedStartTimeLabel={formatPersianTime(
+              item.reservation.startAt,
+            )}
+            reservationId={item.reservation.id}
+            resourcePoolName={item.reservation.resourcePool.name}
+            userEmail={item.reservation.user.email}
+            userName={item.reservation.user.name}
+          />
+        ) : (
+          <QueueCard
+            dateParam={dateParam}
+            fieldIdPrefix="modal"
+            item={item}
+          />
+        )}
       </div>
     </div>
   );
