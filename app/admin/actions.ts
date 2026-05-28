@@ -130,6 +130,39 @@ function redirectToAdmin(params: Record<string, string | undefined>): never {
   redirect(`/admin?${searchParams.toString()}`);
 }
 
+function getSafeAdminRedirectPath(
+  value: FormDataEntryValue | null,
+  fallback: string,
+): string {
+  if (
+    typeof value === "string" &&
+    value.startsWith("/admin") &&
+    !value.startsWith("//")
+  ) {
+    return value;
+  }
+
+  return fallback;
+}
+
+function redirectToPath(
+  path: string,
+  params: Record<string, string | undefined>,
+): never {
+  const [pathname, existingQuery = ""] = path.split("?");
+  const searchParams = new URLSearchParams(existingQuery);
+
+  for (const [key, value] of Object.entries(params)) {
+    if (value) {
+      searchParams.set(key, value);
+    }
+  }
+
+  const query = searchParams.toString();
+
+  redirect(query ? `${pathname}?${query}` : pathname);
+}
+
 function getActionErrorMessage(error: unknown): string {
   if (error instanceof AdminSettingsError || error instanceof UserManagementError) {
     return error.message;
@@ -467,6 +500,14 @@ export async function importIranHolidaysAction(
 
 export async function createUserAction(formData: FormData): Promise<void> {
   const admin = await requireRole([UserRole.ADMIN]);
+  const errorRedirectPath = getSafeAdminRedirectPath(
+    formData.get("errorRedirectPath"),
+    "/admin?tab=users",
+  );
+  const successRedirectPath = getSafeAdminRedirectPath(
+    formData.get("successRedirectPath"),
+    "/admin?tab=users",
+  );
   const parsed = createUserSchema.safeParse({
     name: formData.get("name"),
     email: formData.get("email"),
@@ -475,9 +516,8 @@ export async function createUserAction(formData: FormData): Promise<void> {
   });
 
   if (!parsed.success) {
-    redirectToAdmin({
+    redirectToPath(errorRedirectPath, {
       error: "Enter a valid user name, email, role, and temporary password.",
-      tab: "users",
     });
   }
 
@@ -487,14 +527,18 @@ export async function createUserAction(formData: FormData): Promise<void> {
       ...parsed.data,
     });
   } catch (error) {
-    redirectToAdmin({ error: getActionErrorMessage(error), tab: "users" });
+    redirectToPath(errorRedirectPath, { error: getActionErrorMessage(error) });
   }
 
-  redirectToAdmin({ userCreated: "1", tab: "users" });
+  redirectToPath(successRedirectPath, { userCreated: "1" });
 }
 
 export async function updateUserAction(formData: FormData): Promise<void> {
   const admin = await requireRole([UserRole.ADMIN]);
+  const redirectPath = getSafeAdminRedirectPath(
+    formData.get("redirectPath"),
+    "/admin?tab=users",
+  );
   const parsed = updateUserSchema.safeParse({
     userId: formData.get("userId"),
     name: formData.get("name"),
@@ -503,7 +547,7 @@ export async function updateUserAction(formData: FormData): Promise<void> {
   });
 
   if (!parsed.success) {
-    redirectToAdmin({ error: "Enter valid user details.", tab: "users" });
+    redirectToPath(redirectPath, { error: "Enter valid user details." });
   }
 
   try {
@@ -512,25 +556,28 @@ export async function updateUserAction(formData: FormData): Promise<void> {
       ...parsed.data,
     });
   } catch (error) {
-    redirectToAdmin({ error: getActionErrorMessage(error), tab: "users" });
+    redirectToPath(redirectPath, { error: getActionErrorMessage(error) });
   }
 
-  redirectToAdmin({ userUpdated: "1", tab: "users" });
+  redirectToPath(redirectPath, { userUpdated: "1" });
 }
 
 export async function resetUserPasswordAction(
   formData: FormData,
 ): Promise<void> {
   const admin = await requireRole([UserRole.ADMIN]);
+  const redirectPath = getSafeAdminRedirectPath(
+    formData.get("redirectPath"),
+    "/admin?tab=users",
+  );
   const parsed = resetPasswordSchema.safeParse({
     userId: formData.get("userId"),
     password: formData.get("password"),
   });
 
   if (!parsed.success) {
-    redirectToAdmin({
+    redirectToPath(redirectPath, {
       error: "Temporary password must be at least 8 characters.",
-      tab: "users",
     });
   }
 
@@ -540,8 +587,8 @@ export async function resetUserPasswordAction(
       ...parsed.data,
     });
   } catch (error) {
-    redirectToAdmin({ error: getActionErrorMessage(error), tab: "users" });
+    redirectToPath(redirectPath, { error: getActionErrorMessage(error) });
   }
 
-  redirectToAdmin({ passwordReset: "1", tab: "users" });
+  redirectToPath(redirectPath, { passwordReset: "1" });
 }

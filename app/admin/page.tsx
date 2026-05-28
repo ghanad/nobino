@@ -2,10 +2,13 @@ import Link from "next/link";
 import {
   CalendarDays,
   Database,
-  KeyRound,
+  Mail,
   Save,
+  ShieldCheck,
   Trash2,
+  UserCheck,
   UserPlus,
+  UserX,
   Users,
 } from "lucide-react";
 import { UserRole } from "@prisma/client";
@@ -13,17 +16,14 @@ import type { ReactNode } from "react";
 
 import {
   createCapacityExceptionAction,
-  createUserAction,
   createScheduleExceptionAction,
   deleteCapacityExceptionAction,
   deleteScheduleExceptionAction,
   importIranHolidaysAction,
   updateCapacityExceptionAction,
   updateReservationPolicyAction,
-  resetUserPasswordAction,
   updateResourcePoolAction,
   updateScheduleExceptionAction,
-  updateUserAction,
   updateWeeklyScheduleAction,
 } from "@/app/admin/actions";
 import { PageHeader } from "@/components/app/page-header";
@@ -62,9 +62,9 @@ const ADMIN_TABS = ["users", "capacity", "schedule"] as const;
 type AdminTab = (typeof ADMIN_TABS)[number];
 
 const ADMIN_TAB_LABELS: Record<AdminTab, string> = {
-  users: "Users",
-  capacity: "Capacity",
-  schedule: "Schedule",
+  users: "کاربران",
+  capacity: "ظرفیت",
+  schedule: "زمان‌بندی",
 };
 
 const ADMIN_TAB_ICONS: Record<AdminTab, typeof Users> = {
@@ -82,6 +82,36 @@ const DAY_LABELS: Record<number, string> = {
   5: "Friday",
   6: "Saturday",
 };
+
+const PERSIAN_NUMBER_FORMATTER = new Intl.NumberFormat("fa-IR");
+
+const USER_ROLE_LABELS: Record<UserRole, string> = {
+  USER: "کاربر",
+  MANAGER: "مدیر",
+  ADMIN: "ادمین",
+};
+
+const USER_ROLE_DESCRIPTIONS: Record<UserRole, string> = {
+  USER: "ثبت و پیگیری رزروهای خودش",
+  MANAGER: "بررسی، تایید و رد درخواست‌ها",
+  ADMIN: "دسترسی کامل به تنظیمات و کاربران",
+};
+
+function formatPersianNumber(value: number): string {
+  return PERSIAN_NUMBER_FORMATTER.format(value);
+}
+
+function getUserRoleBadgeClass(role: UserRole): string {
+  if (role === UserRole.ADMIN) {
+    return "border-amber-200 bg-amber-50 text-amber-800";
+  }
+
+  if (role === UserRole.MANAGER) {
+    return "border-blue-200 bg-blue-50 text-blue-800";
+  }
+
+  return "border-slate-200 bg-slate-50 text-slate-700";
+}
 
 function getActiveAdminTab(
   params: Awaited<AdminPageProps["searchParams"]>,
@@ -172,7 +202,7 @@ function getAdminToast(params: Awaited<AdminPageProps["searchParams"]>) {
 function AdminTabs({ activeTab }: { activeTab: AdminTab }) {
   return (
     <nav
-      aria-label="Admin sections"
+      aria-label="بخش‌های مدیریت"
       className="grid gap-2 rounded-lg border bg-card p-2 text-card-foreground sm:grid-cols-3"
     >
       {ADMIN_TABS.map((tab) => {
@@ -232,10 +262,8 @@ function SelectInput(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
 }
 
 function UserManagement({
-  currentAdminId,
   users,
 }: {
-  currentAdminId: string;
   users: Array<{
     id: string;
     name: string;
@@ -245,153 +273,119 @@ function UserManagement({
     createdAt: Date;
   }>;
 }) {
+  const activeUsers = users.filter((user) => user.active).length;
+  const adminUsers = users.filter((user) => user.role === UserRole.ADMIN).length;
+  const managerUsers = users.filter(
+    (user) => user.role === UserRole.MANAGER,
+  ).length;
+
   return (
-    <section className="rounded-lg border bg-card p-5 text-card-foreground">
-      <div className="flex flex-col gap-1">
-        <h2 className="font-medium">Users</h2>
-        <p className="text-sm text-muted-foreground">
-          Create accounts, change roles, deactivate users, and set temporary
-          passwords.
-        </p>
+    <section className="grid gap-5 text-card-foreground" dir="rtl">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="grid gap-1">
+          <h2 className="text-lg font-semibold text-slate-950">
+            مدیریت کاربران
+          </h2>
+          <p className="text-sm leading-6 text-muted-foreground">
+            این صفحه فقط نمای کلی کاربران است. ساخت، ویرایش و تنظیم رمز در
+            صفحه جدا انجام می‌شود.
+          </p>
+        </div>
+        <Button asChild className="w-full sm:w-auto">
+          <Link href="/admin/users/new">
+            <UserPlus className="h-4 w-4" />
+            ساخت کاربر
+          </Link>
+        </Button>
       </div>
 
-      <form
-        action={createUserAction}
-        className="mt-5 grid gap-4 rounded-md border bg-muted/20 p-4 lg:grid-cols-[1fr_1.2fr_150px_180px_auto]"
-      >
-        <div className="grid gap-2">
-          <FieldLabel htmlFor="new-user-name">Name</FieldLabel>
-          <TextInput id="new-user-name" maxLength={100} name="name" required />
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-lg border bg-card p-4">
+          <p className="text-xs font-medium text-muted-foreground">کل کاربران</p>
+          <p className="mt-2 text-2xl font-semibold text-slate-950">
+            {formatPersianNumber(users.length)}
+          </p>
         </div>
-        <div className="grid gap-2">
-          <FieldLabel htmlFor="new-user-email">Email</FieldLabel>
-          <TextInput
-            id="new-user-email"
-            maxLength={200}
-            name="email"
-            required
-            type="email"
-          />
+        <div className="rounded-lg border bg-card p-4">
+          <p className="text-xs font-medium text-muted-foreground">فعال</p>
+          <p className="mt-2 text-2xl font-semibold text-emerald-700">
+            {formatPersianNumber(activeUsers)}
+          </p>
         </div>
-        <div className="grid gap-2">
-          <FieldLabel htmlFor="new-user-role">Role</FieldLabel>
-          <SelectInput defaultValue={UserRole.USER} id="new-user-role" name="role">
-            <option value={UserRole.USER}>User</option>
-            <option value={UserRole.MANAGER}>Manager</option>
-            <option value={UserRole.ADMIN}>Admin</option>
-          </SelectInput>
+        <div className="rounded-lg border bg-card p-4">
+          <p className="text-xs font-medium text-muted-foreground">
+            مدیر و ادمین
+          </p>
+          <p className="mt-2 text-2xl font-semibold text-blue-700">
+            {formatPersianNumber(managerUsers + adminUsers)}
+          </p>
         </div>
-        <div className="grid gap-2">
-          <FieldLabel htmlFor="new-user-password">
-            Temporary password
-          </FieldLabel>
-          <TextInput
-            id="new-user-password"
-            minLength={8}
-            name="password"
-            required
-            type="password"
-          />
-        </div>
-        <div className="flex items-end">
-          <Button type="submit">
-            <UserPlus className="h-4 w-4" />
-            Create
-          </Button>
-        </div>
-      </form>
+      </div>
 
-      <div className="mt-5 grid gap-3">
+      <div className="grid gap-3">
         {users.map((user) => (
-          <div className="rounded-md border bg-muted/20 p-4" key={user.id}>
-            <form
-              action={updateUserAction}
-              className="grid gap-4 lg:grid-cols-[1fr_1.2fr_150px_1fr_auto]"
-            >
-              <input name="userId" type="hidden" value={user.id} />
-              <div className="grid gap-2">
-                <FieldLabel htmlFor={`user-name-${user.id}`}>Name</FieldLabel>
-                <TextInput
-                  defaultValue={user.name}
-                  id={`user-name-${user.id}`}
-                  maxLength={100}
-                  name="name"
-                  required
-                />
-              </div>
-              <div className="grid gap-2">
-                <FieldLabel htmlFor={`user-email-${user.id}`}>Email</FieldLabel>
-                <TextInput
-                  defaultValue={user.email}
-                  disabled
-                  id={`user-email-${user.id}`}
-                />
-              </div>
-              <div className="grid gap-2">
-                <FieldLabel htmlFor={`user-role-${user.id}`}>Role</FieldLabel>
-                <SelectInput
-                  defaultValue={user.role}
-                  id={`user-role-${user.id}`}
-                  name="role"
+          <div className="rounded-lg border bg-card p-4 shadow-sm" key={user.id}>
+            <div className="grid gap-4 lg:grid-cols-[minmax(220px,0.8fr)_1fr_auto] lg:items-center">
+              <div className="flex min-w-0 items-start gap-3">
+                <span
+                  className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md ${
+                    user.active
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "bg-slate-100 text-slate-500"
+                  }`}
                 >
-                  <option value={UserRole.USER}>User</option>
-                  <option value={UserRole.MANAGER}>Manager</option>
-                  <option value={UserRole.ADMIN}>Admin</option>
-                </SelectInput>
-              </div>
-              <div className="flex flex-col justify-end gap-2">
-                {user.id === currentAdminId ? (
-                  <input name="active" type="hidden" value="on" />
-                ) : null}
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    className="h-4 w-4 rounded border-input"
-                    defaultChecked={user.active}
-                    disabled={user.id === currentAdminId}
-                    name="active"
-                    type="checkbox"
-                  />
-                  Active
-                </label>
-                {user.id === currentAdminId ? (
-                  <p className="text-xs text-muted-foreground">
-                    Your own account cannot be deactivated here.
+                  {user.active ? (
+                    <UserCheck className="h-5 w-5" />
+                  ) : (
+                    <UserX className="h-5 w-5" />
+                  )}
+                </span>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="truncate font-medium text-slate-950">
+                      {user.name}
+                    </h3>
+                    <span
+                      className={`inline-flex h-6 items-center rounded-full border px-2 text-xs font-medium ${getUserRoleBadgeClass(
+                        user.role,
+                      )}`}
+                    >
+                      {USER_ROLE_LABELS[user.role]}
+                    </span>
+                    <span
+                      className={`inline-flex h-6 items-center rounded-full px-2 text-xs font-medium ${
+                        user.active
+                          ? "bg-emerald-50 text-emerald-700"
+                          : "bg-slate-100 text-slate-600"
+                      }`}
+                    >
+                      {user.active ? "فعال" : "غیرفعال"}
+                    </span>
+                  </div>
+                  <p className="mt-1 flex items-center gap-1.5 truncate text-sm text-muted-foreground">
+                    <Mail className="h-3.5 w-3.5 shrink-0" />
+                    <span dir="ltr">{user.email}</span>
                   </p>
-                ) : null}
+                </div>
               </div>
-              <div className="flex items-end">
-                <Button type="submit">
-                  <Save className="h-4 w-4" />
-                  Save
-                </Button>
-              </div>
-            </form>
 
-            <form
-              action={resetUserPasswordAction}
-              className="mt-4 grid gap-3 border-t pt-4 sm:grid-cols-[1fr_auto]"
-            >
-              <input name="userId" type="hidden" value={user.id} />
-              <div className="grid gap-2">
-                <FieldLabel htmlFor={`user-password-${user.id}`}>
-                  Temporary password
-                </FieldLabel>
-                <TextInput
-                  id={`user-password-${user.id}`}
-                  minLength={8}
-                  name="password"
-                  placeholder="At least 8 characters"
-                  required
-                  type="password"
-                />
+              <div className="grid gap-2 rounded-md bg-muted/30 p-3 text-sm text-muted-foreground md:grid-cols-2">
+                <div className="flex items-start gap-2">
+                  <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
+                  <span>{USER_ROLE_DESCRIPTIONS[user.role]}</span>
+                </div>
+                <div>
+                  ساخته شده در{" "}
+                  <span className="font-medium text-slate-700">
+                    {formatJalaliDate(user.createdAt)}
+                  </span>
+                </div>
               </div>
-              <div className="flex items-end">
-                <Button type="submit" variant="outline">
-                  <KeyRound className="h-4 w-4" />
-                  Set password
-                </Button>
-              </div>
-            </form>
+
+              <Button asChild className="w-full lg:w-auto" variant="outline">
+                <Link href={`/admin/users/${user.id}`}>جزئیات و ویرایش</Link>
+              </Button>
+            </div>
           </div>
         ))}
       </div>
@@ -959,7 +953,7 @@ function ScheduleExceptions({
 }
 
 export default async function AdminPage({ searchParams }: AdminPageProps) {
-  const currentAdmin = await requireRole([UserRole.ADMIN]);
+  await requireRole([UserRole.ADMIN]);
   const params = await searchParams;
   const toast = getAdminToast(params);
   const activeTab = getActiveAdminTab(params);
@@ -1048,7 +1042,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       {toast ? <UrlToast {...toast} /> : null}
       <AdminTabs activeTab={activeTab} />
       {activeTab === "users" ? (
-        <UserManagement currentAdminId={currentAdmin.id} users={users} />
+        <UserManagement users={users} />
       ) : null}
       {activeTab === "capacity" ? (
         <>
