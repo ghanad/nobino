@@ -334,7 +334,7 @@ test("reservation time range cannot span multiple calendar days", async () => {
 });
 
 test("official Iran holidays are non-working unless overridden", async () => {
-  const holidayDate = parseJalaliDateParam("1405-03-06");
+  const holidayDate = parseJalaliDateParam("1405-03-14");
 
   assert.ok(holidayDate);
 
@@ -356,7 +356,7 @@ test("official Iran holidays are non-working unless overridden", async () => {
 });
 
 test("schedule exceptions can override official Iran holidays", async () => {
-  const holidayDate = parseJalaliDateParam("1405-03-06");
+  const holidayDate = parseJalaliDateParam("1405-03-14");
 
   assert.ok(holidayDate);
 

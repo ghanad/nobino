@@ -2,7 +2,15 @@
 
 import { ChevronLeft, ChevronRight, Users } from "lucide-react";
 import Link from "next/link";
-import { useState, useTransition, type DragEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+  type DragEvent,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 
 import { proposeAlternativeDropAction } from "@/app/manager/actions";
 import { JALALI_DATE_INPUT_PLACEHOLDER } from "@/lib/jalali-date";
@@ -49,6 +57,23 @@ type DraggedReservation = {
   durationHours: number;
   reservationId: string;
   status: SlotReservationDetail["status"];
+};
+
+type ResizeEdge = "start" | "end";
+
+type ResizingReservation = {
+  dateParam: string;
+  edge: ResizeEdge;
+  endHour: number;
+  reservationId: string;
+  startHour: number;
+  status: SlotReservationDetail["status"];
+};
+
+type SlotPointerTarget = {
+  dateParam: string;
+  slotEndHour: number;
+  slotStartHour: number;
 };
 
 type ManagerWeeklyCalendarProps = {
@@ -200,21 +225,30 @@ function getReservationBlockStyle(block: PositionedReservationBlock) {
 function ReservationBlock({
   block,
   isDragging,
+  isResizing,
   onDragEnd,
   onDragStart,
+  onResizeStart,
 }: {
   block: PositionedReservationBlock;
   isDragging: boolean;
+  isResizing: boolean;
   onDragEnd: () => void;
   onDragStart: (block: PositionedReservationBlock) => void;
+  onResizeStart: (
+    event: ReactPointerEvent<HTMLElement>,
+    block: PositionedReservationBlock,
+    edge: ResizeEdge,
+  ) => void;
 }) {
   const { detail } = block;
   const canDrag = detail.status === "PENDING";
+  const suppressNextClickRef = useRef(false);
   const className = cn(
-    "pointer-events-auto flex h-full min-w-0 flex-col items-center justify-between gap-2 rounded-md px-1.5 py-2 text-xs font-medium leading-5 shadow-sm ring-1 transition",
+    "pointer-events-auto relative flex h-full min-w-0 flex-col items-center justify-between gap-2 rounded-md px-1.5 py-2 text-xs font-medium leading-5 shadow-sm ring-1 transition",
     getDetailClass(detail.status),
     canDrag ? "cursor-grab active:cursor-grabbing" : null,
-    isDragging ? "opacity-45" : null,
+    isDragging || isResizing ? "opacity-45" : null,
   );
   const dragProps = canDrag
     ? {
@@ -238,6 +272,23 @@ function ReservationBlock({
     : {};
   const content = (
     <>
+      {canDrag ? (
+        <span
+          aria-label="Change reservation start time"
+          className="absolute inset-x-1 top-0 h-3 cursor-ns-resize rounded-t-md border-t-2 border-amber-700/70 bg-amber-200/80 opacity-0 transition-opacity hover:opacity-100"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
+          onPointerDown={(event) => {
+            suppressNextClickRef.current = true;
+            onResizeStart(event, block, "start");
+          }}
+          role="button"
+          tabIndex={-1}
+          title="Drag to change the start time"
+        />
+      ) : null}
       <span
         className="min-h-0 max-h-full overflow-hidden text-center leading-4 [text-orientation:mixed] [writing-mode:vertical-rl]"
         title={`${detail.userName} - ${detail.partySize} people`}
@@ -249,8 +300,25 @@ function ReservationBlock({
         {detail.partySize}
       </span>
       <span className="shrink-0 text-[9px] uppercase leading-3 opacity-75">
-        {canDrag ? "Drag" : getDetailActionLabel(detail.status)}
+        {canDrag ? "Drag / resize" : getDetailActionLabel(detail.status)}
       </span>
+      {canDrag ? (
+        <span
+          aria-label="Change reservation end time"
+          className="absolute inset-x-1 bottom-0 h-3 cursor-ns-resize rounded-b-md border-b-2 border-amber-700/70 bg-amber-200/80 opacity-0 transition-opacity hover:opacity-100"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
+          onPointerDown={(event) => {
+            suppressNextClickRef.current = true;
+            onResizeStart(event, block, "end");
+          }}
+          role="button"
+          tabIndex={-1}
+          title="Drag to change the end time"
+        />
+      ) : null}
     </>
   );
 
@@ -266,11 +334,20 @@ function ReservationBlock({
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         )}
         href={detail.href}
+        onClickCapture={(event) => {
+          if (!suppressNextClickRef.current) {
+            return;
+          }
+
+          suppressNextClickRef.current = false;
+          event.preventDefault();
+          event.stopPropagation();
+        }}
         {...dragProps}
         style={getReservationBlockStyle(block)}
         title={
           canDrag
-            ? "Drag to a working hour to update this pending request time"
+            ? "Drag to move, or drag the top/bottom edge to resize this pending request"
             : `${detail.partySize} people${detail.reason ? ` - ${detail.reason}` : ""}`
         }
       >
@@ -304,6 +381,9 @@ export function ManagerWeeklyCalendar({
     useState<DraggedReservation | null>(null);
   const [dragOverSlotKey, setDragOverSlotKey] = useState<string | null>(null);
   const [dropError, setDropError] = useState<string | null>(null);
+  const [resizeOverSlotKey, setResizeOverSlotKey] = useState<string | null>(null);
+  const [resizingReservation, setResizingReservation] =
+    useState<ResizingReservation | null>(null);
   const [isDropPending, startDropTransition] = useTransition();
   const hours = getHourRange(weekDays);
   const reservationBlocksByDate = new Map(
@@ -333,6 +413,34 @@ export function ManagerWeeklyCalendar({
     }
   }
 
+  const submitTimeUpdate = useCallback((input: {
+    dateParam: string;
+    proposedEndHour: number;
+    proposedStartHour: number;
+    reservationId: string;
+  }) => {
+    const formData = new FormData();
+
+    formData.set("reservationId", input.reservationId);
+    formData.set("proposedDate", input.dateParam);
+    formData.set("proposedStartHour", input.proposedStartHour.toString());
+    formData.set("proposedEndHour", input.proposedEndHour.toString());
+    formData.set("date", currentDateParam);
+
+    startDropTransition(async () => {
+      const result = await proposeAlternativeDropAction(formData);
+
+      if (!result.ok) {
+        setDropError(result.error);
+        return;
+      }
+
+      const searchParams = new URLSearchParams({ date: currentDateParam });
+      searchParams.set("alternative", "1");
+      window.location.href = `/manager?${searchParams.toString()}`;
+    });
+  }, [currentDateParam]);
+
   function handleDrop(
     event: DragEvent<HTMLDivElement>,
     day: ManagerWeekDay,
@@ -348,27 +456,118 @@ export function ManagerWeeklyCalendar({
     }
 
     const proposedEndHour = slot.slotStartHour + dragged.durationHours;
-    const formData = new FormData();
 
-    formData.set("reservationId", dragged.reservationId);
-    formData.set("proposedDate", day.dateParam);
-    formData.set("proposedStartHour", slot.slotStartHour.toString());
-    formData.set("proposedEndHour", proposedEndHour.toString());
-    formData.set("date", currentDateParam);
+    submitTimeUpdate({
+      dateParam: day.dateParam,
+      proposedEndHour,
+      proposedStartHour: slot.slotStartHour,
+      reservationId: dragged.reservationId,
+    });
+  }
 
-    startDropTransition(async () => {
-      const result = await proposeAlternativeDropAction(formData);
+  function getSlotPointerTarget(
+    clientX: number,
+    clientY: number,
+  ): SlotPointerTarget | null {
+    const elements = document.elementsFromPoint(clientX, clientY);
+    const cell = elements
+      .map((element) =>
+        element instanceof HTMLElement
+          ? element.closest<HTMLElement>("[data-manager-calendar-cell='true']")
+          : null,
+      )
+      .find((element): element is HTMLElement => Boolean(element));
 
-      if (!result.ok) {
-        setDropError(result.error);
+    if (!cell) {
+      return null;
+    }
+
+    const dateParam = cell.dataset.dateParam;
+    const slotStartHour = Number(cell.dataset.slotStartHour);
+    const slotEndHour = Number(cell.dataset.slotEndHour);
+
+    if (
+      !dateParam ||
+      !Number.isInteger(slotStartHour) ||
+      !Number.isInteger(slotEndHour)
+    ) {
+      return null;
+    }
+
+    return { dateParam, slotEndHour, slotStartHour };
+  }
+
+  useEffect(() => {
+    if (!resizingReservation) {
+      return;
+    }
+
+    const resizing = resizingReservation;
+
+    function handlePointerMove(event: PointerEvent) {
+      const target = getSlotPointerTarget(event.clientX, event.clientY);
+
+      if (!target || target.dateParam !== resizing.dateParam) {
+        setResizeOverSlotKey(null);
         return;
       }
 
-      const searchParams = new URLSearchParams({ date: currentDateParam });
-      searchParams.set("alternative", "1");
-      window.location.href = `/manager?${searchParams.toString()}`;
-    });
-  }
+      setResizeOverSlotKey(
+        `${target.dateParam}-${target.slotStartHour}-${resizing.edge}`,
+      );
+    }
+
+    function handlePointerUp(event: PointerEvent) {
+      const target = getSlotPointerTarget(event.clientX, event.clientY);
+
+      setResizeOverSlotKey(null);
+      setResizingReservation(null);
+
+      if (
+        !target ||
+        target.dateParam !== resizing.dateParam ||
+        resizing.status !== "PENDING"
+      ) {
+        return;
+      }
+
+      const proposedStartHour =
+        resizing.edge === "start"
+          ? target.slotStartHour
+          : resizing.startHour;
+      const proposedEndHour =
+        resizing.edge === "end"
+          ? target.slotEndHour
+          : resizing.endHour;
+
+      if (
+        proposedStartHour === resizing.startHour &&
+        proposedEndHour === resizing.endHour
+      ) {
+        return;
+      }
+
+      if (proposedEndHour <= proposedStartHour) {
+        setDropError("Reservation must be at least 1 hour long.");
+        return;
+      }
+
+      submitTimeUpdate({
+        dateParam: resizing.dateParam,
+        proposedEndHour,
+        proposedStartHour,
+        reservationId: resizing.reservationId,
+      });
+    }
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, [resizingReservation, submitTimeUpdate]);
 
   return (
     <section className="rounded-lg border bg-card p-5 text-card-foreground">
@@ -417,7 +616,8 @@ export function ManagerWeeklyCalendar({
             <p className="mt-1 text-xs text-muted-foreground">
               Amber requests are pending review; green reservations are approved
               and consume capacity. Drag amber requests onto another working
-              hour to update their pending time.
+              hour to update their pending time. Drag the top or bottom edge of
+              a pending request to change its duration.
             </p>
           </div>
           <Link
@@ -506,7 +706,16 @@ export function ManagerWeeklyCalendar({
                             dragOverSlotKey === `${day.dateParam}-${hour}`
                               ? "outline outline-2 outline-sky-500"
                               : null,
+                            resizeOverSlotKey ===
+                              `${day.dateParam}-${hour}-start` ||
+                              resizeOverSlotKey === `${day.dateParam}-${hour}-end`
+                              ? "outline outline-2 outline-amber-600"
+                              : null,
                           )}
+                          data-date-param={day.dateParam}
+                          data-manager-calendar-cell="true"
+                          data-slot-end-hour={slot?.slotEndHour}
+                          data-slot-start-hour={slot?.slotStartHour}
                           onDragLeave={() => setDragOverSlotKey(null)}
                           onDragOver={(event) => {
                             if (!slot || !draggedReservation || isDropPending) {
@@ -576,6 +785,10 @@ export function ManagerWeeklyCalendar({
                                 draggedReservation?.reservationId ===
                                 block.detail.id
                               }
+                              isResizing={
+                                resizingReservation?.reservationId ===
+                                block.detail.id
+                              }
                               onDragEnd={() => {
                                 setDraggedReservation(null);
                                 setDragOverSlotKey(null);
@@ -587,6 +800,21 @@ export function ManagerWeeklyCalendar({
                                     dragBlock.endHour - dragBlock.startHour,
                                   reservationId: dragBlock.detail.id,
                                   status: dragBlock.detail.status,
+                                });
+                              }}
+                              onResizeStart={(event, resizeBlock, edge) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                setDropError(null);
+                                setDraggedReservation(null);
+                                setDragOverSlotKey(null);
+                                setResizingReservation({
+                                  dateParam: day.dateParam,
+                                  edge,
+                                  endHour: resizeBlock.endHour,
+                                  reservationId: resizeBlock.detail.id,
+                                  startHour: resizeBlock.startHour,
+                                  status: resizeBlock.detail.status,
                                 });
                               }}
                             />
