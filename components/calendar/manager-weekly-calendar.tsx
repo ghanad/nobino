@@ -222,6 +222,51 @@ function getReservationBlockStyle(block: PositionedReservationBlock) {
   };
 }
 
+function applyReservationTimeUpdate(
+  weekDays: ManagerWeekDay[],
+  input: {
+    dateParam: string;
+    proposedEndHour: number;
+    proposedStartHour: number;
+    reservationId: string;
+  },
+): ManagerWeekDay[] {
+  const existingDetail = weekDays
+    .flatMap((day) => day.slots)
+    .flatMap((slot) => slot.details)
+    .find((detail) => detail.id === input.reservationId);
+
+  if (!existingDetail) {
+    return weekDays;
+  }
+
+  return weekDays.map((day) => ({
+    ...day,
+    slots: day.slots.map((slot) => {
+      const hadReservation = slot.details.some(
+        (detail) => detail.id === input.reservationId,
+      );
+      const shouldHaveReservation =
+        day.dateParam === input.dateParam &&
+        slot.slotStartHour < input.proposedEndHour &&
+        slot.slotEndHour > input.proposedStartHour;
+
+      if (hadReservation === shouldHaveReservation) {
+        return slot;
+      }
+
+      return {
+        ...slot,
+        pendingCount:
+          slot.pendingCount + (shouldHaveReservation ? 1 : -1),
+        details: shouldHaveReservation
+          ? [...slot.details, existingDetail]
+          : slot.details.filter((detail) => detail.id !== input.reservationId),
+      };
+    }),
+  }));
+}
+
 function ReservationBlock({
   block,
   isDragging,
@@ -381,15 +426,23 @@ export function ManagerWeeklyCalendar({
     useState<DraggedReservation | null>(null);
   const [dragOverSlotKey, setDragOverSlotKey] = useState<string | null>(null);
   const [dropError, setDropError] = useState<string | null>(null);
+  const [localWeekDays, setLocalWeekDays] = useState(weekDays);
   const [resizeOverSlotKey, setResizeOverSlotKey] = useState<string | null>(null);
   const [resizingReservation, setResizingReservation] =
     useState<ResizingReservation | null>(null);
   const [isDropPending, startDropTransition] = useTransition();
-  const hours = getHourRange(weekDays);
+  const hours = getHourRange(localWeekDays);
   const reservationBlocksByDate = new Map(
-    weekDays.map((day) => [day.dateParam, getPositionedReservationBlocks(day)]),
+    localWeekDays.map((day) => [
+      day.dateParam,
+      getPositionedReservationBlocks(day),
+    ]),
   );
   const firstHour = hours[0] ?? 0;
+
+  useEffect(() => {
+    setLocalWeekDays(weekDays);
+  }, [weekDays]);
 
   function readDraggedReservation(
     event: DragEvent<HTMLElement>,
@@ -435,9 +488,10 @@ export function ManagerWeeklyCalendar({
         return;
       }
 
-      const searchParams = new URLSearchParams({ date: currentDateParam });
-      searchParams.set("alternative", "1");
-      window.location.href = `/manager?${searchParams.toString()}`;
+      setDropError(null);
+      setLocalWeekDays((currentWeekDays) =>
+        applyReservationTimeUpdate(currentWeekDays, input),
+      );
     });
   }, [currentDateParam]);
 
@@ -653,7 +707,7 @@ export function ManagerWeeklyCalendar({
               <div>
                 <div className="sticky top-0 z-20 grid grid-cols-[72px_repeat(7,minmax(124px,1fr))] border-b bg-background">
                   <div className="border-r px-3 py-3 text-xs font-medium text-muted-foreground" />
-                  {weekDays.map((day) => (
+                  {localWeekDays.map((day) => (
                     <div
                       className="border-r px-3 py-3 text-center text-sm font-semibold last:border-r-0"
                       key={day.dateParam}
@@ -689,7 +743,7 @@ export function ManagerWeeklyCalendar({
                   ))}
 
                   {hours.map((hour, hourIndex) =>
-                    weekDays.map((day, dayIndex) => {
+                    localWeekDays.map((day, dayIndex) => {
                       const slot = getSlotForHour(day, hour);
                       const available = slot
                         ? Math.max(slot.capacity - slot.approvedCount, 0)
@@ -764,7 +818,7 @@ export function ManagerWeeklyCalendar({
                     }),
                   )}
 
-                  {weekDays.flatMap((day, dayIndex) =>
+                  {localWeekDays.flatMap((day, dayIndex) =>
                     (reservationBlocksByDate.get(day.dateParam) ?? []).map(
                       (block) => {
                         const startLine = block.startHour - firstHour + 1;
