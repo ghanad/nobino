@@ -654,14 +654,14 @@ export function ManagerWeeklyCalendar({
               name="date"
               pattern="\d{4}[-/]\d{1,2}[-/]\d{1,2}"
               placeholder={JALALI_DATE_INPUT_PLACEHOLDER}
-              title={`Enter a Jalali date like ${JALALI_DATE_INPUT_PLACEHOLDER}`}
+              title={`تاریخ جلالی مثل ${JALALI_DATE_INPUT_PLACEHOLDER} وارد کنید`}
               type="text"
             />
             <button
               className="inline-flex h-9 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
               type="submit"
             >
-              View
+              مشاهده
             </button>
           </form>
         </div>
@@ -675,22 +675,20 @@ export function ManagerWeeklyCalendar({
             href={buildDateHref(previousWeekDateParam)}
           >
             <ChevronLeft aria-hidden="true" className="h-4 w-4" />
-            Previous week
+            <span dir="rtl">هفته قبل</span>
           </Link>
-          <div className="order-first text-center sm:order-none">
-            <p className="text-sm font-medium">Approval calendar</p>
+          <div className="order-first text-center sm:order-none" dir="rtl">
+            <p className="text-sm font-medium">تقویم تایید رزروها</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Amber requests are pending review; green reservations are approved
-              and consume capacity. Drag amber or green reservations onto another
-              working hour to update their time. Drag the top or bottom edge to
-              change duration.
+              درخواست‌های زرد در انتظار بررسی هستند؛ رزروهای سبز تایید شده‌اند
+              و ظرفیت را مصرف می‌کنند.
             </p>
           </div>
           <Link
             className="inline-flex h-10 items-center justify-center gap-2 rounded-md border bg-background px-3 text-sm font-medium hover:bg-accent sm:justify-self-end"
             href={buildDateHref(nextWeekDateParam)}
           >
-            Next week
+            <span dir="rtl">هفته بعد</span>
             <ChevronRight aria-hidden="true" className="h-4 w-4" />
           </Link>
         </div>

@@ -451,15 +451,15 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
           currentDateParam={dateParam}
           emptyMessage={
             resourcePool
-              ? "No working-hour slots are configured for this week."
-              : "No active resource pool is configured."
+              ? "هیچ بازه ساعت کاری برای این هفته تنظیم نشده است."
+              : "هیچ مجموعه منبع فعالی تنظیم نشده است."
           }
           nextWeekDateParam={formatJalaliDateParam(addDays(weekStart, 7))}
           previousWeekDateParam={formatJalaliDateParam(addDays(weekStart, -7))}
           title={
             resourcePool
-              ? `${resourcePool.name} weekly approval calendar`
-              : "Manager weekly approval calendar"
+              ? `تقویم هفتگی تایید رزروهای ${resourcePool.name}`
+              : "تقویم هفتگی تایید مدیر"
           }
           weekDays={weekDays}
           weekLabel={formatWeekLabel(weekDates[0], weekDates[6])}
