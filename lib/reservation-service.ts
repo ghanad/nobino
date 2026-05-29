@@ -512,8 +512,8 @@ export async function proposeAlternative(input: {
         userId: reservation.userId,
         reservationId: reservation.id,
         type: "RESERVATION_TIME_UPDATED",
-        title: "Reservation time updated",
-        body: "A manager changed the time for your pending reservation.",
+        title: "زمان رزرو تغییر کرد",
+        body: "مدیر زمان درخواست رزرو شما را تغییر داد. درخواست هنوز در انتظار تایید است.",
       },
     });
 

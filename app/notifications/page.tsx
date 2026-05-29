@@ -384,6 +384,15 @@ function getNotificationMessage(notification: NotificationItem): ReactNode {
     );
   }
 
+  if (notification.type === "RESERVATION_TIME_UPDATED" && poolName) {
+    return (
+      <>
+        مدیر زمان درخواست رزرو شما برای <bdi>{poolName}</bdi> را تغییر داد.
+        درخواست هنوز در انتظار تایید است.
+      </>
+    );
+  }
+
   if (notification.type === "ALTERNATIVE_ACCEPTED" && poolName && requesterName) {
     return (
       <>
