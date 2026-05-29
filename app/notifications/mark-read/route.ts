@@ -2,12 +2,13 @@ import { revalidatePath } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 
-import { requireCurrentUser } from "@/lib/auth";
+import { getCurrentUserFromSessionToken } from "@/lib/auth";
 import {
   markAllNotificationsAsRead,
   markNotificationAsRead,
   NotificationError,
 } from "@/lib/notification-service";
+import { SESSION_COOKIE_NAME } from "@/lib/session";
 
 const notificationFilterSchema = z
   .enum(["all", "unread", "actionable", "reservations"])
@@ -28,22 +29,40 @@ const markReadSchema = z.discriminatedUnion("mode", [
 ]);
 
 function redirectToNotifications(
-  request: NextRequest,
   params: Record<string, string | undefined>,
 ) {
-  const url = new URL("/notifications", request.url);
+  const searchParams = new URLSearchParams();
 
   for (const [key, value] of Object.entries(params)) {
     if (value) {
-      url.searchParams.set(key, value);
+      searchParams.set(key, value);
     }
   }
 
-  return NextResponse.redirect(url, 303);
+  const query = searchParams.toString();
+
+  return new NextResponse(null, {
+    status: 303,
+    headers: { Location: query ? `/notifications?${query}` : "/notifications" },
+  });
+}
+
+function redirectToLogin() {
+  return new NextResponse(null, {
+    status: 303,
+    headers: { Location: "/login" },
+  });
 }
 
 export async function POST(request: NextRequest) {
-  const user = await requireCurrentUser();
+  const user = await getCurrentUserFromSessionToken(
+    request.cookies.get(SESSION_COOKIE_NAME)?.value,
+  );
+
+  if (!user) {
+    return redirectToLogin();
+  }
+
   const formData = await request.formData();
   const parsed = markReadSchema.safeParse({
     mode: formData.get("mode"),
@@ -53,7 +72,7 @@ export async function POST(request: NextRequest) {
   });
 
   if (!parsed.success) {
-    return redirectToNotifications(request, {
+    return redirectToNotifications({
       error: "اعلان معتبر انتخاب نشده است.",
     });
   }
@@ -69,16 +88,16 @@ export async function POST(request: NextRequest) {
       });
       revalidatePath("/notifications");
 
-      return redirectToNotifications(request, { filter, page, read: "1" });
+      return redirectToNotifications({ filter, page, read: "1" });
     }
 
     await markAllNotificationsAsRead(user.id);
     revalidatePath("/notifications");
 
-    return redirectToNotifications(request, { allRead: "1", filter, page });
+    return redirectToNotifications({ allRead: "1", filter, page });
   } catch (error) {
     if (error instanceof NotificationError) {
-      return redirectToNotifications(request, {
+      return redirectToNotifications({
         error: error.message,
         filter,
         page,

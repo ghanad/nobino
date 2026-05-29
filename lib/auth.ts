@@ -122,9 +122,10 @@ export async function clearSession(): Promise<void> {
   cookieStore.delete(SESSION_COOKIE_NAME);
 }
 
-export async function getCurrentUser(): Promise<CurrentUser | null> {
-  const cookieStore = await cookies();
-  const payload = parseSessionToken(cookieStore.get(SESSION_COOKIE_NAME)?.value);
+export async function getCurrentUserFromSessionToken(
+  token: string | undefined,
+): Promise<CurrentUser | null> {
+  const payload = parseSessionToken(token);
 
   if (!payload) {
     return null;
@@ -146,6 +147,14 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   }
 
   return user;
+}
+
+export async function getCurrentUser(): Promise<CurrentUser | null> {
+  const cookieStore = await cookies();
+
+  return getCurrentUserFromSessionToken(
+    cookieStore.get(SESSION_COOKIE_NAME)?.value,
+  );
 }
 
 export async function requireCurrentUser(): Promise<CurrentUser> {
