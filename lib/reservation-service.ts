@@ -410,6 +410,15 @@ export async function proposeAlternative(input: {
   proposedStartAt: Date;
   proposedEndAt: Date;
 }) {
+  return updateReservationTimeByManager(input);
+}
+
+export async function updateReservationTimeByManager(input: {
+  reservationId: string;
+  managerId: string;
+  proposedStartAt: Date;
+  proposedEndAt: Date;
+}) {
   await validateReservationTimeRange({
     startAt: input.proposedStartAt,
     endAt: input.proposedEndAt,
@@ -436,10 +445,11 @@ export async function proposeAlternative(input: {
 
     if (
       reservation.status !== ReservationStatus.PENDING &&
-      reservation.status !== ReservationStatus.ALTERNATIVE_PROPOSED
+      reservation.status !== ReservationStatus.ALTERNATIVE_PROPOSED &&
+      reservation.status !== ReservationStatus.APPROVED
     ) {
       throw new ReservationTransitionError(
-        "Only pending or alternative-proposed reservations can receive an alternative time.",
+        "Only active reservations can be updated by a manager.",
       );
     }
 
@@ -476,14 +486,17 @@ export async function proposeAlternative(input: {
       },
     });
 
+    const keepsApproval = reservation.status === ReservationStatus.APPROVED;
     const updatedReservation = await tx.reservation.update({
       where: { id: reservation.id },
       data: {
         startAt: input.proposedStartAt,
         endAt: input.proposedEndAt,
-        status: ReservationStatus.PENDING,
-        approvedById: null,
-        approvedAt: null,
+        status: keepsApproval
+          ? ReservationStatus.APPROVED
+          : ReservationStatus.PENDING,
+        approvedById: keepsApproval ? undefined : null,
+        approvedAt: keepsApproval ? undefined : null,
         rejectionReason: null,
       },
     });
@@ -513,7 +526,9 @@ export async function proposeAlternative(input: {
         reservationId: reservation.id,
         type: "RESERVATION_TIME_UPDATED",
         title: "زمان رزرو تغییر کرد",
-        body: "مدیر زمان درخواست رزرو شما را تغییر داد. درخواست هنوز در انتظار تایید است.",
+        body: keepsApproval
+          ? "A manager changed the time for your approved reservation."
+          : "A manager changed the time for your pending reservation.",
       },
     });
 

@@ -255,10 +255,18 @@ function applyReservationTimeUpdate(
         return slot;
       }
 
+      const countDelta = shouldHaveReservation ? 1 : -1;
+
       return {
         ...slot,
+        approvedCount:
+          existingDetail.status === "APPROVED"
+            ? slot.approvedCount + countDelta
+            : slot.approvedCount,
         pendingCount:
-          slot.pendingCount + (shouldHaveReservation ? 1 : -1),
+          existingDetail.status === "PENDING"
+            ? slot.pendingCount + countDelta
+            : slot.pendingCount,
         details: shouldHaveReservation
           ? [...slot.details, existingDetail]
           : slot.details.filter((detail) => detail.id !== input.reservationId),
@@ -287,7 +295,7 @@ function ReservationBlock({
   ) => void;
 }) {
   const { detail } = block;
-  const canDrag = detail.status === "PENDING";
+  const canDrag = detail.status === "PENDING" || detail.status === "APPROVED";
   const suppressNextClickRef = useRef(false);
   const className = cn(
     "pointer-events-auto relative flex h-full min-w-0 flex-col items-center justify-between gap-2 rounded-md px-1.5 py-2 text-xs font-medium leading-5 shadow-sm ring-1 transition",
@@ -392,7 +400,7 @@ function ReservationBlock({
         style={getReservationBlockStyle(block)}
         title={
           canDrag
-            ? "Drag to move, or drag the top/bottom edge to resize this pending request"
+            ? "Drag to move, or drag the top/bottom edge to resize this reservation"
             : `${detail.partySize} people${detail.reason ? ` - ${detail.reason}` : ""}`
         }
       >
@@ -505,7 +513,11 @@ export function ManagerWeeklyCalendar({
 
     const dragged = readDraggedReservation(event);
 
-    if (!slot || !dragged || dragged.status !== "PENDING") {
+      if (
+        !slot ||
+        !dragged ||
+        (dragged.status !== "PENDING" && dragged.status !== "APPROVED")
+      ) {
       return;
     }
 
@@ -580,7 +592,7 @@ export function ManagerWeeklyCalendar({
       if (
         !target ||
         target.dateParam !== resizing.dateParam ||
-        resizing.status !== "PENDING"
+        (resizing.status !== "PENDING" && resizing.status !== "APPROVED")
       ) {
         return;
       }
@@ -669,9 +681,9 @@ export function ManagerWeeklyCalendar({
             <p className="text-sm font-medium">Approval calendar</p>
             <p className="mt-1 text-xs text-muted-foreground">
               Amber requests are pending review; green reservations are approved
-              and consume capacity. Drag amber requests onto another working
-              hour to update their pending time. Drag the top or bottom edge of
-              a pending request to change its duration.
+              and consume capacity. Drag amber or green reservations onto another
+              working hour to update their time. Drag the top or bottom edge to
+              change duration.
             </p>
           </div>
           <Link

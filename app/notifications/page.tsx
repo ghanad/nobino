@@ -385,6 +385,14 @@ function getNotificationMessage(notification: NotificationItem): ReactNode {
   }
 
   if (notification.type === "RESERVATION_TIME_UPDATED" && poolName) {
+    if (notification.reservation?.status === ReservationStatus.APPROVED) {
+      return (
+        <>
+          مدیر زمان رزرو تاییدشده شما برای <bdi>{poolName}</bdi> را تغییر داد.
+        </>
+      );
+    }
+
     return (
       <>
         مدیر زمان درخواست رزرو شما برای <bdi>{poolName}</bdi> را تغییر داد.

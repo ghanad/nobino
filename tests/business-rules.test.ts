@@ -20,6 +20,7 @@ import {
   createReservationRequest,
   proposeAlternative,
   ReservationTransitionError,
+  updateReservationTimeByManager,
 } from "@/lib/reservation-service";
 import {
   parseJalaliDateParam,
@@ -339,6 +340,82 @@ test("manager time updates can exceed the daily user hour limit for that request
   assert.equal(updated.endAt.getTime(), proposedEndAt.getTime());
   await assert.doesNotReject(() =>
     approveReservation({ reservationId: pending.id, managerId }),
+  );
+});
+
+test("manager time updates keep approved reservations approved and notify the user", async () => {
+  const startAt = nextWorkingDateAtHour(9);
+  const endAt = addHours(startAt, 1);
+  const proposedStartAt = addHours(startAt, 2);
+  const proposedEndAt = addHours(proposedStartAt, 1);
+  await markDateWorkingForTest(startAt);
+  const approved = await createReservation({
+    startAt,
+    endAt,
+    status: ReservationStatus.APPROVED,
+  });
+
+  const updated = await updateReservationTimeByManager({
+    reservationId: approved.id,
+    managerId,
+    proposedStartAt,
+    proposedEndAt,
+  });
+
+  assert.equal(updated.status, ReservationStatus.APPROVED);
+  assert.equal(updated.startAt.getTime(), proposedStartAt.getTime());
+  assert.equal(updated.endAt.getTime(), proposedEndAt.getTime());
+
+  const oldUsage = await getSlotUsage({
+    resourcePoolId: poolId,
+    startAt,
+    endAt,
+  });
+  const newUsage = await getSlotUsage({
+    resourcePoolId: poolId,
+    startAt: proposedStartAt,
+    endAt: proposedEndAt,
+  });
+  const notification = await db.notification.findFirst({
+    where: {
+      reservationId: approved.id,
+      type: "RESERVATION_TIME_UPDATED",
+      userId,
+    },
+  });
+
+  assert.equal(oldUsage[0].approvedCount, 0);
+  assert.equal(newUsage[0].approvedCount, 1);
+  assert.ok(notification);
+});
+
+test("manager approved time updates fail when the destination approved capacity is full", async () => {
+  const startAt = nextWorkingDateAtHour(9);
+  const endAt = addHours(startAt, 1);
+  const occupiedStartAt = addHours(startAt, 2);
+  const occupiedEndAt = addHours(occupiedStartAt, 1);
+  await markDateWorkingForTest(startAt);
+  const approved = await createReservation({
+    startAt,
+    endAt,
+    status: ReservationStatus.APPROVED,
+  });
+  await createReservation({
+    userId: secondUserId,
+    startAt: occupiedStartAt,
+    endAt: occupiedEndAt,
+    status: ReservationStatus.APPROVED,
+  });
+
+  await assert.rejects(
+    () =>
+      updateReservationTimeByManager({
+        reservationId: approved.id,
+        managerId,
+        proposedStartAt: occupiedStartAt,
+        proposedEndAt: occupiedEndAt,
+      }),
+    CapacityUnavailableError,
   );
 });
 

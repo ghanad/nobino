@@ -1,10 +1,12 @@
 "use client";
 
+import type { ReservationStatus as ReservationStatusType } from "@prisma/client";
 import { CalendarClock, Check, X } from "lucide-react";
 import { useState } from "react";
 
 import {
   approveReservationAction,
+  cancelReservationByManagerAction,
   proposeAlternativeAction,
   rejectReservationAction,
 } from "@/app/manager/actions";
@@ -27,6 +29,7 @@ type PendingReviewModalContentProps = {
   requestedEndTimeLabel: string;
   requestedStartTimeLabel: string;
   reservationId: string;
+  status: ReservationStatusType;
   resourcePoolName: string;
   userEmail: string;
   userName: string;
@@ -45,11 +48,13 @@ export function PendingReviewModalContent({
   requestedEndTimeLabel,
   requestedStartTimeLabel,
   reservationId,
+  status,
   resourcePoolName,
   userEmail,
   userName,
 }: PendingReviewModalContentProps) {
   const [activeAction, setActiveAction] = useState<ReviewAction>(null);
+  const isPending = status === "PENDING";
 
   return (
     <div className="p-5 text-card-foreground">
@@ -96,17 +101,19 @@ export function PendingReviewModalContent({
 
         <div className="grid gap-3 border-t pt-4">
           <div className="flex flex-col gap-2 sm:flex-row">
-            <form action={approveReservationAction} className="sm:flex-1">
-              <input name="reservationId" type="hidden" value={reservationId} />
-              <input name="date" type="hidden" value={dateParam} />
-              <SubmitButton
-                className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
-                pendingLabel="در حال تایید..."
-              >
-                <Check className="h-4 w-4" />
-                تایید درخواست
-              </SubmitButton>
-            </form>
+            {isPending ? (
+              <form action={approveReservationAction} className="sm:flex-1">
+                <input name="reservationId" type="hidden" value={reservationId} />
+                <input name="date" type="hidden" value={dateParam} />
+                <SubmitButton
+                  className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
+                  pendingLabel="در حال تایید..."
+                >
+                  <Check className="h-4 w-4" />
+                  تایید درخواست
+                </SubmitButton>
+              </form>
+            ) : null}
 
             <Button
               className="sm:flex-1"
@@ -120,17 +127,28 @@ export function PendingReviewModalContent({
               تغییر زمان
             </Button>
 
-            <Button
-              className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 sm:flex-1"
-              onClick={() =>
-                setActiveAction(activeAction === "reject" ? null : "reject")
-              }
-              type="button"
-              variant="outline"
-            >
-              <X className="h-4 w-4" />
-              رد درخواست
-            </Button>
+            {isPending ? (
+              <Button
+                className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 sm:flex-1"
+                onClick={() =>
+                  setActiveAction(activeAction === "reject" ? null : "reject")
+                }
+                type="button"
+                variant="outline"
+              >
+                <X className="h-4 w-4" />
+                رد درخواست
+              </Button>
+            ) : (
+              <form action={cancelReservationByManagerAction} className="sm:flex-1">
+                <input name="reservationId" type="hidden" value={reservationId} />
+                <input name="date" type="hidden" value={dateParam} />
+                <SubmitButton pendingLabel="در حال لغو..." variant="outline">
+                  <X className="h-4 w-4" />
+                  لغو رزرو
+                </SubmitButton>
+              </form>
+            )}
           </div>
 
           {activeAction === "time" ? (

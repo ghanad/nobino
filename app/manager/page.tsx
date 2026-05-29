@@ -1,26 +1,16 @@
 import { AlternativeStatus, ReservationStatus } from "@prisma/client";
-import { CalendarClock, Check, Download, X } from "lucide-react";
+import { Download, X } from "lucide-react";
 
-import {
-  approveReservationAction,
-  cancelReservationByManagerAction,
-  proposeAlternativeAction,
-  rejectReservationAction,
-} from "@/app/manager/actions";
 import { PendingReviewModalContent } from "@/app/manager/pending-review-modal-content";
 import { PageHeader } from "@/components/app/page-header";
 import { ManagerWeeklyCalendar } from "@/components/calendar/manager-weekly-calendar";
-import { SubmitButton } from "@/components/ui/submit-button";
 import { UrlToast } from "@/components/ui/url-toast";
 import { getSlotUsage } from "@/lib/capacity-service";
 import { db } from "@/lib/db";
 import {
-  JALALI_DATE_INPUT_PLACEHOLDER,
   formatJalaliDate,
   formatJalaliDateWithoutYear,
   formatJalaliDateParam,
-  formatJalaliDateTime,
-  formatLocalTime,
   parseJalaliDateParam,
 } from "@/lib/jalali-date";
 import { getWorkingWindowForDate } from "@/lib/schedule";
@@ -64,13 +54,6 @@ type CalendarReservation = QueueReservation & {
 
 type QueueItem = {
   reservation: QueueReservation;
-  slots: Array<{
-    slotStart: Date;
-    slotEnd: Date;
-    approvedCount: number;
-    pendingCount: number;
-    capacity: number;
-  }>;
 };
 
 const PERSIAN_NUMBER_FORMATTER = new Intl.NumberFormat("fa-IR");
@@ -110,14 +93,6 @@ function buildDateAtTime(date: Date, time: string): Date {
     0,
     0,
   );
-}
-
-function formatDateTime(date: Date): string {
-  return formatJalaliDateTime(date);
-}
-
-function formatHour(date: Date): string {
-  return formatLocalTime(date);
 }
 
 function formatDuration(startAt: Date, endAt: Date): string {
@@ -212,265 +187,6 @@ function getQueueToast(params: Awaited<ManagerPageProps["searchParams"]>) {
     : null;
 }
 
-function CapacitySummary({ item }: { item: QueueItem }) {
-  return (
-    <div className="grid gap-2">
-      <p className="text-xs font-medium uppercase text-muted-foreground">
-        Slot capacity
-      </p>
-      <div className="grid gap-2">
-        {item.slots.map((slot) => {
-          const available = Math.max(slot.capacity - slot.approvedCount, 0);
-          const isFull = available <= 0;
-
-          return (
-            <div
-              className={`grid gap-2 rounded-md border px-3 py-2 text-sm sm:grid-cols-[110px_1fr] ${
-                isFull ? "border-red-200 bg-red-50" : "bg-muted/30"
-              }`}
-              key={slot.slotStart.toISOString()}
-            >
-              <span className="font-medium">
-                {formatHour(slot.slotStart)}-{formatHour(slot.slotEnd)}
-              </span>
-              <span className="text-muted-foreground">
-                {slot.approvedCount} approved, {slot.pendingCount} pending,{" "}
-                {available} of {slot.capacity} available
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function QueueCard({
-  fieldIdPrefix,
-  item,
-  dateParam,
-}: {
-  fieldIdPrefix: string;
-  item: QueueItem;
-  dateParam: string;
-}) {
-  const hourOptions = buildHourOptions();
-  const requestedDate = formatJalaliDateParam(item.reservation.startAt);
-  const defaultStartHour = item.reservation.startAt.getHours();
-  const defaultEndHour = item.reservation.endAt.getHours();
-  const proposedDateId = `${fieldIdPrefix}-proposedDate-${item.reservation.id}`;
-  const proposedStartHourId = `${fieldIdPrefix}-proposedStartHour-${item.reservation.id}`;
-  const proposedEndHourId = `${fieldIdPrefix}-proposedEndHour-${item.reservation.id}`;
-  const isPending = item.reservation.status === ReservationStatus.PENDING;
-
-  return (
-    <article className="rounded-lg border bg-card p-5 text-card-foreground">
-      <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
-        <div className="grid gap-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <h3 className="font-medium">{item.reservation.user.name}</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {item.reservation.user.email}
-              </p>
-            </div>
-            <span
-              className={`inline-flex w-fit rounded-full px-2 py-1 text-xs font-medium ring-1 ${
-                isPending
-                  ? "bg-amber-50 text-amber-800 ring-amber-200"
-                  : "bg-emerald-50 text-emerald-800 ring-emerald-200"
-              }`}
-            >
-              {item.reservation.status}
-            </span>
-          </div>
-
-          <dl className="grid gap-3 text-sm sm:grid-cols-2">
-            <div>
-              <dt className="text-muted-foreground">Pool</dt>
-              <dd className="mt-1 font-medium">
-                {item.reservation.resourcePool.name}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Duration</dt>
-              <dd className="mt-1 font-medium">
-                {formatDuration(item.reservation.startAt, item.reservation.endAt)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">People</dt>
-              <dd className="mt-1 font-medium">
-                {item.reservation.partySize}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Start</dt>
-              <dd className="mt-1 font-medium">
-                {formatDateTime(item.reservation.startAt)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">End</dt>
-              <dd className="mt-1 font-medium">
-                {formatDateTime(item.reservation.endAt)}
-              </dd>
-            </div>
-          </dl>
-
-          <div>
-            <p className="text-xs font-medium uppercase text-muted-foreground">
-              Reason
-            </p>
-            <p className="mt-2 rounded-md bg-muted/40 p-3 text-sm leading-6 text-muted-foreground">
-              {item.reservation.reason || "No reason provided."}
-            </p>
-          </div>
-
-          <CapacitySummary item={item} />
-        </div>
-
-        <div className="grid content-start gap-4">
-          {isPending ? (
-            <>
-              <form action={approveReservationAction}>
-                <input
-                  name="reservationId"
-                  type="hidden"
-                  value={item.reservation.id}
-                />
-                <input name="date" type="hidden" value={dateParam} />
-                <SubmitButton className="w-full" pendingLabel="Approving...">
-                  <Check className="h-4 w-4" />
-                  Approve
-                </SubmitButton>
-              </form>
-
-              <form action={rejectReservationAction} className="grid gap-2">
-                <input
-                  name="reservationId"
-                  type="hidden"
-                  value={item.reservation.id}
-                />
-                <input name="date" type="hidden" value={dateParam} />
-                <textarea
-                  className="min-h-20 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  maxLength={500}
-                  name="rejectionReason"
-                  placeholder="Optional rejection reason"
-                />
-                <SubmitButton
-                  className="w-full"
-                  pendingLabel="Rejecting..."
-                  variant="outline"
-                >
-                  <X className="h-4 w-4" />
-                  Reject
-                </SubmitButton>
-              </form>
-
-              <form action={proposeAlternativeAction} className="grid gap-3">
-                <input
-                  name="reservationId"
-                  type="hidden"
-                  value={item.reservation.id}
-                />
-                <input name="date" type="hidden" value={dateParam} />
-                <div className="grid gap-2">
-                  <label
-                    className="text-xs font-medium text-muted-foreground"
-                    htmlFor={proposedDateId}
-                  >
-                    New date
-                  </label>
-                  <input
-                    className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                    defaultValue={requestedDate}
-                    dir="ltr"
-                    id={proposedDateId}
-                    name="proposedDate"
-                    pattern="\d{4}[-/]\d{1,2}[-/]\d{1,2}"
-                    placeholder={JALALI_DATE_INPUT_PLACEHOLDER}
-                    title={`Enter a Jalali date like ${JALALI_DATE_INPUT_PLACEHOLDER}`}
-                    type="text"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="grid gap-2">
-                    <label
-                      className="text-xs font-medium text-muted-foreground"
-                      htmlFor={proposedStartHourId}
-                    >
-                      Start
-                    </label>
-                    <select
-                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                      defaultValue={defaultStartHour}
-                      id={proposedStartHourId}
-                      name="proposedStartHour"
-                    >
-                      {hourOptions.slice(0, 23).map((hour) => (
-                        <option key={hour} value={hour}>
-                          {hour.toString().padStart(2, "0")}:00
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="grid gap-2">
-                    <label
-                      className="text-xs font-medium text-muted-foreground"
-                      htmlFor={proposedEndHourId}
-                    >
-                      End
-                    </label>
-                    <select
-                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                      defaultValue={defaultEndHour}
-                      id={proposedEndHourId}
-                      name="proposedEndHour"
-                    >
-                      {hourOptions.slice(1).map((hour) => (
-                        <option key={hour} value={hour}>
-                          {hour.toString().padStart(2, "0")}:00
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <SubmitButton
-                  className="w-full"
-                  pendingLabel="Applying..."
-                  variant="secondary"
-                >
-                  <CalendarClock className="h-4 w-4" />
-                  Update pending time
-                </SubmitButton>
-              </form>
-            </>
-          ) : (
-            <form action={cancelReservationByManagerAction}>
-              <input
-                name="reservationId"
-                type="hidden"
-                value={item.reservation.id}
-              />
-              <input name="date" type="hidden" value={dateParam} />
-              <SubmitButton
-                className="w-full"
-                pendingLabel="Cancelling..."
-                variant="outline"
-              >
-                <X className="h-4 w-4" />
-                Cancel reservation
-              </SubmitButton>
-            </form>
-          )}
-        </div>
-      </div>
-    </article>
-  );
-}
-
 function ReviewModal({
   item,
   dateParam,
@@ -513,36 +229,27 @@ function ReviewModal({
             <X aria-hidden="true" className="h-4 w-4" />
           </a>
         </div>
-        {isPending ? (
-          <PendingReviewModalContent
-            dateParam={dateParam}
-            defaultEndHour={item.reservation.endAt.getHours()}
-            defaultStartHour={item.reservation.startAt.getHours()}
-            durationLabel={formatDuration(
-              item.reservation.startAt,
-              item.reservation.endAt,
-            )}
-            hourOptions={buildHourOptions()}
-            partySizeLabel={formatPersianNumber(item.reservation.partySize)}
-            reason={item.reservation.reason}
-            requestedDate={formatJalaliDateParam(item.reservation.startAt)}
-            requestedDateLabel={formatJalaliDate(item.reservation.startAt)}
-            requestedEndTimeLabel={formatPersianTime(item.reservation.endAt)}
-            requestedStartTimeLabel={formatPersianTime(
-              item.reservation.startAt,
-            )}
-            reservationId={item.reservation.id}
-            resourcePoolName={item.reservation.resourcePool.name}
-            userEmail={item.reservation.user.email}
-            userName={item.reservation.user.name}
-          />
-        ) : (
-          <QueueCard
-            dateParam={dateParam}
-            fieldIdPrefix="modal"
-            item={item}
-          />
-        )}
+        <PendingReviewModalContent
+          dateParam={dateParam}
+          defaultEndHour={item.reservation.endAt.getHours()}
+          defaultStartHour={item.reservation.startAt.getHours()}
+          durationLabel={formatDuration(
+            item.reservation.startAt,
+            item.reservation.endAt,
+          )}
+          hourOptions={buildHourOptions()}
+          partySizeLabel={formatPersianNumber(item.reservation.partySize)}
+          reason={item.reservation.reason}
+          requestedDate={formatJalaliDateParam(item.reservation.startAt)}
+          requestedDateLabel={formatJalaliDate(item.reservation.startAt)}
+          requestedEndTimeLabel={formatPersianTime(item.reservation.endAt)}
+          requestedStartTimeLabel={formatPersianTime(item.reservation.startAt)}
+          reservationId={item.reservation.id}
+          resourcePoolName={item.reservation.resourcePool.name}
+          status={item.reservation.status}
+          userEmail={item.reservation.user.email}
+          userName={item.reservation.user.name}
+        />
       </div>
     </div>
   );
@@ -722,28 +429,12 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       },
     },
   });
-  const queueItems: QueueItem[] = await Promise.all(
-    pendingReservations.map(async (reservation) => ({
-      reservation,
-      slots: await getSlotUsage({
-        resourcePoolId: reservation.resourcePoolId,
-        startAt: reservation.startAt,
-        endAt: reservation.endAt,
-      }),
-    })),
-  );
-  const approvedCalendarItems: QueueItem[] = await Promise.all(
-    weekReservations
-      .filter((reservation) => reservation.status === ReservationStatus.APPROVED)
-      .map(async (reservation) => ({
-        reservation,
-        slots: await getSlotUsage({
-          resourcePoolId: reservation.resourcePoolId,
-          startAt: reservation.startAt,
-          endAt: reservation.endAt,
-        }),
-      })),
-  );
+  const queueItems: QueueItem[] = pendingReservations.map((reservation) => ({
+    reservation,
+  }));
+  const approvedCalendarItems: QueueItem[] = weekReservations
+    .filter((reservation) => reservation.status === ReservationStatus.APPROVED)
+    .map((reservation) => ({ reservation }));
   const modalItems = [...queueItems, ...approvedCalendarItems];
 
   return (

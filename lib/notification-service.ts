@@ -37,6 +37,8 @@ const NOTIFICATION_BODY_LABELS: Record<string, string> = {
     "مدیر یک زمان جایگزین برای رزرو شما پیشنهاد کرده است.",
   "A manager changed the time for your pending reservation.":
     "مدیر زمان درخواست رزرو شما را تغییر داد. درخواست هنوز در انتظار تایید است.",
+  "A manager changed the time for your approved reservation.":
+    "مدیر زمان رزرو تاییدشده شما را تغییر داد.",
   "A requester accepted your proposed alternative time.":
     "درخواست کننده زمان جایگزین پیشنهادی شما را پذیرفت.",
   "A requester cancelled a pending reservation.":

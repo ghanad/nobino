@@ -13,9 +13,9 @@ import {
 import {
   approveReservation,
   cancelReservationByManager,
-  proposeAlternative,
   rejectReservation,
   ReservationTransitionError,
+  updateReservationTimeByManager,
 } from "@/lib/reservation-service";
 import { ReservationTimeRangeError } from "@/lib/schedule";
 
@@ -140,7 +140,7 @@ export async function proposeAlternativeAction(
   }
 
   try {
-    await proposeAlternative({
+    await updateReservationTimeByManager({
       reservationId: parsed.data.reservationId,
       managerId: user.id,
       proposedStartAt: buildLocalDateAtHourFromJalali(
@@ -182,7 +182,7 @@ export async function proposeAlternativeDropAction(
   }
 
   try {
-    await proposeAlternative({
+    await updateReservationTimeByManager({
       reservationId: parsed.data.reservationId,
       managerId: user.id,
       proposedStartAt: buildLocalDateAtHourFromJalali(
