@@ -1,8 +1,14 @@
 import Link from "next/link";
 import {
+  CalendarDays,
+  CheckCircle2,
+  Database,
+  Gauge,
   Mail,
+  Plus,
   Save,
   ShieldCheck,
+  SlidersHorizontal,
   Trash2,
   UserCheck,
   UserPlus,
@@ -321,71 +327,135 @@ export function ResourcePoolSettings({
     active: boolean;
   }>;
 }) {
+  const activePools = resourcePools.filter((pool) => pool.active);
+  const totalActiveCapacity = activePools.reduce(
+    (sum, pool) => sum + pool.capacity,
+    0,
+  );
+  const inactivePools = resourcePools.length - activePools.length;
+
   return (
-    <section className="rounded-lg border bg-card p-5 text-card-foreground">
-      <div className="flex flex-col gap-1">
-        <h2 className="font-medium">Resource pools</h2>
-        <p className="text-sm text-muted-foreground">
-          Capacity reductions are blocked when future approved reservations
-          already exceed the requested value.
-        </p>
+    <section className="grid gap-5 text-card-foreground" dir="rtl">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div className="grid gap-1">
+          <h2 className="text-lg font-semibold text-slate-950">
+            ظرفیت پایه سیستم‌ها
+          </h2>
+          <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+            Nobino سیستم‌ها را به عنوان یک مخزن ظرفیت مدیریت می‌کند. کاهش
+            ظرفیت فقط وقتی ذخیره می‌شود که رزروهای تاییدشده آینده از مقدار
+            جدید بیشتر نباشند.
+          </p>
+        </div>
       </div>
 
       {resourcePools.length === 0 ? (
-        <p className="mt-5 text-sm text-muted-foreground">
-          No resource pools are configured.
-        </p>
+        <div className="rounded-lg border border-dashed bg-muted/20 p-5 text-sm text-muted-foreground">
+          هنوز مخزن ظرفیتی تعریف نشده است.
+        </div>
       ) : (
-        <div className="mt-5 grid gap-4">
-          {resourcePools.map((pool) => (
-            <form
-              action={updateResourcePoolAction}
-              className="grid gap-4 rounded-md border bg-muted/20 p-4 lg:grid-cols-[1fr_140px_auto]"
-              key={pool.id}
-            >
-              <input name="resourcePoolId" type="hidden" value={pool.id} />
-              <div className="grid gap-2">
-                <FieldLabel htmlFor={`pool-name-${pool.id}`}>Name</FieldLabel>
-                <TextInput
-                  defaultValue={pool.name}
-                  id={`pool-name-${pool.id}`}
-                  maxLength={100}
-                  name="name"
-                  required
-                />
+        <div className="grid gap-5">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-lg border bg-card p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-medium text-muted-foreground">
+                  ظرفیت فعال
+                </p>
+                <Gauge className="h-4 w-4 text-emerald-700" />
               </div>
-              <div className="grid gap-2">
-                <FieldLabel htmlFor={`pool-capacity-${pool.id}`}>
-                  Capacity
-                </FieldLabel>
-                <TextInput
-                  defaultValue={pool.capacity}
-                  id={`pool-capacity-${pool.id}`}
-                  inputMode="numeric"
-                  max={50}
-                  min={1}
-                  name="capacity"
-                  required
-                  type="number"
-                />
+              <p className="mt-2 text-2xl font-semibold text-emerald-700">
+                {formatPersianNumber(totalActiveCapacity)}
+              </p>
+            </div>
+            <div className="rounded-lg border bg-card p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-medium text-muted-foreground">
+                  مخزن فعال
+                </p>
+                <Database className="h-4 w-4 text-blue-700" />
               </div>
-              <div className="flex flex-col justify-end gap-3">
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    className="h-4 w-4 rounded border-input"
-                    defaultChecked={pool.active}
-                    name="active"
-                    type="checkbox"
-                  />
-                  Active
-                </label>
-                <Button type="submit">
-                  <Save className="h-4 w-4" />
-                  Save
-                </Button>
+              <p className="mt-2 text-2xl font-semibold text-blue-700">
+                {formatPersianNumber(activePools.length)}
+              </p>
+            </div>
+            <div className="rounded-lg border bg-card p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-medium text-muted-foreground">
+                  غیرفعال
+                </p>
+                <CheckCircle2 className="h-4 w-4 text-slate-500" />
               </div>
-            </form>
-          ))}
+              <p className="mt-2 text-2xl font-semibold text-slate-700">
+                {formatPersianNumber(inactivePools)}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-3">
+            {resourcePools.map((pool) => (
+              <form
+                action={updateResourcePoolAction}
+                className="rounded-lg border bg-card p-4 shadow-sm"
+                key={pool.id}
+              >
+                <input name="resourcePoolId" type="hidden" value={pool.id} />
+                <div className="grid gap-4 lg:grid-cols-[1fr_150px_160px_auto] lg:items-end">
+                  <div className="grid gap-2">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`h-2.5 w-2.5 rounded-full ${
+                          pool.active ? "bg-emerald-500" : "bg-slate-300"
+                        }`}
+                      />
+                      <FieldLabel htmlFor={`pool-name-${pool.id}`}>
+                        نام مخزن
+                      </FieldLabel>
+                    </div>
+                    <TextInput
+                      defaultValue={pool.name}
+                      id={`pool-name-${pool.id}`}
+                      maxLength={100}
+                      name="name"
+                      required
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <FieldLabel htmlFor={`pool-capacity-${pool.id}`}>
+                      ظرفیت همزمان
+                    </FieldLabel>
+                    <TextInput
+                      defaultValue={pool.capacity}
+                      id={`pool-capacity-${pool.id}`}
+                      inputMode="numeric"
+                      max={50}
+                      min={1}
+                      name="capacity"
+                      required
+                      type="number"
+                    />
+                  </div>
+                  <label className="flex min-h-10 items-center justify-between gap-3 rounded-md border bg-muted/20 px-3 py-2 text-sm">
+                    <span>فعال باشد</span>
+                    <input
+                      className="h-4 w-4 rounded border-input"
+                      defaultChecked={pool.active}
+                      name="active"
+                      type="checkbox"
+                    />
+                  </label>
+                  <Button className="w-full lg:w-auto" type="submit">
+                    <Save className="h-4 w-4" />
+                    ذخیره
+                  </Button>
+                </div>
+                <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                  فقط رزروهای تاییدشده ظرفیت را مصرف می‌کنند؛ درخواست‌های در
+                  انتظار در تقویم دیده می‌شوند اما جلوی درخواست جدید را
+                  نمی‌گیرند.
+                </p>
+              </form>
+            ))}
+          </div>
         </div>
       )}
     </section>
@@ -400,46 +470,49 @@ export function ReservationPolicySettings({
   oneReservationPerDayEnabled: boolean;
 }) {
   return (
-    <section className="rounded-lg border bg-card p-5 text-card-foreground">
-      <div className="flex flex-col gap-1">
-        <h2 className="font-medium">Reservation policy</h2>
-        <p className="text-sm text-muted-foreground">
-          Limit how many approved or pending hours each user can hold on one day.
+    <section className="grid gap-5 text-card-foreground" dir="rtl">
+      <div className="grid gap-1">
+        <h2 className="text-lg font-semibold text-slate-950">
+          سیاست رزرو کاربران
+        </h2>
+        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+          این محدودیت‌ها قبل از ثبت درخواست بررسی می‌شوند تا هر کاربر در یک
+          روز بیشتر از سقف مجاز، زمان رزرو نکند.
         </p>
       </div>
 
       <form
         action={updateReservationPolicyAction}
-        className="mt-5 grid gap-4 rounded-md border bg-muted/20 p-4 sm:grid-cols-[180px_minmax(220px,1fr)_auto] sm:items-end"
+        className="rounded-lg border bg-card p-4 shadow-sm"
       >
-        <div className="grid gap-2">
-          <FieldLabel htmlFor="daily-user-hour-limit">
-            Daily user hours
-          </FieldLabel>
-          <TextInput
-            defaultValue={dailyUserHourLimit}
-            id="daily-user-hour-limit"
-            inputMode="numeric"
-            max={24}
-            min={1}
-            name="dailyUserHourLimit"
-            required
-            type="number"
-          />
-        </div>
-        <label className="flex min-h-10 items-center gap-3 rounded-md border bg-background px-3 py-2 text-sm">
-          <input
-            className="h-4 w-4 rounded border-input"
-            defaultChecked={oneReservationPerDayEnabled}
-            name="oneReservationPerDayEnabled"
-            type="checkbox"
-          />
-          <span>Only one reservation per user per day</span>
-        </label>
-        <div className="flex items-end">
-          <Button type="submit">
+        <div className="grid gap-4 lg:grid-cols-[220px_1fr_auto] lg:items-end">
+          <div className="grid gap-2">
+            <FieldLabel htmlFor="daily-user-hour-limit">
+              سقف ساعت روزانه هر کاربر
+            </FieldLabel>
+            <TextInput
+              defaultValue={dailyUserHourLimit}
+              id="daily-user-hour-limit"
+              inputMode="numeric"
+              max={24}
+              min={1}
+              name="dailyUserHourLimit"
+              required
+              type="number"
+            />
+          </div>
+          <label className="flex min-h-10 items-center justify-between gap-3 rounded-md border bg-muted/20 px-3 py-2 text-sm">
+            <span>هر کاربر در هر روز فقط یک رزرو داشته باشد</span>
+            <input
+              className="h-4 w-4 rounded border-input"
+              defaultChecked={oneReservationPerDayEnabled}
+              name="oneReservationPerDayEnabled"
+              type="checkbox"
+            />
+          </label>
+          <Button className="w-full lg:w-auto" type="submit">
             <Save className="h-4 w-4" />
-            Save
+            ذخیره سیاست
           </Button>
         </div>
       </form>
@@ -469,77 +542,105 @@ export function CapacityExceptions({
     active: boolean;
   }>;
 }) {
+  const hasResourcePools = resourcePools.length > 0;
+
   return (
-    <section className="rounded-lg border bg-card p-5 text-card-foreground">
-      <div className="flex flex-col gap-1">
-        <h2 className="font-medium">Daily capacity exceptions</h2>
-        <p className="text-sm text-muted-foreground">
-          Override capacity for a specific Jalali date when systems are out for
-          repair. Existing approved reservations must still fit the new value.
-        </p>
+    <section className="grid gap-5 text-card-foreground" dir="rtl">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div className="grid gap-1">
+          <h2 className="text-lg font-semibold text-slate-950">
+            استثناهای ظرفیت روزانه
+          </h2>
+          <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+            برای تاریخ‌های خاص مثل تعمیرات یا کاهش موقت سیستم‌ها، ظرفیت همان
+            روز را با تاریخ جلالی تغییر دهید. مقدار جدید باید رزروهای
+            تاییدشده همان روز را پوشش دهد.
+          </p>
+        </div>
+        <div className="inline-flex items-center gap-2 rounded-md border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
+          <CalendarDays className="h-4 w-4" />
+          <span>{formatPersianNumber(capacityExceptions.length)} استثنا</span>
+        </div>
       </div>
 
       <form
         action={createCapacityExceptionAction}
-        className="mt-5 grid gap-4 rounded-md border bg-muted/20 p-4 lg:grid-cols-[1fr_150px_120px_1fr_auto]"
+        className="rounded-lg border bg-card p-4 shadow-sm"
       >
-        <div className="grid gap-2">
-          <FieldLabel htmlFor="capacity-exception-pool">Pool</FieldLabel>
-          <SelectInput id="capacity-exception-pool" name="resourcePoolId">
-            {resourcePools.map((pool) => (
-              <option key={pool.id} value={pool.id}>
-                {pool.name} default {pool.capacity}
-              </option>
-            ))}
-          </SelectInput>
+        <div className="mb-4 flex items-center gap-2 text-sm font-medium text-slate-950">
+          <Plus className="h-4 w-4 text-primary" />
+          <span>ثبت استثنای جدید</span>
         </div>
-        <div className="grid gap-2">
-          <FieldLabel htmlFor="capacity-exception-date">Jalali date</FieldLabel>
-          <TextInput
-            id="capacity-exception-date"
-            name="date"
-            placeholder={JALALI_DATE_INPUT_PLACEHOLDER}
-            required
-          />
-        </div>
-        <div className="grid gap-2">
-          <FieldLabel htmlFor="capacity-exception-capacity">
-            Capacity
-          </FieldLabel>
-          <TextInput
-            id="capacity-exception-capacity"
-            inputMode="numeric"
-            max={50}
-            min={0}
-            name="capacity"
-            required
-            type="number"
-          />
-        </div>
-        <div className="grid gap-2">
-          <FieldLabel htmlFor="capacity-exception-reason">Reason</FieldLabel>
-          <TextInput
-            id="capacity-exception-reason"
-            maxLength={200}
-            name="reason"
-            placeholder="Repair, maintenance, or temporary capacity change"
-          />
-        </div>
-        <div className="flex items-end">
-          <Button type="submit">Create</Button>
+        <div className="grid gap-4 lg:grid-cols-[1fr_170px_140px_1fr_auto] lg:items-end">
+          <div className="grid gap-2">
+            <FieldLabel htmlFor="capacity-exception-pool">مخزن</FieldLabel>
+            <SelectInput
+              disabled={!hasResourcePools}
+              id="capacity-exception-pool"
+              name="resourcePoolId"
+            >
+              {resourcePools.map((pool) => (
+                <option key={pool.id} value={pool.id}>
+                  {pool.name}، پیش‌فرض {formatPersianNumber(pool.capacity)}
+                </option>
+              ))}
+            </SelectInput>
+          </div>
+          <div className="grid gap-2">
+            <FieldLabel htmlFor="capacity-exception-date">
+              تاریخ جلالی
+            </FieldLabel>
+            <TextInput
+              id="capacity-exception-date"
+              name="date"
+              placeholder={JALALI_DATE_INPUT_PLACEHOLDER}
+              required
+            />
+          </div>
+          <div className="grid gap-2">
+            <FieldLabel htmlFor="capacity-exception-capacity">
+              ظرفیت همان روز
+            </FieldLabel>
+            <TextInput
+              id="capacity-exception-capacity"
+              inputMode="numeric"
+              max={50}
+              min={0}
+              name="capacity"
+              required
+              type="number"
+            />
+          </div>
+          <div className="grid gap-2">
+            <FieldLabel htmlFor="capacity-exception-reason">دلیل</FieldLabel>
+            <TextInput
+              id="capacity-exception-reason"
+              maxLength={200}
+              name="reason"
+              placeholder="تعمیر، سرویس دوره‌ای یا تغییر موقت ظرفیت"
+            />
+          </div>
+          <Button
+            className="w-full lg:w-auto"
+            disabled={!hasResourcePools}
+            type="submit"
+          >
+            <Plus className="h-4 w-4" />
+            ثبت
+          </Button>
         </div>
       </form>
 
       {capacityExceptions.length === 0 ? (
-        <p className="mt-5 text-sm text-muted-foreground">
-          No daily capacity exceptions are configured.
-        </p>
+        <div className="rounded-lg border border-dashed bg-muted/20 p-5 text-sm text-muted-foreground">
+          هیچ استثنای ظرفیتی ثبت نشده است.
+        </div>
       ) : (
-        <div className="mt-5 grid gap-3">
+        <div className="grid gap-3">
           {capacityExceptions.map((exception) => (
             <form
               action={updateCapacityExceptionAction}
-              className="grid gap-4 rounded-md border bg-muted/20 p-4 lg:grid-cols-[220px_120px_1fr_auto_auto]"
+              className="rounded-lg border bg-card p-4 shadow-sm"
               key={exception.id}
             >
               <input
@@ -547,53 +648,62 @@ export function CapacityExceptions({
                 type="hidden"
                 value={exception.id}
               />
-              <div>
-                <p className="font-medium">{exception.resourcePool.name}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {formatJalaliDate(exception.date)} - default{" "}
-                  {exception.resourcePool.capacity}
-                </p>
-              </div>
-              <div className="grid gap-2">
-                <FieldLabel htmlFor={`capacity-exception-value-${exception.id}`}>
-                  Capacity
-                </FieldLabel>
-                <TextInput
-                  defaultValue={exception.capacity}
-                  id={`capacity-exception-value-${exception.id}`}
-                  inputMode="numeric"
-                  max={50}
-                  min={0}
-                  name="capacity"
-                  required
-                  type="number"
-                />
-              </div>
-              <div className="grid gap-2">
-                <FieldLabel htmlFor={`capacity-exception-reason-${exception.id}`}>
-                  Reason
-                </FieldLabel>
-                <TextInput
-                  defaultValue={exception.reason ?? ""}
-                  id={`capacity-exception-reason-${exception.id}`}
-                  maxLength={200}
-                  name="reason"
-                />
-              </div>
-              <div className="flex items-end">
-                <Button type="submit">
+              <div className="grid gap-4 lg:grid-cols-[minmax(180px,0.9fr)_140px_1fr_auto_auto] lg:items-end">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <SlidersHorizontal className="h-4 w-4 shrink-0 text-slate-500" />
+                    <p className="truncate font-medium text-slate-950">
+                      {exception.resourcePool.name}
+                    </p>
+                  </div>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    {formatJalaliDate(exception.date)}، پیش‌فرض{" "}
+                    {formatPersianNumber(exception.resourcePool.capacity)}
+                  </p>
+                </div>
+                <div className="grid gap-2">
+                  <FieldLabel
+                    htmlFor={`capacity-exception-value-${exception.id}`}
+                  >
+                    ظرفیت
+                  </FieldLabel>
+                  <TextInput
+                    defaultValue={exception.capacity}
+                    id={`capacity-exception-value-${exception.id}`}
+                    inputMode="numeric"
+                    max={50}
+                    min={0}
+                    name="capacity"
+                    required
+                    type="number"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <FieldLabel
+                    htmlFor={`capacity-exception-reason-${exception.id}`}
+                  >
+                    دلیل
+                  </FieldLabel>
+                  <TextInput
+                    defaultValue={exception.reason ?? ""}
+                    id={`capacity-exception-reason-${exception.id}`}
+                    maxLength={200}
+                    name="reason"
+                    placeholder="بدون توضیح"
+                  />
+                </div>
+                <Button className="w-full lg:w-auto" type="submit">
                   <Save className="h-4 w-4" />
-                  Save
+                  ذخیره
                 </Button>
-              </div>
-              <div className="flex items-end">
                 <Button
+                  className="w-full lg:w-auto"
                   formAction={deleteCapacityExceptionAction}
                   type="submit"
                   variant="outline"
                 >
                   <Trash2 className="h-4 w-4" />
-                  Delete
+                  حذف
                 </Button>
               </div>
             </form>
