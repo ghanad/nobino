@@ -120,14 +120,22 @@ function emptyToUndefined(value: FormDataEntryValue | null): string | undefined 
 
 function redirectToAdmin(params: Record<string, string | undefined>): never {
   const searchParams = new URLSearchParams();
+  const sectionPath =
+    params.tab === "capacity"
+      ? "/admin/capacity"
+      : params.tab === "schedule"
+        ? "/admin/schedule"
+        : "/admin";
 
   for (const [key, value] of Object.entries(params)) {
-    if (value) {
+    if (value && key !== "tab") {
       searchParams.set(key, value);
     }
   }
 
-  redirect(`/admin?${searchParams.toString()}`);
+  const query = searchParams.toString();
+
+  redirect(query ? `${sectionPath}?${query}` : sectionPath);
 }
 
 function getSafeAdminRedirectPath(
@@ -502,11 +510,11 @@ export async function createUserAction(formData: FormData): Promise<void> {
   const admin = await requireRole([UserRole.ADMIN]);
   const errorRedirectPath = getSafeAdminRedirectPath(
     formData.get("errorRedirectPath"),
-    "/admin?tab=users",
+    "/admin",
   );
   const successRedirectPath = getSafeAdminRedirectPath(
     formData.get("successRedirectPath"),
-    "/admin?tab=users",
+    "/admin",
   );
   const parsed = createUserSchema.safeParse({
     name: formData.get("name"),
@@ -537,7 +545,7 @@ export async function updateUserAction(formData: FormData): Promise<void> {
   const admin = await requireRole([UserRole.ADMIN]);
   const redirectPath = getSafeAdminRedirectPath(
     formData.get("redirectPath"),
-    "/admin?tab=users",
+    "/admin",
   );
   const parsed = updateUserSchema.safeParse({
     userId: formData.get("userId"),
@@ -568,7 +576,7 @@ export async function resetUserPasswordAction(
   const admin = await requireRole([UserRole.ADMIN]);
   const redirectPath = getSafeAdminRedirectPath(
     formData.get("redirectPath"),
-    "/admin?tab=users",
+    "/admin",
   );
   const parsed = resetPasswordSchema.safeParse({
     userId: formData.get("userId"),

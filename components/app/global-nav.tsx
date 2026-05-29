@@ -9,6 +9,7 @@ import { logoutAction } from "@/app/login/actions";
 import { cn } from "@/lib/utils";
 
 export type GlobalNavItem = {
+  children?: GlobalNavItem[];
   href: string;
   label: string;
   match: "exact" | "prefix";
@@ -23,6 +24,10 @@ type GlobalNavProps = {
 const PERSIAN_NUMBER_FORMATTER = new Intl.NumberFormat("fa-IR");
 
 function isActiveNavItem(pathname: string, item: GlobalNavItem): boolean {
+  if (item.children?.some((child) => isActiveNavItem(pathname, child))) {
+    return true;
+  }
+
   if (item.match === "exact") {
     return pathname === item.href;
   }
@@ -31,10 +36,12 @@ function isActiveNavItem(pathname: string, item: GlobalNavItem): boolean {
 }
 
 function NavLink({
+  enableDropdown = true,
   item,
   pathname,
   unreadNotificationCount,
 }: {
+  enableDropdown?: boolean;
   item: GlobalNavItem;
   pathname: string;
   unreadNotificationCount: number;
@@ -42,6 +49,53 @@ function NavLink({
   const isActive = isActiveNavItem(pathname, item);
   const showUnreadCount =
     item.href === "/notifications" && unreadNotificationCount > 0;
+  const hasChildren = Boolean(item.children?.length);
+
+  if (hasChildren && enableDropdown) {
+    return (
+      <div className="group relative">
+        <Link
+          aria-current={isActive ? "page" : undefined}
+          aria-haspopup="menu"
+          className={cn(
+            "relative inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 text-sm font-medium transition-colors",
+            isActive
+              ? "border-slate-200 bg-slate-100 text-slate-950"
+              : "border-transparent text-slate-700 hover:bg-slate-50 hover:text-slate-950",
+          )}
+          href={item.href}
+        >
+          <span>{item.label}</span>
+          <ChevronDown className="h-3.5 w-3.5 text-slate-500 transition-transform group-hover:rotate-180 group-focus-within:rotate-180" />
+        </Link>
+        <div
+          className="invisible absolute right-0 z-20 mt-1.5 w-40 rounded-md border border-slate-200 bg-card p-1 text-card-foreground opacity-0 shadow-sm transition-opacity group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100"
+          role="menu"
+        >
+          {item.children?.map((child) => {
+            const isChildActive = isActiveNavItem(pathname, child);
+
+            return (
+              <Link
+                aria-current={isChildActive ? "page" : undefined}
+                className={cn(
+                  "flex h-8 items-center justify-start rounded-sm px-2 text-xs font-medium transition-colors",
+                  isChildActive
+                    ? "bg-slate-100 text-slate-950"
+                    : "text-slate-700 hover:bg-slate-50 hover:text-slate-950",
+                )}
+                href={child.href}
+                key={child.href}
+                role="menuitem"
+              >
+                {child.label}
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Link
@@ -196,12 +250,27 @@ export function GlobalNav({
           className="mt-3 grid gap-2 rounded-lg border bg-background p-2"
         >
           {navItems.map((item) => (
-            <NavLink
-              item={item}
-              key={item.href}
-              pathname={pathname}
-              unreadNotificationCount={unreadNotificationCount}
-            />
+            <div className="grid gap-1" key={item.href}>
+              <NavLink
+                enableDropdown={false}
+                item={item}
+                pathname={pathname}
+                unreadNotificationCount={unreadNotificationCount}
+              />
+              {item.children?.length ? (
+                <div className="grid gap-1 border-r border-slate-200 pr-3">
+                  {item.children.map((child) => (
+                    <NavLink
+                      enableDropdown={false}
+                      item={child}
+                      key={child.href}
+                      pathname={pathname}
+                      unreadNotificationCount={unreadNotificationCount}
+                    />
+                  ))}
+                </div>
+              ) : null}
+            </div>
           ))}
         </nav>
       </details>

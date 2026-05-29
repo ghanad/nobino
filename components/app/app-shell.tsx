@@ -32,8 +32,13 @@ function getNavItems(user: CurrentUser): GlobalNavItem[] {
     navItems.push(
       {
         href: "/admin",
-        label: "کاربران و سیستم‌ها",
+        label: "مدیریت",
         match: "exact",
+        children: [
+          { href: "/admin", label: "کاربران", match: "exact" },
+          { href: "/admin/capacity", label: "ظرفیت", match: "prefix" },
+          { href: "/admin/schedule", label: "زمان‌بندی", match: "prefix" },
+        ],
       },
       {
         href: "/admin/audit",
