@@ -49,64 +49,83 @@ type AuditLogRow = {
 type AuditJsonRecord = Record<string, Prisma.JsonValue>;
 
 const ACTION_LABELS: Record<string, string> = {
-  ALTERNATIVE_ACCEPTED: "Alternative accepted",
-  ALTERNATIVE_PROPOSED: "Alternative proposed",
-  ALTERNATIVE_REJECTED: "Alternative rejected",
-  CAPACITY_CHANGED: "Capacity changed",
-  CAPACITY_EXCEPTION_CREATED: "Capacity exception added",
-  CAPACITY_EXCEPTION_DELETED: "Capacity exception removed",
-  CAPACITY_EXCEPTION_UPDATED: "Capacity exception updated",
-  RESERVATION_APPROVED: "Reservation approved",
-  RESERVATION_CANCELLED: "Reservation cancelled",
-  RESERVATION_CREATED: "Reservation requested",
-  RESERVATION_REJECTED: "Reservation rejected",
-  RESERVATION_TIME_UPDATED: "Reservation time updated",
-  SCHEDULE_EXCEPTION_CREATED: "Schedule exception added",
-  SCHEDULE_EXCEPTION_DELETED: "Schedule exception removed",
-  SCHEDULE_EXCEPTION_UPDATED: "Schedule exception updated",
-  USER_CREATED: "User created",
-  USER_PASSWORD_RESET: "Password reset",
-  USER_ROLE_CHANGED: "User role changed",
-  USER_UPDATED: "User updated",
-  WORKING_SCHEDULE_CHANGED: "Weekly schedule changed",
+  ALTERNATIVE_ACCEPTED: "پیشنهاد جایگزین پذیرفته شد",
+  ALTERNATIVE_PROPOSED: "زمان جایگزین پیشنهاد شد",
+  ALTERNATIVE_REJECTED: "پیشنهاد جایگزین رد شد",
+  CAPACITY_CHANGED: "ظرفیت تغییر کرد",
+  CAPACITY_EXCEPTION_CREATED: "استثنای ظرفیت اضافه شد",
+  CAPACITY_EXCEPTION_DELETED: "استثنای ظرفیت حذف شد",
+  CAPACITY_EXCEPTION_UPDATED: "استثنای ظرفیت ویرایش شد",
+  RESERVATION_APPROVED: "رزرو تایید شد",
+  RESERVATION_CANCELLED: "رزرو لغو شد",
+  RESERVATION_CREATED: "درخواست رزرو ثبت شد",
+  RESERVATION_POLICY_CHANGED: "سیاست رزرو تغییر کرد",
+  RESERVATION_REJECTED: "رزرو رد شد",
+  RESERVATION_TIME_UPDATED: "زمان رزرو تغییر کرد",
+  SCHEDULE_EXCEPTION_CREATED: "استثنای برنامه کاری اضافه شد",
+  SCHEDULE_EXCEPTION_DELETED: "استثنای برنامه کاری حذف شد",
+  SCHEDULE_EXCEPTION_UPDATED: "استثنای برنامه کاری ویرایش شد",
+  USER_CREATED: "کاربر ساخته شد",
+  USER_PASSWORD_RESET: "رمز عبور بازنشانی شد",
+  USER_ROLE_CHANGED: "نقش کاربر تغییر کرد",
+  USER_UPDATED: "کاربر ویرایش شد",
+  WORKING_SCHEDULE_CHANGED: "برنامه هفتگی تغییر کرد",
 };
 
 const ENTITY_LABELS: Record<string, string> = {
-  Reservation: "Reservation",
-  ResourcePool: "Capacity",
-  ResourcePoolCapacityException: "Daily capacity",
-  ScheduleException: "Schedule exception",
-  User: "User",
-  WorkingSchedule: "Weekly schedule",
+  Reservation: "رزرو",
+  ReservationPolicy: "سیاست رزرو",
+  ResourcePool: "ظرفیت",
+  ResourcePoolCapacityException: "ظرفیت روزانه",
+  ScheduleException: "استثنای برنامه کاری",
+  User: "کاربر",
+  WorkingSchedule: "برنامه هفتگی",
 };
 
 const FIELD_LABELS: Record<string, string> = {
-  active: "Active",
-  capacity: "Capacity",
-  date: "Date",
-  email: "Email",
-  endAt: "End",
-  endTime: "End time",
-  isWorkingDay: "Working day",
-  name: "Name",
-  proposedEndAt: "Proposed end",
-  proposedStartAt: "Proposed start",
-  reason: "Reason",
-  rejectionReason: "Rejection reason",
-  role: "Role",
-  startAt: "Start",
-  startTime: "Start time",
-  status: "Status",
+  active: "وضعیت کاربر",
+  capacity: "ظرفیت",
+  dailyUserHourLimit: "سقف روزانه هر کاربر",
+  date: "تاریخ",
+  email: "ایمیل",
+  endAt: "پایان",
+  endTime: "پایان کار",
+  isWorkingDay: "روز کاری",
+  name: "نام",
+  oneReservationPerDayEnabled: "محدودیت یک رزرو در روز",
+  partySize: "تعداد نفرات",
+  proposedEndAt: "پایان پیشنهادی",
+  proposedStartAt: "شروع پیشنهادی",
+  reason: "دلیل",
+  rejectionReason: "دلیل رد",
+  role: "نقش",
+  startAt: "شروع",
+  startTime: "شروع کار",
+  status: "وضعیت",
 };
 
 const DAY_LABELS: Record<number, string> = {
-  0: "Sunday",
-  1: "Monday",
-  2: "Tuesday",
-  3: "Wednesday",
-  4: "Thursday",
-  5: "Friday",
-  6: "Saturday",
+  0: "یک شنبه",
+  1: "دو شنبه",
+  2: "سه شنبه",
+  3: "چهار شنبه",
+  4: "پنج شنبه",
+  5: "جمعه",
+  6: "شنبه",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  ALTERNATIVE_PROPOSED: "زمان جایگزین پیشنهاد شده",
+  APPROVED: "تایید شده",
+  CANCELLED: "لغو شده",
+  PENDING: "در انتظار تایید",
+  REJECTED: "رد شده",
+};
+
+const ROLE_LABELS: Record<string, string> = {
+  ADMIN: "ادمین",
+  MANAGER: "مدیر",
+  USER: "کاربر",
 };
 
 const NOISE_FIELDS = new Set([
@@ -131,6 +150,11 @@ const DATE_RANGE_FIELDS = new Set([
   "startAt",
 ]);
 const AUDIT_PAGE_SIZE = 25;
+const PERSIAN_NUMBER_FORMATTER = new Intl.NumberFormat("fa-IR");
+
+function formatPersianNumber(value: number): string {
+  return PERSIAN_NUMBER_FORMATTER.format(value);
+}
 
 function FieldLabel({
   children,
@@ -150,7 +174,7 @@ function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...props}
-      className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+      className="h-10 w-full rounded-md border border-input bg-background px-3 text-right text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
     />
   );
 }
@@ -159,7 +183,7 @@ function SelectInput(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <select
       {...props}
-      className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+      className="h-10 w-full rounded-md border border-input bg-background px-3 text-right text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
     />
   );
 }
@@ -268,15 +292,17 @@ function formatDateRange(record: AuditJsonRecord): string | null {
 
 function formatAuditValue(key: string, value: Prisma.JsonValue): string {
   if (value === null) {
-    return "Empty";
+    return "خالی";
   }
 
   if (typeof value === "boolean") {
-    return value ? "Yes" : "No";
+    return value ? "بله" : "خیر";
   }
 
   if (typeof value === "number") {
-    return key === "dayOfWeek" ? DAY_LABELS[value] ?? String(value) : String(value);
+    return key === "dayOfWeek"
+      ? DAY_LABELS[value] ?? formatPersianNumber(value)
+      : formatPersianNumber(value);
   }
 
   if (typeof value === "string") {
@@ -286,6 +312,14 @@ function formatAuditValue(key: string, value: Prisma.JsonValue): string {
 
     if (key.endsWith("At") || key.startsWith("proposed")) {
       return formatIsoDateTime(value) ?? value;
+    }
+
+    if (key === "role") {
+      return ROLE_LABELS[value] ?? value;
+    }
+
+    if (key === "status") {
+      return STATUS_LABELS[value] ?? value;
     }
 
     return value;
@@ -303,7 +337,7 @@ function formatChangeRows(log: AuditLogRow): Array<{ label: string; value: strin
 
   if (source.dayOfWeek !== undefined) {
     rows.push({
-      label: "Day",
+      label: "روز",
       value: formatAuditValue("dayOfWeek", source.dayOfWeek),
     });
   }
@@ -323,7 +357,7 @@ function formatChangeRows(log: AuditLogRow): Array<{ label: string; value: strin
     rows.push({
       label: FIELD_LABELS[key] ?? key,
       value: changed
-        ? `${formatAuditValue(key, oldValue)} -> ${formatAuditValue(key, value)}`
+        ? `از ${formatAuditValue(key, oldValue)} به ${formatAuditValue(key, value)}`
         : formatAuditValue(key, value),
     });
   }
@@ -344,11 +378,13 @@ function buildAuditDescription(log: AuditLogRow): string {
   const oldCapacity = getNumber(oldRecord, "capacity");
 
   if (capacity !== null && oldCapacity !== null && capacity !== oldCapacity) {
-    return `Capacity ${oldCapacity} -> ${capacity}`;
+    return `ظرفیت از ${formatPersianNumber(oldCapacity)} به ${formatPersianNumber(
+      capacity,
+    )} تغییر کرد`;
   }
 
   if (capacity !== null) {
-    return `Capacity ${capacity}`;
+    return `ظرفیت ${formatPersianNumber(capacity)}`;
   }
 
   const email = getString(newRecord, "email") ?? getString(oldRecord, "email");
@@ -358,19 +394,19 @@ function buildAuditDescription(log: AuditLogRow): string {
     return `${name} (${email})`;
   }
 
-  return "No extra summary available";
+  return "خلاصه بیشتری ثبت نشده است";
 }
 
 function stringifyAuditValue(value: Prisma.JsonValue | null): string {
   if (value === null) {
-    return "None";
+    return "خالی";
   }
 
   return JSON.stringify(value, null, 2);
 }
 
 function shortId(value: string): string {
-  return value.length > 10 ? `${value.slice(0, 8)}...` : value;
+  return value.length > 10 ? `${value.slice(0, 8)}…` : value;
 }
 
 function getAuditPage(value: string | undefined): number {
@@ -416,16 +452,31 @@ function AuditFilters({
   params: Awaited<AuditPageProps["searchParams"]>;
 }) {
   return (
-    <section className="rounded-lg border bg-card p-5 text-card-foreground">
+    <section
+      className="rounded-lg border bg-card p-5 text-card-foreground"
+      dir="rtl"
+    >
+      <div className="mb-4 flex flex-col gap-1 text-right sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="text-base font-semibold text-slate-950">فیلتر گزارش</h2>
+          <p className="mt-1 text-sm leading-6 text-muted-foreground">
+            برای بررسی تغییرات یک کاربر، بخش یا بازه زمانی مشخص، فیلترها را
+            محدود کنید.
+          </p>
+        </div>
+        <span className="text-xs text-muted-foreground">
+          تاریخ‌ها را با تقویم جلالی وارد کنید.
+        </span>
+      </div>
       <form className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <div className="grid gap-2">
-          <FieldLabel htmlFor="audit-actor">Actor</FieldLabel>
+          <FieldLabel htmlFor="audit-actor">انجام‌دهنده</FieldLabel>
           <SelectInput
             defaultValue={params?.actorId ?? ""}
             id="audit-actor"
             name="actorId"
           >
-            <option value="">All actors</option>
+            <option value="">همه کاربران</option>
             {actors.map((actor) => (
               <option key={actor.id} value={actor.id}>
                 {actor.name} ({actor.email})
@@ -435,39 +486,39 @@ function AuditFilters({
         </div>
 
         <div className="grid gap-2">
-          <FieldLabel htmlFor="audit-entity-type">Entity</FieldLabel>
+          <FieldLabel htmlFor="audit-entity-type">بخش</FieldLabel>
           <SelectInput
             defaultValue={params?.entityType ?? ""}
             id="audit-entity-type"
             name="entityType"
           >
-            <option value="">All entities</option>
+            <option value="">همه بخش‌ها</option>
             {entityTypes.map((entityType) => (
               <option key={entityType} value={entityType}>
-                {entityType}
+                {ENTITY_LABELS[entityType] ?? entityType}
               </option>
             ))}
           </SelectInput>
         </div>
 
         <div className="grid gap-2">
-          <FieldLabel htmlFor="audit-action">Action</FieldLabel>
+          <FieldLabel htmlFor="audit-action">نوع تغییر</FieldLabel>
           <SelectInput
             defaultValue={params?.action ?? ""}
             id="audit-action"
             name="action"
           >
-            <option value="">All actions</option>
+            <option value="">همه تغییرات</option>
             {actions.map((action) => (
               <option key={action} value={action}>
-                {action}
+                {ACTION_LABELS[action] ?? action}
               </option>
             ))}
           </SelectInput>
         </div>
 
         <div className="grid gap-2">
-          <FieldLabel htmlFor="audit-from">From</FieldLabel>
+          <FieldLabel htmlFor="audit-from">از تاریخ</FieldLabel>
           <TextInput
             defaultValue={params?.from ?? ""}
             id="audit-from"
@@ -477,7 +528,7 @@ function AuditFilters({
         </div>
 
         <div className="grid gap-2">
-          <FieldLabel htmlFor="audit-to">To</FieldLabel>
+          <FieldLabel htmlFor="audit-to">تا تاریخ</FieldLabel>
           <TextInput
             defaultValue={params?.to ?? ""}
             id="audit-to"
@@ -489,12 +540,12 @@ function AuditFilters({
         <div className="flex items-end gap-2">
           <Button type="submit">
             <Filter className="h-4 w-4" />
-            Filter
+            اعمال فیلتر
           </Button>
           <Button asChild type="button" variant="outline">
             <Link href="/admin/audit">
               <RotateCcw className="h-4 w-4" />
-              Reset
+              پاک کردن
             </Link>
           </Button>
         </div>
@@ -508,11 +559,14 @@ function AuditLogCard({ log }: { log: AuditLogRow }) {
   const hasRawValues = log.oldValue !== null || log.newValue !== null;
 
   return (
-    <article className="rounded-lg border bg-card p-4 text-card-foreground">
+    <article
+      className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm"
+      dir="rtl"
+    >
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="rounded-full bg-secondary px-2 py-1 font-medium text-secondary-foreground">
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 font-medium text-slate-700">
               {ENTITY_LABELS[log.entityType] ?? log.entityType}
             </span>
             <span className="text-muted-foreground">
@@ -526,11 +580,11 @@ function AuditLogCard({ log }: { log: AuditLogRow }) {
             {buildAuditDescription(log)}
           </p>
         </div>
-        <div className="rounded-md bg-muted/40 px-3 py-2 text-sm lg:text-right">
-          <p className="text-xs text-muted-foreground">Actor</p>
-          <p className="mt-1 font-medium">{log.actor?.name ?? "System"}</p>
+        <div className="rounded-md bg-muted/40 px-3 py-2 text-sm text-right">
+          <p className="text-xs text-muted-foreground">انجام‌دهنده</p>
+          <p className="mt-1 font-medium">{log.actor?.name ?? "سیستم"}</p>
           <p className="mt-0.5 truncate text-xs text-muted-foreground">
-            {log.actor?.email ?? "No actor recorded"}
+            {log.actor?.email ?? "کاربری ثبت نشده است"}
           </p>
         </div>
       </div>
@@ -548,17 +602,17 @@ function AuditLogCard({ log }: { log: AuditLogRow }) {
 
       <details className="mt-3 border-t pt-3 text-xs text-muted-foreground">
         <summary className="cursor-pointer select-none">
-          Technical details
+          جزئیات فنی
         </summary>
         <dl className="mt-3 grid gap-2 sm:grid-cols-2">
           <div>
-            <dt>Record ID</dt>
+            <dt>شناسه رکورد</dt>
             <dd className="mt-1 break-all font-mono text-foreground">
               {shortId(log.entityId)}
             </dd>
           </div>
           <div>
-            <dt>Event ID</dt>
+            <dt>شناسه رویداد</dt>
             <dd className="mt-1 break-all font-mono text-foreground">
               {shortId(log.id)}
             </dd>
@@ -567,9 +621,11 @@ function AuditLogCard({ log }: { log: AuditLogRow }) {
         {hasRawValues ? (
           <div className="mt-3 grid gap-3 lg:grid-cols-2">
             <pre className="max-h-48 overflow-auto rounded-md border bg-muted/30 p-3 text-[11px] leading-relaxed text-foreground">
+              {`مقدار قبلی\n`}
               {stringifyAuditValue(log.oldValue)}
             </pre>
             <pre className="max-h-48 overflow-auto rounded-md border bg-muted/30 p-3 text-[11px] leading-relaxed text-foreground">
+              {`مقدار جدید\n`}
               {stringifyAuditValue(log.newValue)}
             </pre>
           </div>
@@ -593,34 +649,35 @@ function AuditPagination({
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2 text-sm" dir="rtl">
       {currentPage > 1 ? (
         <Button asChild size="sm" variant="outline">
           <Link href={getAuditPageHref(params, currentPage - 1)}>
-            <ChevronLeft className="h-4 w-4" />
-            Previous
+            <ChevronRight className="h-4 w-4" />
+            صفحه قبلی
           </Link>
         </Button>
       ) : (
         <Button disabled size="sm" variant="outline">
-          <ChevronLeft className="h-4 w-4" />
-          Previous
+          <ChevronRight className="h-4 w-4" />
+          صفحه قبلی
         </Button>
       )}
-      <span>
-        Page {currentPage} of {totalPages}
+      <span className="text-muted-foreground">
+        صفحه {formatPersianNumber(currentPage)} از{" "}
+        {formatPersianNumber(totalPages)}
       </span>
       {currentPage < totalPages ? (
         <Button asChild size="sm" variant="outline">
           <Link href={getAuditPageHref(params, currentPage + 1)}>
-            Next
-            <ChevronRight className="h-4 w-4" />
+            صفحه بعدی
+            <ChevronLeft className="h-4 w-4" />
           </Link>
         </Button>
       ) : (
         <Button disabled size="sm" variant="outline">
-          Next
-          <ChevronRight className="h-4 w-4" />
+          صفحه بعدی
+          <ChevronLeft className="h-4 w-4" />
         </Button>
       )}
     </div>
@@ -691,7 +748,7 @@ export default async function AuditPage({ searchParams }: AuditPageProps) {
       <PageHeader
         actions={
           <Button asChild variant="outline">
-            <Link href="/admin">بازگشت به کاربران و سیستم‌ها</Link>
+            <Link href="/admin">بازگشت به مدیریت</Link>
           </Button>
         }
         subtitle="تاریخچه تغییرات رزروها، ظرفیت، برنامه کاری و کاربران"
@@ -706,11 +763,15 @@ export default async function AuditPage({ searchParams }: AuditPageProps) {
       />
 
       <section className="grid gap-4">
-        <div className="flex flex-col gap-2 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+        <div
+          className="flex flex-col gap-2 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between"
+          dir="rtl"
+        >
           <p className="inline-flex items-center gap-2 text-sm text-muted-foreground">
             <CalendarClock className="h-4 w-4" />
-            Showing {firstEventNumber}-{lastEventNumber} of {totalLogs} matching
-            events
+            نمایش {formatPersianNumber(firstEventNumber)} تا{" "}
+            {formatPersianNumber(lastEventNumber)} از{" "}
+            {formatPersianNumber(totalLogs)} رویداد
           </p>
           <AuditPagination
             currentPage={currentPage}
@@ -720,8 +781,11 @@ export default async function AuditPage({ searchParams }: AuditPageProps) {
         </div>
 
         {logs.length === 0 ? (
-          <div className="rounded-lg border bg-card p-6 text-sm text-muted-foreground">
-            No audit events match these filters.
+          <div
+            className="rounded-lg border bg-card p-6 text-right text-sm text-muted-foreground"
+            dir="rtl"
+          >
+            هیچ رویدادی با این فیلترها پیدا نشد.
           </div>
         ) : (
           logs.map((log) => <AuditLogCard key={log.id} log={log} />)
