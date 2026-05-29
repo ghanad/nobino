@@ -311,6 +311,37 @@ test("manager time updates keep reservations pending", async () => {
   assert.equal(usage[0].pendingCount, 1);
 });
 
+test("manager time updates can exceed the daily user hour limit for that request", async () => {
+  const startAt = nextWorkingDateAtHour(9);
+  const endAt = addHours(startAt, 1);
+  const proposedEndAt = addHours(startAt, 4);
+  await markDateWorkingForTest(startAt);
+  await updateReservationPolicy({
+    adminId,
+    dailyUserHourLimit: 3,
+    oneReservationPerDayEnabled: true,
+  });
+  const pending = await createReservation({
+    startAt,
+    endAt,
+    status: ReservationStatus.PENDING,
+  });
+
+  const updated = await proposeAlternative({
+    reservationId: pending.id,
+    managerId,
+    proposedStartAt: startAt,
+    proposedEndAt,
+  });
+
+  assert.equal(updated.status, ReservationStatus.PENDING);
+  assert.equal(updated.startAt.getTime(), startAt.getTime());
+  assert.equal(updated.endAt.getTime(), proposedEndAt.getTime());
+  await assert.doesNotReject(() =>
+    approveReservation({ reservationId: pending.id, managerId }),
+  );
+});
+
 test("reservation requests outside working hours are rejected", async () => {
   const startAt = nextWorkingDateAtHour(8);
   const endAt = addHours(startAt, 1);

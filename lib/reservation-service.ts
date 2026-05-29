@@ -96,8 +96,15 @@ async function assertDailyUserReservationPolicy(input: {
   endAt: Date;
   statuses: ReservationStatus[];
   excludeReservationId?: string;
+  allowSingleReservationOverDailyHourLimit?: boolean;
 }, client: DbClient): Promise<void> {
   const policy = await getReservationPolicy(client);
+  const allowedDailyHours = input.allowSingleReservationOverDailyHourLimit
+    ? Math.max(
+        policy.dailyUserHourLimit,
+        reservationHours(input.startAt, input.endAt),
+      )
+    : policy.dailyUserHourLimit;
   const dayStart = startOfLocalDay(input.startAt);
   const dayEnd = endOfLocalDay(input.startAt);
   const reservations = await client.reservation.findMany({
@@ -129,7 +136,7 @@ async function assertDailyUserReservationPolicy(input: {
   );
   const requestedHours = reservationHours(input.startAt, input.endAt);
 
-  if (existingHours + requestedHours > policy.dailyUserHourLimit) {
+  if (existingHours + requestedHours > allowedDailyHours) {
     throw new ReservationTransitionError(
       `هر کاربر حداکثر می‌تواند ${PERSIAN_NUMBER_FORMATTER.format(
         policy.dailyUserHourLimit,
@@ -274,6 +281,8 @@ export async function approveReservation(input: {
       tx,
     );
 
+    const policy = await getReservationPolicy(tx);
+
     await assertDailyUserReservationPolicy(
       {
         userId: reservation.userId,
@@ -281,6 +290,9 @@ export async function approveReservation(input: {
         endAt: reservation.endAt,
         statuses: [ReservationStatus.APPROVED],
         excludeReservationId: reservation.id,
+        allowSingleReservationOverDailyHourLimit:
+          reservationHours(reservation.startAt, reservation.endAt) >
+          policy.dailyUserHourLimit,
       },
       tx,
     );
@@ -448,6 +460,7 @@ export async function proposeAlternative(input: {
         endAt: input.proposedEndAt,
         statuses: [ReservationStatus.APPROVED],
         excludeReservationId: reservation.id,
+        allowSingleReservationOverDailyHourLimit: true,
       },
       tx,
     );
