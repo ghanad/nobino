@@ -2,6 +2,7 @@ import { AlternativeStatus, ReservationStatus } from "@prisma/client";
 import { Download, X } from "lucide-react";
 
 import { PendingReviewModalContent } from "@/app/manager/pending-review-modal-content";
+import { ReviewModalCloseLink } from "@/app/manager/review-modal-close-link";
 import { PageHeader } from "@/components/app/page-header";
 import { ManagerWeeklyCalendar } from "@/components/calendar/manager-weekly-calendar";
 import { UrlToast } from "@/components/ui/url-toast";
@@ -195,39 +196,42 @@ function ReviewModal({
   dateParam: string;
 }) {
   const isPending = item.reservation.status === ReservationStatus.PENDING;
+  const modalId = buildReviewModalId(item.reservation.id);
   const modalTitle = isPending
     ? "بررسی درخواست رزرو"
     : "جزئیات رزرو تاییدشده";
 
   return (
     <div
-      aria-labelledby={`${buildReviewModalId(item.reservation.id)}-title`}
+      aria-labelledby={`${modalId}-title`}
       aria-modal="true"
-      className="fixed inset-0 z-50 hidden items-start justify-center overflow-y-auto bg-black/55 p-4 target:flex"
+      className="fixed inset-0 z-50 hidden items-start justify-center overflow-y-auto bg-black/55 p-4 target:flex data-[closed=true]:!hidden"
       dir="rtl"
-      id={buildReviewModalId(item.reservation.id)}
+      id={modalId}
       role="dialog"
     >
-      <a
+      <ReviewModalCloseLink
         aria-label="بستن پنجره بررسی"
         className="fixed inset-0 cursor-default"
-        href={buildManagerHref(dateParam)}
+        closeHref={buildManagerHref(dateParam)}
+        modalId={modalId}
       />
       <div className="relative z-10 w-full max-w-3xl overflow-hidden rounded-lg border bg-background text-right shadow-lg">
         <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
           <h2
             className="text-base font-semibold"
-            id={`${buildReviewModalId(item.reservation.id)}-title`}
+            id={`${modalId}-title`}
           >
             {modalTitle}
           </h2>
-          <a
+          <ReviewModalCloseLink
             aria-label="بستن پنجره بررسی"
             className="inline-flex h-9 w-9 items-center justify-center rounded-md border bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
-            href={buildManagerHref(dateParam)}
+            closeHref={buildManagerHref(dateParam)}
+            modalId={modalId}
           >
             <X aria-hidden="true" className="h-4 w-4" />
-          </a>
+          </ReviewModalCloseLink>
         </div>
         <PendingReviewModalContent
           dateParam={dateParam}
