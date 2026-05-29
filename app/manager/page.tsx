@@ -1,5 +1,5 @@
 import { AlternativeStatus, ReservationStatus } from "@prisma/client";
-import { Download, X } from "lucide-react";
+import { X } from "lucide-react";
 
 import { PendingReviewModalContent } from "@/app/manager/pending-review-modal-content";
 import { ReviewModalCloseLink } from "@/app/manager/review-modal-close-link";
@@ -112,10 +112,6 @@ function formatPersianTime(date: Date): string {
 
 function buildHourOptions() {
   return Array.from({ length: 24 }, (_, hour) => hour);
-}
-
-function buildExportHref(dateParam: string): string {
-  return `/manager/export?date=${encodeURIComponent(dateParam)}`;
 }
 
 function buildReviewModalId(reservationId: string): string {
@@ -444,15 +440,6 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
   return (
     <div className="grid gap-6">
       <PageHeader
-        actions={
-          <a
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-input bg-background px-4 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
-            href={buildExportHref(dateParam)}
-          >
-            <Download className="h-4 w-4" />
-            دریافت CSV
-          </a>
-        }
         subtitle="درخواست‌های رزرو را بررسی، تایید یا رد کنید"
         title="بررسی درخواست‌ها"
       />
