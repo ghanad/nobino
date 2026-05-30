@@ -33,7 +33,7 @@ ENV APP_TIMEZONE=Asia/Tehran
 ENV DATABASE_URL=file:/data/nobino.sqlite
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates gosu openssl \
+  && apt-get install -y --no-install-recommends ca-certificates gosu ldap-utils openssl \
   && rm -rf /var/lib/apt/lists/* \
   && groupadd --system --gid 1001 nodejs \
   && useradd --system --uid 1001 --gid nodejs --create-home --home-dir /home/nextjs nextjs \

@@ -147,9 +147,44 @@ Use `.env.example` as the source of truth for required settings:
   SQLite paths from the `prisma/` directory.
 - `AUTH_SECRET`: long random secret used to sign HTTP-only session cookies.
   Generate a unique value for every shared or production environment.
+- `AUTH_PROVIDER`: authentication backend. Use `local` for Nobino passwords,
+  `ldap` for company LDAP passwords, or `hybrid` to accept either local or LDAP
+  passwords.
+- `LDAP_AUTH_METHOD`: LDAP client implementation. Use `node` for the built-in
+  Node.js LDAP client path, or `command` to authenticate through
+  `ldapsearch`/`ldapwhoami`. The Docker image includes `ldap-utils` for the
+  command method.
+- `LDAP_URL`: LDAP server URL, for example `ldap://ldap.example.com:389` or
+  `ldaps://ldap.example.com:636`. Required when `AUTH_PROVIDER` is `ldap` or
+  `hybrid`.
+- `LDAP_BASE_DN`: search base used to find users, for example
+  `dc=example,dc=com`. Required unless `LDAP_USER_DN_TEMPLATE` is set.
+- `LDAP_BIND_DN` and `LDAP_BIND_PASSWORD`: optional service account used for
+  user searches. Leave both empty only if anonymous search is allowed or a
+  direct `LDAP_USER_DN_TEMPLATE` is used.
+- `LDAP_USER_FILTER`: LDAP search filter used to find the login user. It
+  supports `{{email}}`, `{{login}}`, and `{{username}}`; the default is
+  `(mail={{email}})`. For Active Directory, a common value is
+  `(|(mail={{email}})(userPrincipalName={{email}})(sAMAccountName={{username}}))`.
+- `LDAP_USER_DN_TEMPLATE`: optional direct bind DN template, for example
+  `uid={{username}},ou=People,dc=example,dc=com`. When set, Nobino skips the
+  service-account search and binds directly as the user.
+- `LDAP_USER_BIND_ATTRIBUTE`: optional attribute used for the user password bind
+  after search. For Active Directory this can be `userPrincipalName`, which
+  avoids binding with long or non-ASCII distinguished names.
+- `LDAP_EMAIL_ATTRIBUTE` and `LDAP_NAME_ATTRIBUTE`: attributes requested during
+  LDAP search; defaults are `mail` and `displayName`.
+- `LDAP_CONNECT_TIMEOUT_MS` and `LDAP_TIMEOUT_MS`: LDAP connection and operation
+  timeouts in milliseconds.
+- `LDAP_TLS_REJECT_UNAUTHORIZED`: keep `true` in production so LDAPS
+  certificates are verified.
 - `APP_TIMEZONE`: operational timezone. Use `Asia/Tehran` unless the company
   explicitly changes scheduling policy.
 - `NEXT_PUBLIC_APP_NAME`: display name used by the app shell.
+
+LDAP authentication only validates the password against LDAP. Users still must
+exist in Nobino's `User` table, and Nobino continues to use the local `role` and
+`active` fields for authorization and access control.
 
 ## Production Deployment
 
@@ -168,6 +203,19 @@ Run with compose:
 ```bash
 mkdir -p data
 AUTH_SECRET="replace-with-a-long-random-secret" \
+docker compose up -d
+```
+
+To enable LDAP in compose, pass the company settings as environment variables:
+
+```bash
+AUTH_SECRET="replace-with-a-long-random-secret" \
+AUTH_PROVIDER="ldap" \
+LDAP_URL="ldaps://ldap.example.com:636" \
+LDAP_BASE_DN="dc=example,dc=com" \
+LDAP_BIND_DN="cn=nobino,ou=Service Accounts,dc=example,dc=com" \
+LDAP_BIND_PASSWORD="replace-with-service-account-password" \
+LDAP_USER_FILTER="(|(mail={{email}})(userPrincipalName={{email}})(sAMAccountName={{username}}))" \
 docker compose up -d
 ```
 

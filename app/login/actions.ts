@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { createSession, clearSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { authenticateLdapUser, getAuthProvider } from "@/lib/ldap-auth";
 import { verifyPassword } from "@/lib/password";
 
 const loginSchema = z.object({
@@ -29,10 +30,14 @@ export async function loginAction(formData: FormData): Promise<void> {
     redirect("/login?error=invalid");
   }
 
-  const passwordIsValid = await verifyPassword(
-    parsed.data.password,
-    user.passwordHash,
-  );
+  const authProvider = getAuthProvider();
+  const passwordIsValid =
+    authProvider === "ldap"
+      ? Boolean(await authenticateLdapUser(email, parsed.data.password))
+      : authProvider === "hybrid"
+        ? (await verifyPassword(parsed.data.password, user.passwordHash)) ||
+          Boolean(await authenticateLdapUser(email, parsed.data.password))
+        : await verifyPassword(parsed.data.password, user.passwordHash);
 
   if (!passwordIsValid) {
     redirect("/login?error=invalid");
