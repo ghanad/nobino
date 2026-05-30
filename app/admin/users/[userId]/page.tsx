@@ -1,9 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronRight, KeyRound, Mail, Save, ShieldCheck } from "lucide-react";
+import {
+  ChevronRight,
+  KeyRound,
+  Mail,
+  Save,
+  ShieldCheck,
+  Trash2,
+} from "lucide-react";
 import { UserRole } from "@prisma/client";
 
 import {
+  deleteUserAction,
   resetUserPasswordAction,
   updateUserAction,
 } from "@/app/admin/actions";
@@ -29,6 +37,7 @@ type UserDetailPageProps = {
   searchParams?: Promise<{
     error?: string;
     passwordReset?: string;
+    userDeleted?: string;
     userUpdated?: string;
   }>;
 };
@@ -63,11 +72,12 @@ export default async function UserDetailPage({
       email: true,
       role: true,
       active: true,
+      deletedAt: true,
       createdAt: true,
     },
   });
 
-  if (!user) {
+  if (!user || user.deletedAt) {
     notFound();
   }
 
@@ -227,6 +237,30 @@ export default async function UserDetailPage({
           </Button>
         </form>
       </section>
+
+      {!isCurrentAdmin ? (
+        <section className="rounded-lg border border-red-200 bg-card p-5 text-card-foreground shadow-sm">
+          <div className="grid gap-1 border-b border-red-100 pb-5">
+            <h2 className="font-medium text-red-800">حذف کاربر</h2>
+            <p className="text-sm leading-6 text-muted-foreground">
+              با حذف کاربر، حساب او غیرفعال و از فهرست کاربران پنهان می‌شود؛
+              رزروها و تاریخچه تغییرات برای گزارش‌گیری باقی می‌مانند.
+            </p>
+          </div>
+
+          <form action={deleteUserAction} className="mt-5 flex justify-end">
+            <input name="redirectPath" type="hidden" value={redirectPath} />
+            <input name="userId" type="hidden" value={user.id} />
+            <Button
+              className="w-full bg-red-700 text-white hover:bg-red-800 sm:w-auto"
+              type="submit"
+            >
+              <Trash2 className="h-4 w-4" />
+              حذف کاربر
+            </Button>
+          </form>
+        </section>
+      ) : null}
     </div>
   );
 }

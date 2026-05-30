@@ -29,6 +29,10 @@ import {
   ReservationTimeRangeError,
   validateReservationTimeRange,
 } from "@/lib/schedule";
+import {
+  deleteManagedUser,
+  UserManagementError,
+} from "@/lib/user-management-service";
 
 const db = new PrismaClient();
 
@@ -840,4 +844,54 @@ test("admin cannot set daily capacity below approved usage for that day", async 
       reason: "Two systems are under repair.",
     }),
   );
+});
+
+test("admin can delete a managed user without removing reservation history", async () => {
+  const startAt = nextWorkingDateAtHour(9);
+  const endAt = addHours(startAt, 1);
+  const reservation = await createReservation({
+    userId: secondUserId,
+    startAt,
+    endAt,
+    status: ReservationStatus.APPROVED,
+  });
+
+  await deleteManagedUser({ adminId, userId: secondUserId });
+
+  const [deletedUser, existingReservation, auditLog] = await Promise.all([
+    db.user.findUnique({
+      where: { id: secondUserId },
+      select: { active: true, deletedAt: true },
+    }),
+    db.reservation.findUnique({
+      where: { id: reservation.id },
+      select: { userId: true },
+    }),
+    db.auditLog.findFirst({
+      where: {
+        entityId: secondUserId,
+        action: "USER_DELETED",
+      },
+    }),
+  ]);
+
+  assert.equal(deletedUser?.active, false);
+  assert.ok(deletedUser?.deletedAt);
+  assert.equal(existingReservation?.userId, secondUserId);
+  assert.ok(auditLog);
+});
+
+test("admin cannot delete their own account", async () => {
+  await assert.rejects(
+    () => deleteManagedUser({ adminId, userId: adminId }),
+    UserManagementError,
+  );
+
+  const admin = await db.user.findUnique({
+    where: { id: adminId },
+    select: { active: true, deletedAt: true },
+  });
+
+  assert.equal(admin?.active, true);
+  assert.equal(admin?.deletedAt, null);
 });

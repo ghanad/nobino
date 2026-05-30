@@ -164,6 +164,64 @@ export async function updateManagedUser(input: {
   });
 }
 
+export async function deleteManagedUser(input: {
+  adminId: string;
+  userId: string;
+}) {
+  return db.$transaction(async (tx) => {
+    await assertAdmin(input.adminId, tx);
+
+    const current = await tx.user.findUnique({
+      where: { id: input.userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        active: true,
+        deletedAt: true,
+      },
+    });
+
+    if (!current || current.deletedAt) {
+      throw new UserManagementError("User was not found.");
+    }
+
+    if (current.id === input.adminId) {
+      throw new UserManagementError("Admins cannot delete their own account.");
+    }
+
+    const deleted = await tx.user.update({
+      where: { id: current.id },
+      data: {
+        active: false,
+        deletedAt: new Date(),
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        active: true,
+        deletedAt: true,
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorUserId: input.adminId,
+        entityType: "User",
+        entityId: deleted.id,
+        action: "USER_DELETED",
+        oldValue: current,
+        newValue: deleted,
+      },
+    });
+
+    return deleted;
+  });
+}
+
 export async function resetManagedUserPassword(input: {
   adminId: string;
   userId: string;

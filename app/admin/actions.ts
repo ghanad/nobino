@@ -24,6 +24,7 @@ import {
 } from "@/lib/jalali-date";
 import {
   createManagedUser,
+  deleteManagedUser,
   resetManagedUserPassword,
   updateManagedUser,
   UserManagementError,
@@ -104,6 +105,10 @@ const updateUserSchema = z.object({
 const resetPasswordSchema = z.object({
   userId: z.string().min(1),
   password: z.string().min(8).max(200),
+});
+
+const deleteUserSchema = z.object({
+  userId: z.string().min(1),
 });
 
 function checkboxToBoolean(value: FormDataEntryValue | null): boolean {
@@ -599,4 +604,30 @@ export async function resetUserPasswordAction(
   }
 
   redirectToPath(redirectPath, { passwordReset: "1" });
+}
+
+export async function deleteUserAction(formData: FormData): Promise<void> {
+  const admin = await requireRole([UserRole.ADMIN]);
+  const redirectPath = getSafeAdminRedirectPath(
+    formData.get("redirectPath"),
+    "/admin",
+  );
+  const parsed = deleteUserSchema.safeParse({
+    userId: formData.get("userId"),
+  });
+
+  if (!parsed.success) {
+    redirectToPath(redirectPath, { error: "Choose a valid user to delete." });
+  }
+
+  try {
+    await deleteManagedUser({
+      adminId: admin.id,
+      ...parsed.data,
+    });
+  } catch (error) {
+    redirectToPath(redirectPath, { error: getActionErrorMessage(error) });
+  }
+
+  redirectToPath("/admin", { userDeleted: "1" });
 }

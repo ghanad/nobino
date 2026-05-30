@@ -66,6 +66,7 @@ const ACTION_LABELS: Record<string, string> = {
   SCHEDULE_EXCEPTION_DELETED: "استثنای برنامه کاری حذف شد",
   SCHEDULE_EXCEPTION_UPDATED: "استثنای برنامه کاری ویرایش شد",
   USER_CREATED: "کاربر ساخته شد",
+  USER_DELETED: "کاربر حذف شد",
   USER_PASSWORD_RESET: "رمز عبور بازنشانی شد",
   USER_ROLE_CHANGED: "نقش کاربر تغییر کرد",
   USER_UPDATED: "کاربر ویرایش شد",

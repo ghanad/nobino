@@ -24,6 +24,7 @@
     "../lib/jalali-date.ts",
     "../lib/reservation-service.ts",
     "../lib/schedule.ts",
+    "../lib/user-management-service.ts",
     "../types/pholiday.d.ts"
   ]
 }

@@ -15,6 +15,7 @@ type AdminPageProps = {
     error?: string;
     passwordReset?: string;
     userCreated?: string;
+    userDeleted?: string;
     userUpdated?: string;
   }>;
 };
@@ -24,6 +25,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const params = await searchParams;
   const toast = getAdminToast(params);
   const users = await db.user.findMany({
+    where: { deletedAt: null },
     orderBy: [{ active: "desc" }, { name: "asc" }],
     select: {
       id: true,

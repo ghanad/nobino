@@ -23,6 +23,7 @@ export function getUserManagementToast(params?: {
   error?: string;
   passwordReset?: string;
   userCreated?: string;
+  userDeleted?: string;
   userUpdated?: string;
 }) {
   if (params?.error) {
@@ -35,12 +36,13 @@ export function getUserManagementToast(params?: {
 
   const successMessage =
     (params?.userCreated && "کاربر ساخته شد.") ||
+    (params?.userDeleted && "کاربر حذف شد.") ||
     (params?.userUpdated && "اطلاعات کاربر ذخیره شد.") ||
     (params?.passwordReset && "رمز موقت تنظیم شد.");
 
   return successMessage
     ? {
-        consumeKeys: ["userCreated", "userUpdated", "passwordReset"],
+        consumeKeys: ["userCreated", "userDeleted", "userUpdated", "passwordReset"],
         message: successMessage,
         variant: "success" as const,
       }
@@ -54,6 +56,7 @@ export function UserManagementToast({
     error?: string;
     passwordReset?: string;
     userCreated?: string;
+    userDeleted?: string;
     userUpdated?: string;
   };
 }) {
