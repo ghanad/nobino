@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth";
+import { getAuthProvider } from "@/lib/ldap-auth";
 import { loginAction } from "./actions";
 
 type LoginPageProps = {
@@ -21,6 +22,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   }
 
   const hasInvalidLogin = params.error === "invalid";
+  const authProvider = getAuthProvider();
+  const shouldShowCompanyEmailHint =
+    authProvider === "ldap" || authProvider === "hybrid";
 
   return (
     <main
@@ -54,6 +58,14 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               dir="ltr"
               required
             />
+            {shouldShowCompanyEmailHint ? (
+              <span className="text-xs font-normal leading-5 text-muted-foreground">
+                از ایمیل شرکت استفاده کنید؛ مثل{" "}
+                <span dir="ltr" className="inline-block">
+                  user@balout.co
+                </span>
+              </span>
+            ) : null}
           </label>
           <label className="grid gap-2 text-sm font-medium">
             رمز عبور
