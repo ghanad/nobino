@@ -35,6 +35,18 @@ enum LunchReservationStatus {
   CANCELLED_BY_ADMIN
 }
 
+enum AnnouncementSeverity {
+  NORMAL
+  IMPORTANT
+}
+
+enum AnnouncementAudience {
+  ALL
+  USER
+  MANAGER
+  ADMIN
+}
+
 model User {
   id           String   @id @default(cuid())
   name         String
@@ -55,6 +67,8 @@ model User {
   createdCapacityExceptions ResourcePoolCapacityException[] @relation("CapacityExceptionCreator")
   auditLogs                 AuditLog[]                      @relation("AuditActor")
   notifications             Notification[]                  @relation("NotificationUser")
+  createdAnnouncements      Announcement[]                  @relation("AnnouncementCreator")
+  announcementReceipts      AnnouncementReceipt[]           @relation("AnnouncementReceiptUser")
 }
 
 model ResourcePool {
@@ -239,6 +253,43 @@ model AuditLog {
   @@index([entityType, entityId])
   @@index([actorUserId])
   @@index([createdAt])
+}
+
+model Announcement {
+  id          String               @id @default(cuid())
+  title       String
+  body        String
+  severity    AnnouncementSeverity @default(NORMAL)
+  audience    AnnouncementAudience @default(ALL)
+  startsAt    DateTime             @default(now())
+  endsAt      DateTime?
+  requiresAck Boolean              @default(false)
+  active      Boolean              @default(true)
+  createdById String
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  createdBy User                  @relation("AnnouncementCreator", fields: [createdById], references: [id])
+  receipts  AnnouncementReceipt[]
+
+  @@index([active, startsAt, endsAt])
+  @@index([audience])
+}
+
+model AnnouncementReceipt {
+  id             String    @id @default(cuid())
+  announcementId String
+  userId         String
+  seenAt         DateTime?
+  acknowledgedAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  announcement Announcement @relation(fields: [announcementId], references: [id])
+  user         User         @relation("AnnouncementReceiptUser", fields: [userId], references: [id])
+
+  @@unique([announcementId, userId])
+  @@index([userId, acknowledgedAt])
 }
 
 model Notification {

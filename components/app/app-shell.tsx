@@ -1,8 +1,10 @@
 import type { ReactNode } from "react";
 
 import { GlobalNav, type GlobalNavItem } from "@/components/app/global-nav";
+import { AnnouncementModal } from "@/components/ui/announcement-modal";
 import { UnreadNotificationToast } from "@/components/ui/unread-notification-toast";
 import type { CurrentUser } from "@/lib/auth";
+import { getPendingAnnouncementForUser } from "@/lib/announcement-service";
 import {
   getLatestUnreadNotification,
   getRecentNotificationsForNav,
@@ -52,6 +54,7 @@ function getNavItems(user: CurrentUser): GlobalNavItem[] {
           { href: "/admin/capacity", label: "ظرفیت", match: "prefix" },
           { href: "/admin/schedule", label: "زمان‌بندی", match: "prefix" },
           { href: "/admin/lunch", label: "ناهار", match: "prefix" },
+          { href: "/admin/announcements", label: "اعلان‌ها", match: "prefix" },
         ],
       },
       {
@@ -69,15 +72,18 @@ export async function AppShell({ user, children }: AppShellProps) {
   const [
     unreadNotificationCount,
     latestUnreadNotification,
+    pendingAnnouncement,
     recentNotifications,
   ] = await Promise.all([
     getUnreadNotificationCount(user.id),
     getLatestUnreadNotification(user.id),
+    getPendingAnnouncementForUser({ role: user.role, userId: user.id }),
     getRecentNotificationsForNav(user.id),
   ]);
 
   return (
     <main className="min-h-screen bg-background">
+      <AnnouncementModal announcement={pendingAnnouncement} />
       <UnreadNotificationToast notification={latestUnreadNotification} />
       <header className="border-b bg-card" dir="rtl">
         <GlobalNav
