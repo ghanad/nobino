@@ -22,7 +22,6 @@ function getNavItems(user: CurrentUser): GlobalNavItem[] {
   const navItems: GlobalNavItem[] = [
     { href: "/reservations", label: "رزروها", match: "prefix" },
     { href: "/lunch", label: "ناهار", match: "exact" },
-    { href: "/notifications", label: "اعلان‌ها", match: "prefix" },
   ];
 
   if (canAccessLunchReport(user)) {

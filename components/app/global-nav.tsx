@@ -39,16 +39,12 @@ function NavLink({
   enableDropdown = true,
   item,
   pathname,
-  unreadNotificationCount,
 }: {
   enableDropdown?: boolean;
   item: GlobalNavItem;
   pathname: string;
-  unreadNotificationCount: number;
 }) {
   const isActive = isActiveNavItem(pathname, item);
-  const showUnreadCount =
-    item.href === "/notifications" && unreadNotificationCount > 0;
   const hasChildren = Boolean(item.children?.length);
 
   if (hasChildren && enableDropdown) {
@@ -108,13 +104,41 @@ function NavLink({
       )}
       href={item.href}
     >
-      {item.href === "/notifications" ? <Bell className="h-4 w-4" /> : null}
       <span>{item.label}</span>
-      {showUnreadCount ? (
-        <span
-          aria-label={`${PERSIAN_NUMBER_FORMATTER.format(unreadNotificationCount)} اعلان خوانده‌نشده`}
-          className="min-w-4 rounded-full bg-red-600 px-1.5 py-0.5 text-center text-[10px] font-semibold leading-none text-white"
-        >
+    </Link>
+  );
+}
+
+function NotificationLink({
+  pathname,
+  unreadNotificationCount,
+}: {
+  pathname: string;
+  unreadNotificationCount: number;
+}) {
+  const isActive =
+    pathname === "/notifications" || pathname.startsWith("/notifications/");
+  const unreadLabel =
+    unreadNotificationCount > 0
+      ? `${PERSIAN_NUMBER_FORMATTER.format(unreadNotificationCount)} اعلان خوانده‌نشده`
+      : "اعلان‌ها";
+
+  return (
+    <Link
+      aria-current={isActive ? "page" : undefined}
+      aria-label={unreadLabel}
+      className={cn(
+        "relative inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors",
+        isActive
+          ? "border-slate-200 bg-slate-100 text-slate-950"
+          : "border-transparent text-slate-700 hover:bg-slate-50 hover:text-slate-950",
+      )}
+      href="/notifications"
+      title={unreadLabel}
+    >
+      <Bell className="h-4 w-4" />
+      {unreadNotificationCount > 0 ? (
+        <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-red-600 px-1 py-0.5 text-center text-[10px] font-semibold leading-none text-white ring-2 ring-card">
           {PERSIAN_NUMBER_FORMATTER.format(unreadNotificationCount)}
         </span>
       ) : null}
@@ -225,16 +249,23 @@ export function GlobalNav({
               item={item}
               key={item.href}
               pathname={pathname}
-              unreadNotificationCount={unreadNotificationCount}
             />
           ))}
         </nav>
 
-        <div className="hidden shrink-0 md:block">
+        <div className="hidden shrink-0 items-center gap-1.5 md:flex">
+          <NotificationLink
+            pathname={pathname}
+            unreadNotificationCount={unreadNotificationCount}
+          />
           <UserMenu userName={userName} />
         </div>
 
         <div className="flex items-center gap-2 md:hidden">
+          <NotificationLink
+            pathname={pathname}
+            unreadNotificationCount={unreadNotificationCount}
+          />
           <UserMenu userName={userName} />
         </div>
       </div>
@@ -255,7 +286,6 @@ export function GlobalNav({
                 enableDropdown={false}
                 item={item}
                 pathname={pathname}
-                unreadNotificationCount={unreadNotificationCount}
               />
               {item.children?.length ? (
                 <div className="grid gap-1 border-r border-slate-200 pr-3">
@@ -265,7 +295,6 @@ export function GlobalNav({
                       item={child}
                       key={child.href}
                       pathname={pathname}
-                      unreadNotificationCount={unreadNotificationCount}
                     />
                   ))}
                 </div>
