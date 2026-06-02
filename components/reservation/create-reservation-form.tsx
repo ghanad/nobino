@@ -88,7 +88,7 @@ type CellState = {
   unavailableReason: "full" | "past" | null;
 };
 
-type CapacityDotTone = "approved" | "free" | "mine" | "pending";
+type CapacityDotTone = "approved" | "free" | "mine";
 
 type SlotReservationDetail = {
   email: string | null;
@@ -182,10 +182,15 @@ function buildCapacityDots(cell: CellState): CapacityDotTone[] {
     return [];
   }
 
-  const myApprovedCount = cell.myReservationStatus === "APPROVED" ? 1 : 0;
-  const approvedOtherCount = Math.max(cell.approvedCount - myApprovedCount, 0);
+  const capacity = Math.max(cell.capacity, 0);
+  const myApprovedCount =
+    cell.myReservationStatus === "APPROVED" ? Math.min(1, capacity) : 0;
+  const approvedOtherCount = Math.min(
+    Math.max(cell.approvedCount - myApprovedCount, 0),
+    Math.max(capacity - myApprovedCount, 0),
+  );
   const freeCount = Math.max(
-    cell.capacity - myApprovedCount - approvedOtherCount,
+    capacity - myApprovedCount - approvedOtherCount,
     0,
   );
 
@@ -193,17 +198,12 @@ function buildCapacityDots(cell: CellState): CapacityDotTone[] {
     ...Array<CapacityDotTone>(myApprovedCount).fill("mine"),
     ...Array<CapacityDotTone>(freeCount).fill("free"),
     ...Array<CapacityDotTone>(approvedOtherCount).fill("approved"),
-    ...Array<CapacityDotTone>(cell.pendingCount).fill("pending"),
   ];
 }
 
 function getCapacityDotClass(tone: CapacityDotTone): string {
   if (tone === "mine") {
     return "border-sky-600 bg-sky-500";
-  }
-
-  if (tone === "pending") {
-    return "border-amber-500 bg-amber-400";
   }
 
   if (tone === "approved") {
@@ -233,6 +233,31 @@ function CapacityDots({ cell }: { cell: CellState }) {
       {dots.map((tone, index) => (
         <CapacityDot key={`${tone}-${index}`} tone={tone} />
       ))}
+    </span>
+  );
+}
+
+function PendingRequestsBadge({
+  className,
+  count,
+}: {
+  className?: string;
+  count: number;
+}) {
+  if (count <= 0) {
+    return null;
+  }
+
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "inline-flex h-5 min-w-5 shrink-0 items-center justify-center gap-0.5 rounded-full border border-amber-300 bg-amber-100 px-1.5 text-[10px] font-semibold leading-none text-amber-800 shadow-sm",
+        className,
+      )}
+    >
+      <Hourglass className="h-3 w-3" />
+      <span>{formatPersianNumber(count)}</span>
     </span>
   );
 }
@@ -466,23 +491,19 @@ function CalendarLegend() {
     >
       <span className="inline-flex items-center gap-1.5">
         <CapacityDot tone="free" />
-        آزاد
-      </span>
-      <span className="inline-flex items-center gap-1.5">
-        <CapacityDot tone="pending" />
-        در انتظار تایید
+        ظرفیت آزاد
       </span>
       <span className="inline-flex items-center gap-1.5">
         <CapacityDot tone="mine" />
-        رزرو شما
+        رزرو تاییدشده شما
       </span>
       <span className="inline-flex items-center gap-1.5">
         <CapacityDot tone="approved" />
-        رزروشده
+        رزرو تاییدشده
       </span>
       <span className="inline-flex items-center gap-1.5">
-        <Hourglass aria-hidden="true" className="h-3.5 w-3.5 text-amber-600" />
-        درخواست شما
+        <PendingRequestsBadge count={1} />
+        درخواست در انتظار
       </span>
     </div>
   );
@@ -1012,16 +1033,13 @@ export function CreateReservationForm({
                               {cell.isWorkingHour &&
                               !day.closedReason &&
                               cell.unavailableReason !== "past" ? (
-                                <CapacityDots cell={cell} />
-                              ) : null}
-
-                              {cell.myReservationStatus === "PENDING" ||
-                              cell.myReservationStatus ===
-                                "ALTERNATIVE_PROPOSED" ? (
-                                <Hourglass
-                                  aria-hidden="true"
-                                  className="absolute right-2 top-1.5 z-10 h-3.5 w-3.5 text-amber-600"
-                                />
+                                <>
+                                  <CapacityDots cell={cell} />
+                                  <PendingRequestsBadge
+                                    className="absolute right-2 top-1.5 z-10"
+                                    count={cell.pendingCount}
+                                  />
+                                </>
                               ) : null}
 
                               {!cell.isWorkingHour ? (
