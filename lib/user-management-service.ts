@@ -7,6 +7,17 @@ import { hashPassword } from "@/lib/password";
 
 type DbClient = typeof db | Prisma.TransactionClient;
 
+const ldapProvisionedPasswordHash = "ldap-provisioned";
+
+const managedUserSelect = {
+  id: true,
+  name: true,
+  email: true,
+  role: true,
+  active: true,
+  canViewLunchReport: true,
+} satisfies Prisma.UserSelect;
+
 export class UserManagementError extends Error {
   constructor(message: string) {
     super(message);
@@ -31,6 +42,10 @@ function normalizeEmail(email: string): string {
 
 function normalizeName(name: string): string {
   return name.trim();
+}
+
+function getFallbackName(email: string): string {
+  return email.split("@")[0] || email;
 }
 
 function assertPassword(password: string): void {
@@ -90,6 +105,49 @@ export async function createManagedUser(input: {
         entityId: user.id,
         action: "USER_CREATED",
         newValue: user,
+      },
+    });
+
+    return user;
+  });
+}
+
+export async function findOrProvisionLdapUser(input: {
+  email: string;
+  name?: string;
+}) {
+  const email = normalizeEmail(input.email);
+  const name = normalizeName(input.name ?? "") || getFallbackName(email);
+
+  return db.$transaction(async (tx) => {
+    const current = await tx.user.findUnique({
+      where: { email },
+      select: managedUserSelect,
+    });
+
+    if (current) {
+      return current.active ? current : null;
+    }
+
+    const user = await tx.user.create({
+      data: {
+        name,
+        email,
+        passwordHash: ldapProvisionedPasswordHash,
+        role: UserRole.USER,
+      },
+      select: managedUserSelect,
+    });
+
+    await tx.auditLog.create({
+      data: {
+        entityType: "User",
+        entityId: user.id,
+        action: "USER_CREATED",
+        newValue: {
+          ...user,
+          source: "LDAP",
+        },
       },
     });
 

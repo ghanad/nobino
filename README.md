@@ -182,9 +182,12 @@ Use `.env.example` as the source of truth for required settings:
   explicitly changes scheduling policy.
 - `NEXT_PUBLIC_APP_NAME`: display name used by the app shell.
 
-LDAP authentication only validates the password against LDAP. Users still must
-exist in Nobino's `User` table, and Nobino continues to use the local `role` and
-`active` fields for authorization and access control.
+LDAP authentication validates the password against LDAP. When an LDAP login is
+successful for an email that does not exist in Nobino yet, Nobino creates an
+active `USER` account automatically. Existing disabled/deleted Nobino users stay
+blocked even if LDAP accepts their password. Nobino continues to use the local
+`role`, `active`, and `canViewLunchReport` fields for authorization and access
+control, so manager/admin access still must be assigned in the admin UI.
 
 ## Production Deployment
 
@@ -210,7 +213,7 @@ To enable LDAP in compose, pass the company settings as environment variables:
 
 ```bash
 AUTH_SECRET="replace-with-a-long-random-secret" \
-AUTH_PROVIDER="ldap" \
+AUTH_PROVIDER="hybrid" \
 LDAP_URL="ldaps://ldap.example.com:636" \
 LDAP_BASE_DN="dc=example,dc=com" \
 LDAP_BIND_DN="cn=nobino,ou=Service Accounts,dc=example,dc=com" \

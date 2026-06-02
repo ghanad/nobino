@@ -38,6 +38,7 @@ import {
 } from "@/lib/schedule";
 import {
   deleteManagedUser,
+  findOrProvisionLdapUser,
   UserManagementError,
 } from "@/lib/user-management-service";
 
@@ -989,6 +990,65 @@ test("admin cannot set daily capacity below approved usage for that day", async 
       reason: "Two systems are under repair.",
     }),
   );
+});
+
+test("ldap-authenticated users are provisioned with the default user role", async () => {
+  const user = await findOrProvisionLdapUser({
+    email: "new-user@example.test",
+    name: "New LDAP User",
+  });
+
+  const [storedUser, auditLog] = await Promise.all([
+    db.user.findUnique({
+      where: { email: "new-user@example.test" },
+      select: {
+        active: true,
+        canViewLunchReport: true,
+        name: true,
+        passwordHash: true,
+        role: true,
+      },
+    }),
+    db.auditLog.findFirst({
+      where: {
+        entityId: user?.id,
+        action: "USER_CREATED",
+      },
+    }),
+  ]);
+
+  assert.equal(user?.active, true);
+  assert.equal(user?.role, UserRole.USER);
+  assert.equal(storedUser?.active, true);
+  assert.equal(storedUser?.canViewLunchReport, false);
+  assert.equal(storedUser?.name, "New LDAP User");
+  assert.equal(storedUser?.passwordHash, "ldap-provisioned");
+  assert.equal(storedUser?.role, UserRole.USER);
+  assert.equal(auditLog?.actorUserId, null);
+});
+
+test("ldap provisioning preserves disabled user access control", async () => {
+  await db.user.update({
+    where: { id: secondUserId },
+    data: {
+      active: false,
+      deletedAt: new Date(),
+    },
+  });
+
+  const user = await findOrProvisionLdapUser({
+    email: "second@example.test",
+    name: "Second User",
+  });
+
+  const storedUser = await db.user.findUnique({
+    where: { id: secondUserId },
+    select: { active: true, deletedAt: true },
+  });
+
+  assert.equal(user, null);
+  assert.equal(storedUser?.active, false);
+  assert.ok(storedUser?.deletedAt);
 });
 
 test("admin can delete a managed user without removing reservation history", async () => {
