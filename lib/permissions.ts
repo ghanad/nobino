@@ -1,5 +1,7 @@
 import type { UserRole } from "@prisma/client";
 
+import type { CurrentUser } from "@/lib/auth";
+
 export function isManagerOrAdmin(role: UserRole): boolean {
   return role === "MANAGER" || role === "ADMIN";
 }
@@ -14,4 +16,10 @@ export function canAccessManagerArea(role: UserRole): boolean {
 
 export function canAccessAdminArea(role: UserRole): boolean {
   return isAdmin(role);
+}
+
+export function canAccessLunchReport(
+  user: Pick<CurrentUser, "role" | "canViewLunchReport">,
+): boolean {
+  return isManagerOrAdmin(user.role) || user.canViewLunchReport;
 }

@@ -72,6 +72,7 @@ export default async function UserDetailPage({
       email: true,
       role: true,
       active: true,
+      canViewLunchReport: true,
       deletedAt: true,
       createdAt: true,
     },
@@ -147,7 +148,7 @@ export default async function UserDetailPage({
 
         <form
           action={updateUserAction}
-          className="mt-5 grid gap-4 lg:grid-cols-[1fr_1.2fr_160px_minmax(190px,0.7fr)_auto] lg:items-end"
+          className="mt-5 grid gap-4 lg:grid-cols-[1fr_1.2fr_160px_minmax(190px,0.7fr)_minmax(210px,0.8fr)_auto] lg:items-end"
         >
           <input name="redirectPath" type="hidden" value={redirectPath} />
           <input name="userId" type="hidden" value={user.id} />
@@ -197,6 +198,20 @@ export default async function UserDetailPage({
               </p>
             ) : null}
           </div>
+          <label className="flex min-h-10 flex-col justify-center gap-1 rounded-md border bg-background px-3 py-2 text-sm font-medium">
+            <span className="flex items-center gap-2">
+              <input
+                className="h-4 w-4 rounded border-input"
+                defaultChecked={user.canViewLunchReport}
+                name="canViewLunchReport"
+                type="checkbox"
+              />
+              دسترسی گزارش ناهار
+            </span>
+            <span className="text-xs font-normal leading-5 text-muted-foreground">
+              کاربر عادی فقط با این دسترسی گزارش روزانه را می‌بیند.
+            </span>
+          </label>
           <Button className="w-full lg:w-auto" type="submit">
             <Save className="h-4 w-4" />
             ذخیره

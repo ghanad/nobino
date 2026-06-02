@@ -1,0 +1,1 @@
+ALTER TABLE "User" ADD COLUMN "canViewLunchReport" BOOLEAN NOT NULL DEFAULT false;

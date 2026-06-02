@@ -29,6 +29,12 @@ enum AlternativeStatus {
   EXPIRED
 }
 
+enum LunchReservationStatus {
+  ACTIVE
+  CANCELLED_BY_USER
+  CANCELLED_BY_ADMIN
+}
+
 model User {
   id           String   @id @default(cuid())
   name         String
@@ -36,11 +42,13 @@ model User {
   passwordHash String
   role         UserRole @default(USER)
   active       Boolean  @default(true)
+  canViewLunchReport Boolean @default(false)
   deletedAt    DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   reservations              Reservation[]                   @relation("ReservationUser")
+  lunchReservations         LunchReservation[]              @relation("LunchReservationUser")
   approvedReservations      Reservation[]                   @relation("ReservationApprover")
   cancelledReservations     Reservation[]                   @relation("ReservationCanceller")
   proposedAlternatives      ReservationAlternative[]        @relation("AlternativeProposer")
@@ -106,6 +114,67 @@ model ReservationPolicy {
   oneReservationPerDayEnabled Boolean  @default(true)
   createdAt                   DateTime @default(now())
   updatedAt                   DateTime @updatedAt
+}
+
+model LunchSettings {
+  id             String   @id @default("default")
+  maxAdvanceDays Int      @default(7)
+  cutoffTime     String   @default("23:59")
+  enabled        Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model LunchLocation {
+  id        String   @id @default(cuid())
+  name      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reservations LunchReservation[]
+
+  @@unique([name])
+  @@index([active])
+}
+
+model LunchWeeklySchedule {
+  id           String   @id @default(cuid())
+  /// Uses JavaScript Date.getDay(): Sunday=0, Monday=1, ..., Friday=5, Saturday=6.
+  dayOfWeek    Int      @unique
+  isServiceDay Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model LunchException {
+  id           String   @id @default(cuid())
+  date         DateTime @unique
+  isServiceDay Boolean
+  reason       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([date])
+}
+
+model LunchReservation {
+  id            String                 @id @default(cuid())
+  userId        String
+  locationId    String
+  date          DateTime
+  status        LunchReservationStatus @default(ACTIVE)
+  cancelledAt   DateTime?
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+
+  user          User                   @relation("LunchReservationUser", fields: [userId], references: [id])
+  location      LunchLocation          @relation(fields: [locationId], references: [id])
+  notifications Notification[]
+
+  @@index([userId, date])
+  @@index([locationId, date])
+  @@index([status, date])
 }
 
 model Reservation {
@@ -176,6 +245,7 @@ model Notification {
   id            String    @id @default(cuid())
   userId        String
   reservationId String?
+  lunchReservationId String?
   type          String
   title         String
   body          String
@@ -184,7 +254,9 @@ model Notification {
 
   user        User         @relation("NotificationUser", fields: [userId], references: [id])
   reservation Reservation? @relation(fields: [reservationId], references: [id])
+  lunchReservation LunchReservation? @relation(fields: [lunchReservationId], references: [id])
 
   @@index([userId, readAt])
   @@index([reservationId])
+  @@index([lunchReservationId])
 }

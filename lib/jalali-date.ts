@@ -130,6 +130,10 @@ export function formatLocalTime(date: Date): string {
   return TIME_FORMATTER.format(date);
 }
 
+export function formatPersianLocalTime(date: Date): string {
+  return DISPLAY_TIME_FORMATTER.format(date);
+}
+
 export function parseJalaliDateParam(value: string | undefined): Date | null {
   if (!value) {
     return null;

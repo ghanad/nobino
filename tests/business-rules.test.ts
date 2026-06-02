@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { after, beforeEach, test } from "node:test";
 
 import {
+  LunchReservationStatus,
   PrismaClient,
   ReservationStatus,
   UserRole,
@@ -14,6 +15,12 @@ import {
   updateResourcePoolSettings,
 } from "@/lib/admin-settings-service";
 import { CapacityUnavailableError, getSlotUsage } from "@/lib/capacity-service";
+import {
+  cancelLunchReservationByUser,
+  createLunchReservation,
+  LunchReservationError,
+  updateLunchReservationLocation,
+} from "@/lib/lunch-service";
 import {
   approveReservation,
   cancelReservationByManager,
@@ -38,6 +45,8 @@ const db = new PrismaClient();
 
 const passwordHash = "test-password-hash";
 const poolId = "company-systems";
+const lunchLocationId = "building-a";
+const secondLunchLocationId = "building-b";
 const userId = "normal-user";
 const secondUserId = "second-user";
 const managerId = "manager-user";
@@ -69,6 +78,13 @@ function previousWorkingDateAtHour(hour: number): Date {
 
 function addHours(date: Date, hours: number): Date {
   return new Date(date.getTime() + hours * 60 * 60 * 1000);
+}
+
+function addDays(date: Date, days: number): Date {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+
+  return next;
 }
 
 function startOfLocalDay(date: Date): Date {
@@ -105,6 +121,11 @@ async function markDateWorkingForTest(date: Date) {
 async function resetDatabase() {
   await db.notification.deleteMany();
   await db.auditLog.deleteMany();
+  await db.lunchReservation.deleteMany();
+  await db.lunchLocation.deleteMany();
+  await db.lunchException.deleteMany();
+  await db.lunchWeeklySchedule.deleteMany();
+  await db.lunchSettings.deleteMany();
   await db.reservationAlternative.deleteMany();
   await db.reservation.deleteMany();
   await db.resourcePoolCapacityException.deleteMany();
@@ -171,6 +192,37 @@ async function resetDatabase() {
       startTime: "09:00",
       endTime: "17:00",
     })),
+  });
+
+  await db.lunchSettings.create({
+    data: {
+      id: "default",
+      enabled: true,
+      maxAdvanceDays: 7,
+      cutoffTime: "23:59",
+    },
+  });
+
+  await db.lunchWeeklySchedule.createMany({
+    data: Array.from({ length: 7 }, (_, dayOfWeek) => ({
+      dayOfWeek,
+      isServiceDay: dayOfWeek !== 5,
+    })),
+  });
+
+  await db.lunchLocation.createMany({
+    data: [
+      {
+        id: lunchLocationId,
+        name: "Building A",
+        active: true,
+      },
+      {
+        id: secondLunchLocationId,
+        name: "Building B",
+        active: true,
+      },
+    ],
   });
 }
 
@@ -252,6 +304,99 @@ test("approved reservations consume capacity", async () => {
 
   assert.equal(usage[0].approvedCount, 1);
   assert.equal(usage[0].pendingCount, 0);
+});
+
+test("lunch reservation closes after the previous-day cutoff", async () => {
+  const targetDate = nextWorkingDateAtHour(12);
+  const cutoffPassed = addDays(startOfLocalDay(targetDate), -1);
+  cutoffPassed.setHours(23, 59, 1, 0);
+
+  await assert.rejects(
+    () =>
+      createLunchReservation({
+        userId,
+        locationId: lunchLocationId,
+        date: targetDate,
+        now: cutoffPassed,
+      }),
+    LunchReservationError,
+  );
+});
+
+test("users can have only one active lunch reservation per day", async () => {
+  const targetDate = nextWorkingDateAtHour(12);
+  const beforeCutoff = addDays(startOfLocalDay(targetDate), -1);
+  beforeCutoff.setHours(12, 0, 0, 0);
+
+  await createLunchReservation({
+    userId,
+    locationId: lunchLocationId,
+    date: targetDate,
+    now: beforeCutoff,
+  });
+
+  await assert.rejects(
+    () =>
+      createLunchReservation({
+        userId,
+        locationId: secondLunchLocationId,
+        date: targetDate,
+        now: beforeCutoff,
+      }),
+    LunchReservationError,
+  );
+});
+
+test("users can change or cancel their own lunch reservation before cutoff", async () => {
+  const targetDate = nextWorkingDateAtHour(12);
+  const beforeCutoff = addDays(startOfLocalDay(targetDate), -1);
+  beforeCutoff.setHours(12, 0, 0, 0);
+
+  const reservation = await createLunchReservation({
+    userId,
+    locationId: lunchLocationId,
+    date: targetDate,
+    now: beforeCutoff,
+  });
+
+  const updated = await updateLunchReservationLocation({
+    reservationId: reservation.id,
+    userId,
+    locationId: secondLunchLocationId,
+    now: beforeCutoff,
+  });
+
+  assert.equal(updated.locationId, secondLunchLocationId);
+
+  const cancelled = await cancelLunchReservationByUser({
+    reservationId: reservation.id,
+    userId,
+    now: beforeCutoff,
+  });
+
+  assert.equal(cancelled.status, LunchReservationStatus.CANCELLED_BY_USER);
+});
+
+test("friday lunch is disabled by default", async () => {
+  const targetDate = nextWorkingDateAtHour(12);
+
+  while (targetDate.getDay() !== 5) {
+    targetDate.setDate(targetDate.getDate() + 1);
+  }
+
+  const beforeCutoff = addDays(startOfLocalDay(targetDate), -1);
+  beforeCutoff.setHours(12, 0, 0, 0);
+
+  await assert.rejects(
+    () =>
+      createLunchReservation({
+        userId,
+        locationId: lunchLocationId,
+        date: targetDate,
+        now: beforeCutoff,
+      }),
+    LunchReservationError,
+  );
 });
 
 test("approval fails when any requested hour is already full", async () => {

@@ -226,6 +226,7 @@ export function UserManagement({
     email: string;
     role: UserRole;
     active: boolean;
+    canViewLunchReport: boolean;
     createdAt: Date;
   }>;
 }) {
@@ -317,6 +318,11 @@ export function UserManagement({
                     >
                       {user.active ? "فعال" : "غیرفعال"}
                     </span>
+                    {user.canViewLunchReport ? (
+                      <span className="inline-flex h-6 items-center rounded-full bg-cyan-50 px-2 text-xs font-medium text-cyan-800">
+                        گزارش ناهار
+                      </span>
+                    ) : null}
                   </div>
                   <p className="mt-1 flex items-center gap-1.5 truncate text-sm text-muted-foreground">
                     <Mail className="h-3.5 w-3.5 shrink-0" />

@@ -33,6 +33,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       email: true,
       role: true,
       active: true,
+      canViewLunchReport: true,
       createdAt: true,
     },
   });

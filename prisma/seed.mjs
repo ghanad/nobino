@@ -95,6 +95,42 @@ async function main() {
       create: day,
     });
   }
+
+  await prisma.lunchSettings.upsert({
+    where: { id: "default" },
+    update: {
+      enabled: true,
+      maxAdvanceDays: 7,
+      cutoffTime: "23:59",
+    },
+    create: {
+      id: "default",
+      enabled: true,
+      maxAdvanceDays: 7,
+      cutoffTime: "23:59",
+    },
+  });
+
+  for (const dayOfWeek of Array.from({ length: 7 }, (_, index) => index)) {
+    await prisma.lunchWeeklySchedule.upsert({
+      where: { dayOfWeek },
+      update: {
+        isServiceDay: dayOfWeek !== 5,
+      },
+      create: {
+        dayOfWeek,
+        isServiceDay: dayOfWeek !== 5,
+      },
+    });
+  }
+
+  for (const name of ["ساختمان A", "ساختمان B"]) {
+    await prisma.lunchLocation.upsert({
+      where: { name },
+      update: { active: true },
+      create: { name, active: true },
+    });
+  }
 }
 
 main()

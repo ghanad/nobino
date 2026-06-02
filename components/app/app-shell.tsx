@@ -7,7 +7,11 @@ import {
   getLatestUnreadNotification,
   getUnreadNotificationCount,
 } from "@/lib/notification-service";
-import { canAccessAdminArea, canAccessManagerArea } from "@/lib/permissions";
+import {
+  canAccessAdminArea,
+  canAccessLunchReport,
+  canAccessManagerArea,
+} from "@/lib/permissions";
 
 type AppShellProps = {
   user: CurrentUser;
@@ -17,8 +21,17 @@ type AppShellProps = {
 function getNavItems(user: CurrentUser): GlobalNavItem[] {
   const navItems: GlobalNavItem[] = [
     { href: "/reservations", label: "رزروها", match: "prefix" },
+    { href: "/lunch", label: "ناهار", match: "exact" },
     { href: "/notifications", label: "اعلان‌ها", match: "prefix" },
   ];
+
+  if (canAccessLunchReport(user)) {
+    navItems.push({
+      href: "/lunch/report",
+      label: "گزارش ناهار",
+      match: "prefix",
+    });
+  }
 
   if (canAccessManagerArea(user.role)) {
     navItems.push({
@@ -38,6 +51,7 @@ function getNavItems(user: CurrentUser): GlobalNavItem[] {
           { href: "/admin", label: "کاربران", match: "exact" },
           { href: "/admin/capacity", label: "ظرفیت", match: "prefix" },
           { href: "/admin/schedule", label: "زمان‌بندی", match: "prefix" },
+          { href: "/admin/lunch", label: "ناهار", match: "prefix" },
         ],
       },
       {

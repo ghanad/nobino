@@ -103,6 +103,7 @@ export async function updateManagedUser(input: {
   name: string;
   role: UserRole;
   active: boolean;
+  canViewLunchReport: boolean;
 }) {
   const name = normalizeName(input.name);
 
@@ -121,6 +122,7 @@ export async function updateManagedUser(input: {
         email: true,
         role: true,
         active: true,
+        canViewLunchReport: true,
       },
     });
 
@@ -138,6 +140,7 @@ export async function updateManagedUser(input: {
         name,
         role: input.role,
         active: input.active,
+        canViewLunchReport: input.canViewLunchReport,
       },
       select: {
         id: true,
@@ -145,6 +148,7 @@ export async function updateManagedUser(input: {
         email: true,
         role: true,
         active: true,
+        canViewLunchReport: true,
       },
     });
 
