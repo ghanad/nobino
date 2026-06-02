@@ -17,8 +17,17 @@ export type GlobalNavItem = {
 
 type GlobalNavProps = {
   navItems: GlobalNavItem[];
+  recentNotifications: NavNotification[];
   unreadNotificationCount: number;
   userName: string | null;
+};
+
+type NavNotification = {
+  body: string;
+  createdAtLabel: string;
+  id: string;
+  isUnread: boolean;
+  title: string;
 };
 
 const PERSIAN_NUMBER_FORMATTER = new Intl.NumberFormat("fa-IR");
@@ -112,12 +121,18 @@ function NavLink({
 }
 
 function NotificationLink({
+  enablePopover,
   pathname,
+  recentNotifications,
   unreadNotificationCount,
 }: {
+  enablePopover: boolean;
   pathname: string;
+  recentNotifications: NavNotification[];
   unreadNotificationCount: number;
 }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const popoverRef = useRef<HTMLDivElement>(null);
   const isActive =
     pathname === "/notifications" || pathname.startsWith("/notifications/");
   const unreadLabel =
@@ -125,26 +140,142 @@ function NotificationLink({
       ? `${PERSIAN_NUMBER_FORMATTER.format(unreadNotificationCount)} اعلان خوانده‌نشده`
       : "اعلان‌ها";
 
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      if (
+        popoverRef.current &&
+        event.target instanceof Node &&
+        !popoverRef.current.contains(event.target)
+      ) {
+        setIsOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
+
+  if (!enablePopover) {
+    return (
+      <Link
+        aria-current={isActive ? "page" : undefined}
+        aria-label={unreadLabel}
+        className={cn(
+          "relative inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors",
+          isActive
+            ? "border-slate-200 bg-slate-100 text-slate-950"
+            : "border-transparent text-slate-700 hover:bg-slate-50 hover:text-slate-950",
+        )}
+        href="/notifications"
+        title={unreadLabel}
+      >
+        <Bell className="h-4 w-4" />
+        {unreadNotificationCount > 0 ? (
+          <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-red-600 px-1 py-0.5 text-center text-[10px] font-semibold leading-none text-white ring-2 ring-card">
+            {PERSIAN_NUMBER_FORMATTER.format(unreadNotificationCount)}
+          </span>
+        ) : null}
+      </Link>
+    );
+  }
+
   return (
-    <Link
-      aria-current={isActive ? "page" : undefined}
-      aria-label={unreadLabel}
-      className={cn(
-        "relative inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors",
-        isActive
-          ? "border-slate-200 bg-slate-100 text-slate-950"
-          : "border-transparent text-slate-700 hover:bg-slate-50 hover:text-slate-950",
-      )}
-      href="/notifications"
-      title={unreadLabel}
-    >
-      <Bell className="h-4 w-4" />
-      {unreadNotificationCount > 0 ? (
-        <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-red-600 px-1 py-0.5 text-center text-[10px] font-semibold leading-none text-white ring-2 ring-card">
-          {PERSIAN_NUMBER_FORMATTER.format(unreadNotificationCount)}
-        </span>
+    <div className="relative" ref={popoverRef}>
+      <button
+        aria-current={isActive ? "page" : undefined}
+        aria-expanded={isOpen}
+        aria-label={unreadLabel}
+        className={cn(
+          "relative inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border transition-colors",
+          isActive || isOpen
+            ? "border-slate-200 bg-slate-100 text-slate-950"
+            : "border-transparent text-slate-700 hover:bg-slate-50 hover:text-slate-950",
+        )}
+        onClick={() => setIsOpen((current) => !current)}
+        title={unreadLabel}
+        type="button"
+      >
+        <Bell className="h-4 w-4" />
+        {unreadNotificationCount > 0 ? (
+          <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-red-600 px-1 py-0.5 text-center text-[10px] font-semibold leading-none text-white ring-2 ring-card">
+            {PERSIAN_NUMBER_FORMATTER.format(unreadNotificationCount)}
+          </span>
+        ) : null}
+      </button>
+
+      {isOpen ? (
+        <div className="absolute left-0 z-30 mt-2 w-80 rounded-lg border border-slate-200 bg-card text-right text-card-foreground shadow-lg">
+          <div className="flex items-start justify-between gap-3 border-b px-4 py-3">
+            <div>
+              <p className="text-sm font-medium">اعلان‌ها</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {unreadNotificationCount > 0
+                  ? `${PERSIAN_NUMBER_FORMATTER.format(unreadNotificationCount)} خوانده‌نشده`
+                  : "اعلان خوانده‌نشده‌ای ندارید"}
+              </p>
+            </div>
+            <Link
+              className="text-xs font-medium text-primary hover:underline"
+              href="/notifications"
+              onClick={() => setIsOpen(false)}
+            >
+              مشاهده همه
+            </Link>
+          </div>
+
+          {recentNotifications.length > 0 ? (
+            <div className="max-h-80 overflow-y-auto p-1">
+              {recentNotifications.map((notification) => (
+                <Link
+                  className="block rounded-md px-3 py-2.5 transition-colors hover:bg-slate-50"
+                  href="/notifications"
+                  key={notification.id}
+                  onClick={() => setIsOpen(false)}
+                >
+                  <div className="flex items-start gap-2">
+                    {notification.isUnread ? (
+                      <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-sky-600" />
+                    ) : (
+                      <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-transparent" />
+                    )}
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">
+                        {notification.title}
+                      </p>
+                      <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">
+                        {notification.body}
+                      </p>
+                      <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
+                        {notification.createdAtLabel}
+                      </p>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="px-4 py-6 text-sm text-muted-foreground">
+              اعلانی وجود ندارد.
+            </div>
+          )}
+        </div>
       ) : null}
-    </Link>
+    </div>
   );
 }
 
@@ -227,6 +358,7 @@ function UserMenu({ userName }: { userName: string | null }) {
 
 export function GlobalNav({
   navItems,
+  recentNotifications,
   unreadNotificationCount,
   userName,
 }: GlobalNavProps) {
@@ -257,7 +389,9 @@ export function GlobalNav({
 
         <div className="hidden shrink-0 items-center gap-1.5 md:flex">
           <NotificationLink
+            enablePopover
             pathname={pathname}
+            recentNotifications={recentNotifications}
             unreadNotificationCount={unreadNotificationCount}
           />
           <UserMenu userName={userName} />
@@ -265,7 +399,9 @@ export function GlobalNav({
 
         <div className="flex items-center gap-2 md:hidden">
           <NotificationLink
+            enablePopover={false}
             pathname={pathname}
+            recentNotifications={recentNotifications}
             unreadNotificationCount={unreadNotificationCount}
           />
           <UserMenu userName={userName} />

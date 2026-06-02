@@ -5,6 +5,7 @@ import { UnreadNotificationToast } from "@/components/ui/unread-notification-toa
 import type { CurrentUser } from "@/lib/auth";
 import {
   getLatestUnreadNotification,
+  getRecentNotificationsForNav,
   getUnreadNotificationCount,
 } from "@/lib/notification-service";
 import {
@@ -65,9 +66,14 @@ function getNavItems(user: CurrentUser): GlobalNavItem[] {
 }
 
 export async function AppShell({ user, children }: AppShellProps) {
-  const [unreadNotificationCount, latestUnreadNotification] = await Promise.all([
+  const [
+    unreadNotificationCount,
+    latestUnreadNotification,
+    recentNotifications,
+  ] = await Promise.all([
     getUnreadNotificationCount(user.id),
     getLatestUnreadNotification(user.id),
+    getRecentNotificationsForNav(user.id),
   ]);
 
   return (
@@ -76,6 +82,7 @@ export async function AppShell({ user, children }: AppShellProps) {
       <header className="border-b bg-card" dir="rtl">
         <GlobalNav
           navItems={getNavItems(user)}
+          recentNotifications={recentNotifications}
           unreadNotificationCount={unreadNotificationCount}
           userName={user.name}
         />

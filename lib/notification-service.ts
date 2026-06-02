@@ -3,6 +3,7 @@ import "server-only";
 import type { Prisma } from "@prisma/client";
 
 import { db } from "@/lib/db";
+import { formatJalaliDateTime } from "@/lib/jalali-date";
 
 type DbClient = typeof db | Prisma.TransactionClient;
 
@@ -101,6 +102,32 @@ export async function getLatestUnreadNotification(
     id: notification.id,
     ...getNotificationDisplayText(notification),
   };
+}
+
+export async function getRecentNotificationsForNav(
+  userId: string,
+  client: DbClient = db,
+) {
+  const notifications = await client.notification.findMany({
+    where: { userId },
+    orderBy: [{ readAt: "asc" }, { createdAt: "desc" }],
+    take: 5,
+    select: {
+      id: true,
+      type: true,
+      title: true,
+      body: true,
+      readAt: true,
+      createdAt: true,
+    },
+  });
+
+  return notifications.map((notification) => ({
+    id: notification.id,
+    createdAtLabel: formatJalaliDateTime(notification.createdAt),
+    isUnread: !notification.readAt,
+    ...getNotificationDisplayText(notification),
+  }));
 }
 
 export async function markNotificationAsRead(input: {
