@@ -1,9 +1,10 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireCurrentUser } from "@/lib/auth";
+import { db } from "@/lib/db";
 import {
   buildLocalDateAtHourFromJalali,
   isValidJalaliDateParam,
@@ -28,19 +29,24 @@ const cancelLunchReservationSchema = z.object({
   reservationId: z.string().min(1),
 });
 
-function redirectToLunch(params: Record<string, string | undefined>): never {
-  const searchParams = new URLSearchParams();
-
-  for (const [key, value] of Object.entries(params)) {
-    if (value) {
-      searchParams.set(key, value);
-    }
-  }
-
-  const query = searchParams.toString();
-
-  redirect(query ? `/lunch?${query}` : "/lunch");
-}
+export type LunchActionState = {
+  message: string;
+  mutation?:
+    | {
+        dateParam: string;
+        reservation: {
+          id: string;
+          locationId: string;
+          locationName: string;
+        };
+        type: "create" | "update";
+      }
+    | {
+        reservationId: string;
+        type: "cancel";
+      };
+  status: "error" | "idle" | "success";
+};
 
 function getActionErrorMessage(error: unknown): string {
   if (error instanceof LunchReservationError) {
@@ -50,9 +56,27 @@ function getActionErrorMessage(error: unknown): string {
   throw error;
 }
 
+function createActionState(
+  status: LunchActionState["status"],
+  message: string,
+  mutation?: LunchActionState["mutation"],
+): LunchActionState {
+  return { message, mutation, status };
+}
+
+async function getLocationName(locationId: string): Promise<string> {
+  const location = await db.lunchLocation.findUnique({
+    where: { id: locationId },
+    select: { name: true },
+  });
+
+  return location?.name ?? "";
+}
+
 export async function createLunchReservationAction(
+  _previousState: LunchActionState,
   formData: FormData,
-): Promise<void> {
+): Promise<LunchActionState> {
   const user = await requireCurrentUser();
   const parsed = lunchReservationSchema.safeParse({
     date: formData.get("date"),
@@ -60,25 +84,41 @@ export async function createLunchReservationAction(
   });
 
   if (!parsed.success) {
-    redirectToLunch({ error: "تاریخ یا ساختمان معتبر نیست." });
+    return createActionState("error", "تاریخ یا ساختمان معتبر نیست.");
   }
 
+  let reservation: {
+    id: string;
+    locationId: string;
+  };
+
   try {
-    await createLunchReservation({
+    reservation = await createLunchReservation({
       userId: user.id,
       locationId: parsed.data.locationId,
       date: buildLocalDateAtHourFromJalali(parsed.data.date, 0),
     });
   } catch (error) {
-    redirectToLunch({ error: getActionErrorMessage(error) });
+    return createActionState("error", getActionErrorMessage(error));
   }
 
-  redirectToLunch({ reserved: "1" });
+  revalidatePath("/lunch");
+
+  return createActionState("success", "رزرو ناهار ثبت شد.", {
+    dateParam: parsed.data.date,
+    reservation: {
+      id: reservation.id,
+      locationId: reservation.locationId,
+      locationName: await getLocationName(reservation.locationId),
+    },
+    type: "create",
+  });
 }
 
 export async function updateLunchReservationAction(
+  _previousState: LunchActionState,
   formData: FormData,
-): Promise<void> {
+): Promise<LunchActionState> {
   const user = await requireCurrentUser();
   const parsed = updateLunchReservationSchema.safeParse({
     reservationId: formData.get("reservationId"),
@@ -87,32 +127,48 @@ export async function updateLunchReservationAction(
   });
 
   if (!parsed.success) {
-    redirectToLunch({ error: "رزرو یا ساختمان معتبر نیست." });
+    return createActionState("error", "رزرو یا ساختمان معتبر نیست.");
   }
 
+  let reservation: {
+    id: string;
+    locationId: string;
+  };
+
   try {
-    await updateLunchReservationLocation({
+    reservation = await updateLunchReservationLocation({
       reservationId: parsed.data.reservationId,
       userId: user.id,
       locationId: parsed.data.locationId,
     });
   } catch (error) {
-    redirectToLunch({ error: getActionErrorMessage(error) });
+    return createActionState("error", getActionErrorMessage(error));
   }
 
-  redirectToLunch({ updated: "1" });
+  revalidatePath("/lunch");
+
+  return createActionState("success", "محل دریافت ناهار تغییر کرد.", {
+    dateParam: parsed.data.date,
+    reservation: {
+      id: reservation.id,
+      locationId: reservation.locationId,
+      locationName: await getLocationName(reservation.locationId),
+    },
+    type: "update",
+  });
 }
 
 export async function cancelLunchReservationAction(
+  _previousState: LunchActionState,
   formData: FormData,
-): Promise<void> {
+): Promise<LunchActionState> {
   const user = await requireCurrentUser();
   const parsed = cancelLunchReservationSchema.safeParse({
     reservationId: formData.get("reservationId"),
   });
 
   if (!parsed.success) {
-    redirectToLunch({ error: "رزرو معتبر نیست." });
+    return createActionState("error", "رزرو معتبر نیست.");
   }
 
   try {
@@ -121,8 +177,13 @@ export async function cancelLunchReservationAction(
       userId: user.id,
     });
   } catch (error) {
-    redirectToLunch({ error: getActionErrorMessage(error) });
+    return createActionState("error", getActionErrorMessage(error));
   }
 
-  redirectToLunch({ cancelled: "1" });
+  revalidatePath("/lunch");
+
+  return createActionState("success", "رزرو ناهار لغو شد.", {
+    reservationId: parsed.data.reservationId,
+    type: "cancel",
+  });
 }
