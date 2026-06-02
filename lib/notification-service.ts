@@ -57,6 +57,12 @@ const NOTIFICATION_BODY_LABELS: Record<string, string> = {
     "درخواست رزرو شما رد شد.",
 };
 
+const HIDDEN_FROM_FLOATING_TOAST_TYPES = [
+  "LUNCH_CANCELLED",
+  "LUNCH_RESERVED",
+  "LUNCH_UPDATED",
+];
+
 export function getNotificationDisplayText(notification: NotificationTextInput) {
   return {
     title: NOTIFICATION_TITLE_LABELS[notification.type] ?? notification.title,
@@ -84,6 +90,7 @@ export async function getLatestUnreadNotification(
     where: {
       userId,
       readAt: null,
+      type: { notIn: HIDDEN_FROM_FLOATING_TOAST_TYPES },
     },
     orderBy: { createdAt: "desc" },
     select: {

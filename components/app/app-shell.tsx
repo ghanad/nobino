@@ -22,18 +22,21 @@ type AppShellProps = {
 };
 
 function getNavItems(user: CurrentUser): GlobalNavItem[] {
+  const canViewLunchReport = canAccessLunchReport(user);
   const navItems: GlobalNavItem[] = [
     { href: "/reservations", label: "رزروها", match: "prefix" },
-    { href: "/lunch", label: "ناهار", match: "exact" },
+    {
+      href: "/lunch",
+      label: "ناهار",
+      match: "exact",
+      children: canViewLunchReport
+        ? [
+            { href: "/lunch", label: "رزرو ناهار", match: "exact" },
+            { href: "/lunch/report", label: "گزارش ناهار", match: "prefix" },
+          ]
+        : undefined,
+    },
   ];
-
-  if (canAccessLunchReport(user)) {
-    navItems.push({
-      href: "/lunch/report",
-      label: "گزارش ناهار",
-      match: "prefix",
-    });
-  }
 
   if (canAccessManagerArea(user.role)) {
     navItems.push({

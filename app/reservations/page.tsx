@@ -281,12 +281,11 @@ function getReservationsToast(
   }
 
   const successMessage =
-    (params?.created &&
-      "Reservation request created and sent for manager approval.") ||
-    (params?.cancelled && "Pending reservation cancelled.") ||
+    (params?.created && "درخواست رزرو ثبت شد و برای تایید مدیر ارسال شد.") ||
+    (params?.cancelled && "درخواست رزرو در انتظار تایید لغو شد.") ||
     (params?.alternativeAccepted &&
-      "Alternative accepted and reservation approved.") ||
-    (params?.alternativeRejected && "Alternative rejected.");
+      "زمان جایگزین پذیرفته شد و رزرو تایید شد.") ||
+    (params?.alternativeRejected && "زمان جایگزین رد شد.");
 
   if (!successMessage) {
     return null;
