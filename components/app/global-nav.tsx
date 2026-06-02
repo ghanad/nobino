@@ -64,30 +64,32 @@ function NavLink({
           <span>{item.label}</span>
           <ChevronDown className="h-3.5 w-3.5 text-slate-500 transition-transform group-hover:rotate-180 group-focus-within:rotate-180" />
         </Link>
-        <div
-          className="invisible absolute right-0 z-20 mt-1.5 w-40 rounded-md border border-slate-200 bg-card p-1 text-card-foreground opacity-0 shadow-sm transition-opacity group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100"
-          role="menu"
-        >
-          {item.children?.map((child) => {
-            const isChildActive = isActiveNavItem(pathname, child);
+        <div className="invisible absolute right-0 top-full z-20 w-40 pt-1.5 opacity-0 transition-opacity group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+          <div
+            className="rounded-md border border-slate-200 bg-card p-1 text-card-foreground shadow-sm"
+            role="menu"
+          >
+            {item.children?.map((child) => {
+              const isChildActive = isActiveNavItem(pathname, child);
 
-            return (
-              <Link
-                aria-current={isChildActive ? "page" : undefined}
-                className={cn(
-                  "flex h-8 items-center justify-start rounded-sm px-2 text-xs font-medium transition-colors",
-                  isChildActive
-                    ? "bg-slate-100 text-slate-950"
-                    : "text-slate-700 hover:bg-slate-50 hover:text-slate-950",
-                )}
-                href={child.href}
-                key={child.href}
-                role="menuitem"
-              >
-                {child.label}
-              </Link>
-            );
-          })}
+              return (
+                <Link
+                  aria-current={isChildActive ? "page" : undefined}
+                  className={cn(
+                    "flex h-8 items-center justify-start rounded-sm px-2 text-xs font-medium transition-colors",
+                    isChildActive
+                      ? "bg-slate-100 text-slate-950"
+                      : "text-slate-700 hover:bg-slate-50 hover:text-slate-950",
+                  )}
+                  href={child.href}
+                  key={child.href}
+                  role="menuitem"
+                >
+                  {child.label}
+                </Link>
+              );
+            })}
+          </div>
         </div>
       </div>
     );
