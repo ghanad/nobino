@@ -24,7 +24,7 @@ const iranSansX = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Nobino Reservations",
+  title: "Nobino",
   description: "Internal capacity-based reservation app",
 };
 

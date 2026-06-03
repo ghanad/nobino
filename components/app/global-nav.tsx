@@ -369,9 +369,9 @@ export function GlobalNav({
       <div className="flex items-center justify-between gap-3">
         <Link
           className="shrink-0 text-sm font-semibold tracking-normal text-slate-950"
-          href="/reservations"
+          href="/"
         >
-          Nobino Reservations
+          Nobino
         </Link>
 
         <nav

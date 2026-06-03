@@ -59,7 +59,7 @@ export async function loginAction(formData: FormData): Promise<void> {
     }
 
     await createSession(user.id);
-    redirect("/reservations");
+    redirect("/");
   }
 
   if (user && !user.active) {
@@ -72,7 +72,7 @@ export async function loginAction(formData: FormData): Promise<void> {
     (await verifyPassword(password, user.passwordHash))
   ) {
     await createSession(user.id);
-    redirect("/reservations");
+    redirect("/");
   }
 
   const ldapUser = await authenticateLdapUser(email, password);
@@ -93,7 +93,7 @@ export async function loginAction(formData: FormData): Promise<void> {
   }
 
   await createSession(sessionUser.id);
-  redirect("/reservations");
+  redirect("/");
 }
 
 export async function logoutAction(): Promise<void> {
