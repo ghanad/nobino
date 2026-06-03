@@ -28,7 +28,7 @@ type ResourcePoolOption = {
   name: string;
 };
 
-type RequestableSlot = {
+export type RequestableSlot = {
   slotStartHour: number;
   slotEndHour: number;
   approvedCount: number;
@@ -42,7 +42,7 @@ type RequestableSlot = {
   unavailableReason: "full" | "past" | null;
 };
 
-type WeekDay = {
+export type WeekDay = {
   closedReason: string | null;
   dateLabel: string;
   modalDateLabel: string;
@@ -51,7 +51,7 @@ type WeekDay = {
   slots: RequestableSlot[];
 };
 
-type CreateReservationFormProps = {
+export type CreateReservationFormProps = {
   action: (formData: FormData) => Promise<void>;
   currentDateParam: string;
   dailyActiveReservationCountByDate: Record<string, number>;
@@ -90,7 +90,7 @@ type CellState = {
 
 type CapacityDotTone = "approved" | "free" | "mine";
 
-type SlotReservationDetail = {
+export type SlotReservationDetail = {
   email: string | null;
   id: string;
   partySize: number;

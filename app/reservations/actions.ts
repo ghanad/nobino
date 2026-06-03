@@ -30,6 +30,15 @@ const reservationIdSchema = z.object({
   reservationId: z.string().min(1),
 });
 
+export type CancelReservationActionState = {
+  message: string;
+  mutation?: {
+    reservationId: string;
+    type: "cancel";
+  };
+  status: "error" | "idle" | "success";
+};
+
 function redirectWithError(message: string, date?: string): never {
   const params = new URLSearchParams({ error: message });
 
@@ -128,4 +137,42 @@ export async function cancelReservationByUserAction(
   }
 
   redirectToReservations({ cancelled: "1" });
+}
+
+export async function cancelReservationByUserInlineAction(
+  _previousState: CancelReservationActionState,
+  formData: FormData,
+): Promise<CancelReservationActionState> {
+  const user = await requireCurrentUser();
+  const parsed = reservationIdSchema.safeParse({
+    reservationId: formData.get("reservationId"),
+  });
+
+  if (!parsed.success) {
+    return {
+      message: "Choose a valid reservation to cancel.",
+      status: "error",
+    };
+  }
+
+  try {
+    await cancelReservationByUser({
+      reservationId: parsed.data.reservationId,
+      userId: user.id,
+    });
+  } catch (error) {
+    return {
+      message: getActionErrorMessage(error),
+      status: "error",
+    };
+  }
+
+  return {
+    message: "درخواست رزرو در انتظار تایید لغو شد.",
+    mutation: {
+      reservationId: parsed.data.reservationId,
+      type: "cancel",
+    },
+    status: "success",
+  };
 }

@@ -1,15 +1,8 @@
 import { AlternativeStatus, ReservationStatus } from "@prisma/client";
-import { History, X } from "lucide-react";
-import Link from "next/link";
 
-import {
-  cancelReservationByUserAction,
-  createReservationAction,
-} from "@/app/reservations/actions";
+import { createReservationAction } from "@/app/reservations/actions";
+import { ReservationsInteractiveSection } from "@/app/reservations/reservations-interactive-section";
 import { PageHeader } from "@/components/app/page-header";
-import { CreateReservationForm } from "@/components/reservation/create-reservation-form";
-import { Button } from "@/components/ui/button";
-import { SubmitButton } from "@/components/ui/submit-button";
 import { UrlToast } from "@/components/ui/url-toast";
 import { requireCurrentUser } from "@/lib/auth";
 import { getSlotUsage } from "@/lib/capacity-service";
@@ -22,7 +15,6 @@ import {
   parseJalaliDateParam,
 } from "@/lib/jalali-date";
 import { getWorkingWindowForDate } from "@/lib/schedule";
-import { cn } from "@/lib/utils";
 
 type ReservationsPageProps = {
   searchParams?: Promise<{
@@ -79,12 +71,6 @@ type CalendarReservationSource = CalendarReservationDetail & {
   }>;
 };
 
-const DISPLAY_TIME_FORMATTER = new Intl.DateTimeFormat("fa-IR", {
-  hour: "2-digit",
-  hour12: false,
-  minute: "2-digit",
-});
-
 const ACTIVE_REJECTED_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
 
 function formatNaturalJalaliDate(date: Date): string {
@@ -103,97 +89,6 @@ function formatCalendarColumnLabel(date: Date): string {
 
 function formatReservationDialogDate(date: Date): string {
   return formatJalaliDateWithoutWeekday(date);
-}
-
-function formatDisplayTime(date: Date): string {
-  return DISPLAY_TIME_FORMATTER.format(date);
-}
-
-function getStatusClass(status: ReservationStatus): string {
-  if (status === ReservationStatus.PENDING) {
-    return "bg-amber-50 text-amber-800 ring-amber-200";
-  }
-
-  if (status === ReservationStatus.APPROVED) {
-    return "bg-emerald-50 text-emerald-800 ring-emerald-200";
-  }
-
-  if (status === ReservationStatus.REJECTED) {
-    return "bg-rose-50 text-rose-800 ring-rose-200";
-  }
-
-  if (status === ReservationStatus.ALTERNATIVE_PROPOSED) {
-    return "bg-sky-50 text-sky-800 ring-sky-200";
-  }
-
-  return "bg-muted text-muted-foreground ring-border";
-}
-
-function getStatusLabel(status: ReservationStatus): string {
-  if (status === ReservationStatus.PENDING) {
-    return "در انتظار تایید";
-  }
-
-  if (status === ReservationStatus.APPROVED) {
-    return "تایید شده";
-  }
-
-  if (status === ReservationStatus.REJECTED) {
-    return "رد شده";
-  }
-
-  if (status === ReservationStatus.CANCELLED_BY_USER) {
-    return "لغو شده توسط شما";
-  }
-
-  if (status === ReservationStatus.CANCELLED_BY_ADMIN) {
-    return "لغو شده توسط مدیر";
-  }
-
-  return "نیازمند اقدام";
-}
-
-function ReservationTimeRange({
-  endAt,
-  startAt,
-}: {
-  endAt: Date;
-  startAt: Date;
-}) {
-  return (
-    <span dir="rtl">
-      {formatNaturalJalaliDate(startAt)}، {formatDisplayTime(startAt)} تا{" "}
-      {formatDisplayTime(endAt)}
-    </span>
-  );
-}
-
-function getAlternativeStatusClass(status: AlternativeStatus): string {
-  if (status === AlternativeStatus.PROPOSED) {
-    return "bg-sky-50 text-sky-800 ring-sky-200";
-  }
-
-  if (status === AlternativeStatus.ACCEPTED) {
-    return "bg-emerald-50 text-emerald-800 ring-emerald-200";
-  }
-
-  return "bg-muted text-muted-foreground ring-border";
-}
-
-function getAlternativeStatusLabel(status: AlternativeStatus): string {
-  if (status === AlternativeStatus.PROPOSED) {
-    return "پیشنهاد شده";
-  }
-
-  if (status === AlternativeStatus.ACCEPTED) {
-    return "پذیرفته شده";
-  }
-
-  if (status === AlternativeStatus.REJECTED) {
-    return "رد شده";
-  }
-
-  return "منقضی شده";
 }
 
 function hasPendingAlternative(reservation: MyReservation): boolean {
@@ -301,160 +196,6 @@ function getReservationsToast(
     message: successMessage,
     variant: "success" as const,
   };
-}
-
-function AlternativeList({
-  reservation,
-}: {
-  reservation: MyReservation;
-}) {
-  const shouldShowAlternatives =
-    reservation.status === ReservationStatus.ALTERNATIVE_PROPOSED ||
-    reservation.status === ReservationStatus.REJECTED;
-
-  if (!shouldShowAlternatives || reservation.alternatives.length === 0) {
-    return null;
-  }
-
-  return (
-    <div className="grid gap-1.5">
-      <p className="text-xs font-medium text-muted-foreground">
-        زمان پیشنهادی مدیر
-      </p>
-      <div className="grid gap-2">
-        {reservation.alternatives.map((alternative) => {
-          return (
-            <div
-              className="grid gap-2 rounded-md border bg-muted/30 p-2.5"
-              key={alternative.id}
-            >
-              <div className="grid gap-1 text-sm">
-                <div className="font-medium">
-                  <ReservationTimeRange
-                    endAt={alternative.proposedEndAt}
-                    startAt={alternative.proposedStartAt}
-                  />
-                </div>
-                <div>
-                  <span
-                    className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ring-1 ${getAlternativeStatusClass(
-                      alternative.status,
-                    )}`}
-                  >
-                    {getAlternativeStatusLabel(alternative.status)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function ReservationCard({
-  reservation,
-}: {
-  reservation: MyReservation;
-}) {
-  const isPending = reservation.status === ReservationStatus.PENDING;
-  const canCancel = isPending;
-  const showReason = Boolean(reservation.reason?.trim());
-  const hasShortReason = (reservation.reason?.trim().length ?? 0) <= 90;
-  const showRejectionReason =
-    reservation.status === ReservationStatus.REJECTED &&
-    Boolean(reservation.rejectionReason?.trim());
-  const showAlternatives =
-    (reservation.status === ReservationStatus.ALTERNATIVE_PROPOSED ||
-      reservation.status === ReservationStatus.REJECTED) &&
-    reservation.alternatives.length > 0;
-  const showCardBody =
-    showReason || showRejectionReason || showAlternatives;
-
-  return (
-    <article
-      className={cn(
-        "rounded-md border bg-card p-3 text-right text-card-foreground",
-        isPending && "border-amber-200 bg-amber-50/40",
-      )}
-      dir="rtl"
-    >
-      <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-start">
-        <div className="min-w-0">
-          <h3 className="text-sm font-medium">{reservation.resourcePool.name}</h3>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            <ReservationTimeRange
-              endAt={reservation.endAt}
-              startAt={reservation.startAt}
-            />
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 sm:flex-col sm:items-end">
-          <span
-            className={`inline-flex w-fit rounded-full px-2 py-1 text-xs font-medium ring-1 ${getStatusClass(
-              reservation.status,
-            )}`}
-          >
-            {getStatusLabel(reservation.status)}
-          </span>
-
-          {canCancel ? (
-            <form action={cancelReservationByUserAction}>
-              <input name="reservationId" type="hidden" value={reservation.id} />
-              <SubmitButton
-                className="h-8 px-2.5 text-xs"
-                pendingLabel="در حال لغو..."
-                size="sm"
-                variant="outline"
-              >
-                <X className="h-3.5 w-3.5" />
-                لغو درخواست
-              </SubmitButton>
-            </form>
-          ) : null}
-        </div>
-      </div>
-
-      {showCardBody ? (
-        <div className="mt-2 grid gap-2">
-          {showReason || showRejectionReason ? (
-            <dl className="grid gap-1.5 text-xs">
-              {showReason ? (
-                <div
-                  className={cn(
-                    hasShortReason && "flex min-w-0 items-baseline gap-2",
-                  )}
-                >
-                  <dt className="shrink-0 text-muted-foreground">دلیل درخواست</dt>
-                  <dd
-                    className={cn(
-                      "leading-5",
-                      hasShortReason
-                        ? "min-w-0 truncate"
-                        : "mt-1",
-                    )}
-                  >
-                    {reservation.reason}
-                  </dd>
-                </div>
-              ) : null}
-              {showRejectionReason ? (
-                <div>
-                  <dt className="text-muted-foreground">دلیل رد</dt>
-                  <dd className="mt-1 leading-5">
-                    {reservation.rejectionReason}
-                  </dd>
-                </div>
-              ) : null}
-            </dl>
-          ) : null}
-
-          <AlternativeList reservation={reservation} />
-        </div>
-      ) : null}
-    </article>
-  );
 }
 
 function addDays(date: Date, days: number): Date {
@@ -869,8 +610,9 @@ export default async function ReservationsPage({
 
       {toast ? <UrlToast {...toast} /> : null}
 
-      <CreateReservationForm
+      <ReservationsInteractiveSection
         action={createReservationAction}
+        activeReservations={activeReservations}
         currentDateParam={dateParam}
         dailyActiveReservationCountByDate={dailyActiveReservationCountByDate}
         dailyReservedHoursByDate={dailyReservedHoursByDate}
@@ -887,38 +629,6 @@ export default async function ReservationsPage({
         weekDays={weekDays}
         weekLabel={formatWeekLabel(weekDates[0], weekDates[6])}
       />
-
-      <section className="rounded-lg border bg-card p-5 text-right" dir="rtl">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex flex-col gap-1">
-            <h2 className="font-medium">درخواست‌های فعال من</h2>
-            <p className="text-sm text-muted-foreground">
-              وضعیت رزروهای فعال و موارد نیازمند اقدام را پیگیری کنید.
-            </p>
-          </div>
-          <Button asChild size="sm" variant="outline">
-            <Link href="/reservations/history">
-              <History className="h-4 w-4" />
-              مشاهده تاریخچه رزروها
-            </Link>
-          </Button>
-        </div>
-
-        {activeReservations.length === 0 ? (
-          <div className="mt-5 rounded-md border bg-muted/30 p-4 text-sm text-muted-foreground">
-            <p className="font-medium text-foreground">رزرو فعالی ندارید.</p>
-            <p className="mt-1">
-              برای ثبت درخواست جدید، یک بازه زمانی از تقویم انتخاب کنید.
-            </p>
-          </div>
-        ) : (
-          <div className="mt-5 grid gap-3">
-            {activeReservations.map((reservation) => (
-              <ReservationCard key={reservation.id} reservation={reservation} />
-            ))}
-          </div>
-        )}
-      </section>
     </div>
   );
 }
