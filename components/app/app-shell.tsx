@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { GlobalNav, type GlobalNavItem } from "@/components/app/global-nav";
+import { ProductSignature } from "@/components/app/product-signature";
 import { AnnouncementModal } from "@/components/ui/announcement-modal";
 import { UnreadNotificationToast } from "@/components/ui/unread-notification-toast";
 import type { CurrentUser } from "@/lib/auth";
@@ -85,7 +86,7 @@ export async function AppShell({ user, children }: AppShellProps) {
   ]);
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="flex min-h-screen flex-col bg-background">
       <AnnouncementModal announcement={pendingAnnouncement} />
       <UnreadNotificationToast notification={latestUnreadNotification} />
       <header className="border-b bg-card" dir="rtl">
@@ -96,9 +97,12 @@ export async function AppShell({ user, children }: AppShellProps) {
           userName={user.name}
         />
       </header>
-      <div className="mx-auto w-full max-w-6xl px-6 py-8">
+      <div className="mx-auto w-full max-w-6xl flex-1 px-6 py-8">
         {children}
       </div>
+      <footer className="mx-auto w-full max-w-6xl px-6 pb-6">
+        <ProductSignature />
+      </footer>
     </main>
   );
 }
