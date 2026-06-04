@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, MouseEvent, useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
@@ -41,10 +41,6 @@ function InputText({
 
 function buildReportHref(dateParam: string): string {
   return `/lunch/report?date=${dateParam}`;
-}
-
-function buildExportHref(dateParam: string): string {
-  return `/lunch/report/export?date=${dateParam}`;
 }
 
 function buildDataHref(dateParam: string): string {
@@ -140,7 +136,7 @@ export function LunchReportView({ initialReport }: LunchReportViewProps) {
             {report.dateLabel}، {report.activeReservationCount} رزرو فعال
           </p>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="hidden flex-col gap-2 md:flex md:flex-row">
           <form className="flex gap-2" onSubmit={handleSubmit}>
             <InputText
               disabled={isLoading}
@@ -153,12 +149,6 @@ export function LunchReportView({ initialReport }: LunchReportViewProps) {
               نمایش
             </Button>
           </form>
-          <Button asChild variant="outline">
-            <Link href={buildExportHref(report.dateParam)}>
-              <Download className="h-4 w-4" />
-              CSV
-            </Link>
-          </Button>
         </div>
       </div>
 
