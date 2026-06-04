@@ -328,7 +328,8 @@ export default async function ReservationsPage({
   const user = await requireCurrentUser();
   const params = await searchParams;
   const toast = getReservationsToast(params);
-  const selectedDate = parseJalaliDateParam(params?.date) ?? new Date();
+  const now = new Date();
+  const selectedDate = parseJalaliDateParam(params?.date) ?? now;
   const dateParam = formatJalaliDateParam(selectedDate);
   const weekStart = getWeekStart(selectedDate);
   const weekEnd = addDays(weekStart, 7);
@@ -514,7 +515,6 @@ export default async function ReservationsPage({
             ),
         )
       : [];
-  const now = new Date();
   const activeReservations = reservations.filter((reservation) =>
     isActiveReservation(reservation, now),
   );
@@ -626,6 +626,7 @@ export default async function ReservationsPage({
         previousWeekDateParam={formatJalaliDateParam(addDays(weekStart, -7))}
         oneReservationPerDayEnabled={oneReservationPerDayEnabled}
         resourcePools={resourcePools}
+        todayDateParam={formatJalaliDateParam(now)}
         weekDays={weekDays}
         weekLabel={formatWeekLabel(weekDates[0], weekDates[6])}
       />

@@ -62,6 +62,7 @@ export type CreateReservationFormProps = {
   oneReservationPerDayEnabled: boolean;
   previousWeekDateParam: string;
   resourcePools: ResourcePoolOption[];
+  todayDateParam: string;
   weekDays: WeekDay[];
   weekLabel: string;
 };
@@ -653,6 +654,7 @@ export function CreateReservationForm({
   oneReservationPerDayEnabled,
   previousWeekDateParam,
   resourcePools,
+  todayDateParam,
   weekDays,
   weekLabel,
 }: CreateReservationFormProps) {
@@ -776,8 +778,8 @@ export function CreateReservationForm({
               <h2 className="font-medium">درخواست رزرو جدید</h2>
             </div>
 
-            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-              <div className="relative sm:w-44">
+            <div className="hidden w-full flex-col gap-2 sm:flex sm:w-auto sm:flex-row sm:items-center">
+              <div className="relative hidden sm:block sm:w-44">
                 <CalendarDays
                   aria-hidden="true"
                   className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
@@ -795,7 +797,7 @@ export function CreateReservationForm({
                 />
               </div>
               <button
-                className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                className="hidden h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 sm:inline-flex"
                 form="reservation-week-navigation"
                 type="submit"
               >
@@ -805,29 +807,37 @@ export function CreateReservationForm({
           </div>
 
           <div
-            className="grid gap-3 rounded-md border bg-muted/30 p-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center"
-            dir="ltr"
+            className="grid gap-3 rounded-md border bg-muted/30 p-3"
+            dir="rtl"
           >
-            <Link
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-md border bg-background px-3 text-sm font-medium hover:bg-accent sm:justify-self-start"
-              href={buildDateHref(previousWeekDateParam)}
-            >
-              <ChevronLeft aria-hidden="true" className="h-4 w-4" />
-              <span dir="rtl">هفته قبل</span>
-            </Link>
-            <div className="order-first text-center sm:order-none" dir="rtl">
+            <div className="text-center">
               <p className="text-sm font-medium">{weekLabel}</p>
               <p className="mt-1 text-xs text-muted-foreground">
                 راهنمای وضعیت ظرفیت هر ساعت پایین تقویم آمده است.
               </p>
             </div>
-            <Link
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-md border bg-background px-3 text-sm font-medium hover:bg-accent sm:justify-self-end"
-              href={buildDateHref(nextWeekDateParam)}
-            >
-              <span dir="rtl">هفته بعد</span>
-              <ChevronRight aria-hidden="true" className="h-4 w-4" />
-            </Link>
+            <div className="flex items-center gap-2" dir="ltr">
+              <Link
+                className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border bg-background px-2 text-sm font-medium hover:bg-accent sm:flex-none sm:px-4"
+                href={buildDateHref(previousWeekDateParam)}
+              >
+                <ChevronLeft aria-hidden="true" className="h-4 w-4 shrink-0" />
+                <span dir="rtl">هفته قبل</span>
+              </Link>
+              <Link
+                className="inline-flex h-11 flex-1 items-center justify-center whitespace-nowrap rounded-md border bg-muted/60 px-2 text-sm font-medium hover:bg-accent sm:flex-none sm:px-4"
+                href={buildDateHref(todayDateParam)}
+              >
+                امروز
+              </Link>
+              <Link
+                className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border bg-background px-2 text-sm font-medium hover:bg-accent sm:flex-none sm:px-4"
+                href={buildDateHref(nextWeekDateParam)}
+              >
+                <span dir="rtl">هفته بعد</span>
+                <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0" />
+              </Link>
+            </div>
           </div>
 
           <CalendarLegend />
