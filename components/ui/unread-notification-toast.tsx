@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Bell } from "lucide-react";
 
@@ -15,10 +16,13 @@ type UnreadNotificationToastProps = {
 export function UnreadNotificationToast({
   notification,
 }: UnreadNotificationToastProps) {
+  const pathname = usePathname();
   const [isVisible, setIsVisible] = useState(false);
+  const isNotificationsPage =
+    pathname === "/notifications" || pathname.startsWith("/notifications/");
 
   useEffect(() => {
-    if (!notification) {
+    if (!notification || isNotificationsPage) {
       return;
     }
 
@@ -34,9 +38,9 @@ export function UnreadNotificationToast({
     const timeout = window.setTimeout(() => setIsVisible(false), 6_000);
 
     return () => window.clearTimeout(timeout);
-  }, [notification]);
+  }, [isNotificationsPage, notification]);
 
-  if (!notification || !isVisible) {
+  if (!notification || !isVisible || isNotificationsPage) {
     return null;
   }
 

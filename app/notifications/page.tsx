@@ -38,11 +38,9 @@ const NOTIFICATION_FILTERS = [
 
 type NotificationsPageProps = {
   searchParams?: Promise<{
-    allRead?: string;
     error?: string;
     filter?: string;
     page?: string;
-    read?: string;
   }>;
 };
 
@@ -79,19 +77,7 @@ function getNotificationsToast(
     };
   }
 
-  const successMessage =
-    (params?.read && "اعلان به عنوان خوانده شده ثبت شد.") ||
-    (params?.allRead && "همه اعلان‌ها به عنوان خوانده شده ثبت شدند.");
-
-  if (!successMessage) {
-    return null;
-  }
-
-  return {
-    consumeKeys: ["read", "allRead"],
-    message: successMessage,
-    variant: "success" as const,
-  };
+  return null;
 }
 
 function formatPersianNumber(value: number): string {

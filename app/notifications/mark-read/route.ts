@@ -88,13 +88,13 @@ export async function POST(request: NextRequest) {
       });
       revalidatePath("/notifications");
 
-      return redirectToNotifications({ filter, page, read: "1" });
+      return redirectToNotifications({ filter, page });
     }
 
     await markAllNotificationsAsRead(user.id);
     revalidatePath("/notifications");
 
-    return redirectToNotifications({ allRead: "1", filter, page });
+    return redirectToNotifications({ filter, page });
   } catch (error) {
     if (error instanceof NotificationError) {
       return redirectToNotifications({
