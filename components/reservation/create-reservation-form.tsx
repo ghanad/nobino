@@ -104,6 +104,9 @@ type PopoverPosition = {
   top: number;
 };
 
+type MobileSelectionHandle = "end" | "start";
+type SelectionSource = "desktop" | "mobile";
+
 function formatHour(hour: number): string {
   return `${hour.toString().padStart(2, "0")}:00`;
 }
@@ -643,6 +646,157 @@ function buildSelection(
   };
 }
 
+function getDefaultSelectedDayIndex(
+  weekDays: WeekDay[],
+  todayDateParam: string,
+): number {
+  const todayIndex = weekDays.findIndex(
+    (day) => day.dateParam === todayDateParam,
+  );
+
+  if (todayIndex >= 0) {
+    return todayIndex;
+  }
+
+  const firstWorkingDayIndex = weekDays.findIndex(
+    (day) => !day.closedReason && day.slots.length > 0,
+  );
+
+  return firstWorkingDayIndex >= 0 ? firstWorkingDayIndex : 0;
+}
+
+function getMobileSlotStatusLabel(cell: CellState): string {
+  if (cell.myReservationStatus === "ALTERNATIVE_PROPOSED") {
+    return "زمان پیشنهادی مدیر نیازمند بررسی شماست";
+  }
+
+  if (cell.myReservationStatus === "PENDING") {
+    return "درخواست شما در انتظار تایید است";
+  }
+
+  if (cell.myReservationStatus === "APPROVED") {
+    return "رزرو تاییدشده شما";
+  }
+
+  if (cell.unavailableReason === "past") {
+    return "این زمان گذشته و قابل رزرو نیست";
+  }
+
+  if (cell.unavailableReason === "full") {
+    return "ظرفیت تکمیل است";
+  }
+
+  if (cell.approvedCount > 0) {
+    return `ظرفیت آزاد: ${formatPersianNumber(
+      cell.availableCount,
+    )} از ${formatPersianNumber(cell.capacity)}، ${formatPersianNumber(
+      cell.approvedCount,
+    )} رزرو تاییدشده دیگران`;
+  }
+
+  return `ظرفیت آزاد: ${formatPersianNumber(
+    cell.availableCount,
+  )} از ${formatPersianNumber(cell.capacity)}`;
+}
+
+function getMobileSlotToneClass(cell: CellState): string {
+  if (cell.myReservationStatus === "APPROVED") {
+    return "border-sky-200 bg-sky-50/70";
+  }
+
+  if (
+    cell.myReservationStatus === "PENDING" ||
+    cell.myReservationStatus === "ALTERNATIVE_PROPOSED"
+  ) {
+    return "border-amber-200 bg-amber-50/70";
+  }
+
+  if (cell.unavailableReason || !cell.isRequestable) {
+    return "border-slate-200 bg-slate-50/80";
+  }
+
+  return "border-emerald-200 bg-white";
+}
+
+function isMobileSlotSelectable(cell: CellState): boolean {
+  return cell.isRequestable && !cell.myReservationStatus;
+}
+
+function getMobileSlotUnavailableLabel(cell: CellState): string {
+  if (cell.myReservationStatus === "ALTERNATIVE_PROPOSED") {
+    return "زمان پیشنهادی مدیر برای شما ثبت شده است";
+  }
+
+  if (cell.myReservationStatus === "PENDING") {
+    return "درخواست شما در انتظار تایید است";
+  }
+
+  if (cell.myReservationStatus === "APPROVED") {
+    return "رزرو تاییدشده شما";
+  }
+
+  return getPersianUnavailableLabel(cell.unavailableReason) ?? "قابل رزرو نیست";
+}
+
+function getSelectionRangeError(
+  weekDays: WeekDay[],
+  selection: Selection | null,
+): string | null {
+  if (!selection) {
+    return null;
+  }
+
+  const day = weekDays[selection.dayIndex];
+
+  if (!day) {
+    return "روز انتخاب‌شده معتبر نیست.";
+  }
+
+  for (let hour = selection.startHour; hour < selection.endHour; hour += 1) {
+    const cell = getCellState(day, hour);
+
+    if (!cell.isWorkingHour) {
+      return `امکان رزرو این بازه وجود ندارد، چون ساعت ${formatPersianHour(
+        hour,
+      )} در برنامه کاری این روز نیست.`;
+    }
+
+    if (!isMobileSlotSelectable(cell)) {
+      return `امکان رزرو این بازه وجود ندارد، چون ساعت ${formatPersianHour(
+        hour,
+      )} ${getMobileSlotUnavailableLabel(cell)}.`;
+    }
+  }
+
+  return null;
+}
+
+function getSelectionLimitError({
+  dailyUserHourLimit,
+  hasActiveReservationForSelectedDay,
+  isSelectionOverDailyLimit,
+  reservedHoursForSelectedDay,
+}: {
+  dailyUserHourLimit: number;
+  hasActiveReservationForSelectedDay: boolean;
+  isSelectionOverDailyLimit: boolean;
+  reservedHoursForSelectedDay: number;
+}): string | null {
+  if (isSelectionOverDailyLimit) {
+    return `شما نمی‌توانید بیش از ${formatPersianNumber(
+      dailyUserHourLimit,
+    )} ساعت در یک روز رزرو کنید. در این روز قبلا ${formatPersianNumber(
+      reservedHoursForSelectedDay,
+    )} ساعت رزرو فعال دارید.`;
+  }
+
+  if (hasActiveReservationForSelectedDay) {
+    return "شما در این روز یک درخواست رزرو فعال دارید.";
+  }
+
+  return null;
+}
+
 export function CreateReservationForm({
   action,
   currentDateParam,
@@ -660,16 +814,34 @@ export function CreateReservationForm({
 }: CreateReservationFormProps) {
   const defaultPool = resourcePools[0];
   const [selection, setSelection] = useState<Selection | null>(null);
+  const [selectionSource, setSelectionSource] = useState<SelectionSource | null>(
+    null,
+  );
   const [isDragging, setIsDragging] = useState(false);
+  const [mobileDraggingHandle, setMobileDraggingHandle] =
+    useState<MobileSelectionHandle | null>(null);
   const [isReasonDialogOpen, setIsReasonDialogOpen] = useState(false);
+  const [selectedMobileDayIndex, setSelectedMobileDayIndex] = useState(() =>
+    getDefaultSelectedDayIndex(weekDays, todayDateParam),
+  );
   const selectionRef = useRef<Selection | null>(null);
   const hours = useMemo(() => getHourRange(weekDays), [weekDays]);
   const weekKey = weekDays.map((day) => day.dateParam).join("|");
+  const defaultMobileDayIndex = useMemo(
+    () => getDefaultSelectedDayIndex(weekDays, todayDateParam),
+    [todayDateParam, weekDays],
+  );
+  const selectedMobileDay =
+    weekDays[selectedMobileDayIndex] ?? weekDays[0] ?? null;
   const selectedHours = selection ? selection.endHour - selection.startHour : 0;
   const reservedHoursForSelectedDay = selection
     ? dailyReservedHoursByDate[selection.dateParam] ?? 0
     : 0;
   const selectedDailyTotal = reservedHoursForSelectedDay + selectedHours;
+  const selectionRangeError =
+    selectionSource === "mobile"
+      ? getSelectionRangeError(weekDays, selection)
+      : null;
   const isSelectionOverDailyLimit =
     Boolean(selection) && selectedDailyTotal > dailyUserHourLimit;
   const hasActiveReservationForSelectedDay =
@@ -678,14 +850,26 @@ export function CreateReservationForm({
         (dailyActiveReservationCountByDate[selection.dateParam] ?? 0) > 0
       : false;
   const isSelectionBlocked =
-    isSelectionOverDailyLimit || hasActiveReservationForSelectedDay;
+    Boolean(selectionRangeError) ||
+    isSelectionOverDailyLimit ||
+    hasActiveReservationForSelectedDay;
+  const selectionLimitError = getSelectionLimitError({
+    dailyUserHourLimit,
+    hasActiveReservationForSelectedDay,
+    isSelectionOverDailyLimit,
+    reservedHoursForSelectedDay,
+  });
+  const selectionError = selectionRangeError ?? selectionLimitError;
 
   useEffect(() => {
     selectionRef.current = null;
     setSelection(null);
+    setSelectionSource(null);
     setIsDragging(false);
+    setMobileDraggingHandle(null);
     setIsReasonDialogOpen(false);
-  }, [weekKey]);
+    setSelectedMobileDayIndex(defaultMobileDayIndex);
+  }, [defaultMobileDayIndex, weekKey]);
 
   useEffect(() => {
     if (!isReasonDialogOpen) {
@@ -719,6 +903,7 @@ export function CreateReservationForm({
     const nextSelection = buildSelection(weekDays, dayIndex, hour, hour);
     selectionRef.current = nextSelection;
     setSelection(nextSelection);
+    setSelectionSource("desktop");
   }
 
   function updateSelection(dayIndex: number, hour: number) {
@@ -766,6 +951,91 @@ export function CreateReservationForm({
     }
 
     updateSelection(dayIndex, hour);
+  }
+
+  function clearSelection() {
+    selectionRef.current = null;
+    setSelection(null);
+    setSelectionSource(null);
+    setMobileDraggingHandle(null);
+    setIsReasonDialogOpen(false);
+  }
+
+  function selectMobileSingleHour(dayIndex: number, hour: number) {
+    const nextSelection = buildSelection(weekDays, dayIndex, hour, hour);
+
+    selectionRef.current = nextSelection;
+    setSelection(nextSelection);
+    setSelectionSource("mobile");
+    setIsReasonDialogOpen(false);
+  }
+
+  function openReasonDialogForSelection() {
+    if (!selection || isSelectionBlocked) {
+      return;
+    }
+
+    setIsReasonDialogOpen(true);
+  }
+
+  function updateMobileSelectionFromHour(
+    handle: MobileSelectionHandle,
+    hour: number,
+  ) {
+    setSelection((current) => {
+      if (!current) {
+        return current;
+      }
+
+      const day = weekDays[current.dayIndex];
+
+      if (!day) {
+        return current;
+      }
+
+      const slotHours = day.slots.map((slot) => slot.slotStartHour);
+
+      if (!slotHours.includes(hour)) {
+        return current;
+      }
+
+      const nextSelection =
+        handle === "start"
+          ? {
+              ...current,
+              anchorHour: Math.min(hour, current.endHour - 1),
+              startHour: Math.min(hour, current.endHour - 1),
+            }
+          : {
+              ...current,
+              endHour: Math.max(hour + 1, current.startHour + 1),
+            };
+
+      selectionRef.current = nextSelection;
+      setSelectionSource("mobile");
+      return nextSelection;
+    });
+  }
+
+  function updateMobileSelectionFromPoint(
+    handle: MobileSelectionHandle,
+    clientX: number,
+    clientY: number,
+  ) {
+    const element = document.elementFromPoint(clientX, clientY);
+    const slot = element?.closest<HTMLElement>("[data-mobile-calendar-slot='true']");
+
+    if (!slot) {
+      return;
+    }
+
+    const hour = Number(slot.dataset.hour);
+
+    if (Number.isNaN(hour)) {
+      return;
+    }
+
+    updateMobileSelectionFromHour(handle, hour);
   }
 
   return (
@@ -820,6 +1090,7 @@ export function CreateReservationForm({
               <Link
                 className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border bg-background px-2 text-sm font-medium hover:bg-accent sm:flex-none sm:px-4"
                 href={buildDateHref(previousWeekDateParam)}
+                onClick={clearSelection}
               >
                 <ChevronLeft aria-hidden="true" className="h-4 w-4 shrink-0" />
                 <span dir="rtl">هفته قبل</span>
@@ -827,12 +1098,17 @@ export function CreateReservationForm({
               <Link
                 className="inline-flex h-11 flex-1 items-center justify-center whitespace-nowrap rounded-md border bg-muted/60 px-2 text-sm font-medium hover:bg-accent sm:flex-none sm:px-4"
                 href={buildDateHref(todayDateParam)}
+                onClick={() => {
+                  setSelectedMobileDayIndex(defaultMobileDayIndex);
+                  clearSelection();
+                }}
               >
                 امروز
               </Link>
               <Link
                 className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border bg-background px-2 text-sm font-medium hover:bg-accent sm:flex-none sm:px-4"
                 href={buildDateHref(nextWeekDateParam)}
+                onClick={clearSelection}
               >
                 <span dir="rtl">هفته بعد</span>
                 <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0" />
@@ -854,17 +1130,387 @@ export function CreateReservationForm({
               {defaultPool ? emptyMessage : "No active resource pool is configured."}
             </p>
           ) : (
-            <div
-              className="overflow-hidden rounded-lg border border-slate-200 bg-background shadow-sm"
-              dir="ltr"
-              onPointerLeave={() => setIsDragging(false)}
-              onPointerUp={finishSelection}
-            >
-              <div className="overflow-x-auto">
-                <div className="min-w-[920px]">
-                  <div className="grid grid-cols-[72px_repeat(7,minmax(116px,1fr))] border-b border-slate-100 bg-slate-50/70">
-                    <div className="border-r border-slate-100 px-3 py-3 text-xs font-medium text-muted-foreground" />
-                    {weekDays.map((day) => (
+            <>
+              <div
+                className={cn(
+                  "grid gap-3 md:hidden",
+                  selection &&
+                    selection.dayIndex === selectedMobileDayIndex &&
+                    "pb-36",
+                )}
+                dir="rtl"
+              >
+                <div
+                  aria-label="انتخاب روز هفته"
+                  className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1"
+                  role="tablist"
+                >
+                  {weekDays.map((day, dayIndex) => {
+                    const isSelected = dayIndex === selectedMobileDayIndex;
+                    const isToday = day.dateParam === todayDateParam;
+
+                    return (
+                      <button
+                        aria-current={isToday ? "date" : undefined}
+                        aria-selected={isSelected}
+                        className={cn(
+                          "inline-flex min-h-11 shrink-0 items-center justify-center gap-1 rounded-md border bg-background px-3 text-sm font-medium text-slate-700 transition-colors",
+                          isSelected &&
+                            "border-primary bg-primary text-primary-foreground",
+                          !isSelected && "hover:bg-accent",
+                          day.closedReason && !isSelected && "text-slate-500",
+                        )}
+                        key={day.dateParam}
+                        onClick={() => {
+                          setSelectedMobileDayIndex(dayIndex);
+                          clearSelection();
+                        }}
+                        role="tab"
+                        type="button"
+                      >
+                        <span>{day.shortLabel}</span>
+                        {isToday ? (
+                          <span
+                            className={cn(
+                              "rounded-sm px-1 py-0.5 text-[10px] font-semibold",
+                              isSelected
+                                ? "bg-primary-foreground/15 text-primary-foreground"
+                                : "bg-sky-50 text-sky-700",
+                            )}
+                          >
+                            امروز
+                          </span>
+                        ) : null}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {selectedMobileDay ? (
+                  <div className="grid gap-3">
+                    <div className="rounded-md border bg-muted/30 px-3 py-2 text-right">
+                      <h3 className="text-sm font-semibold">
+                        {selectedMobileDay.dateLabel}
+                      </h3>
+                      {selectedMobileDay.closedReason ? (
+                        <p className="mt-1 text-xs text-red-700">
+                          {selectedMobileDay.closedReason}
+                        </p>
+                      ) : null}
+                    </div>
+
+                    {selectedMobileDay.slots.length === 0 ? (
+                      <p className="rounded-md border bg-muted/40 p-4 text-sm text-muted-foreground">
+                        برای این روز بازه زمانی قابل رزرو وجود ندارد.
+                      </p>
+                    ) : (
+                      <div className="overflow-hidden rounded-lg border border-slate-200 bg-background shadow-sm">
+                        {selectedMobileDay.slots.map((slot) => {
+                          const hour = slot.slotStartHour;
+                          const cell = getCellState(selectedMobileDay, hour);
+                          const isSelected = selectionContainsHour(
+                            selection,
+                            selectedMobileDayIndex,
+                            hour,
+                          );
+                          const startsSelection = isSelectionStart(
+                            selection,
+                            selectedMobileDayIndex,
+                            hour,
+                          );
+                          const endsSelection = isSelectionEnd(
+                            selection,
+                            selectedMobileDayIndex,
+                            hour,
+                          );
+                          const slotLabel = buildSlotAriaLabel(
+                            selectedMobileDay,
+                            hour,
+                            cell,
+                          );
+
+                          return (
+                            <SlotDetailsPopover
+                              cell={cell}
+                              isDragging={Boolean(mobileDraggingHandle)}
+                              key={`${selectedMobileDay.dateParam}-${hour}`}
+                            >
+                              <div className="grid h-16 grid-cols-[4.5rem_minmax(0,1fr)] border-b border-slate-100 last:border-b-0">
+                                <div className="flex items-start justify-center border-l border-slate-100 bg-slate-50/60 px-2 py-3 text-sm font-semibold text-slate-700">
+                                  {formatPersianHour(hour)}
+                                </div>
+
+                                <div
+                                  aria-disabled={!isMobileSlotSelectable(cell)}
+                                  aria-label={slotLabel}
+                                  aria-pressed={isSelected}
+                                  className={cn(
+                                    "relative h-16 w-full overflow-visible p-2.5 text-right transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                    getMobileSlotToneClass(cell),
+                                    isMobileSlotSelectable(cell) &&
+                                      "hover:bg-emerald-50/70",
+                                    !isMobileSlotSelectable(cell) &&
+                                      "cursor-not-allowed text-slate-500",
+                                    isSelected &&
+                                      "z-10 border-x border-sky-500 bg-sky-100 text-sky-950 shadow-sm",
+                                    isSelected &&
+                                      startsSelection &&
+                                      "border-t border-sky-500",
+                                    isSelected &&
+                                      endsSelection &&
+                                      "border-b border-sky-500",
+                                    startsSelection && "rounded-t-md",
+                                    endsSelection && "rounded-b-md",
+                                    selectionError &&
+                                      isSelected &&
+                                      "border-red-500 bg-red-50 text-red-950",
+                                  )}
+                                  data-hour={hour}
+                                  data-mobile-calendar-slot="true"
+                                  onClick={() => {
+                                    if (isSelected && !mobileDraggingHandle) {
+                                      openReasonDialogForSelection();
+                                      return;
+                                    }
+
+                                    if (!isMobileSlotSelectable(cell)) {
+                                      return;
+                                    }
+
+                                    selectMobileSingleHour(
+                                      selectedMobileDayIndex,
+                                      hour,
+                                    );
+                                  }}
+                                  onKeyDown={(event) => {
+                                    if (
+                                      event.key !== "Enter" &&
+                                      event.key !== " "
+                                    ) {
+                                      return;
+                                    }
+
+                                    event.preventDefault();
+
+                                    if (isSelected) {
+                                      openReasonDialogForSelection();
+                                      return;
+                                    }
+
+                                    if (isMobileSlotSelectable(cell)) {
+                                      selectMobileSingleHour(
+                                        selectedMobileDayIndex,
+                                        hour,
+                                      );
+                                    }
+                                  }}
+                                  role="button"
+                                  tabIndex={0}
+                                  title={slotLabel}
+                                >
+                                  {isSelected ? (
+                                    <>
+                                      {startsSelection ? (
+                                        <span
+                                          aria-label="تغییر شروع بازه"
+                                          className="absolute -top-5 left-1/2 z-20 flex h-11 w-32 -translate-x-1/2 touch-none items-center justify-center rounded-full"
+                                          onClick={(event) =>
+                                            event.stopPropagation()
+                                          }
+                                          onPointerDown={(event) => {
+                                            event.preventDefault();
+                                            event.stopPropagation();
+                                            event.currentTarget.setPointerCapture(
+                                              event.pointerId,
+                                            );
+                                            setMobileDraggingHandle("start");
+                                          }}
+                                          onPointerMove={(event) => {
+                                            if (
+                                              mobileDraggingHandle === "start"
+                                            ) {
+                                              updateMobileSelectionFromPoint(
+                                                "start",
+                                                event.clientX,
+                                                event.clientY,
+                                              );
+                                            }
+                                          }}
+                                          onPointerUp={(event) => {
+                                            event.preventDefault();
+                                            event.stopPropagation();
+                                            setMobileDraggingHandle(null);
+                                          }}
+                                          role="button"
+                                          tabIndex={0}
+                                        >
+                                          <span className="h-3 w-20 rounded-full border border-slate-300 bg-white shadow-md ring-1 ring-slate-900/10" />
+                                        </span>
+                                      ) : null}
+
+                                      {endsSelection ? (
+                                        <span
+                                          aria-label="تغییر پایان بازه"
+                                          className="absolute -bottom-5 left-1/2 z-20 flex h-11 w-32 -translate-x-1/2 touch-none items-center justify-center rounded-full"
+                                          onClick={(event) =>
+                                            event.stopPropagation()
+                                          }
+                                          onPointerDown={(event) => {
+                                            event.preventDefault();
+                                            event.stopPropagation();
+                                            event.currentTarget.setPointerCapture(
+                                              event.pointerId,
+                                            );
+                                            setMobileDraggingHandle("end");
+                                          }}
+                                          onPointerMove={(event) => {
+                                            if (mobileDraggingHandle === "end") {
+                                              updateMobileSelectionFromPoint(
+                                                "end",
+                                                event.clientX,
+                                                event.clientY,
+                                              );
+                                            }
+                                          }}
+                                          onPointerUp={(event) => {
+                                            event.preventDefault();
+                                            event.stopPropagation();
+                                            setMobileDraggingHandle(null);
+                                          }}
+                                          role="button"
+                                          tabIndex={0}
+                                        >
+                                          <span className="h-3 w-20 rounded-full border border-slate-300 bg-white shadow-md ring-1 ring-slate-900/10" />
+                                        </span>
+                                      ) : null}
+
+                                      {startsSelection && selection ? (
+                                        <span
+                                          className={cn(
+                                            "inline-flex rounded-md border bg-white/90 px-2 py-1 text-sm font-semibold shadow-sm",
+                                            selectionError
+                                              ? "border-red-200 text-red-800"
+                                              : "border-sky-200 text-sky-900",
+                                          )}
+                                        >
+                                          {formatPersianHour(selection.startHour)} تا{" "}
+                                          {formatPersianHour(selection.endHour)}
+                                        </span>
+                                      ) : null}
+                                    </>
+                                  ) : (
+                                    <span className="grid gap-1">
+                                      <span className="text-sm font-medium">
+                                        {getMobileSlotStatusLabel(cell)}
+                                      </span>
+                                      {!isMobileSlotSelectable(cell) ? (
+                                        <span className="text-xs text-muted-foreground">
+                                          {getMobileSlotUnavailableLabel(cell)}
+                                        </span>
+                                      ) : null}
+                                    </span>
+                                  )}
+
+                                  {!isSelected &&
+                                  cell.isWorkingHour &&
+                                  cell.unavailableReason !== "past" ? (
+                                    <span
+                                      aria-hidden="true"
+                                      className="absolute left-3 top-3 flex max-w-20 flex-wrap justify-end gap-1"
+                                    >
+                                      {buildCapacityDots(cell).map(
+                                        (tone, index) => (
+                                          <CapacityDot
+                                            key={`${tone}-${index}`}
+                                            tone={tone}
+                                          />
+                                        ),
+                                      )}
+                                    </span>
+                                  ) : null}
+
+                                  {!isSelected && cell.pendingCount > 0 ? (
+                                    <PendingRequestsBadge
+                                      className="absolute bottom-2 left-3"
+                                      count={cell.pendingCount}
+                                    />
+                                  ) : null}
+                                </div>
+                              </div>
+                            </SlotDetailsPopover>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+
+              {selection && selection.dayIndex === selectedMobileDayIndex ? (
+                <div
+                  className={cn(
+                    "sticky bottom-0 z-40 -mx-5 grid gap-3 border-t border-sky-200 bg-sky-50/95 p-3 shadow-[0_-8px_24px_rgba(15,23,42,0.12)] backdrop-blur md:hidden",
+                    isSelectionBlocked && "border-red-200 bg-red-50/95",
+                  )}
+                  dir="rtl"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 text-right">
+                      <p
+                        className={cn(
+                          "text-sm font-semibold",
+                          isSelectionBlocked ? "text-red-950" : "text-sky-950",
+                        )}
+                      >
+                        {formatPersianHour(selection.startHour)} تا{" "}
+                        {formatPersianHour(selection.endHour)}
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        مدت انتخاب‌شده: {formatPersianNumber(selectedHours)} ساعت
+                      </p>
+                    </div>
+                    <button
+                      aria-label="لغو انتخاب بازه"
+                      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
+                      onClick={clearSelection}
+                      type="button"
+                    >
+                      <X aria-hidden="true" className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  {selectionError ? (
+                    <p
+                      className="rounded-md border border-red-200 bg-white/80 px-3 py-2 text-sm text-red-800"
+                      role="alert"
+                    >
+                      {selectionError}
+                    </p>
+                  ) : null}
+
+                  <button
+                    aria-label="تکمیل درخواست رزرو برای بازه انتخاب‌شده"
+                    className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={isSelectionBlocked}
+                    onClick={openReasonDialogForSelection}
+                    type="button"
+                  >
+                    تکمیل درخواست رزرو
+                  </button>
+                </div>
+              ) : null}
+
+              <div
+                className="hidden overflow-hidden rounded-lg border border-slate-200 bg-background shadow-sm md:block"
+                dir="ltr"
+                onPointerLeave={() => setIsDragging(false)}
+                onPointerUp={finishSelection}
+              >
+                <div className="overflow-x-auto">
+                  <div className="min-w-[920px]">
+                    <div className="grid grid-cols-[72px_repeat(7,minmax(116px,1fr))] border-b border-slate-100 bg-slate-50/70">
+                      <div className="border-r border-slate-100 px-3 py-3 text-xs font-medium text-muted-foreground" />
+                      {weekDays.map((day) => (
                       <div
                         className={cn(
                           "border-r border-slate-100 px-3 py-3 text-center text-sm font-semibold last:border-r-0",
@@ -997,6 +1643,7 @@ export function CreateReservationForm({
                                   );
                                   selectionRef.current = nextSelection;
                                   setSelection(nextSelection);
+                                  setSelectionSource("desktop");
                                   setIsReasonDialogOpen(true);
                                 }}
                                 onPointerDown={(event) =>
@@ -1064,7 +1711,8 @@ export function CreateReservationForm({
                   </div>
                 </div>
               </div>
-            </div>
+              </div>
+            </>
           )}
         </div>
 
@@ -1072,7 +1720,7 @@ export function CreateReservationForm({
           <div
             aria-labelledby="reservation-reason-dialog-title"
             aria-modal="true"
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4"
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/55 p-0 sm:items-center sm:p-4"
             role="dialog"
           >
             <button
@@ -1081,7 +1729,7 @@ export function CreateReservationForm({
               onClick={() => setIsReasonDialogOpen(false)}
               type="button"
             />
-            <div className="relative z-10 grid w-full max-w-lg gap-5 rounded-lg border bg-background p-5 shadow-lg">
+            <div className="relative z-10 grid max-h-[92vh] w-full max-w-lg gap-5 overflow-y-auto rounded-t-lg border bg-background p-5 shadow-lg sm:rounded-lg">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h3
@@ -1167,13 +1815,14 @@ export function CreateReservationForm({
 
               <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <button
-                  className="inline-flex h-10 items-center justify-center rounded-md border bg-background px-4 text-sm font-medium hover:bg-accent"
+                  className="inline-flex h-11 w-full items-center justify-center rounded-md border bg-background px-4 text-sm font-medium hover:bg-accent sm:h-10 sm:w-auto"
                   onClick={() => setIsReasonDialogOpen(false)}
                   type="button"
                 >
                   انصراف
                 </button>
                 <SubmitButton
+                  className="h-11 w-full sm:h-10 sm:w-auto"
                   disabled={isSelectionBlocked}
                   pendingLabel="در حال ثبت..."
                 >
