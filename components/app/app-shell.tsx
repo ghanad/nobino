@@ -89,7 +89,7 @@ export async function AppShell({ user, children }: AppShellProps) {
     <main className="flex min-h-screen flex-col bg-background">
       <AnnouncementModal announcement={pendingAnnouncement} />
       <UnreadNotificationToast notification={latestUnreadNotification} />
-      <header className="border-b bg-card" dir="rtl">
+      <header className="sticky top-0 z-40 border-b bg-card md:static" dir="rtl">
         <GlobalNav
           navItems={getNavItems(user)}
           recentNotifications={recentNotifications}

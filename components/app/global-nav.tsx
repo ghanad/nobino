@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, ChevronDown, LogOut, Menu } from "lucide-react";
+import { Bell, ChevronDown, LogOut, Menu, X } from "lucide-react";
 
 import { logoutAction } from "@/app/login/actions";
 import { cn } from "@/lib/utils";
@@ -30,6 +30,17 @@ type NavNotification = {
   title: string;
 };
 
+type MobileNavEntry = {
+  item: GlobalNavItem;
+  label?: string;
+};
+
+type MobileNavSection = {
+  entries: MobileNavEntry[];
+  id: string;
+  label?: string;
+};
+
 const PERSIAN_NUMBER_FORMATTER = new Intl.NumberFormat("fa-IR");
 
 function isActiveNavItem(pathname: string, item: GlobalNavItem): boolean {
@@ -42,6 +53,77 @@ function isActiveNavItem(pathname: string, item: GlobalNavItem): boolean {
   }
 
   return pathname === item.href || pathname.startsWith(`${item.href}/`);
+}
+
+function getMobileNavSections(navItems: GlobalNavItem[]): MobileNavSection[] {
+  const sections: MobileNavSection[] = [];
+  const reservationsItem = navItems.find((item) => item.href === "/reservations");
+  const lunchItem = navItems.find((item) => item.href === "/lunch");
+  const managerItem = navItems.find((item) => item.href === "/manager");
+  const adminItem = navItems.find((item) => item.href === "/admin");
+  const auditItem = navItems.find((item) => item.href === "/admin/audit");
+
+  if (reservationsItem) {
+    sections.push({
+      entries: [{ item: reservationsItem }],
+      id: "reservations",
+    });
+  }
+
+  if (lunchItem?.children?.length) {
+    sections.push({
+      entries: lunchItem.children.map((child) => ({ item: child })),
+      id: "lunch",
+      label: "ناهار",
+    });
+  } else if (lunchItem) {
+    sections.push({
+      entries: [{ item: lunchItem, label: "رزرو ناهار" }],
+      id: "lunch",
+    });
+  }
+
+  if (managerItem) {
+    sections.push({
+      entries: [{ item: managerItem }],
+      id: "requests",
+      label: "درخواست‌ها",
+    });
+  }
+
+  if (adminItem?.children?.length) {
+    sections.push({
+      entries: adminItem.children.map((child) => ({
+        item: child,
+        label: child.href === "/admin/lunch" ? "تنظیمات ناهار" : child.label,
+      })),
+      id: "management",
+      label: "مدیریت",
+    });
+  }
+
+  if (auditItem) {
+    sections.push({
+      entries: [{ item: auditItem }],
+      id: "reports",
+      label: "گزارش‌ها",
+    });
+  }
+
+  sections.push({
+    entries: [
+      {
+        item: {
+          href: "/notifications",
+          label: "اعلان‌ها",
+          match: "prefix",
+        },
+      },
+    ],
+    id: "notifications",
+  });
+
+  return sections;
 }
 
 function NavLink({
@@ -356,6 +438,248 @@ function UserMenu({ userName }: { userName: string | null }) {
   );
 }
 
+function MobileDrawerLink({
+  entry,
+  onNavigate,
+  pathname,
+}: {
+  entry: MobileNavEntry;
+  onNavigate: () => void;
+  pathname: string;
+}) {
+  const isActive = isActiveNavItem(pathname, entry.item);
+
+  return (
+    <Link
+      aria-current={isActive ? "page" : undefined}
+      className={cn(
+        "flex min-h-11 items-center rounded-md border border-transparent border-r-2 px-3 text-[15px] font-medium transition-colors",
+        isActive
+          ? "border-r-primary bg-primary/5 text-slate-950"
+          : "border-transparent text-slate-700 hover:bg-slate-50 hover:text-slate-950",
+      )}
+      href={entry.item.href}
+      onClick={onNavigate}
+    >
+      {entry.label ?? entry.item.label}
+    </Link>
+  );
+}
+
+function MobileDrawerSection({
+  isOpen,
+  onNavigate,
+  pathname,
+  section,
+  onToggle,
+}: {
+  isOpen: boolean;
+  onNavigate: () => void;
+  onToggle: (sectionId: string) => void;
+  pathname: string;
+  section: MobileNavSection;
+}) {
+  const hasLabel = Boolean(section.label);
+
+  if (!hasLabel) {
+    return (
+      <div className="grid gap-1">
+        {section.entries.map((entry) => (
+          <MobileDrawerLink
+            entry={entry}
+            key={entry.item.href}
+            onNavigate={onNavigate}
+            pathname={pathname}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <section className="grid gap-1">
+      <button
+        aria-expanded={isOpen}
+        className="flex min-h-11 w-full cursor-pointer items-center gap-2 rounded-md px-3 text-right text-[15px] font-semibold text-slate-800 transition-colors hover:bg-slate-50"
+        onClick={() => onToggle(section.id)}
+        type="button"
+      >
+        <span>{section.label}</span>
+        <ChevronDown
+          className={cn(
+            "h-4 w-4 text-slate-500 transition-transform",
+            isOpen ? "rotate-180" : "",
+          )}
+        />
+      </button>
+      {isOpen ? (
+        <div className="grid gap-1 border-r border-slate-200 pr-3">
+          {section.entries.map((entry) => (
+            <MobileDrawerLink
+              entry={entry}
+              key={entry.item.href}
+              onNavigate={onNavigate}
+              pathname={pathname}
+            />
+          ))}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function getDefaultOpenMobileSectionIds(
+  pathname: string,
+  sections: MobileNavSection[],
+): Set<string> {
+  return new Set(
+    sections
+      .filter(
+        (section) =>
+          Boolean(section.label) &&
+          section.entries.some((entry) => isActiveNavItem(pathname, entry.item)),
+      )
+      .map((section) => section.id),
+  );
+}
+
+function MobileDrawer({
+  isOpen,
+  navItems,
+  onClose,
+  pathname,
+  userName,
+}: {
+  isOpen: boolean;
+  navItems: GlobalNavItem[];
+  onClose: () => void;
+  pathname: string;
+  userName: string | null;
+}) {
+  const drawerRef = useRef<HTMLElement>(null);
+  const sections = useMemo(() => getMobileNavSections(navItems), [navItems]);
+  const [openSectionIds, setOpenSectionIds] = useState<Set<string>>(() =>
+    getDefaultOpenMobileSectionIds(pathname, sections),
+  );
+
+  useEffect(() => {
+    setOpenSectionIds(getDefaultOpenMobileSectionIds(pathname, sections));
+  }, [pathname, sections]);
+
+  const toggleSection = useCallback((sectionId: string) => {
+    setOpenSectionIds((current) => {
+      const next = new Set(current);
+
+      if (next.has(sectionId)) {
+        next.delete(sectionId);
+      } else {
+        next.add(sectionId);
+      }
+
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    drawerRef.current?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
+  return (
+    <div
+      aria-hidden={!isOpen}
+      className={cn("fixed inset-0 z-50 md:hidden", isOpen ? "" : "pointer-events-none")}
+      inert={!isOpen}
+    >
+      <button
+        aria-label="بستن منوی ناوبری"
+        className={cn(
+          "absolute inset-0 cursor-default bg-slate-950/45 transition-opacity duration-200",
+          isOpen ? "opacity-100" : "opacity-0",
+        )}
+        onClick={onClose}
+        tabIndex={isOpen ? 0 : -1}
+        type="button"
+      />
+      <aside
+        aria-label="منوی ناوبری موبایل"
+        className={cn(
+          "absolute right-0 top-0 flex h-[100dvh] w-[min(82vw,360px)] flex-col overflow-y-auto border-l border-slate-200 bg-card text-card-foreground shadow-xl outline-none transition-transform duration-200 ease-out",
+          isOpen ? "translate-x-0" : "translate-x-full",
+        )}
+        id="mobile-navigation-drawer"
+        ref={drawerRef}
+        role="dialog"
+        tabIndex={-1}
+      >
+        <div className="flex h-16 shrink-0 items-center justify-between border-b px-4">
+          <Link
+            className="text-sm font-semibold tracking-normal text-slate-950"
+            href="/"
+            onClick={onClose}
+          >
+            Nobino
+          </Link>
+          <button
+            aria-label="بستن منوی ناوبری"
+            className="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-md border border-transparent text-slate-700 transition-colors hover:border-slate-200 hover:bg-slate-50 hover:text-slate-950"
+            onClick={onClose}
+            type="button"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <nav aria-label="ناوبری اصلی" className="grid gap-2.5 px-4 py-4">
+          {sections.map((section) => (
+            <MobileDrawerSection
+              isOpen={!section.label || openSectionIds.has(section.id)}
+              key={section.id}
+              onNavigate={onClose}
+              onToggle={toggleSection}
+              pathname={pathname}
+              section={section}
+            />
+          ))}
+        </nav>
+
+        <div className="mt-auto border-t px-4 py-3">
+          <p className="truncate px-3 text-sm font-medium text-slate-950">
+            {userName ?? "حساب کاربری"}
+          </p>
+          <form action={logoutAction} className="mt-1.5">
+            <button
+              className="flex min-h-11 w-full cursor-pointer items-center gap-2 rounded-md px-3 text-[15px] font-medium text-red-700 transition-colors hover:bg-red-50"
+              type="submit"
+            >
+              <LogOut className="h-4 w-4" />
+              خروج
+            </button>
+          </form>
+        </div>
+      </aside>
+    </div>
+  );
+}
+
 export function GlobalNav({
   navItems,
   recentNotifications,
@@ -363,16 +687,47 @@ export function GlobalNav({
   userName,
 }: GlobalNavProps) {
   const pathname = usePathname();
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const wasMobileDrawerOpenRef = useRef(false);
+
+  const closeMobileDrawer = useCallback(() => {
+    setIsMobileDrawerOpen(false);
+  }, []);
+
+  useEffect(() => {
+    setIsMobileDrawerOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!isMobileDrawerOpen && wasMobileDrawerOpenRef.current) {
+      menuButtonRef.current?.focus();
+    }
+    wasMobileDrawerOpenRef.current = isMobileDrawerOpen;
+  }, [isMobileDrawerOpen]);
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-6 py-3">
+    <div className="mx-auto flex h-16 w-full max-w-6xl flex-col justify-center px-4 md:h-auto md:gap-3 md:px-6 md:py-3">
       <div className="flex items-center justify-between gap-3">
-        <Link
-          className="shrink-0 text-sm font-semibold tracking-normal text-slate-950"
-          href="/"
-        >
-          Nobino
-        </Link>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <Link
+            className="text-sm font-semibold tracking-normal text-slate-950"
+            href="/"
+          >
+            Nobino
+          </Link>
+          <button
+            aria-controls="mobile-navigation-drawer"
+            aria-expanded={isMobileDrawerOpen}
+            aria-label="باز کردن منوی ناوبری"
+            className="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-md border border-transparent text-slate-700 transition-colors hover:border-slate-200 hover:bg-slate-50 hover:text-slate-950 md:hidden"
+            onClick={() => setIsMobileDrawerOpen(true)}
+            ref={menuButtonRef}
+            type="button"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+        </div>
 
         <nav
           aria-label="ناوبری اصلی"
@@ -404,43 +759,16 @@ export function GlobalNav({
             recentNotifications={recentNotifications}
             unreadNotificationCount={unreadNotificationCount}
           />
-          <UserMenu userName={userName} />
         </div>
       </div>
 
-      <details className="group md:hidden">
-        <summary className="inline-flex h-8 cursor-pointer list-none items-center gap-1.5 rounded-full border border-slate-200 bg-background px-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-950 [&::-webkit-details-marker]:hidden">
-          <Menu className="h-4 w-4" />
-          منو
-          <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
-        </summary>
-        <nav
-          aria-label="ناوبری اصلی"
-          className="mt-3 grid gap-2 rounded-lg border bg-background p-2"
-        >
-          {navItems.map((item) => (
-            <div className="grid gap-1" key={item.href}>
-              <NavLink
-                enableDropdown={false}
-                item={item}
-                pathname={pathname}
-              />
-              {item.children?.length ? (
-                <div className="grid gap-1 border-r border-slate-200 pr-3">
-                  {item.children.map((child) => (
-                    <NavLink
-                      enableDropdown={false}
-                      item={child}
-                      key={child.href}
-                      pathname={pathname}
-                    />
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ))}
-        </nav>
-      </details>
+      <MobileDrawer
+        isOpen={isMobileDrawerOpen}
+        navItems={navItems}
+        onClose={closeMobileDrawer}
+        pathname={pathname}
+        userName={userName}
+      />
     </div>
   );
 }
