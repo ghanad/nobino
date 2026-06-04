@@ -57,17 +57,22 @@ const initialActionState: LunchActionState = {
 };
 
 function LocationSelect({
+  className,
   currentLocationId,
   disabled,
   locations,
 }: {
+  className?: string;
   currentLocationId?: string;
   disabled: boolean;
   locations: LunchLocation[];
 }) {
   return (
     <select
-      className="h-10 min-w-40 rounded-md border border-input bg-background px-3 text-sm disabled:opacity-60"
+      className={cn(
+        "h-10 min-w-40 rounded-md border border-input bg-background px-3 text-sm disabled:opacity-60",
+        className,
+      )}
       defaultValue={currentLocationId ?? locations[0]?.id ?? ""}
       disabled={disabled || locations.length === 0}
       name="locationId"
@@ -163,8 +168,16 @@ function CreateLunchReservationForm({
     >
       <ActionResultBridge onComplete={onComplete} state={state} />
       <input name="date" type="hidden" value={row.dateParam} />
-      <LocationSelect disabled={disabled} locations={locations} />
-      <SubmitButton disabled={disabled} pendingLabel="در حال ثبت">
+      <LocationSelect
+        className="w-full sm:w-auto"
+        disabled={disabled}
+        locations={locations}
+      />
+      <SubmitButton
+        className="w-full sm:w-auto"
+        disabled={disabled}
+        pendingLabel="در حال ثبت"
+      >
         {isOpen ? (
           <Utensils className="h-4 w-4" />
         ) : (
@@ -197,17 +210,19 @@ function UpdateLunchReservationForm({
   return (
     <form
       action={formAction}
-      className="flex flex-col gap-2 sm:flex-row sm:items-center"
+      className="contents sm:flex sm:items-center sm:gap-2"
     >
       <ActionResultBridge onComplete={onComplete} state={state} />
       <input name="reservationId" type="hidden" value={row.reservation.id} />
       <input name="date" type="hidden" value={row.dateParam} />
       <LocationSelect
+        className="col-span-2 w-full sm:w-auto"
         currentLocationId={row.reservation.locationId}
         disabled={disabled}
         locations={locations}
       />
       <SubmitButton
+        className="w-full sm:w-auto"
         disabled={disabled}
         pendingLabel="در حال تغییر"
         variant="outline"
@@ -234,10 +249,11 @@ function CancelLunchReservationForm({
   );
 
   return (
-    <form action={formAction}>
+    <form action={formAction} className="w-full sm:w-auto">
       <ActionResultBridge onComplete={onComplete} state={state} />
       <input name="reservationId" type="hidden" value={reservationId} />
       <SubmitButton
+        className="w-full sm:w-auto"
         disabled={disabled}
         pendingLabel="در حال لغو"
         variant="outline"
@@ -355,7 +371,13 @@ export function LunchReservationList({
                 )}
               </div>
 
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div
+                className={cn(
+                  reservation
+                    ? "grid grid-cols-2 gap-2 sm:flex sm:items-center"
+                    : "flex flex-col gap-2 sm:flex-row sm:items-center",
+                )}
+              >
                 {reservation ? (
                   <>
                     <UpdateLunchReservationForm
