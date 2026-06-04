@@ -15,6 +15,11 @@ import {
   updateResourcePoolSettings,
 } from "@/lib/admin-settings-service";
 import { CapacityUnavailableError, getSlotUsage } from "@/lib/capacity-service";
+import { getIranHolidaysForJalaliYear } from "@/lib/iran-holidays";
+import {
+  formatJalaliDateParam,
+  parseJalaliDateParam,
+} from "@/lib/jalali-date";
 import {
   cancelLunchReservationByUser,
   createLunchReservation,
@@ -29,9 +34,6 @@ import {
   ReservationTransitionError,
   updateReservationTimeByManager,
 } from "@/lib/reservation-service";
-import {
-  parseJalaliDateParam,
-} from "@/lib/jalali-date";
 import {
   ReservationTimeRangeError,
   validateReservationTimeRange,
@@ -117,6 +119,28 @@ async function markDateWorkingForTest(date: Date) {
       reason: "Test working day",
     },
   });
+}
+
+async function nextIranHolidayDateAtHour(hour: number): Promise<Date> {
+  const currentJalaliYear = Number(formatJalaliDateParam(new Date()).slice(0, 4));
+
+  for (let year = currentJalaliYear; year <= currentJalaliYear + 2; year += 1) {
+    const holidays = await getIranHolidaysForJalaliYear(year);
+    const futureHoliday = holidays
+      .map((holiday) => {
+        const date = new Date(holiday.date);
+        date.setHours(hour, 0, 0, 0);
+
+        return date;
+      })
+      .find((date) => date.getTime() > Date.now());
+
+    if (futureHoliday) {
+      return futureHoliday;
+    }
+  }
+
+  throw new Error("No future Iran holiday found for test.");
 }
 
 async function resetDatabase() {
@@ -592,19 +616,7 @@ test("reservation time range cannot span multiple calendar days", async () => {
 });
 
 test("official Iran holidays are non-working unless overridden", async () => {
-  const holidayDate = parseJalaliDateParam("1405-03-14");
-
-  assert.ok(holidayDate);
-
-  const startAt = new Date(
-    holidayDate.getFullYear(),
-    holidayDate.getMonth(),
-    holidayDate.getDate(),
-    9,
-    0,
-    0,
-    0,
-  );
+  const startAt = await nextIranHolidayDateAtHour(9);
   const endAt = addHours(startAt, 1);
 
   await assert.rejects(
@@ -614,13 +626,11 @@ test("official Iran holidays are non-working unless overridden", async () => {
 });
 
 test("schedule exceptions can override official Iran holidays", async () => {
-  const holidayDate = parseJalaliDateParam("1405-03-14");
-
-  assert.ok(holidayDate);
+  const startAt = await nextIranHolidayDateAtHour(9);
 
   await db.scheduleException.create({
     data: {
-      date: holidayDate,
+      date: startOfLocalDay(startAt),
       isWorkingDay: true,
       startTime: "09:00",
       endTime: "17:00",
@@ -628,15 +638,6 @@ test("schedule exceptions can override official Iran holidays", async () => {
     },
   });
 
-  const startAt = new Date(
-    holidayDate.getFullYear(),
-    holidayDate.getMonth(),
-    holidayDate.getDate(),
-    9,
-    0,
-    0,
-    0,
-  );
   const endAt = addHours(startAt, 1);
 
   await assert.doesNotReject(() =>
