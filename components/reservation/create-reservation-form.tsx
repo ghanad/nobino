@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import {
-  CalendarDays,
   ChevronLeft,
   ChevronRight,
   Hourglass,
@@ -20,7 +19,6 @@ import {
 import { createPortal } from "react-dom";
 
 import { SubmitButton } from "@/components/ui/submit-button";
-import { JALALI_DATE_INPUT_PLACEHOLDER } from "@/lib/jalali-date";
 import { cn } from "@/lib/utils";
 
 type ResourcePoolOption = {
@@ -789,7 +787,6 @@ function getSelectionLimitError({
 
 export function CreateReservationForm({
   action,
-  currentDateParam,
   dailyActiveReservationCountByDate,
   dailyReservedHoursByDate,
   dailyUserHourLimit,
@@ -1030,42 +1027,8 @@ export function CreateReservationForm({
 
   return (
     <>
-      <form id="reservation-week-navigation" method="get" />
       <form action={action} className="grid gap-5 rounded-lg border bg-card p-5">
         <div className="grid gap-4">
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
-            <div className="max-w-3xl">
-              <h2 className="font-medium">درخواست رزرو جدید</h2>
-            </div>
-
-            <div className="hidden w-full flex-col gap-2 sm:flex sm:w-auto sm:flex-row sm:items-center">
-              <div className="relative hidden sm:block sm:w-44">
-                <CalendarDays
-                  aria-hidden="true"
-                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                />
-                <input
-                  className="h-10 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm"
-                  defaultValue={currentDateParam}
-                  dir="ltr"
-                  form="reservation-week-navigation"
-                  name="date"
-                  pattern="\d{4}[-/]\d{1,2}[-/]\d{1,2}"
-                  placeholder={JALALI_DATE_INPUT_PLACEHOLDER}
-                  title={`Enter a Jalali date like ${JALALI_DATE_INPUT_PLACEHOLDER}`}
-                  type="text"
-                />
-              </div>
-              <button
-                className="hidden h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 sm:inline-flex"
-                form="reservation-week-navigation"
-                type="submit"
-              >
-                نمایش
-              </button>
-            </div>
-          </div>
-
           <div
             className="grid gap-3 rounded-md border bg-muted/30 p-3"
             dir="rtl"
