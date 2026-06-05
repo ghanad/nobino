@@ -665,7 +665,7 @@ function getDefaultSelectedDayIndex(
   return firstWorkingDayIndex >= 0 ? firstWorkingDayIndex : 0;
 }
 
-function getMobileSlotStatusLabel(cell: CellState): string {
+function getMobileSlotStatusLabel(cell: CellState): string | null {
   if (cell.myReservationStatus === "ALTERNATIVE_PROPOSED") {
     return "زمان پیشنهادی مدیر نیازمند بررسی شماست";
   }
@@ -686,17 +686,7 @@ function getMobileSlotStatusLabel(cell: CellState): string {
     return "ظرفیت تکمیل است";
   }
 
-  if (cell.approvedCount > 0) {
-    return `ظرفیت آزاد: ${formatPersianNumber(
-      cell.availableCount,
-    )} از ${formatPersianNumber(cell.capacity)}، ${formatPersianNumber(
-      cell.approvedCount,
-    )} رزرو تاییدشده دیگران`;
-  }
-
-  return `ظرفیت آزاد: ${formatPersianNumber(
-    cell.availableCount,
-  )} از ${formatPersianNumber(cell.capacity)}`;
+  return null;
 }
 
 function getMobileSlotToneClass(cell: CellState): string {
@@ -1080,15 +1070,37 @@ export function CreateReservationForm({
             className="grid gap-3 rounded-md border bg-muted/30 p-3"
             dir="rtl"
           >
-            <div className="text-center">
-              <p className="text-sm font-medium">{weekLabel}</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                راهنمای وضعیت ظرفیت هر ساعت پایین تقویم آمده است.
-              </p>
-            </div>
-            <div className="flex items-center gap-2" dir="ltr">
+            <div
+              className="hidden grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 sm:grid"
+              dir="ltr"
+            >
               <Link
-                className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border bg-background px-2 text-sm font-medium hover:bg-accent sm:flex-none sm:px-4"
+                className="inline-flex h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border bg-background px-4 text-sm font-medium hover:bg-accent"
+                href={buildDateHref(previousWeekDateParam)}
+                onClick={clearSelection}
+              >
+                <ChevronLeft aria-hidden="true" className="h-4 w-4 shrink-0" />
+                <span dir="rtl">هفته قبل</span>
+              </Link>
+              <div className="text-center" dir="rtl">
+                <p className="text-sm font-medium">{weekLabel}</p>
+              </div>
+              <Link
+                className="inline-flex h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border bg-background px-4 text-sm font-medium hover:bg-accent"
+                href={buildDateHref(nextWeekDateParam)}
+                onClick={clearSelection}
+              >
+                <span dir="rtl">هفته بعد</span>
+                <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0" />
+              </Link>
+            </div>
+
+            <div className="text-center sm:hidden">
+              <p className="text-sm font-medium">{weekLabel}</p>
+            </div>
+            <div className="flex items-center gap-2 sm:hidden" dir="ltr">
+              <Link
+                className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border bg-background px-2 text-sm font-medium hover:bg-accent"
                 href={buildDateHref(previousWeekDateParam)}
                 onClick={clearSelection}
               >
@@ -1096,7 +1108,7 @@ export function CreateReservationForm({
                 <span dir="rtl">هفته قبل</span>
               </Link>
               <Link
-                className="inline-flex h-11 flex-1 items-center justify-center whitespace-nowrap rounded-md border bg-muted/60 px-2 text-sm font-medium hover:bg-accent sm:flex-none sm:px-4"
+                className="inline-flex h-11 flex-1 items-center justify-center whitespace-nowrap rounded-md border bg-muted/60 px-2 text-sm font-medium hover:bg-accent"
                 href={buildDateHref(todayDateParam)}
                 onClick={() => {
                   setSelectedMobileDayIndex(defaultMobileDayIndex);
@@ -1106,7 +1118,7 @@ export function CreateReservationForm({
                 امروز
               </Link>
               <Link
-                className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border bg-background px-2 text-sm font-medium hover:bg-accent sm:flex-none sm:px-4"
+                className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border bg-background px-2 text-sm font-medium hover:bg-accent"
                 href={buildDateHref(nextWeekDateParam)}
                 onClick={clearSelection}
               >
@@ -1228,6 +1240,7 @@ export function CreateReservationForm({
                             hour,
                             cell,
                           );
+                          const mobileStatusLabel = getMobileSlotStatusLabel(cell);
 
                           return (
                             <SlotDetailsPopover
@@ -1399,16 +1412,13 @@ export function CreateReservationForm({
                                       ) : null}
                                     </>
                                   ) : (
-                                    <span className="grid gap-1">
-                                      <span className="text-sm font-medium">
-                                        {getMobileSlotStatusLabel(cell)}
-                                      </span>
-                                      {!isMobileSlotSelectable(cell) ? (
-                                        <span className="text-xs text-muted-foreground">
-                                          {getMobileSlotUnavailableLabel(cell)}
+                                    mobileStatusLabel ? (
+                                      <span className="grid max-w-[calc(100%-5.5rem)] gap-1">
+                                        <span className="text-sm font-medium">
+                                          {mobileStatusLabel}
                                         </span>
-                                      ) : null}
-                                    </span>
+                                      </span>
+                                    ) : null
                                   )}
 
                                   {!isSelected &&
@@ -1416,7 +1426,12 @@ export function CreateReservationForm({
                                   cell.unavailableReason !== "past" ? (
                                     <span
                                       aria-hidden="true"
-                                      className="absolute left-3 top-3 flex max-w-20 flex-wrap justify-end gap-1"
+                                      className={cn(
+                                        "absolute flex max-w-24 flex-wrap justify-end gap-1",
+                                        mobileStatusLabel
+                                          ? "left-3 top-3"
+                                          : "left-3 top-1/2 -translate-y-1/2",
+                                      )}
                                     >
                                       {buildCapacityDots(cell).map(
                                         (tone, index) => (
