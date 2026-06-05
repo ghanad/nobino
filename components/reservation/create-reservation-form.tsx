@@ -1268,7 +1268,12 @@ export function CreateReservationForm({
                             >
                               <div className="grid h-16 grid-cols-[3.5rem_minmax(0,1fr)] border-b border-slate-100 last:border-b-0">
                                 <div className="flex items-center justify-center border-l border-slate-100 bg-slate-50/60 px-1.5 py-3 text-sm font-semibold text-slate-700">
-                                  <span aria-label={timeAriaLabel} title={timeTooltip}>
+                                  <span
+                                    aria-label={timeAriaLabel}
+                                    className="[unicode-bidi:isolate]"
+                                    dir="ltr"
+                                    title={timeTooltip}
+                                  >
                                     {timeLabel}
                                   </span>
                                 </div>
@@ -1600,7 +1605,8 @@ export function CreateReservationForm({
                           >
                             <span
                               aria-label={timeAriaLabel}
-                              className="absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-xs font-medium text-muted-foreground"
+                              className="absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-xs font-medium text-muted-foreground [unicode-bidi:isolate]"
+                              dir="ltr"
                               title={timeTooltip}
                             >
                               {timeLabel}
