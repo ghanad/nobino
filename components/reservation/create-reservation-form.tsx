@@ -706,6 +706,22 @@ function getMobileSlotStatusLabel(cell: CellState): string | null {
   return null;
 }
 
+function getMobileSlotStatusBadgeLabel(cell: CellState): string | null {
+  if (cell.myReservationStatus === "ALTERNATIVE_PROPOSED") {
+    return "جایگزین";
+  }
+
+  if (cell.myReservationStatus === "PENDING") {
+    return "در انتظار";
+  }
+
+  if (cell.myReservationStatus === "APPROVED") {
+    return "تایید شده";
+  }
+
+  return null;
+}
+
 function getMobileSlotToneClass(cell: CellState): string {
   if (cell.myReservationStatus === "APPROVED") {
     return "border-sky-200 bg-sky-50/70";
@@ -1160,7 +1176,7 @@ export function CreateReservationForm({
               >
                 <div
                   aria-label="انتخاب روز هفته"
-                  className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1"
+                  className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                   dir="ltr"
                   role="tablist"
                 >
@@ -1261,6 +1277,8 @@ export function CreateReservationForm({
                             slot.slotEndHour,
                           );
                           const mobileStatusLabel = getMobileSlotStatusLabel(cell);
+                          const mobileStatusBadgeLabel =
+                            getMobileSlotStatusBadgeLabel(cell);
 
                           return (
                             <SlotDetailsPopover
@@ -1268,8 +1286,83 @@ export function CreateReservationForm({
                               isDragging={Boolean(mobileDraggingHandle)}
                               key={`${selectedMobileDay.dateParam}-${hour}`}
                             >
-                              <div className="grid h-16 grid-cols-[3.5rem_minmax(0,1fr)] border-b border-slate-100 last:border-b-0">
-                                <div className="flex items-center justify-center border-l border-slate-100 bg-slate-50/60 px-1.5 py-3 text-sm font-semibold text-slate-700">
+                              <div
+                                aria-disabled={!isMobileSlotSelectable(cell)}
+                                aria-label={slotLabel}
+                                aria-pressed={isSelected}
+                                className={cn(
+                                  "relative flex w-full items-stretch border-b border-slate-100 text-right transition-colors last:border-b-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                  mobileStatusLabel || isSelected
+                                    ? "min-h-[68px]"
+                                    : "min-h-14",
+                                  getMobileSlotToneClass(cell),
+                                  (cell.myReservationStatus === "PENDING" ||
+                                    cell.myReservationStatus ===
+                                      "ALTERNATIVE_PROPOSED") &&
+                                    "border-amber-300/30",
+                                  isMobileSlotSelectable(cell) &&
+                                    "hover:bg-emerald-50/70",
+                                  !isMobileSlotSelectable(cell) &&
+                                    "cursor-not-allowed text-slate-500",
+                                  isSelected &&
+                                    "z-10 border-x border-sky-500 bg-sky-100 text-sky-950 shadow-sm",
+                                  isSelected &&
+                                    startsSelection &&
+                                    "border-t border-sky-500",
+                                  isSelected &&
+                                    endsSelection &&
+                                    "border-b border-sky-500",
+                                  startsSelection && "rounded-t-md",
+                                  endsSelection && "rounded-b-md",
+                                  selectionError &&
+                                    isSelected &&
+                                    "border-red-500 bg-red-50 text-red-950",
+                                )}
+                                data-hour={hour}
+                                data-mobile-calendar-slot="true"
+                                dir="ltr"
+                                onClick={() => {
+                                  if (isSelected && !mobileDraggingHandle) {
+                                    openReasonDialogForSelection();
+                                    return;
+                                  }
+
+                                  if (!isMobileSlotSelectable(cell)) {
+                                    return;
+                                  }
+
+                                  selectMobileSingleHour(
+                                    selectedMobileDayIndex,
+                                    hour,
+                                  );
+                                }}
+                                onKeyDown={(event) => {
+                                  if (
+                                    event.key !== "Enter" &&
+                                    event.key !== " "
+                                  ) {
+                                    return;
+                                  }
+
+                                  event.preventDefault();
+
+                                  if (isSelected) {
+                                    openReasonDialogForSelection();
+                                    return;
+                                  }
+
+                                  if (isMobileSlotSelectable(cell)) {
+                                    selectMobileSingleHour(
+                                      selectedMobileDayIndex,
+                                      hour,
+                                    );
+                                  }
+                                }}
+                                role="button"
+                                tabIndex={0}
+                                title={slotLabel}
+                              >
+                                <div className="flex w-[72px] shrink-0 items-center justify-center border-r border-slate-100 bg-slate-50/60 px-2 py-2 text-sm font-semibold text-slate-700">
                                   <span
                                     aria-label={timeAriaLabel}
                                     className="[unicode-bidi:isolate]"
@@ -1281,73 +1374,58 @@ export function CreateReservationForm({
                                 </div>
 
                                 <div
-                                  aria-disabled={!isMobileSlotSelectable(cell)}
-                                  aria-label={slotLabel}
-                                  aria-pressed={isSelected}
                                   className={cn(
-                                    "relative h-16 w-full overflow-visible p-2.5 text-right transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                                    getMobileSlotToneClass(cell),
-                                    isMobileSlotSelectable(cell) &&
-                                      "hover:bg-emerald-50/70",
-                                    !isMobileSlotSelectable(cell) &&
-                                      "cursor-not-allowed text-slate-500",
-                                    isSelected &&
-                                      "z-10 border-x border-sky-500 bg-sky-100 text-sky-950 shadow-sm",
-                                    isSelected &&
-                                      startsSelection &&
-                                      "border-t border-sky-500",
-                                    isSelected &&
-                                      endsSelection &&
-                                      "border-b border-sky-500",
-                                    startsSelection && "rounded-t-md",
-                                    endsSelection && "rounded-b-md",
-                                    selectionError &&
-                                      isSelected &&
-                                      "border-red-500 bg-red-50 text-red-950",
+                                    "relative flex min-w-0 flex-1 flex-col justify-center gap-1 px-3 py-2",
+                                    mobileStatusLabel || isSelected
+                                      ? "items-stretch"
+                                      : "items-start",
                                   )}
-                                  data-hour={hour}
-                                  data-mobile-calendar-slot="true"
-                                  onClick={() => {
-                                    if (isSelected && !mobileDraggingHandle) {
-                                      openReasonDialogForSelection();
-                                      return;
-                                    }
-
-                                    if (!isMobileSlotSelectable(cell)) {
-                                      return;
-                                    }
-
-                                    selectMobileSingleHour(
-                                      selectedMobileDayIndex,
-                                      hour,
-                                    );
-                                  }}
-                                  onKeyDown={(event) => {
-                                    if (
-                                      event.key !== "Enter" &&
-                                      event.key !== " "
-                                    ) {
-                                      return;
-                                    }
-
-                                    event.preventDefault();
-
-                                    if (isSelected) {
-                                      openReasonDialogForSelection();
-                                      return;
-                                    }
-
-                                    if (isMobileSlotSelectable(cell)) {
-                                      selectMobileSingleHour(
-                                        selectedMobileDayIndex,
-                                        hour,
-                                      );
-                                    }
-                                  }}
-                                  role="button"
-                                  tabIndex={0}
-                                  title={slotLabel}
+                                  dir="rtl"
                                 >
+                                  <div className="flex min-h-5 items-center justify-start gap-2">
+                                    {!isSelected &&
+                                    cell.isWorkingHour &&
+                                    cell.unavailableReason !== "past" ? (
+                                      <span
+                                        aria-hidden="true"
+                                        className="flex max-w-28 flex-wrap justify-end gap-1"
+                                      >
+                                        {buildCapacityDots(cell).map(
+                                          (tone, index) => (
+                                            <CapacityDot
+                                              key={`${tone}-${index}`}
+                                              tone={tone}
+                                            />
+                                          ),
+                                        )}
+                                      </span>
+                                    ) : null}
+
+                                    {!isSelected && cell.pendingCount > 0 ? (
+                                      <PendingRequestsBadge
+                                        count={cell.pendingCount}
+                                      />
+                                    ) : null}
+
+                                    {!isSelected && mobileStatusBadgeLabel ? (
+                                      <span
+                                        className={cn(
+                                          "inline-flex h-5 shrink-0 items-center rounded-full border px-2 text-[11px] font-medium leading-none",
+                                          cell.myReservationStatus ===
+                                            "APPROVED" &&
+                                            "border-sky-200 bg-sky-100/70 text-sky-700",
+                                          (cell.myReservationStatus ===
+                                            "PENDING" ||
+                                            cell.myReservationStatus ===
+                                              "ALTERNATIVE_PROPOSED") &&
+                                            "border-amber-200 bg-amber-100/60 text-amber-700",
+                                        )}
+                                      >
+                                        {mobileStatusBadgeLabel}
+                                      </span>
+                                    ) : null}
+                                  </div>
+
                                   {isSelected ? (
                                     <>
                                       {startsSelection ? (
@@ -1440,43 +1518,26 @@ export function CreateReservationForm({
                                     </>
                                   ) : (
                                     mobileStatusLabel ? (
-                                      <span className="grid max-w-[calc(100%-5.5rem)] gap-1">
-                                        <span className="text-sm font-medium">
+                                      <span className="grid min-w-0 gap-1">
+                                        <span
+                                          className={cn(
+                                            "text-[13px] font-medium leading-5",
+                                            cell.myReservationStatus ===
+                                              "APPROVED" && "text-sky-700",
+                                            (cell.myReservationStatus ===
+                                              "PENDING" ||
+                                              cell.myReservationStatus ===
+                                                "ALTERNATIVE_PROPOSED") &&
+                                              "text-amber-700",
+                                            !cell.myReservationStatus &&
+                                              "text-slate-500",
+                                          )}
+                                        >
                                           {mobileStatusLabel}
                                         </span>
                                       </span>
                                     ) : null
                                   )}
-
-                                  {!isSelected &&
-                                  cell.isWorkingHour &&
-                                  cell.unavailableReason !== "past" ? (
-                                    <span
-                                      aria-hidden="true"
-                                      className={cn(
-                                        "absolute flex max-w-24 flex-wrap justify-end gap-1",
-                                        mobileStatusLabel
-                                          ? "left-3 top-3"
-                                          : "left-3 top-1/2 -translate-y-1/2",
-                                      )}
-                                    >
-                                      {buildCapacityDots(cell).map(
-                                        (tone, index) => (
-                                          <CapacityDot
-                                            key={`${tone}-${index}`}
-                                            tone={tone}
-                                          />
-                                        ),
-                                      )}
-                                    </span>
-                                  ) : null}
-
-                                  {!isSelected && cell.pendingCount > 0 ? (
-                                    <PendingRequestsBadge
-                                      className="absolute bottom-2 left-3"
-                                      count={cell.pendingCount}
-                                    />
-                                  ) : null}
                                 </div>
                               </div>
                             </SlotDetailsPopover>
