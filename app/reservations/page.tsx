@@ -1,6 +1,6 @@
 import { AlternativeStatus, ReservationStatus } from "@prisma/client";
 
-import { createReservationAction } from "@/app/reservations/actions";
+import { createReservationInlineAction } from "@/app/reservations/actions";
 import { ReservationsInteractiveSection } from "@/app/reservations/reservations-interactive-section";
 import { PageHeader } from "@/components/app/page-header";
 import { UrlToast } from "@/components/ui/url-toast";
@@ -645,7 +645,7 @@ export default async function ReservationsPage({
       {toast ? <UrlToast {...toast} /> : null}
 
       <ReservationsInteractiveSection
-        action={createReservationAction}
+        action={createReservationInlineAction}
         activeReservations={activeReservations}
         currentDateParam={dateParam}
         dailyActiveReservationCountByDate={dailyActiveReservationCountByDate}

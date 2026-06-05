@@ -2,12 +2,16 @@
 
 import Link from "next/link";
 import {
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Hourglass,
+  XCircle,
   X,
 } from "lucide-react";
 import {
+  useActionState,
+  useCallback,
   useEffect,
   useId,
   useMemo,
@@ -18,6 +22,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
+import type { CreateReservationActionState } from "@/app/reservations/actions";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { cn } from "@/lib/utils";
 
@@ -50,7 +55,10 @@ export type WeekDay = {
 };
 
 export type CreateReservationFormProps = {
-  action: (formData: FormData) => Promise<void>;
+  action: (
+    previousState: CreateReservationActionState,
+    formData: FormData,
+  ) => Promise<CreateReservationActionState>;
   currentDateParam: string;
   dailyActiveReservationCountByDate: Record<string, number>;
   dailyReservedHoursByDate: Record<string, number>;
@@ -61,6 +69,9 @@ export type CreateReservationFormProps = {
   previousWeekDateParam: string;
   resourcePools: ResourcePoolOption[];
   todayDateParam: string;
+  onReservationCreated?: (
+    mutation: NonNullable<CreateReservationActionState["mutation"]>,
+  ) => void;
   weekDays: WeekDay[];
   weekLabel: string;
 };
@@ -104,6 +115,17 @@ type PopoverPosition = {
 
 type MobileSelectionHandle = "end" | "start";
 type SelectionSource = "desktop" | "mobile";
+
+type ActionToast = {
+  id: number;
+  message: string;
+  variant: "error" | "success";
+};
+
+const initialCreateReservationState: CreateReservationActionState = {
+  message: "",
+  status: "idle",
+};
 
 function formatHour(hour: number): string {
   return `${hour.toString().padStart(2, "0")}:00`;
@@ -761,6 +783,63 @@ function getMobileSlotUnavailableLabel(cell: CellState): string {
   return getPersianUnavailableLabel(cell.unavailableReason) ?? "قابل رزرو نیست";
 }
 
+function ReservationsActionToast({
+  onDismiss,
+  toast,
+}: {
+  onDismiss: () => void;
+  toast: ActionToast | null;
+}) {
+  useEffect(() => {
+    if (!toast) {
+      return;
+    }
+
+    const timeout = window.setTimeout(onDismiss, 4_500);
+
+    return () => window.clearTimeout(timeout);
+  }, [onDismiss, toast]);
+
+  if (!toast) {
+    return null;
+  }
+
+  const Icon = toast.variant === "error" ? XCircle : CheckCircle2;
+
+  return (
+    <div
+      className={cn(
+        "fixed right-6 top-6 z-50 flex w-[min(420px,calc(100vw-3rem))] items-start gap-3 rounded-lg border bg-background p-4 text-sm shadow-lg",
+        toast.variant === "error"
+          ? "border-destructive/30 text-destructive"
+          : "border-emerald-200 text-emerald-900",
+      )}
+      role="status"
+    >
+      <Icon className="mt-0.5 h-4 w-4 shrink-0" />
+      <p className="leading-6">{toast.message}</p>
+    </div>
+  );
+}
+
+function ActionResultBridge({
+  onComplete,
+  state,
+}: {
+  onComplete: (state: CreateReservationActionState) => void;
+  state: CreateReservationActionState;
+}) {
+  useEffect(() => {
+    if (state.status === "idle") {
+      return;
+    }
+
+    onComplete(state);
+  }, [onComplete, state]);
+
+  return null;
+}
+
 function getSelectionRangeError(
   weekDays: WeekDay[],
   selection: Selection | null,
@@ -828,6 +907,7 @@ export function CreateReservationForm({
   emptyMessage,
   nextWeekDateParam,
   oneReservationPerDayEnabled,
+  onReservationCreated,
   previousWeekDateParam,
   resourcePools,
   todayDateParam,
@@ -835,6 +915,11 @@ export function CreateReservationForm({
   weekLabel,
 }: CreateReservationFormProps) {
   const defaultPool = resourcePools[0];
+  const [state, formAction] = useActionState(
+    action,
+    initialCreateReservationState,
+  );
+  const [toast, setToast] = useState<ActionToast | null>(null);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [selectionSource, setSelectionSource] = useState<SelectionSource | null>(
     null,
@@ -886,6 +971,7 @@ export function CreateReservationForm({
     reservedHoursForSelectedDay,
   });
   const selectionError = selectionRangeError ?? selectionLimitError;
+  const dismissToast = useCallback(() => setToast(null), []);
 
   useEffect(() => {
     selectionRef.current = null;
@@ -987,6 +1073,22 @@ export function CreateReservationForm({
     setIsReasonDialogOpen(false);
   }
 
+  const handleActionComplete = useCallback(
+    (nextState: CreateReservationActionState) => {
+      setToast({
+        id: Date.now(),
+        message: nextState.message,
+        variant: nextState.status === "error" ? "error" : "success",
+      });
+
+      if (nextState.status === "success" && nextState.mutation) {
+        onReservationCreated?.(nextState.mutation);
+        clearSelection();
+      }
+    },
+    [onReservationCreated],
+  );
+
   function selectMobileSingleHour(dayIndex: number, hour: number) {
     const nextSelection = buildSelection(weekDays, dayIndex, hour, hour);
 
@@ -1066,7 +1168,9 @@ export function CreateReservationForm({
 
   return (
     <>
-      <form action={action} className="grid gap-5 rounded-lg border bg-card p-5">
+      <ReservationsActionToast onDismiss={dismissToast} toast={toast} />
+      <form action={formAction} className="grid gap-5 rounded-lg border bg-card p-5">
+        <ActionResultBridge onComplete={handleActionComplete} state={state} />
         <div className="grid gap-4">
           <div
             className="grid gap-3 rounded-md border bg-muted/30 p-3"

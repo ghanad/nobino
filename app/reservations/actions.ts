@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { requireCurrentUser } from "@/lib/auth";
 import { CapacityUnavailableError } from "@/lib/capacity-service";
+import { db } from "@/lib/db";
 import {
   buildLocalDateAtHourFromJalali,
   formatJalaliDateParam,
@@ -35,6 +36,25 @@ export type CancelReservationActionState = {
   mutation?: {
     reservationId: string;
     type: "cancel";
+  };
+  status: "error" | "idle" | "success";
+};
+
+export type CreateReservationActionState = {
+  message: string;
+  mutation?: {
+    createdAt: string;
+    endAt: string;
+    partySize: number;
+    reason: string | null;
+    reservationId: string;
+    resourcePoolId: string;
+    resourcePoolName: string;
+    startAt: string;
+    type: "create";
+    userEmail: string | null;
+    userId: string;
+    userName: string | null;
   };
   status: "error" | "idle" | "success";
 };
@@ -113,6 +133,76 @@ export async function createReservationAction(
   }
 
   redirect(`/reservations?created=1&date=${dateParam}`);
+}
+
+export async function createReservationInlineAction(
+  _previousState: CreateReservationActionState,
+  formData: FormData,
+): Promise<CreateReservationActionState> {
+  const user = await requireCurrentUser();
+  const parsed = reservationFormSchema.safeParse({
+    resourcePoolId: formData.get("resourcePoolId"),
+    date: formData.get("date"),
+    startHour: formData.get("startHour"),
+    endHour: formData.get("endHour"),
+    partySize: formData.get("partySize"),
+    reason: formData.get("reason") || undefined,
+  });
+
+  if (!parsed.success) {
+    return {
+      message: "Enter a valid Jalali date, start hour, end hour, and people count.",
+      status: "error",
+    };
+  }
+
+  const startAt = buildLocalDateAtHourFromJalali(
+    parsed.data.date,
+    parsed.data.startHour,
+  );
+  const endAt = buildLocalDateAtHourFromJalali(
+    parsed.data.date,
+    parsed.data.endHour,
+  );
+
+  try {
+    const reservation = await createReservationRequest({
+      userId: user.id,
+      resourcePoolId: parsed.data.resourcePoolId,
+      startAt,
+      endAt,
+      partySize: parsed.data.partySize,
+      reason: parsed.data.reason,
+    });
+    const resourcePool = await db.resourcePool.findUnique({
+      where: { id: reservation.resourcePoolId },
+      select: { name: true },
+    });
+
+    return {
+      message: "درخواست رزرو ثبت شد و برای تایید مدیر ارسال شد.",
+      mutation: {
+        createdAt: reservation.createdAt.toISOString(),
+        endAt: reservation.endAt.toISOString(),
+        partySize: reservation.partySize,
+        reason: reservation.reason,
+        reservationId: reservation.id,
+        resourcePoolId: reservation.resourcePoolId,
+        resourcePoolName: resourcePool?.name ?? "سیستم رزرو",
+        startAt: reservation.startAt.toISOString(),
+        type: "create",
+        userEmail: user.email,
+        userId: user.id,
+        userName: user.name,
+      },
+      status: "success",
+    };
+  } catch (error) {
+    return {
+      message: getActionErrorMessage(error),
+      status: "error",
+    };
+  }
 }
 
 export async function cancelReservationByUserAction(

@@ -8,6 +8,7 @@ import {
   ActiveReservationsList,
   type ActiveReservation,
 } from "@/app/reservations/active-reservations-list";
+import type { CreateReservationActionState } from "@/app/reservations/actions";
 import {
   CreateReservationForm,
   type CreateReservationFormProps,
@@ -35,6 +36,17 @@ function decrementDateValue(
   return {
     ...valuesByDate,
     [dateParam]: Math.max((valuesByDate[dateParam] ?? 0) - amount, 0),
+  };
+}
+
+function incrementDateValue(
+  valuesByDate: Record<string, number>,
+  dateParam: string,
+  amount: number,
+) {
+  return {
+    ...valuesByDate,
+    [dateParam]: (valuesByDate[dateParam] ?? 0) + amount,
   };
 }
 
@@ -73,6 +85,52 @@ function removePendingReservationFromWeekDays(
   }));
 }
 
+function addPendingReservationToWeekDays(
+  weekDays: WeekDay[],
+  mutation: NonNullable<CreateReservationActionState["mutation"]>,
+): WeekDay[] {
+  const startAt = new Date(mutation.startAt);
+  const endAt = new Date(mutation.endAt);
+  const startHour = startAt.getHours();
+  const endHour = endAt.getHours();
+  const dateParam = formatJalaliDateParam(startAt);
+  const pendingReservation = {
+    email: mutation.userEmail,
+    id: mutation.reservationId,
+    partySize: mutation.partySize,
+    userId: mutation.userId,
+    userName: mutation.userName,
+  };
+
+  return weekDays.map((day) => {
+    if (day.dateParam !== dateParam) {
+      return day;
+    }
+
+    return {
+      ...day,
+      slots: day.slots.map((slot) => {
+        if (slot.slotStartHour < startHour || slot.slotStartHour >= endHour) {
+          return slot;
+        }
+
+        return {
+          ...slot,
+          myReservationId: mutation.reservationId,
+          myReservationStatus: "PENDING",
+          pendingCount: slot.pendingCount + 1,
+          pendingReservations: [
+            ...slot.pendingReservations.filter(
+              (reservation) => reservation.id !== mutation.reservationId,
+            ),
+            pendingReservation,
+          ],
+        };
+      }),
+    };
+  });
+}
+
 export function ReservationsInteractiveSection({
   activeReservations,
   dailyActiveReservationCountByDate,
@@ -81,6 +139,8 @@ export function ReservationsInteractiveSection({
   ...formProps
 }: ReservationsInteractiveSectionProps) {
   const [currentWeekDays, setCurrentWeekDays] = useState(weekDays);
+  const [currentActiveReservations, setCurrentActiveReservations] =
+    useState(activeReservations);
   const [
     currentDailyActiveReservationCountByDate,
     setCurrentDailyActiveReservationCountByDate,
@@ -91,6 +151,10 @@ export function ReservationsInteractiveSection({
   useEffect(() => {
     setCurrentWeekDays(weekDays);
   }, [weekDays]);
+
+  useEffect(() => {
+    setCurrentActiveReservations(activeReservations);
+  }, [activeReservations]);
 
   useEffect(() => {
     setCurrentDailyActiveReservationCountByDate(
@@ -119,6 +183,53 @@ export function ReservationsInteractiveSection({
           getReservationDurationHours(reservation),
         ),
       );
+      setCurrentActiveReservations((previousReservations) =>
+        previousReservations.filter((item) => item.id !== reservation.id),
+      );
+    },
+    [],
+  );
+
+  const handleReservationCreated = useCallback(
+    (mutation: NonNullable<CreateReservationActionState["mutation"]>) => {
+      const startAt = new Date(mutation.startAt);
+      const endAt = new Date(mutation.endAt);
+      const createdAt = new Date(mutation.createdAt);
+      const dateParam = formatJalaliDateParam(startAt);
+      const reservation: ActiveReservation = {
+        id: mutation.reservationId,
+        startAt,
+        endAt,
+        partySize: mutation.partySize,
+        resourcePoolId: mutation.resourcePoolId,
+        status: "PENDING" as ActiveReservation["status"],
+        reason: mutation.reason,
+        rejectionReason: null,
+        resourcePool: {
+          name: mutation.resourcePoolName,
+        },
+        alternatives: [],
+        createdAt,
+        updatedAt: createdAt,
+      };
+
+      setCurrentWeekDays((previousWeekDays) =>
+        addPendingReservationToWeekDays(previousWeekDays, mutation),
+      );
+      setCurrentDailyActiveReservationCountByDate((previousCounts) =>
+        incrementDateValue(previousCounts, dateParam, 1),
+      );
+      setCurrentDailyReservedHoursByDate((previousHours) =>
+        incrementDateValue(
+          previousHours,
+          dateParam,
+          getReservationDurationHours(reservation),
+        ),
+      );
+      setCurrentActiveReservations((previousReservations) => [
+        reservation,
+        ...previousReservations.filter((item) => item.id !== reservation.id),
+      ]);
     },
     [],
   );
@@ -131,6 +242,7 @@ export function ReservationsInteractiveSection({
           currentDailyActiveReservationCountByDate
         }
         dailyReservedHoursByDate={currentDailyReservedHoursByDate}
+        onReservationCreated={handleReservationCreated}
         weekDays={currentWeekDays}
       />
 
@@ -152,7 +264,7 @@ export function ReservationsInteractiveSection({
 
         <ActiveReservationsList
           onReservationCancelled={handleReservationCancelled}
-          reservations={activeReservations}
+          reservations={currentActiveReservations}
         />
       </section>
     </>
