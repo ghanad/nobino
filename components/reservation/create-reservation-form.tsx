@@ -818,6 +818,10 @@ export function CreateReservationForm({
     () => getDefaultSelectedDayIndex(weekDays, todayDateParam),
     [todayDateParam, weekDays],
   );
+  const isCurrentWeek = useMemo(
+    () => weekDays.some((day) => day.dateParam === todayDateParam),
+    [todayDateParam, weekDays],
+  );
   const selectedMobileDay =
     weekDays[selectedMobileDayIndex] ?? weekDays[0] ?? null;
   const selectedHours = selection ? selection.endHour - selection.startHour : 0;
@@ -1045,8 +1049,28 @@ export function CreateReservationForm({
                 <ChevronLeft aria-hidden="true" className="h-4 w-4 shrink-0" />
                 <span dir="rtl">هفته قبل</span>
               </Link>
-              <div className="text-center" dir="rtl">
+              <div
+                className={cn(
+                  "h-16 text-center",
+                  isCurrentWeek
+                    ? "flex items-center justify-center"
+                    : "grid content-center justify-items-center gap-2",
+                )}
+                dir="rtl"
+              >
                 <p className="text-sm font-medium">{weekLabel}</p>
+                {!isCurrentWeek ? (
+                  <Link
+                    className="inline-flex h-8 items-center justify-center whitespace-nowrap rounded-md bg-sky-50 px-3 text-xs font-medium text-slate-600 transition-colors hover:bg-sky-100 hover:text-slate-800"
+                    href={buildDateHref(todayDateParam)}
+                    onClick={() => {
+                      setSelectedMobileDayIndex(defaultMobileDayIndex);
+                      clearSelection();
+                    }}
+                  >
+                    بازگشت به هفته جاری
+                  </Link>
+                ) : null}
               </div>
               <Link
                 className="inline-flex h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border bg-background px-4 text-sm font-medium hover:bg-accent"
