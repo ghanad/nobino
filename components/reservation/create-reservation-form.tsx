@@ -122,6 +122,25 @@ function formatPersianHour(hour: number): string {
   return `${PERSIAN_HOUR_FORMATTER.format(hour)}:۰۰`;
 }
 
+function formatPersianShortHour(hour: number): string {
+  return PERSIAN_HOUR_FORMATTER.format(hour);
+}
+
+function formatPersianShortHourRange(startHour: number, endHour: number): string {
+  return `${formatPersianShortHour(startHour)}–${formatPersianShortHour(endHour)}`;
+}
+
+function formatPersianHourRangeTooltip(startHour: number, endHour: number): string {
+  return `از ${formatPersianHour(startHour)} تا ${formatPersianHour(endHour)}`;
+}
+
+function formatPersianHourRangeAriaLabel(
+  startHour: number,
+  endHour: number,
+): string {
+  return `از ساعت ${formatPersianHour(startHour)} تا ${formatPersianHour(endHour)}`;
+}
+
 function formatPersianNumber(value: number): string {
   return PERSIAN_NUMBER_FORMATTER.format(value);
 }
@@ -1227,6 +1246,18 @@ export function CreateReservationForm({
                             hour,
                             cell,
                           );
+                          const timeLabel = formatPersianShortHourRange(
+                            slot.slotStartHour,
+                            slot.slotEndHour,
+                          );
+                          const timeTooltip = formatPersianHourRangeTooltip(
+                            slot.slotStartHour,
+                            slot.slotEndHour,
+                          );
+                          const timeAriaLabel = formatPersianHourRangeAriaLabel(
+                            slot.slotStartHour,
+                            slot.slotEndHour,
+                          );
                           const mobileStatusLabel = getMobileSlotStatusLabel(cell);
 
                           return (
@@ -1235,9 +1266,11 @@ export function CreateReservationForm({
                               isDragging={Boolean(mobileDraggingHandle)}
                               key={`${selectedMobileDay.dateParam}-${hour}`}
                             >
-                              <div className="grid h-16 grid-cols-[4.5rem_minmax(0,1fr)] border-b border-slate-100 last:border-b-0">
-                                <div className="flex items-start justify-center border-l border-slate-100 bg-slate-50/60 px-2 py-3 text-sm font-semibold text-slate-700">
-                                  {formatPersianHour(hour)}
+                              <div className="grid h-16 grid-cols-[3.5rem_minmax(0,1fr)] border-b border-slate-100 last:border-b-0">
+                                <div className="flex items-center justify-center border-l border-slate-100 bg-slate-50/60 px-1.5 py-3 text-sm font-semibold text-slate-700">
+                                  <span aria-label={timeAriaLabel} title={timeTooltip}>
+                                    {timeLabel}
+                                  </span>
                                 </div>
 
                                 <div
@@ -1510,8 +1543,10 @@ export function CreateReservationForm({
               >
                 <div className="overflow-x-auto">
                   <div className="min-w-[920px]">
-                    <div className="grid grid-cols-[72px_repeat(7,minmax(116px,1fr))] border-b border-slate-100 bg-slate-50/70">
-                      <div className="border-r border-slate-100 px-3 py-3 text-xs font-medium text-muted-foreground" />
+                    <div className="grid grid-cols-[56px_repeat(7,minmax(116px,1fr))] border-b border-slate-100 bg-slate-50/70">
+                      <div className="border-r border-slate-100 px-2 py-3 text-center text-xs font-medium text-muted-foreground">
+                        ساعت
+                      </div>
                       {weekDays.map((day) => (
                       <div
                         className={cn(
@@ -1538,22 +1573,41 @@ export function CreateReservationForm({
 
                   <div className="max-h-[460px] overflow-y-auto">
                     <div
-                      className="grid touch-none select-none grid-cols-[72px_repeat(7,minmax(116px,1fr))]"
+                      className="grid touch-none select-none grid-cols-[56px_repeat(7,minmax(116px,1fr))]"
                       style={{
                         gridTemplateRows: `repeat(${hours.length}, 3.25rem)`,
                       }}
                     >
-                      {hours.map((hour, hourIndex) => (
-                        <div
-                          className="relative border-b border-r border-slate-100 bg-slate-50/40"
-                          key={`time-${hour}`}
-                          style={{ gridColumn: 1, gridRow: hourIndex + 1 }}
-                        >
-                          <span className="absolute right-3 top-1 text-xs font-medium text-muted-foreground">
-                            {formatHour(hour)}
-                          </span>
-                        </div>
-                      ))}
+                      {hours.map((hour, hourIndex) => {
+                        const timeLabel = formatPersianShortHourRange(
+                          hour,
+                          hour + 1,
+                        );
+                        const timeTooltip = formatPersianHourRangeTooltip(
+                          hour,
+                          hour + 1,
+                        );
+                        const timeAriaLabel = formatPersianHourRangeAriaLabel(
+                          hour,
+                          hour + 1,
+                        );
+
+                        return (
+                          <div
+                            className="relative border-b border-r border-slate-100 bg-slate-50/40"
+                            key={`time-${hour}`}
+                            style={{ gridColumn: 1, gridRow: hourIndex + 1 }}
+                          >
+                            <span
+                              aria-label={timeAriaLabel}
+                              className="absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-xs font-medium text-muted-foreground"
+                              title={timeTooltip}
+                            >
+                              {timeLabel}
+                            </span>
+                          </div>
+                        );
+                      })}
 
                       {hours.map((hour, hourIndex) =>
                         weekDays.map((day, dayIndex) => {
