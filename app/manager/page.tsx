@@ -10,8 +10,8 @@ import { getSlotUsage } from "@/lib/capacity-service";
 import { db } from "@/lib/db";
 import {
   formatJalaliDate,
-  formatJalaliDateWithoutYear,
   formatJalaliDateParam,
+  getJalaliDisplayParts,
   parseJalaliDateParam,
 } from "@/lib/jalali-date";
 import { getWorkingWindowForDate } from "@/lib/schedule";
@@ -122,18 +122,45 @@ function buildManagerHref(dateParam: string): string {
   return `/manager?date=${encodeURIComponent(dateParam)}`;
 }
 
-function formatNaturalJalaliDate(date: Date): string {
-  return formatJalaliDate(date);
-}
-
 function formatWeekLabel(startDate: Date, endDate: Date): string {
-  return `${formatNaturalJalaliDate(startDate)} تا ${formatNaturalJalaliDate(
-    endDate,
-  )}`;
+  const start = getJalaliDisplayParts(startDate);
+  const end = getJalaliDisplayParts(endDate);
+  const isSameMonth = start.year === end.year && start.month === end.month;
+  const isSameYear = start.year === end.year;
+
+  if (isSameMonth) {
+    return `${start.dayLabel} تا ${end.dayLabel} ${end.monthLabel} ${end.yearLabel}`;
+  }
+
+  if (isSameYear) {
+    return `${start.dayLabel} ${start.monthLabel} تا ${end.dayLabel} ${end.monthLabel} ${end.yearLabel}`;
+  }
+
+  return `${start.dayLabel} ${start.monthLabel} ${start.yearLabel} تا ${end.dayLabel} ${end.monthLabel} ${end.yearLabel}`;
 }
 
-function formatCalendarColumnLabel(date: Date): string {
-  return formatJalaliDateWithoutYear(date);
+function isSameJalaliMonth(dates: Date[]): boolean {
+  if (dates.length === 0) {
+    return true;
+  }
+
+  const first = getJalaliDisplayParts(dates[0]);
+
+  return dates.every((date) => {
+    const parts = getJalaliDisplayParts(date);
+
+    return parts.year === first.year && parts.month === first.month;
+  });
+}
+
+function formatCalendarColumnLabel(date: Date, includeMonth: boolean): string {
+  const parts = getJalaliDisplayParts(date);
+
+  return [
+    parts.weekdayLabel,
+    parts.dayLabel,
+    includeMonth ? parts.monthLabel : null,
+  ].filter(Boolean).join(" ");
 }
 
 function getCalendarReservationRange(reservation: CalendarReservation): {
@@ -170,10 +197,10 @@ function getQueueToast(params: Awaited<ManagerPageProps["searchParams"]>) {
   }
 
   const successMessage =
-    (params?.approved && "Reservation approved.") ||
-    (params?.cancelled && "Reservation cancelled.") ||
-    (params?.rejected && "Reservation rejected.") ||
-    (params?.alternative && "Reservation time updated.");
+    (params?.approved && "رزرو تایید شد.") ||
+    (params?.cancelled && "رزرو لغو شد.") ||
+    (params?.rejected && "رزرو رد شد.") ||
+    (params?.alternative && "زمان رزرو به‌روزرسانی شد.");
 
   return successMessage
     ? {
@@ -258,12 +285,14 @@ function ReviewModal({
 export default async function ManagerPage({ searchParams }: ManagerPageProps) {
   const params = await searchParams;
   const toast = getQueueToast(params);
-  const selectedDate = parseJalaliDateParam(params?.date) ?? new Date();
+  const now = new Date();
+  const selectedDate = parseJalaliDateParam(params?.date) ?? now;
   const dateParam = formatJalaliDateParam(selectedDate);
   const weekStart = getWeekStart(selectedDate);
   const weekDates = Array.from({ length: 7 }, (_, index) =>
     addDays(weekStart, index),
   );
+  const weekSpansMultipleJalaliMonths = !isSameJalaliMonth(weekDates);
   const weekRangeEnd = addDays(weekStart, 7);
   const resourcePool = await db.resourcePool.findFirst({
     where: { active: true },
@@ -349,11 +378,14 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
 
           return {
             closedReason: !workingWindow.isWorkingDay
-              ? workingWindow.reason ?? "Non-working day"
+              ? workingWindow.reason ?? "روز غیرکاری"
               : null,
-            dateLabel: formatNaturalJalaliDate(date),
+            dateLabel: formatJalaliDate(date),
             dateParam: formatJalaliDateParam(date),
-            shortLabel: formatCalendarColumnLabel(date),
+            shortLabel: formatCalendarColumnLabel(
+              date,
+              weekSpansMultipleJalaliMonths,
+            ),
             slots: slots.map((slot) => {
               const details = weekReservations
                 .map((reservation) => ({
@@ -397,9 +429,12 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       )
     : weekDates.map((date) => ({
         closedReason: null,
-        dateLabel: formatNaturalJalaliDate(date),
+        dateLabel: formatJalaliDate(date),
         dateParam: formatJalaliDateParam(date),
-        shortLabel: formatCalendarColumnLabel(date),
+        shortLabel: formatCalendarColumnLabel(
+          date,
+          weekSpansMultipleJalaliMonths,
+        ),
         slots: [],
       }));
   const pendingReservations: QueueReservation[] = await db.reservation.findMany({
@@ -456,11 +491,7 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
           }
           nextWeekDateParam={formatJalaliDateParam(addDays(weekStart, 7))}
           previousWeekDateParam={formatJalaliDateParam(addDays(weekStart, -7))}
-          title={
-            resourcePool
-              ? `تقویم هفتگی تایید رزروهای ${resourcePool.name}`
-              : "تقویم هفتگی تایید مدیر"
-          }
+          todayDateParam={formatJalaliDateParam(now)}
           weekDays={weekDays}
           weekLabel={formatWeekLabel(weekDates[0], weekDates[6])}
         />
@@ -475,9 +506,9 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
 
       {queueItems.length === 0 ? (
         <section className="rounded-lg border bg-card p-5 text-card-foreground">
-          <h2 className="font-medium">Approval queue</h2>
+          <h2 className="font-medium">صف بررسی تایید</h2>
           <p className="mt-5 rounded-md border bg-muted/40 p-4 text-sm text-muted-foreground">
-            No pending reservation requests.
+            هیچ درخواست رزروی در انتظار تایید نیست.
           </p>
         </section>
       ) : null}

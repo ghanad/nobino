@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Hourglass, Users } from "lucide-react";
 import Link from "next/link";
 import {
   useCallback,
@@ -13,7 +13,6 @@ import {
 } from "react";
 
 import { proposeAlternativeDropAction } from "@/app/manager/actions";
-import { JALALI_DATE_INPUT_PLACEHOLDER } from "@/lib/jalali-date";
 import { cn } from "@/lib/utils";
 
 type SlotReservationDetail = {
@@ -60,6 +59,7 @@ type DraggedReservation = {
 };
 
 type ResizeEdge = "start" | "end";
+type CapacityDotTone = "approved" | "free";
 
 type ResizingReservation = {
   dateParam: string;
@@ -81,7 +81,7 @@ type ManagerWeeklyCalendarProps = {
   emptyMessage: string;
   nextWeekDateParam: string;
   previousWeekDateParam: string;
-  title: string;
+  todayDateParam: string;
   weekDays: ManagerWeekDay[];
   weekLabel: string;
 };
@@ -90,8 +90,25 @@ function buildDateHref(dateParam: string): string {
   return `?date=${dateParam}`;
 }
 
-function formatHour(hour: number): string {
-  return `${hour.toString().padStart(2, "0")}:00`;
+const PERSIAN_HOUR_FORMATTER = new Intl.NumberFormat("fa-IR", {
+  minimumIntegerDigits: 2,
+  useGrouping: false,
+});
+
+const PERSIAN_NUMBER_FORMATTER = new Intl.NumberFormat("fa-IR", {
+  useGrouping: false,
+});
+
+function formatPersianShortHour(hour: number): string {
+  return PERSIAN_HOUR_FORMATTER.format(hour);
+}
+
+function formatPersianShortHourRange(startHour: number, endHour: number): string {
+  return `${formatPersianShortHour(startHour)}–${formatPersianShortHour(endHour)}`;
+}
+
+function formatPersianNumber(value: number): string {
+  return PERSIAN_NUMBER_FORMATTER.format(value);
 }
 
 function getHourRange(weekDays: ManagerWeekDay[]): number[] {
@@ -118,22 +135,14 @@ function getSlotForHour(
 
 function getCellTone(slot: ManagerWeekSlot | null): string {
   if (!slot) {
-    return "bg-muted/30 text-muted-foreground";
+    return "bg-slate-50/80 text-muted-foreground";
   }
 
   if (slot.approvedCount >= slot.capacity) {
-    return "bg-red-50/80 text-red-900";
+    return "bg-slate-50/80 text-red-900";
   }
 
-  if (slot.pendingCount > 0) {
-    return "bg-amber-50/80 text-amber-950";
-  }
-
-  if (slot.approvedCount > 0) {
-    return "bg-emerald-50/70 text-emerald-950";
-  }
-
-  return "bg-background hover:bg-sky-50/60";
+  return "bg-white hover:bg-sky-50/50";
 }
 
 function getDetailClass(status: SlotReservationDetail["status"]): string {
@@ -150,14 +159,104 @@ function getDetailClass(status: SlotReservationDetail["status"]): string {
 
 function getDetailActionLabel(status: SlotReservationDetail["status"]): string {
   if (status === "PENDING") {
-    return "Review";
+    return "بررسی";
   }
 
   if (status === "ALTERNATIVE_PROPOSED") {
-    return "Proposed";
+    return "پیشنهادی";
   }
 
-  return "Details";
+  return "جزئیات";
+}
+
+function buildCapacityDots(slot: ManagerWeekSlot): CapacityDotTone[] {
+  const capacity = Math.max(slot.capacity, 0);
+  const approvedCount = Math.min(slot.approvedCount, capacity);
+  const freeCount = Math.max(capacity - approvedCount, 0);
+
+  return [
+    ...Array<CapacityDotTone>(freeCount).fill("free"),
+    ...Array<CapacityDotTone>(approvedCount).fill("approved"),
+  ];
+}
+
+function getCapacityDotClass(tone: CapacityDotTone): string {
+  if (tone === "approved") {
+    return "border-slate-400 bg-slate-300";
+  }
+
+  return "border-emerald-600 bg-emerald-500";
+}
+
+function CapacityDot({ tone }: { tone: CapacityDotTone }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "h-2 w-2 shrink-0 rounded-full border shadow-[inset_0_0_0_1px_rgba(255,255,255,0.45)]",
+        getCapacityDotClass(tone),
+      )}
+    />
+  );
+}
+
+function CapacityDots({ slot }: { slot: ManagerWeekSlot }) {
+  const dots = buildCapacityDots(slot);
+
+  return (
+    <span className="absolute inset-x-2 top-1/2 z-10 flex -translate-y-1/2 flex-wrap items-center justify-center gap-1.5">
+      {dots.map((tone, index) => (
+        <CapacityDot key={`${tone}-${index}`} tone={tone} />
+      ))}
+    </span>
+  );
+}
+
+function PendingRequestsBadge({
+  className,
+  count,
+}: {
+  className?: string;
+  count: number;
+}) {
+  if (count <= 0) {
+    return null;
+  }
+
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "inline-flex h-5 min-w-5 shrink-0 items-center justify-center gap-0.5 rounded-full border border-amber-300 bg-amber-100 px-1.5 text-[10px] font-semibold leading-none text-amber-800 shadow-sm",
+        className,
+      )}
+    >
+      <Hourglass className="h-3 w-3" />
+      <span>{formatPersianNumber(count)}</span>
+    </span>
+  );
+}
+
+function CalendarLegend() {
+  return (
+    <div
+      className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 shadow-sm"
+      dir="rtl"
+    >
+      <span className="inline-flex items-center gap-1.5">
+        <CapacityDot tone="free" />
+        ظرفیت آزاد
+      </span>
+      <span className="inline-flex items-center gap-1.5">
+        <CapacityDot tone="approved" />
+        رزرو تاییدشده
+      </span>
+      <span className="inline-flex items-center gap-1.5">
+        <PendingRequestsBadge count={1} />
+        درخواست در انتظار
+      </span>
+    </div>
+  );
 }
 
 function getReservationBlocks(day: ManagerWeekDay): SlotReservationBlock[] {
@@ -339,12 +438,12 @@ function ReservationBlock({
           }}
           role="button"
           tabIndex={-1}
-          title="Drag to change the start time"
+          title="برای تغییر زمان شروع بکشید"
         />
       ) : null}
       <span
         className="min-h-0 max-h-full overflow-hidden text-center leading-4 [text-orientation:mixed] [writing-mode:vertical-rl]"
-        title={`${detail.userName} - ${detail.partySize} people`}
+        title={`${detail.userName} - ${formatPersianNumber(detail.partySize)} نفر`}
       >
         {detail.userName}
       </span>
@@ -352,8 +451,8 @@ function ReservationBlock({
         <Users aria-hidden="true" className="h-2.5 w-2.5" />
         {detail.partySize}
       </span>
-      <span className="shrink-0 text-[9px] uppercase leading-3 opacity-75">
-        {canDrag ? "Drag / resize" : getDetailActionLabel(detail.status)}
+      <span className="shrink-0 text-[9px] leading-3 opacity-75">
+        {canDrag ? "جابجایی / تغییر اندازه" : getDetailActionLabel(detail.status)}
       </span>
       {canDrag ? (
         <span
@@ -369,7 +468,7 @@ function ReservationBlock({
           }}
           role="button"
           tabIndex={-1}
-          title="Drag to change the end time"
+          title="برای تغییر زمان پایان بکشید"
         />
       ) : null}
     </>
@@ -400,8 +499,8 @@ function ReservationBlock({
         style={getReservationBlockStyle(block)}
         title={
           canDrag
-            ? "Drag to move, or drag the top/bottom edge to resize this reservation"
-            : `${detail.partySize} people${detail.reason ? ` - ${detail.reason}` : ""}`
+            ? "برای جابجایی بکشید، یا لبه بالا/پایین را برای تغییر زمان بکشید"
+            : `${formatPersianNumber(detail.partySize)} نفر${detail.reason ? ` - ${detail.reason}` : ""}`
         }
       >
         {content}
@@ -414,7 +513,7 @@ function ReservationBlock({
       className={className}
       {...dragProps}
       style={getReservationBlockStyle(block)}
-      title={`${detail.partySize} people${detail.reason ? ` - ${detail.reason}` : ""}`}
+      title={`${formatPersianNumber(detail.partySize)} نفر${detail.reason ? ` - ${detail.reason}` : ""}`}
     >
       {content}
     </span>
@@ -426,7 +525,7 @@ export function ManagerWeeklyCalendar({
   emptyMessage,
   nextWeekDateParam,
   previousWeekDateParam,
-  title,
+  todayDateParam,
   weekDays,
   weekLabel,
 }: ManagerWeeklyCalendarProps) {
@@ -447,6 +546,7 @@ export function ManagerWeeklyCalendar({
     ]),
   );
   const firstHour = hours[0] ?? 0;
+  const isCurrentWeek = weekDays.some((day) => day.dateParam === todayDateParam);
 
   useEffect(() => {
     setLocalWeekDays(weekDays);
@@ -614,7 +714,7 @@ export function ManagerWeeklyCalendar({
       }
 
       if (proposedEndHour <= proposedStartHour) {
-        setDropError("Reservation must be at least 1 hour long.");
+        setDropError("مدت رزرو باید حداقل ۱ ساعت باشد.");
         return;
       }
 
@@ -638,60 +738,79 @@ export function ManagerWeeklyCalendar({
   return (
     <section className="rounded-lg border bg-card p-5 text-card-foreground">
       <div className="grid gap-4">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
-          <div>
-            <h2 className="font-medium">{title}</h2>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              {weekLabel}
-            </p>
-          </div>
-
-          <form className="flex items-center gap-2" method="get">
-            <input
-              className="h-9 w-40 rounded-md border border-input bg-background px-3 text-sm"
-              defaultValue={currentDateParam}
-              dir="ltr"
-              name="date"
-              pattern="\d{4}[-/]\d{1,2}[-/]\d{1,2}"
-              placeholder={JALALI_DATE_INPUT_PLACEHOLDER}
-              title={`تاریخ جلالی مثل ${JALALI_DATE_INPUT_PLACEHOLDER} وارد کنید`}
-              type="text"
-            />
-            <button
-              className="inline-flex h-9 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-              type="submit"
-            >
-              مشاهده
-            </button>
-          </form>
-        </div>
-
         <div
-          className="grid gap-3 rounded-md border bg-muted/30 p-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center"
-          dir="ltr"
+          className="grid gap-3 rounded-md border bg-muted/30 p-3"
+          dir="rtl"
         >
-          <Link
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-md border bg-background px-3 text-sm font-medium hover:bg-accent sm:justify-self-start"
-            href={buildDateHref(previousWeekDateParam)}
+          <div
+            className="hidden grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 sm:grid"
+            dir="ltr"
           >
-            <ChevronLeft aria-hidden="true" className="h-4 w-4" />
-            <span dir="rtl">هفته قبل</span>
-          </Link>
-          <div className="order-first text-center sm:order-none" dir="rtl">
-            <p className="text-sm font-medium">تقویم تایید رزروها</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              درخواست‌های زرد در انتظار بررسی هستند؛ رزروهای سبز تایید شده‌اند
-              و ظرفیت را مصرف می‌کنند.
-            </p>
+            <Link
+              className="inline-flex h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border bg-background px-4 text-sm font-medium hover:bg-accent"
+              href={buildDateHref(previousWeekDateParam)}
+            >
+              <ChevronLeft aria-hidden="true" className="h-4 w-4 shrink-0" />
+              <span dir="rtl">هفته قبل</span>
+            </Link>
+            <div
+              className={cn(
+                "h-16 text-center",
+                isCurrentWeek
+                  ? "flex items-center justify-center"
+                  : "grid content-center justify-items-center gap-2",
+              )}
+              dir="rtl"
+            >
+              <p className="text-sm font-medium">{weekLabel}</p>
+              {!isCurrentWeek ? (
+                <Link
+                  className="inline-flex h-8 items-center justify-center whitespace-nowrap rounded-md bg-sky-50 px-3 text-xs font-medium text-slate-600 transition-colors hover:bg-sky-100 hover:text-slate-800"
+                  href={buildDateHref(todayDateParam)}
+                >
+                  بازگشت به هفته جاری
+                </Link>
+              ) : null}
+            </div>
+            <Link
+              className="inline-flex h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border bg-background px-4 text-sm font-medium hover:bg-accent"
+              href={buildDateHref(nextWeekDateParam)}
+            >
+              <span dir="rtl">هفته بعد</span>
+              <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0" />
+            </Link>
           </div>
-          <Link
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-md border bg-background px-3 text-sm font-medium hover:bg-accent sm:justify-self-end"
-            href={buildDateHref(nextWeekDateParam)}
-          >
-            <span dir="rtl">هفته بعد</span>
-            <ChevronRight aria-hidden="true" className="h-4 w-4" />
-          </Link>
+
+          <div className="text-center sm:hidden">
+            <p className="text-sm font-medium">{weekLabel}</p>
+          </div>
+          <div className="flex items-center gap-2 sm:hidden" dir="ltr">
+            <Link
+              className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border bg-background px-2 text-sm font-medium hover:bg-accent"
+              href={buildDateHref(previousWeekDateParam)}
+            >
+              <ChevronLeft aria-hidden="true" className="h-4 w-4 shrink-0" />
+              <span dir="rtl">هفته قبل</span>
+            </Link>
+            {!isCurrentWeek ? (
+              <Link
+                className="inline-flex h-11 flex-1 items-center justify-center whitespace-nowrap rounded-md border bg-muted/60 px-2 text-sm font-medium hover:bg-accent"
+                href={buildDateHref(todayDateParam)}
+              >
+                امروز
+              </Link>
+            ) : null}
+            <Link
+              className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border bg-background px-2 text-sm font-medium hover:bg-accent"
+              href={buildDateHref(nextWeekDateParam)}
+            >
+              <span dir="rtl">هفته بعد</span>
+              <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0" />
+            </Link>
+          </div>
         </div>
+
+        <CalendarLegend />
       </div>
 
       {dropError ? (
@@ -715,8 +834,10 @@ export function ManagerWeeklyCalendar({
           <div className="overflow-x-auto">
             <div className="min-w-[980px]">
               <div>
-                <div className="sticky top-0 z-20 grid grid-cols-[72px_repeat(7,minmax(124px,1fr))] border-b bg-background">
-                  <div className="border-r px-3 py-3 text-xs font-medium text-muted-foreground" />
+                <div className="sticky top-0 z-20 grid grid-cols-[64px_repeat(7,minmax(124px,1fr))] border-b bg-slate-50/80">
+                  <div className="border-r px-3 py-3 text-center text-sm font-semibold text-slate-500" dir="rtl">
+                    ساعت
+                  </div>
                   {localWeekDays.map((day) => (
                     <div
                       className="border-r px-3 py-3 text-center text-sm font-semibold last:border-r-0"
@@ -735,19 +856,19 @@ export function ManagerWeeklyCalendar({
                 </div>
 
                 <div
-                  className="grid grid-cols-[72px_repeat(7,minmax(124px,1fr))]"
+                  className="grid grid-cols-[64px_repeat(7,minmax(124px,1fr))]"
                   style={{
-                    gridTemplateRows: `repeat(${hours.length}, minmax(6rem, auto))`,
+                    gridTemplateRows: `repeat(${hours.length}, minmax(5.75rem, auto))`,
                   }}
                 >
                   {hours.map((hour, hourIndex) => (
                     <div
-                      className="relative border-b border-r bg-background"
+                      className="relative border-b border-r bg-slate-50/80"
                       key={`time-${hour}`}
                       style={{ gridColumn: 1, gridRow: hourIndex + 1 }}
                     >
-                      <span className="absolute right-3 top-2 text-xs font-medium text-muted-foreground">
-                        {formatHour(hour)}
+                      <span className="absolute inset-x-1 top-1/2 -translate-y-1/2 text-center text-xs font-medium text-slate-500" dir="ltr">
+                        {formatPersianShortHourRange(hour, hour + 1)}
                       </span>
                     </div>
                   ))}
@@ -762,7 +883,7 @@ export function ManagerWeeklyCalendar({
                       return (
                         <div
                           className={cn(
-                            "border-b border-r p-2 text-left transition-colors",
+                            "relative border-b border-r text-left transition-colors",
                             getCellTone(slot),
                             draggedReservation && slot
                               ? "outline-offset-[-2px]"
@@ -798,30 +919,24 @@ export function ManagerWeeklyCalendar({
                           }}
                         >
                           {slot ? (
-                            <div className="grid min-h-20 content-start gap-1">
-                              <div className="flex items-start justify-between gap-2 text-[11px] leading-4">
-                                <span className="font-medium">Capacity</span>
-                                <span className="shrink-0 text-muted-foreground">
-                                  {available}/{slot.capacity} open
-                                </span>
-                              </div>
-                              {slot.approvedCount > 0 || slot.pendingCount > 0 ? (
-                                <div className="flex flex-wrap gap-1 text-[10px] leading-4">
-                                  {slot.approvedCount > 0 ? (
-                                    <span className="rounded-sm bg-emerald-100 px-1 text-emerald-900">
-                                      {slot.approvedCount} approved
-                                    </span>
-                                  ) : null}
-                                  {slot.pendingCount > 0 ? (
-                                    <span className="rounded-sm bg-amber-100 px-1 text-amber-950">
-                                      {slot.pendingCount} pending
-                                    </span>
-                                  ) : null}
-                                </div>
-                              ) : null}
-                            </div>
+                            <>
+                              <CapacityDots slot={slot} />
+                              <PendingRequestsBadge
+                                className="absolute left-2 top-2 z-10"
+                                count={slot.pendingCount}
+                              />
+                              <span className="sr-only">
+                                {`ظرفیت آزاد ${formatPersianNumber(
+                                  available,
+                                )} از ${formatPersianNumber(slot.capacity)}، ${formatPersianNumber(
+                                  slot.approvedCount,
+                                )} رزرو تاییدشده، ${formatPersianNumber(
+                                  slot.pendingCount,
+                                )} درخواست در انتظار`}
+                              </span>
+                            </>
                           ) : (
-                            <span className="sr-only">Not working hour</span>
+                            <span className="sr-only">ساعت غیرکاری</span>
                           )}
                         </div>
                       );
