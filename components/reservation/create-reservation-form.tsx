@@ -1161,6 +1161,7 @@ export function CreateReservationForm({
                 <div
                   aria-label="انتخاب روز هفته"
                   className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1"
+                  dir="ltr"
                   role="tablist"
                 >
                   {weekDays.map((day, dayIndex) => {
@@ -1183,6 +1184,7 @@ export function CreateReservationForm({
                           setSelectedMobileDayIndex(dayIndex);
                           clearSelection();
                         }}
+                        dir="rtl"
                         role="tab"
                         type="button"
                       >
