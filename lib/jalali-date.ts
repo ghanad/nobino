@@ -63,6 +63,13 @@ type JalaliParts = {
   day: number;
 };
 
+export type JalaliDisplayParts = JalaliParts & {
+  dayLabel: string;
+  monthLabel: string;
+  weekdayLabel: string;
+  yearLabel: string;
+};
+
 function normalizeDigits(value: string): string {
   return value.replace(/[۰-۹٠-٩]/g, (digit) => {
     const persianIndex = PERSIAN_DIGITS.indexOf(digit);
@@ -82,6 +89,23 @@ function getJalaliParts(date: Date): JalaliParts {
   const day = Number(parts.find((part) => part.type === "day")?.value);
 
   return { year, month, day };
+}
+
+export function getJalaliDisplayParts(date: Date): JalaliDisplayParts {
+  const displayParts = JALALI_DATE_FORMATTER.formatToParts(date);
+  const numericParts = getJalaliParts(date);
+  const rawWeekday = displayParts.find((part) => part.type === "weekday")?.value;
+  const weekdayLabel = rawWeekday
+    ? WEEKDAY_LABELS[rawWeekday] ?? rawWeekday
+    : "";
+
+  return {
+    ...numericParts,
+    dayLabel: displayParts.find((part) => part.type === "day")?.value ?? "",
+    monthLabel: displayParts.find((part) => part.type === "month")?.value ?? "",
+    weekdayLabel,
+    yearLabel: displayParts.find((part) => part.type === "year")?.value ?? "",
+  };
 }
 
 function sameJalaliDate(date: Date, parts: JalaliParts): boolean {

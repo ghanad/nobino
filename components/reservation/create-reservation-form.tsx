@@ -1528,7 +1528,7 @@ export function CreateReservationForm({
                       >
                         <span>{day.shortLabel}</span>
                         {day.closedReason ? (
-                          <span className="mt-1 block text-[11px] font-medium leading-4 text-red-700">
+                          <span className="mt-1 line-clamp-2 text-[10px] font-medium leading-4 text-red-600">
                             {day.closedReason}
                           </span>
                         ) : null}

@@ -10,8 +10,8 @@ import { db } from "@/lib/db";
 import {
   formatJalaliDate,
   formatJalaliDateWithoutWeekday,
-  formatJalaliDateWithoutYear,
   formatJalaliDateParam,
+  getJalaliDisplayParts,
   parseJalaliDateParam,
 } from "@/lib/jalali-date";
 import { getWorkingWindowForDate } from "@/lib/schedule";
@@ -73,18 +73,45 @@ type CalendarReservationSource = CalendarReservationDetail & {
 
 const ACTIVE_REJECTED_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
 
-function formatNaturalJalaliDate(date: Date): string {
-  return formatJalaliDate(date);
-}
-
 function formatWeekLabel(startDate: Date, endDate: Date): string {
-  return `${formatNaturalJalaliDate(startDate)} تا ${formatNaturalJalaliDate(
-    endDate,
-  )}`;
+  const start = getJalaliDisplayParts(startDate);
+  const end = getJalaliDisplayParts(endDate);
+  const isSameMonth = start.year === end.year && start.month === end.month;
+  const isSameYear = start.year === end.year;
+
+  if (isSameMonth) {
+    return `${start.dayLabel} تا ${end.dayLabel} ${end.monthLabel} ${end.yearLabel}`;
+  }
+
+  if (isSameYear) {
+    return `${start.dayLabel} ${start.monthLabel} تا ${end.dayLabel} ${end.monthLabel} ${end.yearLabel}`;
+  }
+
+  return `${start.dayLabel} ${start.monthLabel} ${start.yearLabel} تا ${end.dayLabel} ${end.monthLabel} ${end.yearLabel}`;
 }
 
-function formatCalendarColumnLabel(date: Date): string {
-  return formatJalaliDateWithoutYear(date);
+function isSameJalaliMonth(dates: Date[]): boolean {
+  if (dates.length === 0) {
+    return true;
+  }
+
+  const first = getJalaliDisplayParts(dates[0]);
+
+  return dates.every((date) => {
+    const parts = getJalaliDisplayParts(date);
+
+    return parts.year === first.year && parts.month === first.month;
+  });
+}
+
+function formatCalendarColumnLabel(date: Date, includeMonth: boolean): string {
+  const parts = getJalaliDisplayParts(date);
+
+  return [
+    parts.weekdayLabel,
+    parts.dayLabel,
+    includeMonth ? parts.monthLabel : null,
+  ].filter(Boolean).join(" ");
 }
 
 function formatReservationDialogDate(date: Date): string {
@@ -336,6 +363,7 @@ export default async function ReservationsPage({
   const weekDates = Array.from({ length: 7 }, (_, index) =>
     addDays(weekStart, index),
   );
+  const weekSpansMultipleJalaliMonths = !isSameJalaliMonth(weekDates);
   const [resourcePools, reservationPolicy, reservations] = await Promise.all([
     db.resourcePool.findMany({
       where: { active: true },
@@ -540,7 +568,10 @@ export default async function ReservationsPage({
             dateLabel: formatJalaliDate(date),
             modalDateLabel: formatReservationDialogDate(date),
             dateParam: formatJalaliDateParam(date),
-            shortLabel: formatCalendarColumnLabel(date),
+            shortLabel: formatCalendarColumnLabel(
+              date,
+              weekSpansMultipleJalaliMonths,
+            ),
             slots: slots.map((slot) => {
               const isPast = slot.slotStart.getTime() < now.getTime();
               const isFull = slot.approvedCount >= slot.capacity;
@@ -597,7 +628,10 @@ export default async function ReservationsPage({
         dateLabel: formatJalaliDate(date),
         modalDateLabel: formatReservationDialogDate(date),
         dateParam: formatJalaliDateParam(date),
-        shortLabel: formatCalendarColumnLabel(date),
+        shortLabel: formatCalendarColumnLabel(
+          date,
+          weekSpansMultipleJalaliMonths,
+        ),
         slots: [],
       }));
 
