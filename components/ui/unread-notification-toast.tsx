@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Bell } from "lucide-react";
+import { Bell, X } from "lucide-react";
 
 type UnreadNotificationToastProps = {
   notification: {
@@ -46,10 +46,18 @@ export function UnreadNotificationToast({
 
   return (
     <div
-      className="fixed right-6 top-24 z-50 w-[min(420px,calc(100vw-3rem))] rounded-lg border border-sky-200 bg-background p-4 text-right text-sm text-foreground shadow-lg"
+      className="fixed right-4 top-20 z-50 w-[min(420px,calc(100vw-2rem))] rounded-lg border border-sky-200 bg-background p-4 pl-12 text-right text-sm text-foreground shadow-lg md:right-6 md:top-24 md:w-[min(420px,calc(100vw-3rem))]"
       dir="rtl"
       role="status"
     >
+      <button
+        aria-label="بستن اعلان"
+        className="absolute left-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        onClick={() => setIsVisible(false)}
+        type="button"
+      >
+        <X aria-hidden="true" className="h-4 w-4" />
+      </button>
       <div className="flex items-start gap-3">
         <Bell className="mt-0.5 h-4 w-4 shrink-0 text-sky-700" />
         <div className="min-w-0">

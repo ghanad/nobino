@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, X, XCircle } from "lucide-react";
 
 type UrlToastProps = {
   message: string;
@@ -41,7 +41,15 @@ export function UrlToast({ message, variant, consumeKeys }: UrlToastProps) {
       role="status"
     >
       <Icon className="mt-0.5 h-4 w-4 shrink-0" />
-      <p className="leading-6">{message}</p>
+      <p className="min-w-0 flex-1 pl-8 leading-6">{message}</p>
+      <button
+        aria-label="بستن پیام"
+        className="absolute left-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        onClick={() => setIsVisible(false)}
+        type="button"
+      >
+        <X aria-hidden="true" className="h-4 w-4" />
+      </button>
     </div>
   );
 }

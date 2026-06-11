@@ -817,7 +817,15 @@ function ReservationsActionToast({
       role="status"
     >
       <Icon className="mt-0.5 h-4 w-4 shrink-0" />
-      <p className="leading-6">{toast.message}</p>
+      <p className="min-w-0 flex-1 pl-8 leading-6">{toast.message}</p>
+      <button
+        aria-label="بستن پیام"
+        className="absolute left-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        onClick={onDismiss}
+        type="button"
+      >
+        <X aria-hidden="true" className="h-4 w-4" />
+      </button>
     </div>
   );
 }
