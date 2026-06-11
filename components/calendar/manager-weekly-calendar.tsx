@@ -169,6 +169,16 @@ function getDetailActionLabel(status: SlotReservationDetail["status"]): string {
   return "جزئیات";
 }
 
+function canUpdateReservationTime(
+  status: SlotReservationDetail["status"],
+): boolean {
+  return (
+    status === "PENDING" ||
+    status === "APPROVED" ||
+    status === "ALTERNATIVE_PROPOSED"
+  );
+}
+
 function buildCapacityDots(slot: ManagerWeekSlot): CapacityDotTone[] {
   const capacity = Math.max(slot.capacity, 0);
   const approvedCount = Math.min(slot.approvedCount, capacity);
@@ -389,16 +399,47 @@ function buildMobileSlotAriaLabel(
 
 function MobileReservationBlock({
   block,
+  isResizing,
+  onResizeStart,
 }: {
   block: PositionedReservationBlock;
+  isResizing: boolean;
+  onResizeStart: (
+    event: ReactPointerEvent<HTMLElement>,
+    block: PositionedReservationBlock,
+    edge: ResizeEdge,
+  ) => void;
 }) {
   const { detail } = block;
+  const canResize = canUpdateReservationTime(detail.status);
+  const suppressNextClickRef = useRef(false);
   const className = cn(
-    "pointer-events-auto relative flex h-full min-w-0 flex-col justify-between gap-2 rounded-md px-2.5 py-2 text-xs font-medium leading-5 shadow-sm ring-1 transition",
+    "pointer-events-auto relative flex h-full min-w-0 flex-col justify-between gap-2 rounded-md px-2.5 py-3 text-xs font-medium leading-5 shadow-sm ring-1 transition",
     getDetailClass(detail.status),
+    canResize ? "touch-none" : null,
+    isResizing ? "opacity-45" : null,
   );
   const content = (
     <>
+      {canResize ? (
+        <span
+          aria-label="تغییر زمان شروع"
+          className="absolute inset-x-3 top-0 z-20 flex h-6 cursor-ns-resize items-start justify-center rounded-t-md pt-1"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
+          onPointerDown={(event) => {
+            suppressNextClickRef.current = true;
+            onResizeStart(event, block, "start");
+          }}
+          role="button"
+          tabIndex={-1}
+          title="برای تغییر زمان شروع بکشید"
+        >
+          <span className="h-1.5 w-14 rounded-full border border-amber-500/70 bg-white/90 shadow-sm" />
+        </span>
+      ) : null}
       <span
         className="min-w-0 truncate text-sm font-semibold leading-6"
         title={`${detail.userName} - ${formatPersianNumber(detail.partySize)} نفر`}
@@ -410,8 +451,27 @@ function MobileReservationBlock({
         {formatPersianNumber(detail.partySize)} نفر
       </span>
       <span className="mt-auto shrink-0 text-[11px] leading-4 opacity-75">
-        {getDetailActionLabel(detail.status)}
+        {canResize ? "بررسی / تغییر اندازه" : getDetailActionLabel(detail.status)}
       </span>
+      {canResize ? (
+        <span
+          aria-label="تغییر زمان پایان"
+          className="absolute inset-x-3 bottom-0 z-20 flex h-6 cursor-ns-resize items-end justify-center rounded-b-md pb-1"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
+          onPointerDown={(event) => {
+            suppressNextClickRef.current = true;
+            onResizeStart(event, block, "end");
+          }}
+          role="button"
+          tabIndex={-1}
+          title="برای تغییر زمان پایان بکشید"
+        >
+          <span className="h-1.5 w-14 rounded-full border border-amber-500/70 bg-white/90 shadow-sm" />
+        </span>
+      ) : null}
     </>
   );
 
@@ -428,8 +488,21 @@ function MobileReservationBlock({
         )}
         dir="rtl"
         href={detail.href}
+        onClickCapture={(event) => {
+          if (!suppressNextClickRef.current) {
+            return;
+          }
+
+          suppressNextClickRef.current = false;
+          event.preventDefault();
+          event.stopPropagation();
+        }}
         style={getMobileReservationBlockStyle(block)}
-        title={`${formatPersianNumber(detail.partySize)} نفر${detail.reason ? ` - ${detail.reason}` : ""}`}
+        title={
+          canResize
+            ? "برای بررسی لمس کنید، یا لبه بالا/پایین را برای تغییر زمان بکشید"
+            : `${formatPersianNumber(detail.partySize)} نفر${detail.reason ? ` - ${detail.reason}` : ""}`
+        }
       >
         {content}
       </a>
@@ -521,7 +594,7 @@ function ReservationBlock({
   ) => void;
 }) {
   const { detail } = block;
-  const canDrag = detail.status === "PENDING" || detail.status === "APPROVED";
+  const canDrag = canUpdateReservationTime(detail.status);
   const suppressNextClickRef = useRef(false);
   const className = cn(
     "pointer-events-auto relative flex h-full min-w-0 flex-col items-center justify-between gap-2 rounded-md px-1.5 py-2 text-xs font-medium leading-5 shadow-sm ring-1 transition",
@@ -758,7 +831,7 @@ export function ManagerWeeklyCalendar({
       if (
         !slot ||
         !dragged ||
-        (dragged.status !== "PENDING" && dragged.status !== "APPROVED")
+        !canUpdateReservationTime(dragged.status)
       ) {
       return;
     }
@@ -834,7 +907,7 @@ export function ManagerWeeklyCalendar({
       if (
         !target ||
         target.dateParam !== resizing.dateParam ||
-        (resizing.status !== "PENDING" && resizing.status !== "APPROVED")
+        !canUpdateReservationTime(resizing.status)
       ) {
         return;
       }
@@ -1071,7 +1144,17 @@ export function ManagerWeeklyCalendar({
                         className={cn(
                           "relative flex min-h-[72px] items-center justify-between gap-3 border-b px-3 py-2 text-right last:border-b-0",
                           getMobileSlotToneClass(slot),
+                          resizeOverSlotKey ===
+                            `${selectedMobileDay.dateParam}-${slot.slotStartHour}-start` ||
+                            resizeOverSlotKey ===
+                              `${selectedMobileDay.dateParam}-${slot.slotStartHour}-end`
+                            ? "outline outline-2 outline-amber-600 outline-offset-[-2px]"
+                            : null,
                         )}
+                        data-date-param={selectedMobileDay.dateParam}
+                        data-manager-calendar-cell="true"
+                        data-slot-end-hour={slot.slotEndHour}
+                        data-slot-start-hour={slot.slotStartHour}
                         dir="rtl"
                         key={`mobile-slot-${selectedMobileDay.dateParam}-${slot.slotStartHour}`}
                         style={{
@@ -1122,7 +1205,28 @@ export function ManagerWeeklyCalendar({
                               gridRow: `${startIndex + 1} / ${endLine}`,
                             }}
                           >
-                            <MobileReservationBlock block={block} />
+                            <MobileReservationBlock
+                              block={block}
+                              isResizing={
+                                resizingReservation?.reservationId ===
+                                block.detail.id
+                              }
+                              onResizeStart={(event, resizeBlock, edge) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                setDropError(null);
+                                setDraggedReservation(null);
+                                setDragOverSlotKey(null);
+                                setResizingReservation({
+                                  dateParam: selectedMobileDay.dateParam,
+                                  edge,
+                                  endHour: resizeBlock.endHour,
+                                  reservationId: resizeBlock.detail.id,
+                                  startHour: resizeBlock.startHour,
+                                  status: resizeBlock.detail.status,
+                                });
+                              }}
+                            />
                           </div>
                         );
                       },
