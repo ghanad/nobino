@@ -153,8 +153,8 @@ export function LunchReportView({ initialReport }: LunchReportViewProps) {
       </div>
 
       <div className="grid gap-3 rounded-md border bg-background p-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <Button asChild variant="outline">
+        <div className="grid grid-cols-3 gap-2">
+          <Button asChild className="w-full min-w-0" variant="outline">
             <Link
               aria-disabled={isLoading}
               className={isLoading ? "pointer-events-none opacity-60" : undefined}
@@ -165,7 +165,7 @@ export function LunchReportView({ initialReport }: LunchReportViewProps) {
               روز قبل
             </Link>
           </Button>
-          <Button asChild variant="outline">
+          <Button asChild className="w-full min-w-0" variant="outline">
             <Link
               aria-disabled={isLoading}
               className={isLoading ? "pointer-events-none opacity-60" : undefined}
@@ -175,7 +175,7 @@ export function LunchReportView({ initialReport }: LunchReportViewProps) {
               امروز
             </Link>
           </Button>
-          <Button asChild variant="outline">
+          <Button asChild className="w-full min-w-0" variant="outline">
             <Link
               aria-disabled={isLoading}
               className={isLoading ? "pointer-events-none opacity-60" : undefined}
