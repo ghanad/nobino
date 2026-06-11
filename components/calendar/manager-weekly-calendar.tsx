@@ -321,6 +321,133 @@ function getReservationBlockStyle(block: PositionedReservationBlock) {
   };
 }
 
+function getMobileReservationBlockStyle(block: PositionedReservationBlock) {
+  const laneWidth = 100 / block.laneCount;
+
+  return {
+    marginLeft: `calc(${block.lane * laneWidth}% + 0.25rem)`,
+    width: `calc(${laneWidth}% - 0.5rem)`,
+  };
+}
+
+function getDefaultSelectedDayIndex(
+  weekDays: ManagerWeekDay[],
+  currentDateParam: string,
+): number {
+  const currentDateIndex = weekDays.findIndex(
+    (day) => day.dateParam === currentDateParam,
+  );
+
+  if (currentDateIndex >= 0) {
+    return currentDateIndex;
+  }
+
+  const firstWorkingDayIndex = weekDays.findIndex(
+    (day) => !day.closedReason && day.slots.length > 0,
+  );
+
+  return firstWorkingDayIndex >= 0 ? firstWorkingDayIndex : 0;
+}
+
+function getMobileSlotToneClass(slot: ManagerWeekSlot): string {
+  if (slot.approvedCount >= slot.capacity) {
+    return "border-red-200 bg-red-50";
+  }
+
+  if (slot.pendingCount > 0) {
+    return "border-amber-200 bg-amber-50/70";
+  }
+
+  return "border-slate-100 bg-background";
+}
+
+function getMobileSlotStatusLabel(slot: ManagerWeekSlot): string {
+  const available = Math.max(slot.capacity - slot.approvedCount, 0);
+
+  if (available === 0) {
+    return "ظرفیت تکمیل است";
+  }
+
+  return `${formatPersianNumber(available)} ظرفیت آزاد`;
+}
+
+function buildMobileSlotAriaLabel(
+  day: ManagerWeekDay,
+  slot: ManagerWeekSlot,
+): string {
+  return [
+    day.dateLabel,
+    `ساعت ${formatPersianShortHourRange(
+      slot.slotStartHour,
+      slot.slotEndHour,
+    )}`,
+    `${formatPersianNumber(slot.approvedCount)} رزرو تاییدشده`,
+    `${formatPersianNumber(slot.pendingCount)} درخواست در انتظار`,
+    `${formatPersianNumber(Math.max(slot.capacity - slot.approvedCount, 0))} ظرفیت آزاد`,
+  ].join("، ");
+}
+
+function MobileReservationBlock({
+  block,
+}: {
+  block: PositionedReservationBlock;
+}) {
+  const { detail } = block;
+  const className = cn(
+    "pointer-events-auto relative flex h-full min-w-0 flex-col justify-between gap-2 rounded-md px-2.5 py-2 text-xs font-medium leading-5 shadow-sm ring-1 transition",
+    getDetailClass(detail.status),
+  );
+  const content = (
+    <>
+      <span
+        className="min-w-0 truncate text-sm font-semibold leading-6"
+        title={`${detail.userName} - ${formatPersianNumber(detail.partySize)} نفر`}
+      >
+        {detail.userName}
+      </span>
+      <span className="inline-flex shrink-0 items-center gap-1 text-[11px] leading-4 opacity-80">
+        <Users aria-hidden="true" className="h-3 w-3" />
+        {formatPersianNumber(detail.partySize)} نفر
+      </span>
+      <span className="mt-auto shrink-0 text-[11px] leading-4 opacity-75">
+        {getDetailActionLabel(detail.status)}
+      </span>
+    </>
+  );
+
+  if (detail.href) {
+    const hoverClass =
+      detail.status === "APPROVED" ? "hover:bg-emerald-200" : "hover:bg-amber-200";
+
+    return (
+      <a
+        className={cn(
+          className,
+          hoverClass,
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        )}
+        dir="rtl"
+        href={detail.href}
+        style={getMobileReservationBlockStyle(block)}
+        title={`${formatPersianNumber(detail.partySize)} نفر${detail.reason ? ` - ${detail.reason}` : ""}`}
+      >
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <span
+      className={className}
+      dir="rtl"
+      style={getMobileReservationBlockStyle(block)}
+      title={`${formatPersianNumber(detail.partySize)} نفر${detail.reason ? ` - ${detail.reason}` : ""}`}
+    >
+      {content}
+    </span>
+  );
+}
+
 function applyReservationTimeUpdate(
   weekDays: ManagerWeekDay[],
   input: {
@@ -547,10 +674,25 @@ export function ManagerWeeklyCalendar({
   );
   const firstHour = hours[0] ?? 0;
   const isCurrentWeek = weekDays.some((day) => day.dateParam === todayDateParam);
+  const defaultMobileDayIndex = getDefaultSelectedDayIndex(
+    localWeekDays,
+    currentDateParam,
+  );
+  const [selectedMobileDayIndex, setSelectedMobileDayIndex] = useState(
+    defaultMobileDayIndex,
+  );
+  const selectedMobileDay =
+    localWeekDays[selectedMobileDayIndex] ?? localWeekDays[0] ?? null;
 
   useEffect(() => {
     setLocalWeekDays(weekDays);
   }, [weekDays]);
+
+  useEffect(() => {
+    setSelectedMobileDayIndex(
+      getDefaultSelectedDayIndex(weekDays, currentDateParam),
+    );
+  }, [currentDateParam, weekDays]);
 
   function readDraggedReservation(
     event: DragEvent<HTMLElement>,
@@ -792,14 +934,12 @@ export function ManagerWeeklyCalendar({
               <ChevronLeft aria-hidden="true" className="h-4 w-4 shrink-0" />
               <span dir="rtl">هفته قبل</span>
             </Link>
-            {!isCurrentWeek ? (
-              <Link
-                className="inline-flex h-11 flex-1 items-center justify-center whitespace-nowrap rounded-md border bg-muted/60 px-2 text-sm font-medium hover:bg-accent"
-                href={buildDateHref(todayDateParam)}
-              >
-                امروز
-              </Link>
-            ) : null}
+            <Link
+              className="inline-flex h-11 flex-1 items-center justify-center whitespace-nowrap rounded-md border bg-muted/60 px-2 text-sm font-medium hover:bg-accent"
+              href={buildDateHref(todayDateParam)}
+            >
+              امروز
+            </Link>
             <Link
               className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border bg-background px-2 text-sm font-medium hover:bg-accent"
               href={buildDateHref(nextWeekDateParam)}
@@ -827,186 +967,353 @@ export function ManagerWeeklyCalendar({
           {emptyMessage}
         </p>
       ) : (
-        <div
-          className="mt-5 overflow-hidden rounded-lg border bg-background shadow-sm"
-          dir="ltr"
-        >
-          <div className="overflow-x-auto">
-            <div className="min-w-[980px]">
-              <div>
-                <div className="sticky top-0 z-20 grid grid-cols-[64px_repeat(7,minmax(124px,1fr))] border-b bg-slate-50/80">
-                  <div className="border-r px-3 py-3 text-center text-sm font-semibold text-slate-500" dir="rtl">
-                    ساعت
-                  </div>
-                  {localWeekDays.map((day) => (
-                    <div
-                      className="border-r px-3 py-3 text-center text-sm font-semibold last:border-r-0"
-                      key={day.dateParam}
-                      title={day.dateLabel}
-                      dir="rtl"
-                    >
-                      <span>{day.shortLabel}</span>
-                      {day.closedReason ? (
-                        <span className="mt-1 block text-[11px] font-medium leading-4 text-red-700">
-                          {day.closedReason}
-                        </span>
-                      ) : null}
-                    </div>
-                  ))}
+        <>
+          <div className="mt-5 grid gap-3 sm:hidden" dir="rtl">
+            <div
+              aria-label="انتخاب روز هفته"
+              className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              dir="ltr"
+              role="tablist"
+            >
+              {localWeekDays.map((day, dayIndex) => {
+                const isSelected = dayIndex === selectedMobileDayIndex;
+                const isToday = day.dateParam === todayDateParam;
+
+                return (
+                  <button
+                    aria-current={isToday ? "date" : undefined}
+                    aria-selected={isSelected}
+                    className={cn(
+                      "inline-flex min-h-11 shrink-0 items-center justify-center gap-1 rounded-md border bg-background px-3 text-sm font-medium text-slate-700 transition-colors",
+                      isSelected &&
+                        "border-primary bg-primary text-primary-foreground",
+                      !isSelected && "hover:bg-accent",
+                      day.closedReason && !isSelected && "text-slate-500",
+                    )}
+                    dir="rtl"
+                    key={day.dateParam}
+                    onClick={() => setSelectedMobileDayIndex(dayIndex)}
+                    role="tab"
+                    type="button"
+                  >
+                    <span>{day.shortLabel}</span>
+                    {isToday ? (
+                      <span
+                        className={cn(
+                          "rounded-sm px-1 py-0.5 text-[10px] font-semibold",
+                          isSelected
+                            ? "bg-primary-foreground/15 text-primary-foreground"
+                            : "bg-sky-50 text-sky-700",
+                        )}
+                      >
+                        امروز
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+
+            {selectedMobileDay ? (
+              <div className="grid gap-3">
+                <div className="rounded-md border bg-muted/30 px-3 py-2 text-right">
+                  <h3 className="text-sm font-semibold">
+                    {selectedMobileDay.dateLabel}
+                  </h3>
+                  {selectedMobileDay.closedReason ? (
+                    <p className="mt-1 text-xs text-red-700">
+                      {selectedMobileDay.closedReason}
+                    </p>
+                  ) : null}
                 </div>
 
-                <div
-                  className="grid grid-cols-[64px_repeat(7,minmax(124px,1fr))]"
-                  style={{
-                    gridTemplateRows: `repeat(${hours.length}, minmax(5.75rem, auto))`,
-                  }}
-                >
-                  {hours.map((hour, hourIndex) => (
-                    <div
-                      className="relative border-b border-r bg-slate-50/80"
-                      key={`time-${hour}`}
-                      style={{ gridColumn: 1, gridRow: hourIndex + 1 }}
-                    >
-                      <span className="absolute inset-x-1 top-1/2 -translate-y-1/2 text-center text-xs font-medium text-slate-500" dir="ltr">
-                        {formatPersianShortHourRange(hour, hour + 1)}
-                      </span>
-                    </div>
-                  ))}
-
-                  {hours.map((hour, hourIndex) =>
-                    localWeekDays.map((day, dayIndex) => {
-                      const slot = getSlotForHour(day, hour);
-                      const available = slot
-                        ? Math.max(slot.capacity - slot.approvedCount, 0)
-                        : 0;
+                {selectedMobileDay.slots.length === 0 ? (
+                  <p className="rounded-md border bg-muted/40 p-4 text-sm text-muted-foreground">
+                    برای این روز بازه ساعت کاری وجود ندارد.
+                  </p>
+                ) : (
+                  <div
+                    className="grid overflow-hidden rounded-lg border border-slate-200 bg-background shadow-sm"
+                    dir="ltr"
+                    style={{
+                      gridTemplateColumns: "72px minmax(0,1fr)",
+                      gridTemplateRows: `repeat(${selectedMobileDay.slots.length}, minmax(72px, auto))`,
+                    }}
+                  >
+                    {selectedMobileDay.slots.map((slot, slotIndex) => {
+                      const timeLabel = formatPersianShortHourRange(
+                        slot.slotStartHour,
+                        slot.slotEndHour,
+                      );
 
                       return (
                         <div
-                          className={cn(
-                            "relative border-b border-r text-left transition-colors",
-                            getCellTone(slot),
-                            draggedReservation && slot
-                              ? "outline-offset-[-2px]"
-                              : null,
-                            dragOverSlotKey === `${day.dateParam}-${hour}`
-                              ? "outline outline-2 outline-sky-500"
-                              : null,
-                            resizeOverSlotKey ===
-                              `${day.dateParam}-${hour}-start` ||
-                              resizeOverSlotKey === `${day.dateParam}-${hour}-end`
-                              ? "outline outline-2 outline-amber-600"
-                              : null,
-                          )}
-                          data-date-param={day.dateParam}
-                          data-manager-calendar-cell="true"
-                          data-slot-end-hour={slot?.slotEndHour}
-                          data-slot-start-hour={slot?.slotStartHour}
-                          onDragLeave={() => setDragOverSlotKey(null)}
-                          onDragOver={(event) => {
-                            if (!slot || !draggedReservation || isDropPending) {
-                              return;
-                            }
-
-                            event.preventDefault();
-                            event.dataTransfer.dropEffect = "move";
-                            setDragOverSlotKey(`${day.dateParam}-${hour}`);
-                          }}
-                          onDrop={(event) => handleDrop(event, day, slot)}
-                          key={`${day.dateParam}-${hour}`}
+                          className="flex items-center justify-center border-b border-r border-slate-100 bg-slate-50/60 px-2 py-2 text-sm font-semibold text-slate-700 last:border-b-0"
+                          key={`mobile-time-${selectedMobileDay.dateParam}-${slot.slotStartHour}`}
                           style={{
-                            gridColumn: dayIndex + 2,
-                            gridRow: hourIndex + 1,
+                            gridColumn: 1,
+                            gridRow: slotIndex + 1,
                           }}
                         >
-                          {slot ? (
-                            <>
-                              <CapacityDots slot={slot} />
-                              <PendingRequestsBadge
-                                className="absolute left-2 top-2 z-10"
-                                count={slot.pendingCount}
-                              />
-                              <span className="sr-only">
-                                {`ظرفیت آزاد ${formatPersianNumber(
-                                  available,
-                                )} از ${formatPersianNumber(slot.capacity)}، ${formatPersianNumber(
-                                  slot.approvedCount,
-                                )} رزرو تاییدشده، ${formatPersianNumber(
-                                  slot.pendingCount,
-                                )} درخواست در انتظار`}
-                              </span>
-                            </>
-                          ) : (
-                            <span className="sr-only">ساعت غیرکاری</span>
-                          )}
+                          <span className="[unicode-bidi:isolate]" dir="ltr">
+                            {timeLabel}
+                          </span>
                         </div>
                       );
-                    }),
-                  )}
+                    })}
 
-                  {localWeekDays.flatMap((day, dayIndex) =>
-                    (reservationBlocksByDate.get(day.dateParam) ?? []).map(
+                    {selectedMobileDay.slots.map((slot, slotIndex) => (
+                      <div
+                        aria-label={buildMobileSlotAriaLabel(
+                          selectedMobileDay,
+                          slot,
+                        )}
+                        className={cn(
+                          "relative flex min-h-[72px] items-center justify-between gap-3 border-b px-3 py-2 text-right last:border-b-0",
+                          getMobileSlotToneClass(slot),
+                        )}
+                        dir="rtl"
+                        key={`mobile-slot-${selectedMobileDay.dateParam}-${slot.slotStartHour}`}
+                        style={{
+                          gridColumn: 2,
+                          gridRow: slotIndex + 1,
+                        }}
+                      >
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span
+                            aria-hidden="true"
+                            className="flex max-w-28 flex-wrap justify-end gap-1"
+                          >
+                            {buildCapacityDots(slot).map((tone, index) => (
+                              <CapacityDot key={`${tone}-${index}`} tone={tone} />
+                            ))}
+                          </span>
+                          <PendingRequestsBadge count={slot.pendingCount} />
+                        </div>
+                        <span className="text-xs font-medium text-slate-600">
+                          {getMobileSlotStatusLabel(slot)}
+                        </span>
+                      </div>
+                    ))}
+
+                    {getPositionedReservationBlocks(selectedMobileDay).map(
                       (block) => {
-                        const startLine = block.startHour - firstHour + 1;
-                        const endLine = block.endHour - firstHour + 1;
+                        const startIndex = selectedMobileDay.slots.findIndex(
+                          (slot) => slot.slotStartHour === block.startHour,
+                        );
+                        const endIndexExclusive = selectedMobileDay.slots.findIndex(
+                          (slot) => slot.slotStartHour >= block.endHour,
+                        );
+                        const endLine =
+                          endIndexExclusive >= 0
+                            ? endIndexExclusive + 1
+                            : selectedMobileDay.slots.length + 1;
+
+                        if (startIndex < 0 || endLine <= startIndex + 1) {
+                          return null;
+                        }
 
                         return (
                           <div
                             className="pointer-events-none z-10 p-2"
-                            key={`${day.dateParam}-${block.detail.id}`}
+                            key={`mobile-block-${selectedMobileDay.dateParam}-${block.detail.id}`}
                             style={{
-                              gridColumn: dayIndex + 2,
-                              gridRow: `${startLine} / ${endLine}`,
+                              gridColumn: 2,
+                              gridRow: `${startIndex + 1} / ${endLine}`,
                             }}
                           >
-                            <ReservationBlock
-                              block={block}
-                              isDragging={
-                                draggedReservation?.reservationId ===
-                                block.detail.id
-                              }
-                              isResizing={
-                                resizingReservation?.reservationId ===
-                                block.detail.id
-                              }
-                              onDragEnd={() => {
-                                setDraggedReservation(null);
-                                setDragOverSlotKey(null);
-                              }}
-                              onDragStart={(dragBlock) => {
-                                setDropError(null);
-                                setDraggedReservation({
-                                  durationHours:
-                                    dragBlock.endHour - dragBlock.startHour,
-                                  reservationId: dragBlock.detail.id,
-                                  status: dragBlock.detail.status,
-                                });
-                              }}
-                              onResizeStart={(event, resizeBlock, edge) => {
-                                event.preventDefault();
-                                event.stopPropagation();
-                                setDropError(null);
-                                setDraggedReservation(null);
-                                setDragOverSlotKey(null);
-                                setResizingReservation({
-                                  dateParam: day.dateParam,
-                                  edge,
-                                  endHour: resizeBlock.endHour,
-                                  reservationId: resizeBlock.detail.id,
-                                  startHour: resizeBlock.startHour,
-                                  status: resizeBlock.detail.status,
-                                });
-                              }}
-                            />
+                            <MobileReservationBlock block={block} />
                           </div>
                         );
                       },
-                    ),
-                  )}
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </div>
+
+          <div
+            className="mt-5 hidden overflow-hidden rounded-lg border bg-background shadow-sm sm:block"
+            dir="ltr"
+          >
+            <div className="overflow-x-auto">
+              <div className="min-w-[980px]">
+                <div>
+                  <div className="sticky top-0 z-20 grid grid-cols-[64px_repeat(7,minmax(124px,1fr))] border-b bg-slate-50/80">
+                    <div className="border-r px-3 py-3 text-center text-sm font-semibold text-slate-500" dir="rtl">
+                      ساعت
+                    </div>
+                    {localWeekDays.map((day) => (
+                      <div
+                        className="border-r px-3 py-3 text-center text-sm font-semibold last:border-r-0"
+                        key={day.dateParam}
+                        title={day.dateLabel}
+                        dir="rtl"
+                      >
+                        <span>{day.shortLabel}</span>
+                        {day.closedReason ? (
+                          <span className="mt-1 block text-[11px] font-medium leading-4 text-red-700">
+                            {day.closedReason}
+                          </span>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div
+                    className="grid grid-cols-[64px_repeat(7,minmax(124px,1fr))]"
+                    style={{
+                      gridTemplateRows: `repeat(${hours.length}, minmax(5.75rem, auto))`,
+                    }}
+                  >
+                    {hours.map((hour, hourIndex) => (
+                      <div
+                        className="relative border-b border-r bg-slate-50/80"
+                        key={`time-${hour}`}
+                        style={{ gridColumn: 1, gridRow: hourIndex + 1 }}
+                      >
+                        <span className="absolute inset-x-1 top-1/2 -translate-y-1/2 text-center text-xs font-medium text-slate-500" dir="ltr">
+                          {formatPersianShortHourRange(hour, hour + 1)}
+                        </span>
+                      </div>
+                    ))}
+
+                    {hours.map((hour, hourIndex) =>
+                      localWeekDays.map((day, dayIndex) => {
+                        const slot = getSlotForHour(day, hour);
+                        const available = slot
+                          ? Math.max(slot.capacity - slot.approvedCount, 0)
+                          : 0;
+
+                        return (
+                          <div
+                            className={cn(
+                              "relative border-b border-r text-left transition-colors",
+                              getCellTone(slot),
+                              draggedReservation && slot
+                                ? "outline-offset-[-2px]"
+                                : null,
+                              dragOverSlotKey === `${day.dateParam}-${hour}`
+                                ? "outline outline-2 outline-sky-500"
+                                : null,
+                              resizeOverSlotKey ===
+                                `${day.dateParam}-${hour}-start` ||
+                                resizeOverSlotKey === `${day.dateParam}-${hour}-end`
+                                ? "outline outline-2 outline-amber-600"
+                                : null,
+                            )}
+                            data-date-param={day.dateParam}
+                            data-manager-calendar-cell="true"
+                            data-slot-end-hour={slot?.slotEndHour}
+                            data-slot-start-hour={slot?.slotStartHour}
+                            onDragLeave={() => setDragOverSlotKey(null)}
+                            onDragOver={(event) => {
+                              if (!slot || !draggedReservation || isDropPending) {
+                                return;
+                              }
+
+                              event.preventDefault();
+                              event.dataTransfer.dropEffect = "move";
+                              setDragOverSlotKey(`${day.dateParam}-${hour}`);
+                            }}
+                            onDrop={(event) => handleDrop(event, day, slot)}
+                            key={`${day.dateParam}-${hour}`}
+                            style={{
+                              gridColumn: dayIndex + 2,
+                              gridRow: hourIndex + 1,
+                            }}
+                          >
+                            {slot ? (
+                              <>
+                                <CapacityDots slot={slot} />
+                                <PendingRequestsBadge
+                                  className="absolute left-2 top-2 z-10"
+                                  count={slot.pendingCount}
+                                />
+                                <span className="sr-only">
+                                  {`ظرفیت آزاد ${formatPersianNumber(
+                                    available,
+                                  )} از ${formatPersianNumber(slot.capacity)}، ${formatPersianNumber(
+                                    slot.approvedCount,
+                                  )} رزرو تاییدشده، ${formatPersianNumber(
+                                    slot.pendingCount,
+                                  )} درخواست در انتظار`}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="sr-only">ساعت غیرکاری</span>
+                            )}
+                          </div>
+                        );
+                      }),
+                    )}
+
+                    {localWeekDays.flatMap((day, dayIndex) =>
+                      (reservationBlocksByDate.get(day.dateParam) ?? []).map(
+                        (block) => {
+                          const startLine = block.startHour - firstHour + 1;
+                          const endLine = block.endHour - firstHour + 1;
+
+                          return (
+                            <div
+                              className="pointer-events-none z-10 p-2"
+                              key={`${day.dateParam}-${block.detail.id}`}
+                              style={{
+                                gridColumn: dayIndex + 2,
+                                gridRow: `${startLine} / ${endLine}`,
+                              }}
+                            >
+                              <ReservationBlock
+                                block={block}
+                                isDragging={
+                                  draggedReservation?.reservationId ===
+                                  block.detail.id
+                                }
+                                isResizing={
+                                  resizingReservation?.reservationId ===
+                                  block.detail.id
+                                }
+                                onDragEnd={() => {
+                                  setDraggedReservation(null);
+                                  setDragOverSlotKey(null);
+                                }}
+                                onDragStart={(dragBlock) => {
+                                  setDropError(null);
+                                  setDraggedReservation({
+                                    durationHours:
+                                      dragBlock.endHour - dragBlock.startHour,
+                                    reservationId: dragBlock.detail.id,
+                                    status: dragBlock.detail.status,
+                                  });
+                                }}
+                                onResizeStart={(event, resizeBlock, edge) => {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  setDropError(null);
+                                  setDraggedReservation(null);
+                                  setDragOverSlotKey(null);
+                                  setResizingReservation({
+                                    dateParam: day.dateParam,
+                                    edge,
+                                    endHour: resizeBlock.endHour,
+                                    reservationId: resizeBlock.detail.id,
+                                    startHour: resizeBlock.startHour,
+                                    status: resizeBlock.detail.status,
+                                  });
+                                }}
+                              />
+                            </div>
+                          );
+                        },
+                      ),
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        </>
       )}
     </section>
   );

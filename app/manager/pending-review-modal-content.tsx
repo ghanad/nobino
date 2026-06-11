@@ -100,9 +100,11 @@ export function PendingReviewModalContent({
         </div>
 
         <div className="grid gap-3 border-t pt-4">
-          <div className="flex flex-col gap-2 sm:flex-row">
+          <div
+            className={isPending ? "grid gap-2 sm:grid-cols-3" : "grid gap-2 sm:grid-cols-2"}
+          >
             {isPending ? (
-              <form action={approveReservationAction} className="sm:flex-1">
+              <form action={approveReservationAction}>
                 <input name="reservationId" type="hidden" value={reservationId} />
                 <input name="date" type="hidden" value={dateParam} />
                 <SubmitButton
@@ -116,7 +118,7 @@ export function PendingReviewModalContent({
             ) : null}
 
             <Button
-              className="sm:flex-1"
+              className="w-full"
               onClick={() =>
                 setActiveAction(activeAction === "time" ? null : "time")
               }
@@ -129,7 +131,7 @@ export function PendingReviewModalContent({
 
             {isPending ? (
               <Button
-                className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 sm:flex-1"
+                className="w-full border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
                 onClick={() =>
                   setActiveAction(activeAction === "reject" ? null : "reject")
                 }
@@ -140,10 +142,14 @@ export function PendingReviewModalContent({
                 رد درخواست
               </Button>
             ) : (
-              <form action={cancelReservationByManagerAction} className="sm:flex-1">
+              <form action={cancelReservationByManagerAction}>
                 <input name="reservationId" type="hidden" value={reservationId} />
                 <input name="date" type="hidden" value={dateParam} />
-                <SubmitButton pendingLabel="در حال لغو..." variant="outline">
+                <SubmitButton
+                  className="w-full border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
+                  pendingLabel="در حال لغو..."
+                  variant="outline"
+                >
                   <X className="h-4 w-4" />
                   لغو رزرو
                 </SubmitButton>
