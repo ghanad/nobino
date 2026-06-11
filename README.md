@@ -147,6 +147,8 @@ Use `.env.example` as the source of truth for required settings:
   SQLite paths from the `prisma/` directory.
 - `AUTH_SECRET`: long random secret used to sign HTTP-only session cookies.
   Generate a unique value for every shared or production environment.
+- `SESSION_TTL_SECONDS`: signed session lifetime in seconds. The default is
+  `604800` seconds, or 7 days.
 - `AUTH_PROVIDER`: authentication backend. Use `local` for Nobino passwords,
   `ldap` for company LDAP passwords, or `hybrid` to accept either local or LDAP
   passwords.
@@ -240,6 +242,8 @@ The default compose file sets `SESSION_COOKIE_SECURE=false` so login works when
 the app is served directly over plain HTTP during initial deployment. When the
 app is placed behind HTTPS, remove that line or set it to `true` so session
 cookies are marked secure.
+Sessions last 7 days by default. Set `SESSION_TTL_SECONDS` to a different
+number of seconds if the organization needs a shorter or longer login lifetime.
 
 For GitHub Actions to publish to Docker Hub on every push to `main`, configure
 these repository secrets:
@@ -276,8 +280,8 @@ checks, hourly boundaries, and Jalali URL dates are interpreted consistently.
 ## Security Checklist
 
 - Passwords are hashed with `scrypt` before storage.
-- Session cookies are HTTP-only, signed with `AUTH_SECRET`, and marked secure in
-  production.
+- Session cookies are HTTP-only, signed with `AUTH_SECRET`, expire after the
+  configured `SESSION_TTL_SECONDS`, and are marked secure in production.
 - Protected routes use server-side role checks for user, manager, and admin
   access.
 - Mutations validate form input with Zod and enforce business rules in service

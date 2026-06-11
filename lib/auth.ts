@@ -8,7 +8,7 @@ import type { User, UserRole } from "@prisma/client";
 import { db } from "@/lib/db";
 import { SESSION_COOKIE_NAME } from "@/lib/session";
 
-const SESSION_TTL_SECONDS = 60 * 60 * 8;
+const DEFAULT_SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
 
 type SessionPayload = {
   userId: string;
@@ -38,6 +38,22 @@ function shouldUseSecureSessionCookie(): boolean {
   }
 
   return process.env.NODE_ENV === "production";
+}
+
+function getSessionTtlSeconds(): number {
+  const configuredTtl = process.env.SESSION_TTL_SECONDS?.trim();
+
+  if (!configuredTtl) {
+    return DEFAULT_SESSION_TTL_SECONDS;
+  }
+
+  const ttlSeconds = Number(configuredTtl);
+
+  if (!Number.isInteger(ttlSeconds) || ttlSeconds < 60) {
+    throw new Error("SESSION_TTL_SECONDS must be an integer of at least 60");
+  }
+
+  return ttlSeconds;
 }
 
 function encodeBase64Url(value: string): string {
@@ -105,14 +121,15 @@ function parseSessionToken(token: string | undefined): SessionPayload | null {
 
 export async function createSession(userId: string): Promise<void> {
   const cookieStore = await cookies();
-  const expiresAt = Date.now() + SESSION_TTL_SECONDS * 1000;
+  const sessionTtlSeconds = getSessionTtlSeconds();
+  const expiresAt = Date.now() + sessionTtlSeconds * 1000;
 
   cookieStore.set(SESSION_COOKIE_NAME, createSessionToken({ userId, expiresAt }), {
     httpOnly: true,
     sameSite: "lax",
     secure: shouldUseSecureSessionCookie(),
     path: "/",
-    maxAge: SESSION_TTL_SECONDS,
+    maxAge: sessionTtlSeconds,
   });
 }
 
