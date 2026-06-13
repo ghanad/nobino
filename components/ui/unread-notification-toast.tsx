@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Bell, X } from "lucide-react";
 
+import { SwipeDismissToast } from "@/components/ui/swipe-dismiss-toast";
+
 type UnreadNotificationToastProps = {
   notification: {
     id: string;
@@ -45,9 +47,10 @@ export function UnreadNotificationToast({
   }
 
   return (
-    <div
+    <SwipeDismissToast
       className="fixed right-4 top-20 z-50 w-[min(420px,calc(100vw-2rem))] rounded-lg border border-sky-200 bg-background p-4 pl-12 text-right text-sm text-foreground shadow-lg md:right-6 md:top-24 md:w-[min(420px,calc(100vw-3rem))]"
       dir="rtl"
+      onDismiss={() => setIsVisible(false)}
       role="status"
     >
       <button
@@ -73,6 +76,6 @@ export function UnreadNotificationToast({
           </Link>
         </div>
       </div>
-    </div>
+    </SwipeDismissToast>
   );
 }

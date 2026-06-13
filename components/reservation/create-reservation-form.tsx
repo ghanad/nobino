@@ -24,6 +24,7 @@ import { createPortal } from "react-dom";
 
 import type { LunchActionState } from "@/app/lunch/actions";
 import type { CreateReservationActionState } from "@/app/reservations/actions";
+import { SwipeDismissToast } from "@/components/ui/swipe-dismiss-toast";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { formatJalaliDateParam } from "@/lib/jalali-date";
 import { cn } from "@/lib/utils";
@@ -842,13 +843,14 @@ function ReservationsActionToast({
   const Icon = toast.variant === "error" ? XCircle : CheckCircle2;
 
   return (
-    <div
+    <SwipeDismissToast
       className={cn(
         "fixed right-6 top-6 z-50 flex w-[min(420px,calc(100vw-3rem))] items-start gap-3 rounded-lg border bg-background p-4 text-sm shadow-lg",
         toast.variant === "error"
           ? "border-destructive/30 text-destructive"
           : "border-emerald-200 text-emerald-900",
       )}
+      onDismiss={onDismiss}
       role="status"
     >
       <Icon className="mt-0.5 h-4 w-4 shrink-0" />
@@ -861,7 +863,7 @@ function ReservationsActionToast({
       >
         <X aria-hidden="true" className="h-4 w-4" />
       </button>
-    </div>
+    </SwipeDismissToast>
   );
 }
 
