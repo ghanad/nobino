@@ -1,5 +1,10 @@
-import { AlternativeStatus, ReservationStatus } from "@prisma/client";
+import {
+  AlternativeStatus,
+  LunchReservationStatus,
+  ReservationStatus,
+} from "@prisma/client";
 
+import { createLunchReservationAction } from "@/app/lunch/actions";
 import { createReservationInlineAction } from "@/app/reservations/actions";
 import { ReservationsInteractiveSection } from "@/app/reservations/reservations-interactive-section";
 import { PageHeader } from "@/components/app/page-header";
@@ -11,9 +16,11 @@ import {
   formatJalaliDate,
   formatJalaliDateWithoutWeekday,
   formatJalaliDateParam,
+  formatPersianLocalTime,
   getJalaliDisplayParts,
   parseJalaliDateParam,
 } from "@/lib/jalali-date";
+import { getLunchDayState } from "@/lib/lunch-service";
 import { getWorkingWindowForDate } from "@/lib/schedule";
 
 type ReservationsPageProps = {
@@ -364,7 +371,8 @@ export default async function ReservationsPage({
     addDays(weekStart, index),
   );
   const weekSpansMultipleJalaliMonths = !isSameJalaliMonth(weekDates);
-  const [resourcePools, reservationPolicy, reservations] = await Promise.all([
+  const [resourcePools, reservationPolicy, reservations, lunchLocations] =
+    await Promise.all([
     db.resourcePool.findMany({
       where: { active: true },
       orderBy: { name: "asc" },
@@ -412,6 +420,11 @@ export default async function ReservationsPage({
           },
         },
       },
+    }),
+    db.lunchLocation.findMany({
+      where: { active: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
     }),
   ]);
   const selectedResourcePool = resourcePools[0];
@@ -546,6 +559,54 @@ export default async function ReservationsPage({
   const activeReservations = reservations.filter((reservation) =>
     isActiveReservation(reservation, now),
   );
+  const [lunchReservations, lunchDayStates] = await Promise.all([
+    db.lunchReservation.findMany({
+      where: {
+        userId: user.id,
+        date: {
+          gte: weekStart,
+          lt: weekEnd,
+        },
+        status: LunchReservationStatus.ACTIVE,
+      },
+      select: {
+        date: true,
+      },
+    }),
+    Promise.all(weekDates.map((date) => getLunchDayState({ date, now }))),
+  ]);
+  const lunchReservedDates = new Set(
+    lunchReservations.map((reservation) =>
+      formatJalaliDateParam(reservation.date),
+    ),
+  );
+  const lunchAvailabilityByDate = Object.fromEntries(
+    weekDates.map((date, index) => {
+      const dateParamForLunch = formatJalaliDateParam(date);
+      const dayState = lunchDayStates[index];
+      const existingReservation = lunchReservedDates.has(dateParamForLunch);
+      const unavailableReason = existingReservation
+        ? "برای این روز قبلا ناهار رزرو کرده‌اید."
+        : lunchLocations.length === 0
+          ? "هنوز ساختمانی برای دریافت ناهار تعریف نشده است."
+          : dayState.isOpen
+            ? null
+            : dayState.isServiceDay
+              ? `مهلت رزرو ناهار گذشته است. مهلت تا ${formatJalaliDate(dayState.cutoffAt)}، ${formatPersianLocalTime(dayState.cutoffAt)} بود.`
+              : "برای این تاریخ سرویس ناهار فعال نیست.";
+
+      return [
+        dateParamForLunch,
+        {
+          cutoffLabel: `مهلت رزرو ناهار تا ${formatJalaliDate(dayState.cutoffAt)}، ${formatPersianLocalTime(dayState.cutoffAt)}`,
+          existingReservation,
+          isOpen:
+            dayState.isOpen && !existingReservation && lunchLocations.length > 0,
+          unavailableReason,
+        },
+      ];
+    }),
+  );
   const weekDays = selectedResourcePool
     ? await Promise.all(
         weekDates.map(async (date) => {
@@ -656,6 +717,9 @@ export default async function ReservationsPage({
             ? "No working-hour slots are configured for this week."
             : "No active resource pool is configured."
         }
+        lunchAvailabilityByDate={lunchAvailabilityByDate}
+        lunchLocations={lunchLocations}
+        lunchReservationAction={createLunchReservationAction}
         nextWeekDateParam={formatJalaliDateParam(addDays(weekStart, 7))}
         previousWeekDateParam={formatJalaliDateParam(addDays(weekStart, -7))}
         oneReservationPerDayEnabled={oneReservationPerDayEnabled}

@@ -22,13 +22,27 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
+import type { LunchActionState } from "@/app/lunch/actions";
 import type { CreateReservationActionState } from "@/app/reservations/actions";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { formatJalaliDateParam } from "@/lib/jalali-date";
 import { cn } from "@/lib/utils";
 
 type ResourcePoolOption = {
   id: string;
   name: string;
+};
+
+type LunchLocationOption = {
+  id: string;
+  name: string;
+};
+
+type LunchAvailability = {
+  cutoffLabel: string;
+  existingReservation: boolean;
+  isOpen: boolean;
+  unavailableReason: string | null;
 };
 
 export type RequestableSlot = {
@@ -64,6 +78,12 @@ export type CreateReservationFormProps = {
   dailyReservedHoursByDate: Record<string, number>;
   dailyUserHourLimit: number;
   emptyMessage: string;
+  lunchAvailabilityByDate: Record<string, LunchAvailability>;
+  lunchLocations: LunchLocationOption[];
+  lunchReservationAction: (
+    previousState: LunchActionState,
+    formData: FormData,
+  ) => Promise<LunchActionState>;
   nextWeekDateParam: string;
   oneReservationPerDayEnabled: boolean;
   previousWeekDateParam: string;
@@ -122,7 +142,22 @@ type ActionToast = {
   variant: "error" | "success";
 };
 
+type ActionStateBase = {
+  status: "error" | "idle" | "success";
+};
+
+type LunchPrompt = {
+  dateLabel: string;
+  dateParam: string;
+  partySize: number;
+};
+
 const initialCreateReservationState: CreateReservationActionState = {
+  message: "",
+  status: "idle",
+};
+
+const initialLunchActionState: LunchActionState = {
   message: "",
   status: "idle",
 };
@@ -830,20 +865,26 @@ function ReservationsActionToast({
   );
 }
 
-function ActionResultBridge({
+function ActionResultBridge<TState extends ActionStateBase>({
   onComplete,
   state,
 }: {
-  onComplete: (state: CreateReservationActionState) => void;
-  state: CreateReservationActionState;
+  onComplete: (state: TState) => void;
+  state: TState;
 }) {
+  const onCompleteRef = useRef(onComplete);
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+
   useEffect(() => {
     if (state.status === "idle") {
       return;
     }
 
-    onComplete(state);
-  }, [onComplete, state]);
+    onCompleteRef.current(state);
+  }, [state]);
 
   return null;
 }
@@ -913,6 +954,9 @@ export function CreateReservationForm({
   dailyReservedHoursByDate,
   dailyUserHourLimit,
   emptyMessage,
+  lunchAvailabilityByDate,
+  lunchLocations,
+  lunchReservationAction,
   nextWeekDateParam,
   oneReservationPerDayEnabled,
   onReservationCreated,
@@ -927,6 +971,10 @@ export function CreateReservationForm({
     action,
     initialCreateReservationState,
   );
+  const [lunchState, lunchFormAction] = useActionState(
+    lunchReservationAction,
+    initialLunchActionState,
+  );
   const [toast, setToast] = useState<ActionToast | null>(null);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [selectionSource, setSelectionSource] = useState<SelectionSource | null>(
@@ -936,6 +984,8 @@ export function CreateReservationForm({
   const [mobileDraggingHandle, setMobileDraggingHandle] =
     useState<MobileSelectionHandle | null>(null);
   const [isReasonDialogOpen, setIsReasonDialogOpen] = useState(false);
+  const [partySize, setPartySize] = useState(1);
+  const [lunchPrompt, setLunchPrompt] = useState<LunchPrompt | null>(null);
   const [selectedMobileDayIndex, setSelectedMobileDayIndex] = useState(() =>
     getDefaultSelectedDayIndex(weekDays, todayDateParam),
   );
@@ -979,6 +1029,13 @@ export function CreateReservationForm({
     reservedHoursForSelectedDay,
   });
   const selectionError = selectionRangeError ?? selectionLimitError;
+  const selectedLunchDateParam = lunchPrompt?.dateParam ?? selection?.dateParam;
+  const lunchAvailability = selectedLunchDateParam
+    ? lunchAvailabilityByDate[selectedLunchDateParam] ?? null
+    : null;
+  const canSubmitLunchReservation = Boolean(
+    lunchAvailability?.isOpen && lunchLocations.length > 0,
+  );
   const dismissToast = useCallback(() => setToast(null), []);
 
   useEffect(() => {
@@ -988,6 +1045,8 @@ export function CreateReservationForm({
     setIsDragging(false);
     setMobileDraggingHandle(null);
     setIsReasonDialogOpen(false);
+    setPartySize(1);
+    setLunchPrompt(null);
     setSelectedMobileDayIndex(defaultMobileDayIndex);
   }, [defaultMobileDayIndex, weekKey]);
 
@@ -1079,22 +1138,67 @@ export function CreateReservationForm({
     setSelectionSource(null);
     setMobileDraggingHandle(null);
     setIsReasonDialogOpen(false);
+    setPartySize(1);
+    setLunchPrompt(null);
   }
 
   const handleActionComplete = useCallback(
     (nextState: CreateReservationActionState) => {
+      if (nextState.status === "error") {
+        setToast({
+          id: Date.now(),
+          message: nextState.message,
+          variant: "error",
+        });
+        return;
+      }
+
+      if (nextState.status === "success" && nextState.mutation) {
+        onReservationCreated?.(nextState.mutation);
+
+        const reservationStartAt = new Date(nextState.mutation.startAt);
+        const reservationDateParam = formatJalaliDateParam(reservationStartAt);
+        const promptAvailability =
+          lunchAvailabilityByDate[reservationDateParam] ?? null;
+        const reservationDay = weekDays.find(
+          (day) => day.dateParam === reservationDateParam,
+        );
+
+        if (promptAvailability) {
+          setToast(null);
+          setLunchPrompt({
+            dateLabel: reservationDay?.modalDateLabel ?? reservationDateParam,
+            dateParam: reservationDateParam,
+            partySize: nextState.mutation.partySize,
+          });
+          setIsReasonDialogOpen(true);
+          return;
+        }
+
+        setToast({
+          id: Date.now(),
+          message: nextState.message,
+          variant: "success",
+        });
+        clearSelection();
+      }
+    },
+    [lunchAvailabilityByDate, onReservationCreated, weekDays],
+  );
+
+  const handleLunchActionComplete = useCallback(
+    (nextState: LunchActionState) => {
       setToast({
         id: Date.now(),
         message: nextState.message,
         variant: nextState.status === "error" ? "error" : "success",
       });
 
-      if (nextState.status === "success" && nextState.mutation) {
-        onReservationCreated?.(nextState.mutation);
+      if (nextState.status === "success") {
         clearSelection();
       }
     },
-    [onReservationCreated],
+    [],
   );
 
   function selectMobileSingleHour(dayIndex: number, hour: number) {
@@ -1179,6 +1283,10 @@ export function CreateReservationForm({
       <ReservationsActionToast onDismiss={dismissToast} toast={toast} />
       <form action={formAction} className="grid gap-5 rounded-lg border bg-card p-5">
         <ActionResultBridge onComplete={handleActionComplete} state={state} />
+        <ActionResultBridge
+          onComplete={handleLunchActionComplete}
+          state={lunchState}
+        />
         <div className="grid gap-4">
           <div
             className="grid gap-3 rounded-md border bg-muted/30 p-3"
@@ -1963,7 +2071,14 @@ export function CreateReservationForm({
             <button
               aria-label="بستن فرم درخواست"
               className="absolute inset-0 cursor-default"
-              onClick={() => setIsReasonDialogOpen(false)}
+              onClick={() => {
+                if (lunchPrompt) {
+                  clearSelection();
+                  return;
+                }
+
+                setIsReasonDialogOpen(false);
+              }}
               type="button"
             />
             <div className="relative z-10 grid max-h-[92vh] w-full max-w-lg gap-5 overflow-y-auto rounded-t-lg border bg-background p-5 shadow-lg sm:rounded-lg">
@@ -1973,9 +2088,14 @@ export function CreateReservationForm({
                     className="font-medium"
                     id="reservation-reason-dialog-title"
                   >
-                    تکمیل درخواست رزرو
+                    {lunchPrompt ? "رزرو ناهار" : "تکمیل درخواست رزرو"}
                   </h3>
-                  {selection ? (
+                  {lunchPrompt ? (
+                    <div className="mt-1 grid gap-1 text-sm text-muted-foreground">
+                      <p>درخواست رزرو شما ثبت شد.</p>
+                      <p>{lunchPrompt.dateLabel}</p>
+                    </div>
+                  ) : selection ? (
                     <div className="mt-1 grid gap-1 text-sm text-muted-foreground">
                       <p dir="rtl">
                         {weekDays[selection.dayIndex]?.modalDateLabel ??
@@ -1993,79 +2113,153 @@ export function CreateReservationForm({
                 <button
                   aria-label="بستن فرم درخواست"
                   className="inline-flex h-9 w-9 items-center justify-center rounded-md border bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
-                  onClick={() => setIsReasonDialogOpen(false)}
+                  onClick={() => {
+                    if (lunchPrompt) {
+                      clearSelection();
+                      return;
+                    }
+
+                    setIsReasonDialogOpen(false);
+                  }}
                   type="button"
                 >
                   <X aria-hidden="true" className="h-4 w-4" />
                 </button>
               </div>
 
-              {isSelectionOverDailyLimit ? (
-                <p
-                  className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
-                  role="alert"
-                >
-                  شما نمی‌توانید بیش از{" "}
-                  {formatPersianNumber(dailyUserHourLimit)} ساعت در یک روز رزرو
-                  کنید. در این روز قبلا{" "}
-                  {formatPersianNumber(reservedHoursForSelectedDay)} ساعت رزرو
-                  فعال دارید.
-                </p>
-              ) : null}
+              {lunchPrompt ? (
+                <>
+                  <div className="grid gap-3 rounded-md border border-sky-100 bg-sky-50/60 p-3 text-sm">
+                    <p className="font-medium">ناهار هم برای این روز رزرو شود؟</p>
+                    <p className="text-xs leading-5 text-muted-foreground">
+                      {lunchAvailability?.cutoffLabel ??
+                        "وضعیت رزرو ناهار برای این روز مشخص نیست."}
+                    </p>
 
-              {hasActiveReservationForSelectedDay ? (
-                <p
-                  className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
-                  role="alert"
-                >
-                  شما در این روز یک درخواست رزرو فعال دارید.
-                </p>
-              ) : null}
+                    <input name="date" type="hidden" value={lunchPrompt.dateParam} />
 
-              <label className="grid gap-2 text-sm font-medium">
-                <span>تعداد نفرات</span>
-                <input
-                  className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  defaultValue={1}
-                  inputMode="numeric"
-                  max={20}
-                  min={1}
-                  name="partySize"
-                  required
-                  type="number"
-                />
-              </label>
+                    {canSubmitLunchReservation ? (
+                      <label className="grid gap-2 font-medium">
+                        <span>محل دریافت ناهار</span>
+                        <select
+                          className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          defaultValue={lunchLocations[0]?.id ?? ""}
+                          name="locationId"
+                        >
+                          {lunchLocations.map((location) => (
+                            <option key={location.id} value={location.id}>
+                              {location.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ) : (
+                      <p className="rounded-md border border-amber-200 bg-white/80 px-3 py-2 text-xs leading-5 text-amber-900">
+                        {lunchAvailability?.unavailableReason ??
+                          "در حال حاضر امکان رزرو ناهار برای این تاریخ وجود ندارد."}
+                      </p>
+                    )}
 
-              <label className="grid gap-2 text-sm font-medium">
-                <span>
-                  دلیل درخواست{" "}
-                  <span className="text-muted-foreground">(اختیاری)</span>
-                </span>
-                <textarea
-                  autoFocus
-                  className="min-h-28 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  maxLength={500}
-                  name="reason"
-                  placeholder="توضیح کوتاهی درباره درخواست بنویسید"
-                />
-              </label>
+                    {lunchPrompt.partySize > 1 ? (
+                      <p className="rounded-md border border-amber-200 bg-white/80 px-3 py-2 text-xs leading-5 text-amber-900">
+                        ناهار فقط برای خود شما رزرو می‌شود. نفرات دیگر باید با
+                        حساب کاربری خودشان ناهار رزرو کنند.
+                      </p>
+                    ) : null}
+                  </div>
 
-              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                <button
-                  className="inline-flex h-11 w-full items-center justify-center rounded-md border bg-background px-4 text-sm font-medium hover:bg-accent sm:h-10 sm:w-auto"
-                  onClick={() => setIsReasonDialogOpen(false)}
-                  type="button"
-                >
-                  انصراف
-                </button>
-                <SubmitButton
-                  className="h-11 w-full sm:h-10 sm:w-auto"
-                  disabled={isSelectionBlocked}
-                  pendingLabel="در حال ثبت..."
-                >
-                  ثبت درخواست
-                </SubmitButton>
-              </div>
+                  <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <button
+                      className="inline-flex h-11 w-full items-center justify-center rounded-md border bg-background px-4 text-sm font-medium hover:bg-accent sm:h-10 sm:w-auto"
+                      onClick={clearSelection}
+                      type="button"
+                    >
+                      فعلاً نه
+                    </button>
+                    <SubmitButton
+                      className="h-11 w-full sm:h-10 sm:w-auto"
+                      disabled={!canSubmitLunchReservation}
+                      formAction={lunchFormAction}
+                      pendingLabel="در حال ثبت ناهار..."
+                    >
+                      رزرو ناهار
+                    </SubmitButton>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {isSelectionOverDailyLimit ? (
+                    <p
+                      className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
+                      role="alert"
+                    >
+                      شما نمی‌توانید بیش از{" "}
+                      {formatPersianNumber(dailyUserHourLimit)} ساعت در یک روز
+                      رزرو کنید. در این روز قبلا{" "}
+                      {formatPersianNumber(reservedHoursForSelectedDay)} ساعت
+                      رزرو فعال دارید.
+                    </p>
+                  ) : null}
+
+                  {hasActiveReservationForSelectedDay ? (
+                    <p
+                      className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
+                      role="alert"
+                    >
+                      شما در این روز یک درخواست رزرو فعال دارید.
+                    </p>
+                  ) : null}
+
+                  <label className="grid gap-2 text-sm font-medium">
+                    <span>تعداد نفرات</span>
+                    <input
+                      className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      inputMode="numeric"
+                      max={20}
+                      min={1}
+                      name="partySize"
+                      onChange={(event) => {
+                        const nextValue = Number(event.currentTarget.value);
+                        setPartySize(Number.isFinite(nextValue) ? nextValue : 1);
+                      }}
+                      required
+                      type="number"
+                      value={partySize}
+                    />
+                  </label>
+
+                  <label className="grid gap-2 text-sm font-medium">
+                    <span>
+                      دلیل درخواست{" "}
+                      <span className="text-muted-foreground">(اختیاری)</span>
+                    </span>
+                    <textarea
+                      autoFocus
+                      className="min-h-28 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      maxLength={500}
+                      name="reason"
+                      placeholder="توضیح کوتاهی درباره درخواست بنویسید"
+                    />
+                  </label>
+
+                  <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <button
+                      className="inline-flex h-11 w-full items-center justify-center rounded-md border bg-background px-4 text-sm font-medium hover:bg-accent sm:h-10 sm:w-auto"
+                      onClick={() => setIsReasonDialogOpen(false)}
+                      type="button"
+                    >
+                      انصراف
+                    </button>
+                    <SubmitButton
+                      className="h-11 w-full sm:h-10 sm:w-auto"
+                      disabled={isSelectionBlocked}
+                      pendingLabel="در حال ثبت..."
+                    >
+                      ثبت درخواست
+                    </SubmitButton>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         ) : null}
