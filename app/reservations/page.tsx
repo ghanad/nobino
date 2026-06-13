@@ -214,7 +214,7 @@ function getReservationsToast(
 
   const successMessage =
     (params?.created && "درخواست رزرو ثبت شد و برای تایید مدیر ارسال شد.") ||
-    (params?.cancelled && "درخواست رزرو در انتظار تایید لغو شد.") ||
+    (params?.cancelled && "رزرو لغو شد و ظرفیت آن آزاد شد.") ||
     (params?.alternativeAccepted &&
       "زمان جایگزین پذیرفته شد و رزرو تایید شد.") ||
     (params?.alternativeRejected && "زمان جایگزین رد شد.");

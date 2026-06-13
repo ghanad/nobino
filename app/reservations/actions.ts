@@ -258,7 +258,7 @@ export async function cancelReservationByUserInlineAction(
   }
 
   return {
-    message: "درخواست رزرو در انتظار تایید لغو شد.",
+    message: "رزرو لغو شد و ظرفیت آن آزاد شد.",
     mutation: {
       reservationId: parsed.data.reservationId,
       type: "cancel",

@@ -560,9 +560,12 @@ export async function cancelReservationByUser(input: {
       );
     }
 
-    if (reservation.status !== ReservationStatus.PENDING) {
+    if (
+      reservation.status !== ReservationStatus.PENDING &&
+      reservation.status !== ReservationStatus.APPROVED
+    ) {
       throw new ReservationTransitionError(
-        "Only pending reservations can be cancelled by the requester.",
+        "Only pending or approved reservations can be cancelled by the requester.",
       );
     }
 
@@ -605,7 +608,10 @@ export async function cancelReservationByUser(input: {
           reservationId: reservation.id,
           type: "RESERVATION_CANCELLED",
           title: "Reservation cancelled",
-          body: "A requester cancelled a pending reservation.",
+          body:
+            reservation.status === ReservationStatus.APPROVED
+              ? "A requester cancelled an approved reservation."
+              : "A requester cancelled a pending reservation.",
         })),
       });
     }

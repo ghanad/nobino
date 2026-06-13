@@ -376,9 +376,11 @@ function AlternativeList({
 
 function CancelReservationForm({
   onComplete,
+  reservationStatus,
   reservationId,
 }: {
   onComplete: (state: CancelReservationActionState) => void;
+  reservationStatus: ReservationStatus;
   reservationId: string;
 }) {
   const [state, formAction, isPending] = useActionState(
@@ -405,7 +407,7 @@ function CancelReservationForm({
         ) : (
           <>
             <X className="h-3.5 w-3.5" />
-            لغو درخواست
+            {reservationStatus === "APPROVED" ? "لغو رزرو" : "لغو درخواست"}
           </>
         )}
       </Button>
@@ -421,7 +423,7 @@ function ReservationCard({
   reservation: ActiveReservation;
 }) {
   const isPending = reservation.status === "PENDING";
-  const canCancel = isPending;
+  const canCancel = isPending || reservation.status === "APPROVED";
   const showReason = Boolean(reservation.reason?.trim());
   const hasShortReason = (reservation.reason?.trim().length ?? 0) <= 90;
   const showRejectionReason =
@@ -463,6 +465,7 @@ function ReservationCard({
           {canCancel ? (
             <CancelReservationForm
               onComplete={onCancelComplete}
+              reservationStatus={reservation.status}
               reservationId={reservation.id}
             />
           ) : null}
