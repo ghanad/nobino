@@ -4,12 +4,13 @@ import { useActionState, useCallback, useEffect, useState } from "react";
 import { CheckCircle2, Loader2, X, XCircle } from "lucide-react";
 import type { AlternativeStatus, ReservationStatus } from "@prisma/client";
 
+import type { LunchActionState } from "@/app/lunch/actions";
 import {
   cancelReservationByUserInlineAction,
   type CancelReservationActionState,
 } from "@/app/reservations/actions";
 import { Button } from "@/components/ui/button";
-import { formatJalaliDate } from "@/lib/jalali-date";
+import { formatJalaliDate, formatJalaliDateParam } from "@/lib/jalali-date";
 import { cn } from "@/lib/utils";
 
 export type ActiveReservation = {
@@ -43,6 +44,11 @@ type ActionToast = {
 };
 
 type ActiveReservationsListProps = {
+  activeLunchReservationByDate: Record<string, { id: string }>;
+  cancelLunchReservationAction: (
+    previousState: LunchActionState,
+    formData: FormData,
+  ) => Promise<LunchActionState>;
   onReservationCancelled?: (reservation: ActiveReservation) => void;
   reservations: ActiveReservation[];
 };
@@ -56,6 +62,20 @@ const DISPLAY_TIME_FORMATTER = new Intl.DateTimeFormat("fa-IR", {
 const initialCancelState: CancelReservationActionState = {
   message: "",
   status: "idle",
+};
+
+const initialLunchCancelState: LunchActionState = {
+  message: "",
+  status: "idle",
+};
+
+type LunchCancelPrompt = {
+  dateLabel: string;
+  reservationId: string;
+};
+
+type ActionStateBase = {
+  status: "error" | "idle" | "success";
 };
 
 function formatDisplayTime(date: Date): string {
@@ -195,12 +215,12 @@ function ReservationsActionToast({
   );
 }
 
-function ActionResultBridge({
+function ActionResultBridge<TState extends ActionStateBase>({
   onComplete,
   state,
 }: {
-  onComplete: (state: CancelReservationActionState) => void;
-  state: CancelReservationActionState;
+  onComplete: (state: TState) => void;
+  state: TState;
 }) {
   useEffect(() => {
     if (state.status === "idle") {
@@ -211,6 +231,97 @@ function ActionResultBridge({
   }, [onComplete, state]);
 
   return null;
+}
+
+function CancelLunchReservationPrompt({
+  action,
+  onClose,
+  onComplete,
+  prompt,
+}: {
+  action: (
+    previousState: LunchActionState,
+    formData: FormData,
+  ) => Promise<LunchActionState>;
+  onClose: () => void;
+  onComplete: (state: LunchActionState) => void;
+  prompt: LunchCancelPrompt;
+}) {
+  const [state, formAction, isPending] = useActionState(
+    action,
+    initialLunchCancelState,
+  );
+
+  return (
+    <div
+      aria-labelledby="cancel-lunch-dialog-title"
+      aria-modal="true"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/55 p-0 sm:items-center sm:p-4"
+      role="dialog"
+    >
+      <button
+        aria-label="بستن پرسش لغو ناهار"
+        className="absolute inset-0 cursor-default"
+        onClick={onClose}
+        type="button"
+      />
+      <div
+        className="relative z-10 grid w-full max-w-md gap-4 rounded-t-lg border bg-background p-5 text-right shadow-lg sm:rounded-lg"
+        dir="rtl"
+      >
+        <ActionResultBridge onComplete={onComplete} state={state} />
+        <div className="flex items-start justify-between gap-4">
+          <div className="grid gap-1">
+            <h3 className="font-medium" id="cancel-lunch-dialog-title">
+              لغو ناهار
+            </h3>
+            <p className="text-sm leading-6 text-muted-foreground">
+              برای {prompt.dateLabel} ناهار هم رزرو کرده‌اید. ناهار هم لغو شود؟
+            </p>
+          </div>
+          <button
+            aria-label="بستن پرسش لغو ناهار"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-md border bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
+            onClick={onClose}
+            type="button"
+          >
+            <X aria-hidden="true" className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <button
+            className="inline-flex h-11 w-full items-center justify-center rounded-md border bg-background px-4 text-sm font-medium hover:bg-accent sm:h-10 sm:w-auto"
+            onClick={onClose}
+            type="button"
+          >
+            نگه داشتن ناهار
+          </button>
+          <form action={formAction}>
+            <input
+              name="reservationId"
+              type="hidden"
+              value={prompt.reservationId}
+            />
+            <Button
+              className="h-11 w-full sm:h-10 sm:w-auto"
+              disabled={isPending}
+              type="submit"
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  در حال لغو...
+                </>
+              ) : (
+                "لغو ناهار"
+              )}
+            </Button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function AlternativeList({
@@ -398,16 +509,26 @@ function ReservationCard({
 }
 
 export function ActiveReservationsList({
+  activeLunchReservationByDate,
+  cancelLunchReservationAction,
   onReservationCancelled,
   reservations,
 }: ActiveReservationsListProps) {
   const [currentReservations, setCurrentReservations] = useState(reservations);
+  const [currentLunchReservationByDate, setCurrentLunchReservationByDate] =
+    useState(activeLunchReservationByDate);
+  const [lunchCancelPrompt, setLunchCancelPrompt] =
+    useState<LunchCancelPrompt | null>(null);
   const [toast, setToast] = useState<ActionToast | null>(null);
   const dismissToast = useCallback(() => setToast(null), []);
 
   useEffect(() => {
     setCurrentReservations(reservations);
   }, [reservations]);
+
+  useEffect(() => {
+    setCurrentLunchReservationByDate(activeLunchReservationByDate);
+  }, [activeLunchReservationByDate]);
 
   const handleCancelComplete = useCallback(
     (state: CancelReservationActionState) => {
@@ -424,6 +545,16 @@ export function ActiveReservationsList({
 
         if (cancelledReservation) {
           onReservationCancelled?.(cancelledReservation);
+
+          const dateParam = formatJalaliDateParam(cancelledReservation.startAt);
+          const lunchReservation = currentLunchReservationByDate[dateParam];
+
+          if (lunchReservation) {
+            setLunchCancelPrompt({
+              dateLabel: formatJalaliDate(cancelledReservation.startAt),
+              reservationId: lunchReservation.id,
+            });
+          }
         }
 
         setCurrentReservations((previousReservations) =>
@@ -433,12 +564,49 @@ export function ActiveReservationsList({
         );
       }
     },
-    [currentReservations, onReservationCancelled],
+    [
+      currentLunchReservationByDate,
+      currentReservations,
+      onReservationCancelled,
+    ],
+  );
+
+  const handleLunchCancelComplete = useCallback(
+    (state: LunchActionState) => {
+      setToast({
+        id: Date.now(),
+        message: state.message,
+        variant: state.status === "error" ? "error" : "success",
+      });
+
+      if (state.status === "success" && state.mutation?.type === "cancel") {
+        const cancelledLunchReservationId = state.mutation.reservationId;
+
+        setCurrentLunchReservationByDate((previousReservations) =>
+          Object.fromEntries(
+            Object.entries(previousReservations).filter(
+              ([, reservation]) =>
+                reservation.id !== cancelledLunchReservationId,
+            ),
+          ),
+        );
+        setLunchCancelPrompt(null);
+      }
+    },
+    [],
   );
 
   return (
     <>
       <ReservationsActionToast onDismiss={dismissToast} toast={toast} />
+      {lunchCancelPrompt ? (
+        <CancelLunchReservationPrompt
+          action={cancelLunchReservationAction}
+          onClose={() => setLunchCancelPrompt(null)}
+          onComplete={handleLunchCancelComplete}
+          prompt={lunchCancelPrompt}
+        />
+      ) : null}
       {currentReservations.length === 0 ? (
         <div className="mt-5 rounded-md border bg-muted/30 p-4 text-sm text-muted-foreground">
           <p className="font-medium text-foreground">رزرو فعالی ندارید.</p>

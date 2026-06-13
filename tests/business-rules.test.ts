@@ -402,6 +402,29 @@ test("users can change or cancel their own lunch reservation before cutoff", asy
   assert.equal(cancelled.status, LunchReservationStatus.CANCELLED_BY_USER);
 });
 
+test("users can cancel their own lunch reservation after cutoff", async () => {
+  const targetDate = nextWorkingDateAtHour(12);
+  const beforeCutoff = addDays(startOfLocalDay(targetDate), -1);
+  beforeCutoff.setHours(12, 0, 0, 0);
+  const afterCutoff = addDays(startOfLocalDay(targetDate), -1);
+  afterCutoff.setHours(23, 59, 1, 0);
+
+  const reservation = await createLunchReservation({
+    userId,
+    locationId: lunchLocationId,
+    date: targetDate,
+    now: beforeCutoff,
+  });
+
+  const cancelled = await cancelLunchReservationByUser({
+    reservationId: reservation.id,
+    userId,
+    now: afterCutoff,
+  });
+
+  assert.equal(cancelled.status, LunchReservationStatus.CANCELLED_BY_USER);
+});
+
 test("friday lunch is disabled by default", async () => {
   const targetDate = nextWorkingDateAtHour(12);
 

@@ -298,12 +298,6 @@ export async function cancelLunchReservationByUser(input: {
       throw new LunchReservationError("رزرو ناهار پیدا نشد.");
     }
 
-    await assertLunchDateIsReservable({
-      date: current.date,
-      now: input.now,
-      client: tx,
-    });
-
     const cancelled = await tx.lunchReservation.update({
       where: { id: current.id },
       data: {

@@ -8,6 +8,7 @@ import {
   ActiveReservationsList,
   type ActiveReservation,
 } from "@/app/reservations/active-reservations-list";
+import type { LunchActionState } from "@/app/lunch/actions";
 import type { CreateReservationActionState } from "@/app/reservations/actions";
 import {
   CreateReservationForm,
@@ -19,6 +20,11 @@ import { formatJalaliDateParam } from "@/lib/jalali-date";
 
 type ReservationsInteractiveSectionProps = CreateReservationFormProps & {
   activeReservations: ActiveReservation[];
+  activeLunchReservationByDate: Record<string, { id: string }>;
+  cancelLunchReservationAction: (
+    previousState: LunchActionState,
+    formData: FormData,
+  ) => Promise<LunchActionState>;
 };
 
 function getReservationDurationHours(reservation: ActiveReservation): number {
@@ -133,6 +139,8 @@ function addPendingReservationToWeekDays(
 
 export function ReservationsInteractiveSection({
   activeReservations,
+  activeLunchReservationByDate,
+  cancelLunchReservationAction,
   dailyActiveReservationCountByDate,
   dailyReservedHoursByDate,
   weekDays,
@@ -263,6 +271,8 @@ export function ReservationsInteractiveSection({
         </div>
 
         <ActiveReservationsList
+          activeLunchReservationByDate={activeLunchReservationByDate}
+          cancelLunchReservationAction={cancelLunchReservationAction}
           onReservationCancelled={handleReservationCancelled}
           reservations={currentActiveReservations}
         />

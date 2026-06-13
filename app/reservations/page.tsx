@@ -4,7 +4,10 @@ import {
   ReservationStatus,
 } from "@prisma/client";
 
-import { createLunchReservationAction } from "@/app/lunch/actions";
+import {
+  cancelLunchReservationAction,
+  createLunchReservationAction,
+} from "@/app/lunch/actions";
 import { createReservationInlineAction } from "@/app/reservations/actions";
 import { ReservationsInteractiveSection } from "@/app/reservations/reservations-interactive-section";
 import { PageHeader } from "@/components/app/page-header";
@@ -563,13 +566,10 @@ export default async function ReservationsPage({
     db.lunchReservation.findMany({
       where: {
         userId: user.id,
-        date: {
-          gte: weekStart,
-          lt: weekEnd,
-        },
         status: LunchReservationStatus.ACTIVE,
       },
       select: {
+        id: true,
         date: true,
       },
     }),
@@ -579,6 +579,12 @@ export default async function ReservationsPage({
     lunchReservations.map((reservation) =>
       formatJalaliDateParam(reservation.date),
     ),
+  );
+  const activeLunchReservationByDate = Object.fromEntries(
+    lunchReservations.map((reservation) => [
+      formatJalaliDateParam(reservation.date),
+      { id: reservation.id },
+    ]),
   );
   const lunchAvailabilityByDate = Object.fromEntries(
     weekDates.map((date, index) => {
@@ -708,6 +714,8 @@ export default async function ReservationsPage({
       <ReservationsInteractiveSection
         action={createReservationInlineAction}
         activeReservations={activeReservations}
+        activeLunchReservationByDate={activeLunchReservationByDate}
+        cancelLunchReservationAction={cancelLunchReservationAction}
         currentDateParam={dateParam}
         dailyActiveReservationCountByDate={dailyActiveReservationCountByDate}
         dailyReservedHoursByDate={dailyReservedHoursByDate}
