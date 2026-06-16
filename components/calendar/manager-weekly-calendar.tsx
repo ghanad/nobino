@@ -717,6 +717,8 @@ export function ManagerWeeklyCalendar({
   const [dragOverSlotKey, setDragOverSlotKey] = useState<string | null>(null);
   const [dropError, setDropError] = useState<string | null>(null);
   const [localWeekDays, setLocalWeekDays] = useState(weekDays);
+  const mobileDayTabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const mobileDayTabsContainerRef = useRef<HTMLDivElement | null>(null);
   const [resizeOverSlotKey, setResizeOverSlotKey] = useState<string | null>(null);
   const [resizingReservation, setResizingReservation] =
     useState<ResizingReservation | null>(null);
@@ -730,6 +732,7 @@ export function ManagerWeeklyCalendar({
   );
   const firstHour = hours[0] ?? 0;
   const isCurrentWeek = weekDays.some((day) => day.dateParam === todayDateParam);
+  const mobileDayKey = localWeekDays.map((day) => day.dateParam).join("|");
   const defaultMobileDayIndex = getDefaultSelectedDayIndex(
     localWeekDays,
     currentDateParam,
@@ -749,6 +752,24 @@ export function ManagerWeeklyCalendar({
       getDefaultSelectedDayIndex(weekDays, currentDateParam),
     );
   }, [currentDateParam, weekDays]);
+
+  useEffect(() => {
+    const container = mobileDayTabsContainerRef.current;
+    const selectedTab = mobileDayTabRefs.current[selectedMobileDayIndex];
+
+    if (!container || !selectedTab) {
+      return;
+    }
+
+    const nextScrollLeft =
+      selectedTab.offsetLeft -
+      (container.clientWidth - selectedTab.offsetWidth) / 2;
+
+    container.scrollTo({
+      left: Math.max(nextScrollLeft, 0),
+      behavior: "auto",
+    });
+  }, [mobileDayKey, selectedMobileDayIndex]);
 
   function readDraggedReservation(
     event: DragEvent<HTMLElement>,
@@ -1029,6 +1050,7 @@ export function ManagerWeeklyCalendar({
               aria-label="انتخاب روز هفته"
               className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
               dir="ltr"
+              ref={mobileDayTabsContainerRef}
               role="tablist"
             >
               {localWeekDays.map((day, dayIndex) => {
@@ -1049,6 +1071,9 @@ export function ManagerWeeklyCalendar({
                     dir="rtl"
                     key={day.dateParam}
                     onClick={() => setSelectedMobileDayIndex(dayIndex)}
+                    ref={(element) => {
+                      mobileDayTabRefs.current[dayIndex] = element;
+                    }}
                     role="tab"
                     type="button"
                   >
