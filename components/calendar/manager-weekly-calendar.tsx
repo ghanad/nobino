@@ -157,18 +157,6 @@ function getDetailClass(status: SlotReservationDetail["status"]): string {
   return "bg-amber-100 text-amber-950 ring-amber-300";
 }
 
-function getDetailActionLabel(status: SlotReservationDetail["status"]): string {
-  if (status === "PENDING") {
-    return "بررسی";
-  }
-
-  if (status === "ALTERNATIVE_PROPOSED") {
-    return "پیشنهادی";
-  }
-
-  return "جزئیات";
-}
-
 function canUpdateReservationTime(
   status: SlotReservationDetail["status"],
 ): boolean {
@@ -441,7 +429,7 @@ function MobileReservationBlock({
         </span>
       ) : null}
       <span
-        className="min-w-0 truncate text-sm font-semibold leading-6"
+        className="block max-h-[4.5rem] w-full min-w-0 overflow-hidden break-words whitespace-normal text-center text-sm font-semibold leading-6"
         title={`${detail.userName} - ${formatPersianNumber(detail.partySize)} نفر`}
       >
         {detail.userName}
@@ -449,9 +437,6 @@ function MobileReservationBlock({
       <span className="inline-flex shrink-0 items-center gap-1 text-[11px] leading-4 opacity-80">
         <Users aria-hidden="true" className="h-3 w-3" />
         {formatPersianNumber(detail.partySize)} نفر
-      </span>
-      <span className="mt-auto shrink-0 text-[11px] leading-4 opacity-75">
-        {canResize ? "بررسی / تغییر اندازه" : getDetailActionLabel(detail.status)}
       </span>
       {canResize ? (
         <span
@@ -642,7 +627,7 @@ function ReservationBlock({
         />
       ) : null}
       <span
-        className="min-h-0 max-h-full overflow-hidden text-center leading-4 [text-orientation:mixed] [writing-mode:vertical-rl]"
+        className="block min-h-0 w-full max-h-full overflow-hidden break-words whitespace-normal text-center leading-4"
         title={`${detail.userName} - ${formatPersianNumber(detail.partySize)} نفر`}
       >
         {detail.userName}
@@ -650,9 +635,6 @@ function ReservationBlock({
       <span className="inline-flex shrink-0 items-center gap-0.5 text-[9px] leading-3 opacity-80">
         <Users aria-hidden="true" className="h-2.5 w-2.5" />
         {detail.partySize}
-      </span>
-      <span className="shrink-0 text-[9px] leading-3 opacity-75">
-        {canDrag ? "جابجایی / تغییر اندازه" : getDetailActionLabel(detail.status)}
       </span>
       {canDrag ? (
         <span
