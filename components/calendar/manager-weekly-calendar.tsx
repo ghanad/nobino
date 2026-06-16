@@ -369,6 +369,17 @@ function getMobileSlotStatusLabel(slot: ManagerWeekSlot): string {
   return `${formatPersianNumber(available)} ظرفیت آزاد`;
 }
 
+function ReservationUserName({ detail }: { detail: SlotReservationDetail }) {
+  return (
+    <span
+      className="block min-h-0 max-h-full max-w-full overflow-hidden text-center text-sm font-semibold leading-5 [direction:ltr] [text-orientation:mixed] [writing-mode:vertical-rl]"
+      title={`${detail.userName} - ${formatPersianNumber(detail.partySize)} نفر`}
+    >
+      {detail.userName}
+    </span>
+  );
+}
+
 function buildMobileSlotAriaLabel(
   day: ManagerWeekDay,
   slot: ManagerWeekSlot,
@@ -402,7 +413,7 @@ function MobileReservationBlock({
   const canResize = canUpdateReservationTime(detail.status);
   const suppressNextClickRef = useRef(false);
   const className = cn(
-    "pointer-events-auto relative flex h-full min-w-0 flex-col justify-between gap-2 rounded-md px-2.5 py-3 text-xs font-medium leading-5 shadow-sm ring-1 transition",
+    "pointer-events-auto relative flex h-full min-w-0 flex-col items-center justify-between gap-2 rounded-md px-2.5 py-3 text-xs font-medium leading-5 shadow-sm ring-1 transition",
     getDetailClass(detail.status),
     canResize ? "touch-none" : null,
     isResizing ? "opacity-45" : null,
@@ -428,12 +439,7 @@ function MobileReservationBlock({
           <span className="h-1.5 w-14 rounded-full border border-amber-500/70 bg-white/90 shadow-sm" />
         </span>
       ) : null}
-      <span
-        className="block max-h-[4.5rem] w-full min-w-0 overflow-hidden break-words whitespace-normal text-center text-sm font-semibold leading-6"
-        title={`${detail.userName} - ${formatPersianNumber(detail.partySize)} نفر`}
-      >
-        {detail.userName}
-      </span>
+      <ReservationUserName detail={detail} />
       <span className="inline-flex shrink-0 items-center gap-1 text-[11px] leading-4 opacity-80">
         <Users aria-hidden="true" className="h-3 w-3" />
         {formatPersianNumber(detail.partySize)} نفر
@@ -626,12 +632,7 @@ function ReservationBlock({
           title="برای تغییر زمان شروع بکشید"
         />
       ) : null}
-      <span
-        className="block min-h-0 w-full max-h-full overflow-hidden break-words whitespace-normal text-center leading-4"
-        title={`${detail.userName} - ${formatPersianNumber(detail.partySize)} نفر`}
-      >
-        {detail.userName}
-      </span>
+      <ReservationUserName detail={detail} />
       <span className="inline-flex shrink-0 items-center gap-0.5 text-[9px] leading-3 opacity-80">
         <Users aria-hidden="true" className="h-2.5 w-2.5" />
         {detail.partySize}
