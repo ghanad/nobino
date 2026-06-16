@@ -257,7 +257,6 @@ function ReviewModal({
           </ReviewModalCloseLink>
         </div>
         <PendingReviewModalContent
-          dateParam={dateParam}
           defaultEndHour={item.reservation.endAt.getHours()}
           defaultStartHour={item.reservation.startAt.getHours()}
           durationLabel={formatDuration(

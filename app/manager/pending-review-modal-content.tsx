@@ -17,7 +17,6 @@ import { JALALI_DATE_INPUT_PLACEHOLDER } from "@/lib/jalali-date";
 type ReviewAction = "reject" | "time" | null;
 
 type PendingReviewModalContentProps = {
-  dateParam: string;
   defaultEndHour: number;
   defaultStartHour: number;
   durationLabel: string;
@@ -36,7 +35,6 @@ type PendingReviewModalContentProps = {
 };
 
 export function PendingReviewModalContent({
-  dateParam,
   defaultEndHour,
   defaultStartHour,
   durationLabel,
@@ -55,6 +53,7 @@ export function PendingReviewModalContent({
 }: PendingReviewModalContentProps) {
   const [activeAction, setActiveAction] = useState<ReviewAction>(null);
   const isPending = status === "PENDING";
+  const returnDateParam = requestedDate;
 
   return (
     <div className="p-5 text-card-foreground">
@@ -106,7 +105,7 @@ export function PendingReviewModalContent({
             {isPending ? (
               <form action={approveReservationAction}>
                 <input name="reservationId" type="hidden" value={reservationId} />
-                <input name="date" type="hidden" value={dateParam} />
+                <input name="date" type="hidden" value={returnDateParam} />
                 <SubmitButton
                   className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
                   pendingLabel="در حال تایید..."
@@ -144,7 +143,7 @@ export function PendingReviewModalContent({
             ) : (
               <form action={cancelReservationByManagerAction}>
                 <input name="reservationId" type="hidden" value={reservationId} />
-                <input name="date" type="hidden" value={dateParam} />
+                <input name="date" type="hidden" value={returnDateParam} />
                 <SubmitButton
                   className="w-full border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
                   pendingLabel="در حال لغو..."
@@ -163,7 +162,7 @@ export function PendingReviewModalContent({
               className="grid gap-3 rounded-md border bg-muted/25 p-4"
             >
               <input name="reservationId" type="hidden" value={reservationId} />
-              <input name="date" type="hidden" value={dateParam} />
+              <input name="date" type="hidden" value={returnDateParam} />
               <div className="grid gap-2">
                 <label
                   className="text-sm font-medium text-muted-foreground"
@@ -252,7 +251,7 @@ export function PendingReviewModalContent({
               }}
             >
               <input name="reservationId" type="hidden" value={reservationId} />
-              <input name="date" type="hidden" value={dateParam} />
+              <input name="date" type="hidden" value={returnDateParam} />
               <div className="grid gap-2">
                 <label
                   className="text-sm font-medium text-muted-foreground"
