@@ -1179,7 +1179,7 @@ export function CreateReservationForm({
           (day) => day.dateParam === reservationDateParam,
         );
 
-        if (promptAvailability) {
+        if (promptAvailability?.isOpen) {
           setToast(null);
           setLunchPrompt({
             dateLabel: reservationDay?.modalDateLabel ?? reservationDateParam,
