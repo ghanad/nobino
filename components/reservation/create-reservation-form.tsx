@@ -131,6 +131,8 @@ export type SlotReservationDetail = {
 
 type PopoverPosition = {
   left: number;
+  maxHeight: number;
+  placement: "bottom" | "top";
   top: number;
 };
 
@@ -432,17 +434,22 @@ function SlotDetailsPopover({
     }
 
     const rect = trigger.getBoundingClientRect();
-    const width = Math.min(340, window.innerWidth - 24);
+    const width = Math.min(260, window.innerWidth - 24);
+    const availableAbove = Math.max(rect.top - 12, 0);
+    const availableBelow = Math.max(window.innerHeight - rect.bottom - 12, 0);
+    const placement =
+      availableAbove > availableBelow && availableBelow < 280 ? "top" : "bottom";
     const left = Math.min(
       Math.max(rect.left + rect.width / 2 - width / 2, 12),
       window.innerWidth - width - 12,
     );
-    const top =
-      rect.bottom + 10 + 280 > window.innerHeight
-        ? Math.max(rect.top - 10, 12)
-        : rect.bottom + 10;
+    const top = placement === "top" ? rect.top - 10 : rect.bottom + 10;
+    const maxHeight =
+      placement === "top"
+        ? Math.max(availableAbove - 10, 80)
+        : Math.max(availableBelow - 10, 80);
 
-    setPosition({ left, top });
+    setPosition({ left, maxHeight, placement, top });
   }
 
   function openPopover({ pinned = false }: { pinned?: boolean } = {}) {
@@ -534,13 +541,19 @@ function SlotDetailsPopover({
       {isOpen && position
         ? createPortal(
             <div
-              className="fixed z-[80] max-h-[70vh] w-[min(260px,calc(100vw-24px))] overflow-y-auto rounded-lg border border-slate-200 bg-white p-3 text-slate-950 shadow-xl"
+              className="pointer-events-none fixed z-[80] w-[min(260px,calc(100vw-24px))] overflow-y-auto rounded-lg border border-slate-200 bg-white p-3 text-slate-950 shadow-xl"
               dir="rtl"
               id={contentId}
               onMouseEnter={cancelScheduledClose}
               onMouseLeave={scheduleClosePopover}
               role="tooltip"
-              style={{ left: position.left, top: position.top }}
+              style={{
+                left: position.left,
+                maxHeight: position.maxHeight,
+                top: position.top,
+                transform:
+                  position.placement === "top" ? "translateY(-100%)" : undefined,
+              }}
             >
               <div className="grid gap-2 text-right">
                 <ReservationUserList
