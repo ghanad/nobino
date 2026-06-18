@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Hourglass, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Users } from "lucide-react";
 import Link from "next/link";
 import {
   useCallback,
@@ -13,103 +13,32 @@ import {
 } from "react";
 
 import { proposeAlternativeDropAction } from "@/app/manager/actions";
+import { CalendarLegend } from "@/components/calendar/manager-weekly-calendar/calendar-legend";
+import {
+  buildCapacityDots,
+  CapacityDot,
+  CapacityDots,
+} from "@/components/calendar/manager-weekly-calendar/capacity-dots";
+import {
+  buildDateHref,
+  formatPersianNumber,
+  formatPersianShortHourRange,
+} from "@/components/calendar/manager-weekly-calendar/formatting";
+import { PendingRequestsBadge } from "@/components/calendar/manager-weekly-calendar/pending-requests-badge";
+import { ReservationUserName } from "@/components/calendar/manager-weekly-calendar/reservation-user-name";
+import type {
+  DraggedReservation,
+  ManagerWeekDay,
+  ManagerWeeklyCalendarProps,
+  ManagerWeekSlot,
+  PositionedReservationBlock,
+  ResizeEdge,
+  ResizingReservation,
+  SlotPointerTarget,
+  SlotReservationBlock,
+  SlotReservationDetail,
+} from "@/components/calendar/manager-weekly-calendar/types";
 import { cn } from "@/lib/utils";
-
-type SlotReservationDetail = {
-  id: string;
-  partySize: number;
-  userName: string;
-  status: "ALTERNATIVE_PROPOSED" | "APPROVED" | "PENDING";
-  reason: string | null;
-  href?: string;
-};
-
-type ManagerWeekSlot = {
-  slotStartHour: number;
-  slotEndHour: number;
-  approvedCount: number;
-  pendingCount: number;
-  capacity: number;
-  details: SlotReservationDetail[];
-};
-
-type ManagerWeekDay = {
-  closedReason: string | null;
-  dateLabel: string;
-  dateParam: string;
-  shortLabel: string;
-  slots: ManagerWeekSlot[];
-};
-
-type SlotReservationBlock = {
-  detail: SlotReservationDetail;
-  startHour: number;
-  endHour: number;
-};
-
-type PositionedReservationBlock = SlotReservationBlock & {
-  lane: number;
-  laneCount: number;
-};
-
-type DraggedReservation = {
-  durationHours: number;
-  reservationId: string;
-  status: SlotReservationDetail["status"];
-};
-
-type ResizeEdge = "start" | "end";
-type CapacityDotTone = "approved" | "free";
-
-type ResizingReservation = {
-  dateParam: string;
-  edge: ResizeEdge;
-  endHour: number;
-  reservationId: string;
-  startHour: number;
-  status: SlotReservationDetail["status"];
-};
-
-type SlotPointerTarget = {
-  dateParam: string;
-  slotEndHour: number;
-  slotStartHour: number;
-};
-
-type ManagerWeeklyCalendarProps = {
-  currentDateParam: string;
-  emptyMessage: string;
-  nextWeekDateParam: string;
-  previousWeekDateParam: string;
-  todayDateParam: string;
-  weekDays: ManagerWeekDay[];
-  weekLabel: string;
-};
-
-function buildDateHref(dateParam: string): string {
-  return `?date=${dateParam}`;
-}
-
-const PERSIAN_HOUR_FORMATTER = new Intl.NumberFormat("fa-IR", {
-  minimumIntegerDigits: 2,
-  useGrouping: false,
-});
-
-const PERSIAN_NUMBER_FORMATTER = new Intl.NumberFormat("fa-IR", {
-  useGrouping: false,
-});
-
-function formatPersianShortHour(hour: number): string {
-  return PERSIAN_HOUR_FORMATTER.format(hour);
-}
-
-function formatPersianShortHourRange(startHour: number, endHour: number): string {
-  return `${formatPersianShortHour(startHour)}–${formatPersianShortHour(endHour)}`;
-}
-
-function formatPersianNumber(value: number): string {
-  return PERSIAN_NUMBER_FORMATTER.format(value);
-}
 
 function getHourRange(weekDays: ManagerWeekDay[]): number[] {
   const slotHours = weekDays.flatMap((day) =>
@@ -164,96 +93,6 @@ function canUpdateReservationTime(
     status === "PENDING" ||
     status === "APPROVED" ||
     status === "ALTERNATIVE_PROPOSED"
-  );
-}
-
-function buildCapacityDots(slot: ManagerWeekSlot): CapacityDotTone[] {
-  const capacity = Math.max(slot.capacity, 0);
-  const approvedCount = Math.min(slot.approvedCount, capacity);
-  const freeCount = Math.max(capacity - approvedCount, 0);
-
-  return [
-    ...Array<CapacityDotTone>(freeCount).fill("free"),
-    ...Array<CapacityDotTone>(approvedCount).fill("approved"),
-  ];
-}
-
-function getCapacityDotClass(tone: CapacityDotTone): string {
-  if (tone === "approved") {
-    return "border-slate-400 bg-slate-300";
-  }
-
-  return "border-emerald-600 bg-emerald-500";
-}
-
-function CapacityDot({ tone }: { tone: CapacityDotTone }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={cn(
-        "h-2 w-2 shrink-0 rounded-full border shadow-[inset_0_0_0_1px_rgba(255,255,255,0.45)]",
-        getCapacityDotClass(tone),
-      )}
-    />
-  );
-}
-
-function CapacityDots({ slot }: { slot: ManagerWeekSlot }) {
-  const dots = buildCapacityDots(slot);
-
-  return (
-    <span className="absolute inset-x-2 top-1/2 z-10 flex -translate-y-1/2 flex-wrap items-center justify-center gap-1.5">
-      {dots.map((tone, index) => (
-        <CapacityDot key={`${tone}-${index}`} tone={tone} />
-      ))}
-    </span>
-  );
-}
-
-function PendingRequestsBadge({
-  className,
-  count,
-}: {
-  className?: string;
-  count: number;
-}) {
-  if (count <= 0) {
-    return null;
-  }
-
-  return (
-    <span
-      aria-hidden="true"
-      className={cn(
-        "inline-flex h-5 min-w-5 shrink-0 items-center justify-center gap-0.5 rounded-full border border-amber-300 bg-amber-100 px-1.5 text-[10px] font-semibold leading-none text-amber-800 shadow-sm",
-        className,
-      )}
-    >
-      <Hourglass className="h-3 w-3" />
-      <span>{formatPersianNumber(count)}</span>
-    </span>
-  );
-}
-
-function CalendarLegend() {
-  return (
-    <div
-      className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 shadow-sm"
-      dir="rtl"
-    >
-      <span className="inline-flex items-center gap-1.5">
-        <CapacityDot tone="free" />
-        ظرفیت آزاد
-      </span>
-      <span className="inline-flex items-center gap-1.5">
-        <CapacityDot tone="approved" />
-        رزرو تاییدشده
-      </span>
-      <span className="inline-flex items-center gap-1.5">
-        <PendingRequestsBadge count={1} />
-        درخواست در انتظار
-      </span>
-    </div>
   );
 }
 
@@ -367,17 +206,6 @@ function getMobileSlotStatusLabel(slot: ManagerWeekSlot): string {
   }
 
   return `${formatPersianNumber(available)} ظرفیت آزاد`;
-}
-
-function ReservationUserName({ detail }: { detail: SlotReservationDetail }) {
-  return (
-    <span
-      className="block min-h-0 max-h-full max-w-full overflow-hidden text-center text-sm font-semibold leading-5 [direction:ltr] [text-orientation:mixed] [writing-mode:vertical-rl]"
-      title={`${detail.userName} - ${formatPersianNumber(detail.partySize)} نفر`}
-    >
-      {detail.userName}
-    </span>
-  );
 }
 
 function buildMobileSlotAriaLabel(
