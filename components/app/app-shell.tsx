@@ -55,6 +55,7 @@ function getNavItems(user: CurrentUser): GlobalNavItem[] {
         match: "exact",
         children: [
           { href: "/admin", label: "کاربران", match: "exact" },
+          { href: "/admin/teams", label: "تیم‌ها", match: "prefix" },
           { href: "/admin/capacity", label: "ظرفیت", match: "prefix" },
           { href: "/admin/schedule", label: "زمان‌بندی", match: "prefix" },
           { href: "/admin/lunch", label: "ناهار", match: "prefix" },

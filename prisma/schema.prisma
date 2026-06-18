@@ -69,6 +69,7 @@ model User {
   notifications             Notification[]                  @relation("NotificationUser")
   createdAnnouncements      Announcement[]                  @relation("AnnouncementCreator")
   announcementReceipts      AnnouncementReceipt[]           @relation("AnnouncementReceiptUser")
+  teamMemberships           TeamMembership[]
 }
 
 model ResourcePool {
@@ -310,4 +311,26 @@ model Notification {
   @@index([userId, readAt])
   @@index([reservationId])
   @@index([lunchReservationId])
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members TeamMembership[]
+}
+
+model TeamMembership {
+  id        String   @id @default(cuid())
+  teamId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([userId])
 }
