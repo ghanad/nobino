@@ -103,6 +103,7 @@ export function SlotDetailsPopover({
   const [isPinned, setIsPinned] = useState(false);
   const [position, setPosition] = useState<PopoverPosition | null>(null);
   const triggerRef = useRef<HTMLDivElement | null>(null);
+  const openTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const contentId = useId();
   const peopleCount = cell.approvedReservations.length + cell.pendingReservations.length;
@@ -138,6 +139,11 @@ export function SlotDetailsPopover({
       return;
     }
 
+    if (openTimerRef.current) {
+      clearTimeout(openTimerRef.current);
+      openTimerRef.current = null;
+    }
+
     if (closeTimerRef.current) {
       clearTimeout(closeTimerRef.current);
       closeTimerRef.current = null;
@@ -149,6 +155,11 @@ export function SlotDetailsPopover({
   }
 
   function closePopover() {
+    if (openTimerRef.current) {
+      clearTimeout(openTimerRef.current);
+      openTimerRef.current = null;
+    }
+
     if (closeTimerRef.current) {
       clearTimeout(closeTimerRef.current);
       closeTimerRef.current = null;
@@ -165,9 +176,31 @@ export function SlotDetailsPopover({
     }
   }
 
+  function scheduleHoverOpen() {
+    if (isDragging || !cell.isWorkingHour || peopleCount === 0) {
+      return;
+    }
+
+    cancelScheduledClose();
+
+    if (openTimerRef.current) {
+      clearTimeout(openTimerRef.current);
+    }
+
+    openTimerRef.current = setTimeout(() => {
+      openTimerRef.current = null;
+      openPopover();
+    }, 500);
+  }
+
   function scheduleClosePopover() {
     if (isPinned) {
       return;
+    }
+
+    if (openTimerRef.current) {
+      clearTimeout(openTimerRef.current);
+      openTimerRef.current = null;
     }
 
     if (closeTimerRef.current) {
@@ -194,6 +227,10 @@ export function SlotDetailsPopover({
 
   useEffect(() => {
     return () => {
+      if (openTimerRef.current) {
+        clearTimeout(openTimerRef.current);
+      }
+
       if (closeTimerRef.current) {
         clearTimeout(closeTimerRef.current);
       }
@@ -211,7 +248,7 @@ export function SlotDetailsPopover({
           }
         }}
         onFocus={() => openPopover()}
-        onMouseEnter={() => openPopover()}
+        onMouseEnter={scheduleHoverOpen}
         onMouseLeave={scheduleClosePopover}
         ref={triggerRef}
         style={style}
