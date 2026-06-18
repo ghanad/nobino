@@ -1,6 +1,6 @@
 "use client";
 
-import { Hourglass } from "lucide-react";
+import { Check, Hourglass } from "lucide-react";
 
 import { formatPersianNumber } from "@/components/reservation/create-reservation/formatters";
 import type {
@@ -8,6 +8,8 @@ import type {
   CellState,
 } from "@/components/reservation/create-reservation/types";
 import { cn } from "@/lib/utils";
+
+type MineIndicatorVariant = "check" | "solid-check" | "soft-check";
 
 export function buildCapacityDots(cell: CellState): CapacityDotTone[] {
   if (cell.unavailableReason === "past") {
@@ -42,10 +44,57 @@ function getCapacityDotClass(tone: CapacityDotTone): string {
     return "border-slate-400 bg-slate-300";
   }
 
-  return "border-emerald-600 bg-emerald-500";
+  return "border-emerald-600 bg-white";
 }
 
-export function CapacityDot({ tone }: { tone: CapacityDotTone }) {
+function MyApprovedIndicator({
+  variant,
+}: {
+  variant: MineIndicatorVariant;
+}) {
+  if (variant === "solid-check") {
+    return (
+      <span
+        aria-hidden="true"
+        className="inline-flex h-[9px] w-[9px] shrink-0 items-center justify-center rounded-full bg-sky-600 text-white"
+      >
+        <Check className="h-[7px] w-[7px] stroke-[3.5]" />
+      </span>
+    );
+  }
+
+  if (variant === "soft-check") {
+    return (
+      <span
+        aria-hidden="true"
+        className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-sky-200 bg-sky-50 text-sky-600"
+      >
+        <Check className="h-3 w-3 stroke-[3]" />
+      </span>
+    );
+  }
+
+  return (
+    <span
+      aria-hidden="true"
+      className="inline-flex h-3 w-3 shrink-0 items-center justify-center text-sky-600"
+    >
+      <Check className="h-3 w-3 stroke-[3]" />
+    </span>
+  );
+}
+
+export function CapacityDot({
+  tone,
+  mineVariant = "solid-check",
+}: {
+  tone: CapacityDotTone;
+  mineVariant?: MineIndicatorVariant;
+}) {
+  if (tone === "mine") {
+    return <MyApprovedIndicator variant={mineVariant} />;
+  }
+
   return (
     <span
       aria-hidden="true"
