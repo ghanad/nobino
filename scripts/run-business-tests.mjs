@@ -40,5 +40,14 @@ if (!existsSync(libAliasPath)) {
   symlinkSync("../../lib", libAliasPath, "dir");
 }
 
+const componentsAliasPath = path.join(scopedAliasDir, "components");
+if (!existsSync(componentsAliasPath)) {
+  symlinkSync("../../components", componentsAliasPath, "dir");
+}
+
 run("npx", ["prisma", "db", "push", "--skip-generate"]);
-run(process.execPath, ["--test", path.join(buildDir, "tests/business-rules.test.js")]);
+run(process.execPath, [
+  "--test",
+  path.join(buildDir, "tests/business-rules.test.js"),
+  path.join(buildDir, "tests/manager-weekly-calendar-helpers.test.js"),
+]);

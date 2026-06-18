@@ -4,6 +4,7 @@
     "lib": ["ES2022", "DOM"],
     "module": "CommonJS",
     "moduleResolution": "Node",
+    "jsx": "react-jsx",
     "baseUrl": "..",
     "paths": {
       "@/*": ["./*"]
@@ -19,6 +20,8 @@
     "server-only.d.ts",
     "*.test.ts",
     "business-rules-helpers.ts",
+    "../components/calendar/manager-weekly-calendar/*.ts",
+    "../components/calendar/manager-weekly-calendar/*.tsx",
     "../lib/admin-settings-service.ts",
     "../lib/capacity-service.ts",
     "../lib/db.ts",
@@ -28,6 +31,7 @@
     "../lib/reservation-service.ts",
     "../lib/schedule.ts",
     "../lib/user-management-service.ts",
+    "../lib/utils.ts",
     "../types/pholiday.d.ts"
   ]
 }
