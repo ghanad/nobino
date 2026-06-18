@@ -713,7 +713,6 @@ export function CreateReservationForm({
                                   }}
                                   role="button"
                                   tabIndex={0}
-                                  title={slotLabel}
                                 >
                                   {isSelected ? (
                                     <span

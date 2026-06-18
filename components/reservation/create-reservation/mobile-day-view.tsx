@@ -253,7 +253,6 @@ export function MobileDayView({
                         }}
                         role="button"
                         tabIndex={0}
-                        title={slotLabel}
                       >
                         <div className="flex w-[72px] shrink-0 items-center justify-center border-r border-slate-100 bg-slate-50/60 px-2 py-2 text-sm font-semibold text-slate-700">
                           <span
