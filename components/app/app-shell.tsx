@@ -44,6 +44,14 @@ function getNavItems(user: CurrentUser): GlobalNavItem[] {
       href: "/manager",
       label: "بررسی درخواست‌ها",
       match: "prefix",
+      children: [
+        { href: "/manager", label: "تقویم رزروها", match: "exact" },
+        {
+          href: "/manager/team-report",
+          label: "گزارش تیم‌ها",
+          match: "prefix",
+        },
+      ],
     });
   }
 

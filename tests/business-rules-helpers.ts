@@ -131,6 +131,8 @@ export async function resetDatabase() {
   await db.resourcePoolCapacityException.deleteMany();
   await db.scheduleException.deleteMany();
   await db.workingSchedule.deleteMany();
+  await db.teamMembership.deleteMany();
+  await db.team.deleteMany();
   await db.resourcePool.deleteMany();
   await db.reservationPolicy.deleteMany();
   await db.user.deleteMany();

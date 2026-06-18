@@ -85,7 +85,9 @@ function getMobileNavSections(navItems: GlobalNavItem[]): MobileNavSection[] {
 
   if (managerItem) {
     sections.push({
-      entries: [{ item: managerItem }],
+      entries: managerItem.children?.length
+        ? managerItem.children.map((child) => ({ item: child }))
+        : [{ item: managerItem }],
       id: "requests",
       label: "درخواست‌ها",
     });
