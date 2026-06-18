@@ -9,20 +9,17 @@ import {
 
 import { assertCapacityAvailableForApproval } from "@/lib/capacity-service";
 import { db } from "@/lib/db";
+import {
+  ACTIVE_REQUEST_STATUSES,
+  endOfLocalDay,
+  formatDailyUserHourLimitError,
+  getReservationPolicy,
+  reservationHours,
+  startOfLocalDay,
+} from "@/lib/reservation-service/helpers";
 import { validateReservationTimeRange } from "@/lib/schedule";
 
 type DbClient = typeof db | Prisma.TransactionClient;
-const ONE_HOUR_MS = 60 * 60 * 1000;
-const DEFAULT_DAILY_USER_HOUR_LIMIT = 3;
-const DEFAULT_ONE_RESERVATION_PER_DAY_ENABLED = true;
-const PERSIAN_NUMBER_FORMATTER = new Intl.NumberFormat("fa-IR", {
-  useGrouping: false,
-});
-const ACTIVE_REQUEST_STATUSES = [
-  ReservationStatus.PENDING,
-  ReservationStatus.APPROVED,
-  ReservationStatus.ALTERNATIVE_PROPOSED,
-];
 
 export class ReservationTransitionError extends Error {
   constructor(message: string) {
@@ -45,49 +42,6 @@ async function assertManagerOrAdmin(userId: string, client: DbClient = db) {
       "Only managers or admins can perform this action.",
     );
   }
-}
-
-function startOfLocalDay(date: Date): Date {
-  return new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate(),
-    0,
-    0,
-    0,
-    0,
-  );
-}
-
-function endOfLocalDay(date: Date): Date {
-  const dayStart = startOfLocalDay(date);
-
-  return new Date(dayStart.getTime() + 24 * ONE_HOUR_MS);
-}
-
-function reservationHours(startAt: Date, endAt: Date): number {
-  return (endAt.getTime() - startAt.getTime()) / ONE_HOUR_MS;
-}
-
-async function getReservationPolicy(client: DbClient): Promise<{
-  dailyUserHourLimit: number;
-  oneReservationPerDayEnabled: boolean;
-}> {
-  const policy = await client.reservationPolicy.findUnique({
-    where: { id: "default" },
-    select: {
-      dailyUserHourLimit: true,
-      oneReservationPerDayEnabled: true,
-    },
-  });
-
-  return {
-    dailyUserHourLimit:
-      policy?.dailyUserHourLimit ?? DEFAULT_DAILY_USER_HOUR_LIMIT,
-    oneReservationPerDayEnabled:
-      policy?.oneReservationPerDayEnabled ??
-      DEFAULT_ONE_RESERVATION_PER_DAY_ENABLED,
-  };
 }
 
 async function assertDailyUserReservationPolicy(input: {
@@ -138,9 +92,7 @@ async function assertDailyUserReservationPolicy(input: {
 
   if (existingHours + requestedHours > allowedDailyHours) {
     throw new ReservationTransitionError(
-      `هر کاربر حداکثر می‌تواند ${PERSIAN_NUMBER_FORMATTER.format(
-        policy.dailyUserHourLimit,
-      )} ساعت در یک روز رزرو کند.`,
+      formatDailyUserHourLimitError(policy.dailyUserHourLimit),
     );
   }
 }
