@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import {
   useCallback,
@@ -9,11 +9,16 @@ import {
   useState,
   useTransition,
   type DragEvent,
-  type PointerEvent as ReactPointerEvent,
 } from "react";
 
 import { proposeAlternativeDropAction } from "@/app/manager/actions";
 import { CalendarLegend } from "@/components/calendar/manager-weekly-calendar/calendar-legend";
+import {
+  getCellTone,
+  getDefaultSelectedDayIndex,
+  getHourRange,
+  getSlotForHour,
+} from "@/components/calendar/manager-weekly-calendar/calendar-helpers";
 import {
   buildCapacityDots,
   CapacityDot,
@@ -24,321 +29,27 @@ import {
   formatPersianNumber,
   formatPersianShortHourRange,
 } from "@/components/calendar/manager-weekly-calendar/formatting";
+import { MobileReservationBlock } from "@/components/calendar/manager-weekly-calendar/mobile-reservation-block";
+import {
+  buildMobileSlotAriaLabel,
+  getMobileSlotStatusLabel,
+  getMobileSlotToneClass,
+} from "@/components/calendar/manager-weekly-calendar/mobile-slot-helpers";
 import { PendingRequestsBadge } from "@/components/calendar/manager-weekly-calendar/pending-requests-badge";
-import { ReservationUserName } from "@/components/calendar/manager-weekly-calendar/reservation-user-name";
+import { ReservationBlock } from "@/components/calendar/manager-weekly-calendar/reservation-block";
+import {
+  canUpdateReservationTime,
+  getPositionedReservationBlocks,
+} from "@/components/calendar/manager-weekly-calendar/reservation-block-helpers";
 import type {
   DraggedReservation,
   ManagerWeekDay,
   ManagerWeeklyCalendarProps,
   ManagerWeekSlot,
-  PositionedReservationBlock,
-  ResizeEdge,
   ResizingReservation,
   SlotPointerTarget,
-  SlotReservationBlock,
-  SlotReservationDetail,
 } from "@/components/calendar/manager-weekly-calendar/types";
 import { cn } from "@/lib/utils";
-
-function getHourRange(weekDays: ManagerWeekDay[]): number[] {
-  const slotHours = weekDays.flatMap((day) =>
-    day.slots.flatMap((slot) => [slot.slotStartHour, slot.slotEndHour]),
-  );
-
-  if (slotHours.length === 0) {
-    return [];
-  }
-
-  const minHour = Math.min(...slotHours);
-  const maxHour = Math.max(...slotHours);
-
-  return Array.from({ length: maxHour - minHour }, (_, index) => minHour + index);
-}
-
-function getSlotForHour(
-  day: ManagerWeekDay,
-  hour: number,
-): ManagerWeekSlot | null {
-  return day.slots.find((slot) => slot.slotStartHour === hour) ?? null;
-}
-
-function getCellTone(slot: ManagerWeekSlot | null): string {
-  if (!slot) {
-    return "bg-slate-50/80 text-muted-foreground";
-  }
-
-  if (slot.approvedCount >= slot.capacity) {
-    return "bg-slate-50/80 text-red-900";
-  }
-
-  return "bg-white hover:bg-sky-50/50";
-}
-
-function getDetailClass(status: SlotReservationDetail["status"]): string {
-  if (status === "APPROVED") {
-    return "bg-emerald-100 text-emerald-900 ring-emerald-200";
-  }
-
-  if (status === "ALTERNATIVE_PROPOSED") {
-    return "bg-sky-100 text-sky-900 ring-sky-300";
-  }
-
-  return "bg-amber-100 text-amber-950 ring-amber-300";
-}
-
-function canUpdateReservationTime(
-  status: SlotReservationDetail["status"],
-): boolean {
-  return (
-    status === "PENDING" ||
-    status === "APPROVED" ||
-    status === "ALTERNATIVE_PROPOSED"
-  );
-}
-
-function getReservationBlocks(day: ManagerWeekDay): SlotReservationBlock[] {
-  const blocksById = new Map<string, SlotReservationBlock>();
-
-  for (const slot of day.slots) {
-    for (const detail of slot.details) {
-      const current = blocksById.get(detail.id);
-
-      if (!current) {
-        blocksById.set(detail.id, {
-          detail,
-          startHour: slot.slotStartHour,
-          endHour: slot.slotEndHour,
-        });
-        continue;
-      }
-
-      current.startHour = Math.min(current.startHour, slot.slotStartHour);
-      current.endHour = Math.max(current.endHour, slot.slotEndHour);
-    }
-  }
-
-  return Array.from(blocksById.values());
-}
-
-function getPositionedReservationBlocks(
-  day: ManagerWeekDay,
-): PositionedReservationBlock[] {
-  const blocks = getReservationBlocks(day).sort(
-    (left, right) =>
-      left.startHour - right.startHour || left.endHour - right.endHour,
-  );
-  const laneEndHours: number[] = [];
-  const positionedBlocks = blocks.map((block) => {
-    const availableLane = laneEndHours.findIndex(
-      (endHour) => endHour <= block.startHour,
-    );
-    const lane = availableLane >= 0 ? availableLane : laneEndHours.length;
-    laneEndHours[lane] = block.endHour;
-
-    return {
-      ...block,
-      lane,
-      laneCount: 1,
-    };
-  });
-  const laneCount = Math.max(laneEndHours.length, 1);
-
-  return positionedBlocks.map((block) => ({
-    ...block,
-    laneCount,
-  }));
-}
-
-function getReservationBlockStyle(block: PositionedReservationBlock) {
-  const laneWidth = 100 / block.laneCount;
-
-  return {
-    marginLeft: `calc(${block.lane * laneWidth}% + 0.25rem)`,
-    width: `calc(${laneWidth}% - 0.5rem)`,
-  };
-}
-
-function getMobileReservationBlockStyle(block: PositionedReservationBlock) {
-  const laneWidth = 100 / block.laneCount;
-
-  return {
-    marginLeft: `calc(${block.lane * laneWidth}% + 0.25rem)`,
-    width: `calc(${laneWidth}% - 0.5rem)`,
-  };
-}
-
-function getDefaultSelectedDayIndex(
-  weekDays: ManagerWeekDay[],
-  currentDateParam: string,
-): number {
-  const currentDateIndex = weekDays.findIndex(
-    (day) => day.dateParam === currentDateParam,
-  );
-
-  if (currentDateIndex >= 0) {
-    return currentDateIndex;
-  }
-
-  const firstWorkingDayIndex = weekDays.findIndex(
-    (day) => !day.closedReason && day.slots.length > 0,
-  );
-
-  return firstWorkingDayIndex >= 0 ? firstWorkingDayIndex : 0;
-}
-
-function getMobileSlotToneClass(slot: ManagerWeekSlot): string {
-  if (slot.approvedCount >= slot.capacity) {
-    return "border-red-200 bg-red-50";
-  }
-
-  if (slot.pendingCount > 0) {
-    return "border-amber-200 bg-amber-50/70";
-  }
-
-  return "border-slate-100 bg-background";
-}
-
-function getMobileSlotStatusLabel(slot: ManagerWeekSlot): string {
-  const available = Math.max(slot.capacity - slot.approvedCount, 0);
-
-  if (available === 0) {
-    return "ظرفیت تکمیل است";
-  }
-
-  return `${formatPersianNumber(available)} ظرفیت آزاد`;
-}
-
-function buildMobileSlotAriaLabel(
-  day: ManagerWeekDay,
-  slot: ManagerWeekSlot,
-): string {
-  return [
-    day.dateLabel,
-    `ساعت ${formatPersianShortHourRange(
-      slot.slotStartHour,
-      slot.slotEndHour,
-    )}`,
-    `${formatPersianNumber(slot.approvedCount)} رزرو تاییدشده`,
-    `${formatPersianNumber(slot.pendingCount)} درخواست در انتظار`,
-    `${formatPersianNumber(Math.max(slot.capacity - slot.approvedCount, 0))} ظرفیت آزاد`,
-  ].join("، ");
-}
-
-function MobileReservationBlock({
-  block,
-  isResizing,
-  onResizeStart,
-}: {
-  block: PositionedReservationBlock;
-  isResizing: boolean;
-  onResizeStart: (
-    event: ReactPointerEvent<HTMLElement>,
-    block: PositionedReservationBlock,
-    edge: ResizeEdge,
-  ) => void;
-}) {
-  const { detail } = block;
-  const canResize = canUpdateReservationTime(detail.status);
-  const suppressNextClickRef = useRef(false);
-  const className = cn(
-    "pointer-events-auto relative flex h-full min-w-0 flex-col items-center justify-between gap-2 rounded-md px-2.5 py-3 text-xs font-medium leading-5 shadow-sm ring-1 transition",
-    getDetailClass(detail.status),
-    canResize ? "touch-none" : null,
-    isResizing ? "opacity-45" : null,
-  );
-  const content = (
-    <>
-      {canResize ? (
-        <span
-          aria-label="تغییر زمان شروع"
-          className="absolute inset-x-3 top-0 z-20 flex h-6 cursor-ns-resize items-start justify-center rounded-t-md pt-1"
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-          }}
-          onPointerDown={(event) => {
-            suppressNextClickRef.current = true;
-            onResizeStart(event, block, "start");
-          }}
-          role="button"
-          tabIndex={-1}
-          title="برای تغییر زمان شروع بکشید"
-        >
-          <span className="h-1.5 w-14 rounded-full border border-amber-500/70 bg-white/90 shadow-sm" />
-        </span>
-      ) : null}
-      <ReservationUserName detail={detail} />
-      <span className="inline-flex shrink-0 items-center gap-1 text-[11px] leading-4 opacity-80">
-        <Users aria-hidden="true" className="h-3 w-3" />
-        {formatPersianNumber(detail.partySize)} نفر
-      </span>
-      {canResize ? (
-        <span
-          aria-label="تغییر زمان پایان"
-          className="absolute inset-x-3 bottom-0 z-20 flex h-6 cursor-ns-resize items-end justify-center rounded-b-md pb-1"
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-          }}
-          onPointerDown={(event) => {
-            suppressNextClickRef.current = true;
-            onResizeStart(event, block, "end");
-          }}
-          role="button"
-          tabIndex={-1}
-          title="برای تغییر زمان پایان بکشید"
-        >
-          <span className="h-1.5 w-14 rounded-full border border-amber-500/70 bg-white/90 shadow-sm" />
-        </span>
-      ) : null}
-    </>
-  );
-
-  if (detail.href) {
-    const hoverClass =
-      detail.status === "APPROVED" ? "hover:bg-emerald-200" : "hover:bg-amber-200";
-
-    return (
-      <a
-        className={cn(
-          className,
-          hoverClass,
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        )}
-        dir="rtl"
-        href={detail.href}
-        onClickCapture={(event) => {
-          if (!suppressNextClickRef.current) {
-            return;
-          }
-
-          suppressNextClickRef.current = false;
-          event.preventDefault();
-          event.stopPropagation();
-        }}
-        style={getMobileReservationBlockStyle(block)}
-        title={
-          canResize
-            ? "برای بررسی لمس کنید، یا لبه بالا/پایین را برای تغییر زمان بکشید"
-            : `${formatPersianNumber(detail.partySize)} نفر${detail.reason ? ` - ${detail.reason}` : ""}`
-        }
-      >
-        {content}
-      </a>
-    );
-  }
-
-  return (
-    <span
-      className={className}
-      dir="rtl"
-      style={getMobileReservationBlockStyle(block)}
-      title={`${formatPersianNumber(detail.partySize)} نفر${detail.reason ? ` - ${detail.reason}` : ""}`}
-    >
-      {content}
-    </span>
-  );
-}
 
 function applyReservationTimeUpdate(
   weekDays: ManagerWeekDay[],
@@ -391,144 +102,6 @@ function applyReservationTimeUpdate(
       };
     }),
   }));
-}
-
-function ReservationBlock({
-  block,
-  isDragging,
-  isResizing,
-  onDragEnd,
-  onDragStart,
-  onResizeStart,
-}: {
-  block: PositionedReservationBlock;
-  isDragging: boolean;
-  isResizing: boolean;
-  onDragEnd: () => void;
-  onDragStart: (block: PositionedReservationBlock) => void;
-  onResizeStart: (
-    event: ReactPointerEvent<HTMLElement>,
-    block: PositionedReservationBlock,
-    edge: ResizeEdge,
-  ) => void;
-}) {
-  const { detail } = block;
-  const canDrag = canUpdateReservationTime(detail.status);
-  const suppressNextClickRef = useRef(false);
-  const className = cn(
-    "pointer-events-auto relative flex h-full min-w-0 flex-col items-center justify-between gap-2 rounded-md px-1.5 py-2 text-xs font-medium leading-5 shadow-sm ring-1 transition",
-    getDetailClass(detail.status),
-    canDrag ? "cursor-grab active:cursor-grabbing" : null,
-    isDragging || isResizing ? "opacity-45" : null,
-  );
-  const dragProps = canDrag
-    ? {
-        draggable: true,
-        onDragEnd,
-        onDragStart: (event: DragEvent<HTMLElement>) => {
-          const payload: DraggedReservation = {
-            durationHours: block.endHour - block.startHour,
-            reservationId: detail.id,
-            status: detail.status,
-          };
-
-          event.dataTransfer.effectAllowed = "move";
-          event.dataTransfer.setData(
-            "application/x-nobino-reservation",
-            JSON.stringify(payload),
-          );
-          onDragStart(block);
-        },
-      }
-    : {};
-  const content = (
-    <>
-      {canDrag ? (
-        <span
-          aria-label="Change reservation start time"
-          className="absolute inset-x-1 top-0 h-3 cursor-ns-resize rounded-t-md border-t-2 border-amber-700/70 bg-amber-200/80 opacity-0 transition-opacity hover:opacity-100"
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-          }}
-          onPointerDown={(event) => {
-            suppressNextClickRef.current = true;
-            onResizeStart(event, block, "start");
-          }}
-          role="button"
-          tabIndex={-1}
-          title="برای تغییر زمان شروع بکشید"
-        />
-      ) : null}
-      <ReservationUserName detail={detail} />
-      <span className="inline-flex shrink-0 items-center gap-0.5 text-[9px] leading-3 opacity-80">
-        <Users aria-hidden="true" className="h-2.5 w-2.5" />
-        {detail.partySize}
-      </span>
-      {canDrag ? (
-        <span
-          aria-label="Change reservation end time"
-          className="absolute inset-x-1 bottom-0 h-3 cursor-ns-resize rounded-b-md border-b-2 border-amber-700/70 bg-amber-200/80 opacity-0 transition-opacity hover:opacity-100"
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-          }}
-          onPointerDown={(event) => {
-            suppressNextClickRef.current = true;
-            onResizeStart(event, block, "end");
-          }}
-          role="button"
-          tabIndex={-1}
-          title="برای تغییر زمان پایان بکشید"
-        />
-      ) : null}
-    </>
-  );
-
-  if (detail.href) {
-    const hoverClass =
-      detail.status === "APPROVED" ? "hover:bg-emerald-200" : "hover:bg-amber-200";
-
-    return (
-      <a
-        className={cn(
-          className,
-          hoverClass,
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        )}
-        href={detail.href}
-        onClickCapture={(event) => {
-          if (!suppressNextClickRef.current) {
-            return;
-          }
-
-          suppressNextClickRef.current = false;
-          event.preventDefault();
-          event.stopPropagation();
-        }}
-        {...dragProps}
-        style={getReservationBlockStyle(block)}
-        title={
-          canDrag
-            ? "برای جابجایی بکشید، یا لبه بالا/پایین را برای تغییر زمان بکشید"
-            : `${formatPersianNumber(detail.partySize)} نفر${detail.reason ? ` - ${detail.reason}` : ""}`
-        }
-      >
-        {content}
-      </a>
-    );
-  }
-
-  return (
-    <span
-      className={className}
-      {...dragProps}
-      style={getReservationBlockStyle(block)}
-      title={`${formatPersianNumber(detail.partySize)} نفر${detail.reason ? ` - ${detail.reason}` : ""}`}
-    >
-      {content}
-    </span>
-  );
 }
 
 export function ManagerWeeklyCalendar({
