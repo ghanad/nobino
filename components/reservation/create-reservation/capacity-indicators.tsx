@@ -129,16 +129,19 @@ export function PendingRequestsBadge({
     return null;
   }
 
+  const showCount = count > 1;
+
   return (
     <span
       aria-hidden="true"
       className={cn(
-        "inline-flex h-5 min-w-5 shrink-0 items-center justify-center gap-0.5 rounded-full border border-amber-300 bg-amber-100 px-1.5 text-[10px] font-semibold leading-none text-amber-800 shadow-sm",
+        "inline-flex h-4 min-w-4 shrink-0 items-center justify-center gap-0.5 rounded-full border border-amber-300/90 bg-white/80 px-1 text-[9px] font-medium leading-none text-amber-700 shadow-[0_0_0_1px_rgba(255,255,255,0.7)_inset]",
+        !showCount && "px-0",
         className,
       )}
     >
-      <Hourglass className="h-3 w-3" />
-      <span>{formatPersianNumber(count)}</span>
+      <Hourglass className="h-2.5 w-2.5" />
+      {showCount ? <span>{formatPersianNumber(count)}</span> : null}
     </span>
   );
 }
