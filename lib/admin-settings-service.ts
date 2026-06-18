@@ -1,13 +1,18 @@
 import "server-only";
 
-import { ReservationStatus, UserRole, type Prisma } from "@prisma/client";
+import { UserRole, type Prisma } from "@prisma/client";
 
+import {
+  findCapacityReductionBlocks,
+  findDailyCapacityReductionBlocks,
+} from "@/lib/admin-settings-service/capacity-reduction";
+import {
+  assertWorkingHours,
+  startOfLocalDay,
+} from "@/lib/admin-settings-service/date-time";
+import { formatBlockingSlots } from "@/lib/admin-settings-service/formatting";
 import { db } from "@/lib/db";
 import { getIranHolidaysForJalaliYear } from "@/lib/iran-holidays";
-import { formatJalaliDateTime } from "@/lib/jalali-date";
-
-const ONE_HOUR_MS = 60 * 60 * 1000;
-const TIME_PATTERN = /^([01]\d|2[0-3]):00$/;
 
 type DbClient = typeof db | Prisma.TransactionClient;
 
@@ -27,192 +32,6 @@ async function assertAdmin(adminId: string, client: DbClient = db) {
   if (!user?.active || user.role !== UserRole.ADMIN) {
     throw new AdminSettingsError("Only admins can change system settings.");
   }
-}
-
-function assertTime(value: string, fieldName: string): void {
-  if (!TIME_PATTERN.test(value)) {
-    throw new AdminSettingsError(`${fieldName} must be an exact hour like 09:00.`);
-  }
-}
-
-function assertWorkingHours(input: {
-  isWorkingDay: boolean;
-  startTime?: string | null;
-  endTime?: string | null;
-}): { startTime: string | null; endTime: string | null } {
-  if (!input.isWorkingDay) {
-    return { startTime: null, endTime: null };
-  }
-
-  if (!input.startTime || !input.endTime) {
-    throw new AdminSettingsError("Working days need start and end hours.");
-  }
-
-  assertTime(input.startTime, "Start time");
-  assertTime(input.endTime, "End time");
-
-  if (input.endTime <= input.startTime) {
-    throw new AdminSettingsError("End time must be after start time.");
-  }
-
-  return {
-    startTime: input.startTime,
-    endTime: input.endTime,
-  };
-}
-
-function startOfLocalDay(date: Date): Date {
-  return new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate(),
-    0,
-    0,
-    0,
-    0,
-  );
-}
-
-function buildHourlySlots(startAt: Date, endAt: Date) {
-  const slots: Array<{ slotStart: Date; slotEnd: Date }> = [];
-
-  for (
-    let slotStartMs = startAt.getTime();
-    slotStartMs < endAt.getTime();
-    slotStartMs += ONE_HOUR_MS
-  ) {
-    slots.push({
-      slotStart: new Date(slotStartMs),
-      slotEnd: new Date(slotStartMs + ONE_HOUR_MS),
-    });
-  }
-
-  return slots;
-}
-
-async function findCapacityReductionBlocks(input: {
-  resourcePoolId: string;
-  capacity: number;
-  client: DbClient;
-}) {
-  const now = new Date();
-  const reservations = await input.client.reservation.findMany({
-    where: {
-      resourcePoolId: input.resourcePoolId,
-      status: ReservationStatus.APPROVED,
-      endAt: { gt: now },
-    },
-    select: {
-      startAt: true,
-      endAt: true,
-    },
-  });
-
-  const usageBySlot = new Map<string, { slotStart: Date; count: number }>();
-  const capacityExceptions = await input.client.resourcePoolCapacityException.findMany({
-    where: {
-      resourcePoolId: input.resourcePoolId,
-      date: { gte: startOfLocalDay(now) },
-    },
-    select: {
-      date: true,
-      capacity: true,
-    },
-  });
-  const capacityByDate = new Map(
-    capacityExceptions.map((exception) => [
-      exception.date.toISOString(),
-      exception.capacity,
-    ]),
-  );
-
-  for (const reservation of reservations) {
-    for (const slot of buildHourlySlots(reservation.startAt, reservation.endAt)) {
-      const key = slot.slotStart.toISOString();
-      const current = usageBySlot.get(key);
-
-      usageBySlot.set(key, {
-        slotStart: slot.slotStart,
-        count: (current?.count ?? 0) + 1,
-      });
-    }
-  }
-
-  const blocks: Array<{ slotStart: Date; count: number }> = [];
-
-  for (const slot of usageBySlot.values()) {
-    const proposedCapacity =
-      capacityByDate.get(startOfLocalDay(slot.slotStart).toISOString()) ??
-      input.capacity;
-
-    if (slot.count > proposedCapacity) {
-      blocks.push(slot);
-    }
-  }
-
-  return blocks
-    .sort((left, right) => left.slotStart.getTime() - right.slotStart.getTime());
-}
-
-async function findDailyCapacityReductionBlocks(input: {
-  resourcePoolId: string;
-  date: Date;
-  capacity: number;
-  client: DbClient;
-}) {
-  const dayStart = startOfLocalDay(input.date);
-  const dayEnd = new Date(
-    dayStart.getFullYear(),
-    dayStart.getMonth(),
-    dayStart.getDate() + 1,
-    0,
-    0,
-    0,
-    0,
-  );
-  const reservations = await input.client.reservation.findMany({
-    where: {
-      resourcePoolId: input.resourcePoolId,
-      status: ReservationStatus.APPROVED,
-      startAt: { lt: dayEnd },
-      endAt: { gt: dayStart },
-    },
-    select: {
-      startAt: true,
-      endAt: true,
-    },
-  });
-
-  const usageBySlot = new Map<string, { slotStart: Date; count: number }>();
-
-  for (const reservation of reservations) {
-    for (const slot of buildHourlySlots(reservation.startAt, reservation.endAt)) {
-      if (slot.slotStart < dayStart || slot.slotStart >= dayEnd) {
-        continue;
-      }
-
-      const key = slot.slotStart.toISOString();
-      const current = usageBySlot.get(key);
-
-      usageBySlot.set(key, {
-        slotStart: slot.slotStart,
-        count: (current?.count ?? 0) + 1,
-      });
-    }
-  }
-
-  return [...usageBySlot.values()]
-    .filter((slot) => slot.count > input.capacity)
-    .sort((left, right) => left.slotStart.getTime() - right.slotStart.getTime());
-}
-
-function formatBlockingSlots(
-  blocks: Array<{ slotStart: Date; count: number }>,
-): string {
-  return blocks
-    .slice(0, 5)
-    .map((slot) => `${formatJalaliDateTime(slot.slotStart)} (${slot.count})`)
-    .join(", ");
 }
 
 export async function updateResourcePoolSettings(input: {
@@ -539,7 +358,10 @@ export async function updateWeeklySchedule(input: {
   startTime?: string | null;
   endTime?: string | null;
 }) {
-  const workingHours = assertWorkingHours(input);
+  const workingHours = assertWorkingHours(
+    input,
+    (message) => new AdminSettingsError(message),
+  );
 
   return db.$transaction(async (tx) => {
     await assertAdmin(input.adminId, tx);
@@ -594,7 +416,10 @@ export async function createScheduleException(input: {
   endTime?: string | null;
   reason?: string | null;
 }) {
-  const workingHours = assertWorkingHours(input);
+  const workingHours = assertWorkingHours(
+    input,
+    (message) => new AdminSettingsError(message),
+  );
   const exceptionDate = startOfLocalDay(input.date);
 
   return db.$transaction(async (tx) => {
@@ -649,7 +474,10 @@ export async function updateScheduleException(input: {
   endTime?: string | null;
   reason?: string | null;
 }) {
-  const workingHours = assertWorkingHours(input);
+  const workingHours = assertWorkingHours(
+    input,
+    (message) => new AdminSettingsError(message),
+  );
 
   return db.$transaction(async (tx) => {
     await assertAdmin(input.adminId, tx);
