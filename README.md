@@ -103,6 +103,8 @@ The first operational version is implemented. Seeded users can sign in, create h
   events and mark them as read.
 - `/settings/bale` allows authenticated users to securely link or unlink their
   private Bale chat.
+- `/admin/bale` shows admins which users have linked Bale and reports sync and
+  delivery health.
 - `/manager` is available to managers and admins.
 - `/admin` is available to admins only.
 
@@ -184,8 +186,8 @@ Use `.env.example` as the source of truth for required settings:
   certificates are verified.
 - `APP_TIMEZONE`: operational timezone. Use `Asia/Tehran` unless the company
   explicitly changes scheduling policy.
-- `APP_BASE_URL`: externally reachable Nobino base URL. Bale notifications use
-  it to link recipients back to `/notifications`.
+- `APP_BASE_URL`: externally reachable Nobino base URL, used by deployment
+  commands such as the Bale sync request below.
 - `BALE_BOT_TOKEN`: secret token received from Bale `@botfather`.
 - `BALE_BOT_USERNAME`: bot username without `@`; used by the account-linking UI.
 - `BALE_SYNC_SECRET`: long random bearer secret protecting the Bale sync route.
@@ -218,6 +220,11 @@ The endpoint tracks Bale's `update_id` offset, records each notification
 delivery, and retries failed sends up to three times. It does not send
 notifications that predate the user's latest account connection. Run only one
 sync invocation at a time to avoid overlapping external requests.
+
+Admins can monitor the last successful or failed sync, recent delivery errors,
+and user connection coverage from `/admin/bale`. A sync older than five minutes
+is shown as stale because the deployment scheduler is expected to run once per
+minute.
 
 ## Production Deployment
 

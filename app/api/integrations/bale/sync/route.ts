@@ -4,6 +4,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import {
   consumeBaleUpdates,
   deliverPendingBaleNotifications,
+  recordBaleSyncFailed,
+  recordBaleSyncStarted,
+  recordBaleSyncSucceeded,
 } from "@/lib/bale-service";
 
 function secretsMatch(actual: string, expected: string): boolean {
@@ -36,11 +39,20 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    await recordBaleSyncStarted();
     const updates = await consumeBaleUpdates();
     const deliveries = await deliverPendingBaleNotifications();
+    await recordBaleSyncSucceeded();
     return NextResponse.json({ ok: true, updates, deliveries });
   } catch (error) {
     console.error("Bale sync failed", error);
+
+    try {
+      await recordBaleSyncFailed(error);
+    } catch (stateError) {
+      console.error("Recording Bale sync failure failed", stateError);
+    }
+
     return NextResponse.json({ error: "Bale sync failed" }, { status: 502 });
   }
 }

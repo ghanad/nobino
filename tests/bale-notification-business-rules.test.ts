@@ -8,6 +8,9 @@ import {
   createBaleLinkToken,
   deliverPendingBaleNotifications,
   disconnectBaleAccount,
+  recordBaleSyncFailed,
+  recordBaleSyncStarted,
+  recordBaleSyncSucceeded,
 } from "@/lib/bale-service";
 
 import {
@@ -83,6 +86,26 @@ test("disconnecting removes the Bale chat mapping", async () => {
   );
 });
 
+test("Bale sync health records failures and clears them after recovery", async () => {
+  await recordBaleSyncStarted();
+  await recordBaleSyncFailed(new Error("temporary Bale failure"));
+
+  const failedState = await db.baleBotState.findUniqueOrThrow({
+    where: { id: "default" },
+  });
+  assert.ok(failedState.lastSyncStartedAt);
+  assert.ok(failedState.lastSyncFailedAt);
+  assert.equal(failedState.lastSyncError, "temporary Bale failure");
+
+  await recordBaleSyncSucceeded();
+
+  const recoveredState = await db.baleBotState.findUniqueOrThrow({
+    where: { id: "default" },
+  });
+  assert.ok(recoveredState.lastSyncSucceededAt);
+  assert.equal(recoveredState.lastSyncError, null);
+});
+
 test("Bale delivery sends only notifications created after linking", async () => {
   const oldNotification = await db.notification.create({
     data: {
@@ -104,9 +127,11 @@ test("Bale delivery sends only notifications created after linking", async () =>
   });
   const originalFetch = global.fetch;
   const originalToken = process.env.BALE_BOT_TOKEN;
+  const originalBaseUrl = process.env.APP_BASE_URL;
   const sentBodies: string[] = [];
 
   process.env.BALE_BOT_TOKEN = "test-token";
+  process.env.APP_BASE_URL = "https://nobino.example";
   global.fetch = async (_input, init) => {
     sentBodies.push(String(init?.body));
     return new Response(JSON.stringify({ ok: true }), {
@@ -125,10 +150,18 @@ test("Bale delivery sends only notifications created after linking", async () =>
     } else {
       process.env.BALE_BOT_TOKEN = originalToken;
     }
+    if (originalBaseUrl === undefined) {
+      delete process.env.APP_BASE_URL;
+    } else {
+      process.env.APP_BASE_URL = originalBaseUrl;
+    }
   }
 
   assert.equal(sentBodies.length, 1);
-  assert.match(sentBodies[0], /chat_id=delivery-chat/);
+  const sentMessage = new URLSearchParams(sentBodies[0]);
+  assert.equal(sentMessage.get("chat_id"), "delivery-chat");
+  assert.equal(sentMessage.get("text"), "درخواست رزرو شما تایید شد.");
+  assert.doesNotMatch(sentMessage.get("text") ?? "", /https?:\/\//);
   assert.equal(
     await db.baleNotificationDelivery.count({
       where: { notificationId: currentNotification.id },

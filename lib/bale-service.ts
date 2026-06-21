@@ -14,6 +14,7 @@ import { getNotificationDisplayText } from "@/lib/notification-service";
 const LINK_TOKEN_TTL_MS = 10 * 60 * 1000;
 const MAX_DELIVERY_ATTEMPTS = 3;
 const DELIVERY_BATCH_SIZE = 50;
+const MAX_SYNC_ERROR_LENGTH = 500;
 
 export class BaleConnectionError extends Error {
   constructor(message: string) {
@@ -194,9 +195,43 @@ export async function consumeBaleUpdates() {
   return { connected, updates: updates.length };
 }
 
-function getNotificationUrl(): string | null {
-  const baseUrl = process.env.APP_BASE_URL?.trim();
-  return baseUrl ? `${baseUrl.replace(/\/$/, "")}/notifications` : null;
+export async function recordBaleSyncStarted(): Promise<void> {
+  await db.baleBotState.upsert({
+    where: { id: "default" },
+    update: { lastSyncStartedAt: new Date() },
+    create: { id: "default", lastSyncStartedAt: new Date() },
+  });
+}
+
+export async function recordBaleSyncSucceeded(): Promise<void> {
+  await db.baleBotState.upsert({
+    where: { id: "default" },
+    update: {
+      lastSyncError: null,
+      lastSyncSucceededAt: new Date(),
+    },
+    create: {
+      id: "default",
+      lastSyncSucceededAt: new Date(),
+    },
+  });
+}
+
+export async function recordBaleSyncFailed(error: unknown): Promise<void> {
+  const message = error instanceof Error ? error.message : "Unknown Bale sync error";
+
+  await db.baleBotState.upsert({
+    where: { id: "default" },
+    update: {
+      lastSyncError: message.slice(0, MAX_SYNC_ERROR_LENGTH),
+      lastSyncFailedAt: new Date(),
+    },
+    create: {
+      id: "default",
+      lastSyncError: message.slice(0, MAX_SYNC_ERROR_LENGTH),
+      lastSyncFailedAt: new Date(),
+    },
+  });
 }
 
 function buildNotificationMessage(notification: {
@@ -205,9 +240,7 @@ function buildNotificationMessage(notification: {
   body: string;
 }): string {
   const display = getNotificationDisplayText(notification);
-  const url = getNotificationUrl();
-
-  return [display.title, display.body, url].filter(Boolean).join("\n\n");
+  return display.body || display.title;
 }
 
 async function sendClaimedDelivery(input: {

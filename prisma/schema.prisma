@@ -349,9 +349,13 @@ model BaleLinkToken {
 }
 
 model BaleBotState {
-  id           String   @id @default("default")
-  updateOffset Int      @default(0)
-  updatedAt    DateTime @updatedAt
+  id                  String    @id @default("default")
+  updateOffset        Int       @default(0)
+  lastSyncStartedAt   DateTime?
+  lastSyncSucceededAt DateTime?
+  lastSyncFailedAt    DateTime?
+  lastSyncError       String?
+  updatedAt           DateTime  @updatedAt
 }
 
 model BaleNotificationDelivery {
