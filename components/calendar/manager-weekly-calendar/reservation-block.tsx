@@ -11,7 +11,6 @@ import type {
 } from "@/components/calendar/manager-weekly-calendar/types";
 import { cn } from "@/lib/utils";
 
-import { formatPersianNumber } from "./formatting";
 import {
   canUpdateReservationTime,
   getDetailClass,
@@ -41,7 +40,7 @@ export function ReservationBlock({
   const canDrag = canUpdateReservationTime(detail.status);
   const suppressNextClickRef = useRef(false);
   const className = cn(
-    "group pointer-events-auto relative flex h-full min-w-0 flex-col items-center justify-between gap-2 rounded-md px-1.5 py-2 text-xs font-medium leading-5 shadow-sm ring-1 transition",
+    "group pointer-events-auto relative flex h-full min-w-0 flex-col items-center justify-between gap-2 rounded-md px-1.5 py-2 text-xs font-medium leading-5 shadow-sm ring-1 transition sm:hover:z-40",
     getDetailClass(detail.status),
     canDrag ? "cursor-grab active:cursor-grabbing" : null,
     isDragging || isResizing ? "opacity-45" : null,
@@ -141,11 +140,6 @@ export function ReservationBlock({
         }}
         {...dragProps}
         style={getReservationBlockStyle(block)}
-        title={
-          canDrag
-            ? `${detail.userName} - برای جابجایی بکشید، یا لبه بالا/پایین را برای تغییر زمان بکشید`
-            : `${detail.userName} - ${formatPersianNumber(detail.partySize)} نفر${detail.reason ? ` - ${detail.reason}` : ""}`
-        }
       >
         {content}
       </a>
@@ -157,7 +151,6 @@ export function ReservationBlock({
       className={className}
       {...dragProps}
       style={getReservationBlockStyle(block)}
-      title={`${detail.userName} - ${formatPersianNumber(detail.partySize)} نفر${detail.reason ? ` - ${detail.reason}` : ""}`}
     >
       {content}
     </span>
