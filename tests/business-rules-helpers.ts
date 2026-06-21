@@ -119,7 +119,11 @@ export async function nextIranHolidayDateAtHour(hour: number): Promise<Date> {
 }
 
 export async function resetDatabase() {
+  await db.baleNotificationDelivery.deleteMany();
   await db.notification.deleteMany();
+  await db.baleLinkToken.deleteMany();
+  await db.baleConnection.deleteMany();
+  await db.baleBotState.deleteMany();
   await db.auditLog.deleteMany();
   await db.lunchReservation.deleteMany();
   await db.lunchLocation.deleteMany();

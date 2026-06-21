@@ -10,6 +10,10 @@ services:
       NODE_ENV: production
       TZ: Asia/Tehran
       APP_TIMEZONE: Asia/Tehran
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3000}
+      BALE_BOT_TOKEN: ${BALE_BOT_TOKEN:-}
+      BALE_BOT_USERNAME: ${BALE_BOT_USERNAME:-}
+      BALE_SYNC_SECRET: ${BALE_SYNC_SECRET:-}
       DATABASE_URL: file:/data/nobino.sqlite
       AUTH_SECRET: ${AUTH_SECRET}
       AUTH_PROVIDER: ${AUTH_PROVIDER:-local}

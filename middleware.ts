@@ -5,6 +5,7 @@ import { SESSION_COOKIE_NAME } from "@/lib/session";
 const PROTECTED_PREFIXES = [
   "/reservations",
   "/notifications",
+  "/settings",
   "/manager",
   "/admin",
 ];
@@ -31,6 +32,7 @@ export const config = {
   matcher: [
     "/reservations/:path*",
     "/notifications/:path*",
+    "/settings/:path*",
     "/manager/:path*",
     "/admin/:path*",
   ],

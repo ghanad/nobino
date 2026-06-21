@@ -101,6 +101,8 @@ The first operational version is implemented. Seeded users can sign in, create h
   requests and review their recent requests.
 - `/notifications` allows authenticated users to review unread notification
   events and mark them as read.
+- `/settings/bale` allows authenticated users to securely link or unlink their
+  private Bale chat.
 - `/manager` is available to managers and admins.
 - `/admin` is available to admins only.
 
@@ -182,6 +184,11 @@ Use `.env.example` as the source of truth for required settings:
   certificates are verified.
 - `APP_TIMEZONE`: operational timezone. Use `Asia/Tehran` unless the company
   explicitly changes scheduling policy.
+- `APP_BASE_URL`: externally reachable Nobino base URL. Bale notifications use
+  it to link recipients back to `/notifications`.
+- `BALE_BOT_TOKEN`: secret token received from Bale `@botfather`.
+- `BALE_BOT_USERNAME`: bot username without `@`; used by the account-linking UI.
+- `BALE_SYNC_SECRET`: long random bearer secret protecting the Bale sync route.
 - `NEXT_PUBLIC_APP_NAME`: display name used by the app shell.
 
 LDAP authentication validates the password against LDAP. When an LDAP login is
@@ -193,9 +200,24 @@ control, so manager/admin access still must be assigned in the admin UI.
 
 ## External Messaging
 
-The verified bot setup, chat-ID discovery, and test-message procedure for Bale
-is documented in [`docs/bale-bot.md`](docs/bale-bot.md). This is currently an
-integration note only; automated daily Bale reporting is not implemented.
+The verified bot setup and test-message procedure for Bale are documented in
+[`docs/bale-bot.md`](docs/bale-bot.md). Users link their own private chat from
+`/settings/bale` using a hashed, single-use, 10-minute connection token.
+
+The protected sync endpoint consumes bot updates and sends pending in-app
+notifications to linked users. Invoke it once per minute from the deployment
+scheduler:
+
+```bash
+curl --fail --silent --show-error -X POST \
+  -H "Authorization: Bearer ${BALE_SYNC_SECRET}" \
+  "${APP_BASE_URL}/api/integrations/bale/sync"
+```
+
+The endpoint tracks Bale's `update_id` offset, records each notification
+delivery, and retries failed sends up to three times. It does not send
+notifications that predate the user's latest account connection. Run only one
+sync invocation at a time to avoid overlapping external requests.
 
 ## Production Deployment
 

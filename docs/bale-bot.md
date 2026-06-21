@@ -131,18 +131,31 @@ if result.get("ok") is not True:
 print("Message sent successfully")
 ```
 
-## Future Nobino Integration
+## Nobino Account Linking and Notification Delivery
 
-The later application change should keep these concerns separate:
+The application integration uses these additional environment variables:
 
-- A reusable Bale client responsible only for authenticated API requests and
-  response/error handling.
-- A report service responsible for defining and calculating the daily count.
-- A scheduler responsible for running after the configured reservation window
-  closes, using `APP_TIMEZONE=Asia/Tehran`.
-- Idempotency or a delivery record so restarts and retries do not send the same
-  daily report more than once.
+```text
+APP_BASE_URL=https://nobino.example.com
+BALE_BOT_USERNAME=nobino_bot
+BALE_SYNC_SECRET=<long random secret>
+```
 
-Before implementing that change, define precisely which reservations count in
-the report (for example, approved reservations, unique users, or occupied
-capacity) and how non-working days and schedule exceptions should behave.
+Authenticated users open `/settings/bale`, generate a single-use connection
+token, and send the displayed `/connect <token>` command to the bot. Nobino
+stores only a SHA-256 hash of the token. It expires after 10 minutes, and the
+resulting private `chat.id` is unique across Nobino users.
+
+The deployment scheduler must invoke the protected sync endpoint once per
+minute. The endpoint consumes `getUpdates` with a persisted offset and delivers
+new in-app notifications to linked users:
+
+```bash
+curl --fail --silent --show-error -X POST \
+  -H "Authorization: Bearer ${BALE_SYNC_SECRET}" \
+  "${APP_BASE_URL}/api/integrations/bale/sync"
+```
+
+Delivery happens outside reservation transactions. Each attempted delivery is
+stored separately, failed sends are retried up to three times, and notifications
+created before the user's latest connection are not sent retroactively.

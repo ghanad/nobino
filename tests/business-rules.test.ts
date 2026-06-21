@@ -1,4 +1,5 @@
 import "./capacity-business-rules.test";
+import "./bale-notification-business-rules.test";
 import "./lunch-business-rules.test";
 import "./reservation-business-rules.test";
 import "./schedule-business-rules.test";

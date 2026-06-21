@@ -1,0 +1,46 @@
+import { timingSafeEqual } from "node:crypto";
+import { NextResponse, type NextRequest } from "next/server";
+
+import {
+  consumeBaleUpdates,
+  deliverPendingBaleNotifications,
+} from "@/lib/bale-service";
+
+function secretsMatch(actual: string, expected: string): boolean {
+  const actualBuffer = Buffer.from(actual);
+  const expectedBuffer = Buffer.from(expected);
+
+  return (
+    actualBuffer.length === expectedBuffer.length &&
+    timingSafeEqual(actualBuffer, expectedBuffer)
+  );
+}
+
+export async function POST(request: NextRequest) {
+  const secret = process.env.BALE_SYNC_SECRET?.trim();
+
+  if (!secret) {
+    return NextResponse.json(
+      { error: "BALE_SYNC_SECRET is not configured" },
+      { status: 503 },
+    );
+  }
+
+  const authorization = request.headers.get("authorization") ?? "";
+  const suppliedSecret = authorization.startsWith("Bearer ")
+    ? authorization.slice("Bearer ".length)
+    : "";
+
+  if (!secretsMatch(suppliedSecret, secret)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const updates = await consumeBaleUpdates();
+    const deliveries = await deliverPendingBaleNotifications();
+    return NextResponse.json({ ok: true, updates, deliveries });
+  } catch (error) {
+    console.error("Bale sync failed", error);
+    return NextResponse.json({ error: "Bale sync failed" }, { status: 502 });
+  }
+}

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, ChevronDown, LogOut, Menu, X } from "lucide-react";
+import { Bell, ChevronDown, LogOut, Menu, Settings, X } from "lucide-react";
 
 import { logoutAction } from "@/app/login/actions";
 import { cn } from "@/lib/utils";
@@ -421,9 +421,18 @@ function UserMenu({ userName }: { userName: string | null }) {
       </button>
       {isOpen ? (
         <div
-          className="absolute left-0 z-20 mt-1.5 w-36 rounded-md border border-slate-200 bg-card p-1 text-card-foreground shadow-sm"
+          className="absolute left-0 z-20 mt-1.5 w-44 rounded-md border border-slate-200 bg-card p-1 text-card-foreground shadow-sm"
           role="menu"
         >
+          <Link
+            className="inline-flex h-8 w-full items-center justify-start gap-1.5 rounded-sm px-2 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-950"
+            href="/settings/bale"
+            onClick={() => setIsOpen(false)}
+            role="menuitem"
+          >
+            <Settings className="h-3.5 w-3.5" />
+            تنظیمات اعلان بله
+          </Link>
           <form action={logoutAction}>
             <button
               className="inline-flex h-8 w-full items-center justify-start gap-1.5 rounded-sm px-2 text-xs font-medium text-red-700 transition-colors hover:bg-red-50"
@@ -667,6 +676,14 @@ function MobileDrawer({
           <p className="truncate px-3 text-sm font-medium text-slate-950">
             {userName ?? "حساب کاربری"}
           </p>
+          <Link
+            className="mt-1.5 flex min-h-11 w-full items-center gap-2 rounded-md px-3 text-[15px] font-medium text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-950"
+            href="/settings/bale"
+            onClick={onClose}
+          >
+            <Settings className="h-4 w-4" />
+            تنظیمات اعلان بله
+          </Link>
           <form action={logoutAction} className="mt-1.5">
             <button
               className="flex min-h-11 w-full cursor-pointer items-center gap-2 rounded-md px-3 text-[15px] font-medium text-red-700 transition-colors hover:bg-red-50"
