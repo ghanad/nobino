@@ -191,6 +191,12 @@ blocked even if LDAP accepts their password. Nobino continues to use the local
 `role`, `active`, and `canViewLunchReport` fields for authorization and access
 control, so manager/admin access still must be assigned in the admin UI.
 
+## External Messaging
+
+The verified bot setup, chat-ID discovery, and test-message procedure for Bale
+is documented in [`docs/bale-bot.md`](docs/bale-bot.md). This is currently an
+integration note only; automated daily Bale reporting is not implemented.
+
 ## Production Deployment
 
 The project includes a production Docker image and a compose file. Runtime
