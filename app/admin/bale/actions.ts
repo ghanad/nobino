@@ -3,7 +3,12 @@
 import { UserRole } from "@prisma/client";
 import { z } from "zod";
 
-import { checkboxToBoolean, getActionErrorMessage, redirectToPath } from "@/app/admin/_actions/shared";
+import {
+  checkboxToBoolean,
+  emptyToUndefined,
+  getActionErrorMessage,
+  redirectToPath,
+} from "@/app/admin/_actions/shared";
 import { requireRole } from "@/lib/auth";
 import {
   createBaleLunchReportRecipient,
@@ -39,10 +44,10 @@ export async function createBaleLunchReportRecipientAction(
 ): Promise<void> {
   const admin = await requireRole([UserRole.ADMIN]);
   const parsed = createRecipientSchema.safeParse({
-    chatId: formData.get("chatId"),
+    chatId: emptyToUndefined(formData.get("chatId")),
     destinationType: formData.get("destinationType"),
     name: formData.get("name"),
-    userId: formData.get("userId"),
+    userId: emptyToUndefined(formData.get("userId")),
   });
 
   if (!parsed.success) {
@@ -69,11 +74,11 @@ export async function updateBaleLunchReportRecipientAction(
   const admin = await requireRole([UserRole.ADMIN]);
   const parsed = updateRecipientSchema.safeParse({
     active: checkboxToBoolean(formData.get("active")),
-    chatId: formData.get("chatId"),
+    chatId: emptyToUndefined(formData.get("chatId")),
     destinationType: formData.get("destinationType"),
     name: formData.get("name"),
     recipientId: formData.get("recipientId"),
-    userId: formData.get("userId"),
+    userId: emptyToUndefined(formData.get("userId")),
   });
 
   if (!parsed.success) {
