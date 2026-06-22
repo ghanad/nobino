@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { syncBaleLunchReports } from "@/lib/bale-lunch-report-service";
 import {
   consumeBaleUpdates,
   deliverPendingBaleNotifications,
@@ -42,8 +43,9 @@ export async function POST(request: NextRequest) {
     await recordBaleSyncStarted();
     const updates = await consumeBaleUpdates();
     const deliveries = await deliverPendingBaleNotifications();
+    const lunchReports = await syncBaleLunchReports();
     await recordBaleSyncSucceeded();
-    return NextResponse.json({ ok: true, updates, deliveries });
+    return NextResponse.json({ ok: true, updates, deliveries, lunchReports });
   } catch (error) {
     console.error("Bale sync failed", error);
 

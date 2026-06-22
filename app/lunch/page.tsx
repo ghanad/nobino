@@ -124,7 +124,7 @@ export default async function LunchPage({ searchParams }: LunchPageProps) {
           ? "مهلت گذشته"
           : "بدون سرویس",
       availabilityVariant,
-      cutoffLabel: `مهلت رزرو یا تغییر تا ${formatJalaliDate(dayState.cutoffAt)}، ${formatPersianLocalTime(dayState.cutoffAt)}`,
+      cutoffLabel: `مهلت رزرو، تغییر یا لغو تا ${formatJalaliDate(dayState.cutoffAt)}، ${formatPersianLocalTime(dayState.cutoffAt)}`,
       dateLabel: formatJalaliDate(date),
       dateParam,
       isActionDisabled: !dayState.isOpen || locations.length === 0,

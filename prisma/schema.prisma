@@ -79,6 +79,7 @@ model User {
   teamMemberships           TeamMembership[]
   baleConnection            BaleConnection?
   baleLinkTokens            BaleLinkToken[]
+  baleLunchReportRecipient  BaleLunchReportRecipient?
 }
 
 model ResourcePool {
@@ -355,6 +356,7 @@ model BaleBotState {
   lastSyncSucceededAt DateTime?
   lastSyncFailedAt    DateTime?
   lastSyncError       String?
+  lastLunchReportCheckAt DateTime?
   updatedAt           DateTime  @updatedAt
 }
 
@@ -372,6 +374,44 @@ model BaleNotificationDelivery {
   notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
 
   @@index([status, updatedAt])
+}
+
+model BaleLunchReportDelivery {
+  id         String             @id @default(cuid())
+  deliveryKey String            @unique
+  recipientId String?
+  recipientName String
+  reportDate DateTime
+  cutoffAt   DateTime
+  chatId     String?
+  message    String
+  totalCount Int
+  status     BaleDeliveryStatus @default(SENDING)
+  attempts   Int                @default(1)
+  lastError  String?
+  sentAt     DateTime?
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  recipient  BaleLunchReportRecipient? @relation(fields: [recipientId], references: [id])
+
+  @@index([status, updatedAt])
+  @@index([reportDate, recipientId])
+}
+
+model BaleLunchReportRecipient {
+  id        String   @id @default(cuid())
+  name      String
+  chatId    String?  @unique
+  userId    String?  @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deliveries BaleLunchReportDelivery[]
+  user       User?                     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([active, name])
 }
 
 model Team {

@@ -206,9 +206,9 @@ The verified bot setup and test-message procedure for Bale are documented in
 [`docs/bale-bot.md`](docs/bale-bot.md). Users link their own private chat from
 `/settings/bale` using a hashed, single-use, 10-minute connection token.
 
-The protected sync endpoint consumes bot updates and sends pending in-app
-notifications to linked users. Invoke it once per minute from the deployment
-scheduler:
+The protected sync endpoint consumes bot updates, sends pending in-app
+notifications to linked users, and also handles the lunch summary delivery.
+Invoke the same endpoint once per minute from the deployment scheduler:
 
 ```bash
 curl --fail --silent --show-error -X POST \
@@ -218,8 +218,22 @@ curl --fail --silent --show-error -X POST \
 
 The endpoint tracks Bale's `update_id` offset, records each notification
 delivery, and retries failed sends up to three times. It does not send
-notifications that predate the user's latest account connection. Run only one
-sync invocation at a time to avoid overlapping external requests.
+notifications that predate the user's latest account connection. Lunch reports
+become eligible exactly one minute after the configured lunch cutoff, use the
+target date in Jalali form, skip days without lunch service, and still send a
+zero-count message for active service days without reservations. If lunch
+reservations are disabled in admin settings, no lunch report is sent. Report
+recipients are managed by admins from `/admin/bale`, and every active recipient
+can target either a Bale chat ID or a Nobino user with an active Bale connection.
+Every active recipient receives its own delivery snapshot. User destinations
+resolve their current Bale connection again on each retry. Run only one sync invocation at a time to
+avoid overlapping external requests.
+
+Lunch report rows are stored separately from user-notification deliveries so
+only one report can be claimed per date. The Bale API does not expose an
+idempotency key, so an ambiguous network failure can still produce a duplicate
+report on retry even though Nobino preserves and retries the same stored
+message snapshot.
 
 Admins can monitor the last successful or failed sync, recent delivery errors,
 and user connection coverage from `/admin/bale`. A sync older than five minutes

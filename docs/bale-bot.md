@@ -2,8 +2,7 @@
 
 This document records the verified setup for sending a direct message through
 the official Bale Bot API. It is intentionally independent from the Nobino
-application; application scheduling and reservation-count integration are not
-implemented yet.
+application; the Nobino-specific scheduling details are documented below.
 
 The flow below was manually verified on 2026-06-21.
 
@@ -93,6 +92,10 @@ again. For a production bot, update consumption must track `update_id` and use
 an appropriate `offset` to avoid processing the same update repeatedly. This is
 not needed when `getUpdates` is used only once to discover a chat ID.
 
+For Nobino's lunch summary, the bot must already be a member of each target
+group or chat. The actual destination IDs are now managed from `/admin/bale`
+inside the application and must not be committed to Git.
+
 ## Send a Test Message
 
 The `sendMessage` method requires `chat_id` and `text`:
@@ -147,8 +150,13 @@ stores only a SHA-256 hash of the token. It expires after 10 minutes, and the
 resulting private `chat.id` is unique across Nobino users.
 
 The deployment scheduler must invoke the protected sync endpoint once per
-minute. The endpoint consumes `getUpdates` with a persisted offset and delivers
-new in-app notifications to linked users:
+minute. The endpoint consumes `getUpdates`, delivers new in-app notifications
+to linked users, and also sends the lunch summary to every active report
+recipient configured in `/admin/bale`:
+
+- A recipient can be a direct chat/group ID or a Nobino user with an active
+  Bale connection.
+- User recipients use their current active connection at send and retry time.
 
 ```bash
 curl --fail --silent --show-error -X POST \
@@ -156,6 +164,14 @@ curl --fail --silent --show-error -X POST \
   "${APP_BASE_URL}/api/integrations/bale/sync"
 ```
 
-Delivery happens outside reservation transactions. Each attempted delivery is
-stored separately, failed sends are retried up to three times, and notifications
-created before the user's latest connection are not sent retroactively.
+Delivery happens outside reservation transactions. Each attempted direct-message
+delivery is stored separately, failed sends are retried up to three times, and
+notifications created before the user's latest connection are not sent
+retroactively.
+
+Lunch reports use the same one-minute scheduler. A report becomes eligible one
+minute after the lunch cutoff for its target date. Days without lunch service do
+not produce a message, disabled lunch reservations also suppress the report, and
+active service days with zero reservations still send a zero-count summary.
+Because Bale does not provide an idempotency key, an ambiguous network failure
+can still lead to a duplicate lunch report on retry.

@@ -17,7 +17,7 @@ export class LunchReservationError extends Error {
   }
 }
 
-function startOfLocalDay(date: Date): Date {
+export function startOfLocalDay(date: Date): Date {
   return new Date(
     date.getFullYear(),
     date.getMonth(),
@@ -29,7 +29,7 @@ function startOfLocalDay(date: Date): Date {
   );
 }
 
-function addDays(date: Date, days: number): Date {
+export function addDays(date: Date, days: number): Date {
   const day = startOfLocalDay(date);
 
   return new Date(day.getFullYear(), day.getMonth(), day.getDate() + days);
@@ -48,7 +48,7 @@ function parseTime(value: string): { hour: number; minute: number } {
   return { hour, minute };
 }
 
-function buildCutoffAt(date: Date, cutoffTime: string): Date {
+export function buildCutoffAt(date: Date, cutoffTime: string): Date {
   const { hour, minute } = parseTime(cutoffTime);
   const previousDay = addDays(date, -1);
 
@@ -74,7 +74,7 @@ async function assertAdmin(adminId: string, client: DbClient = db) {
   }
 }
 
-async function getLunchSettings(client: DbClient = db) {
+export async function getLunchSettings(client: DbClient = db) {
   const settings = await client.lunchSettings.findUnique({
     where: { id: "default" },
   });
@@ -87,7 +87,10 @@ async function getLunchSettings(client: DbClient = db) {
   };
 }
 
-async function isLunchServiceDay(date: Date, client: DbClient = db): Promise<boolean> {
+export async function isLunchServiceDay(
+  date: Date,
+  client: DbClient = db,
+): Promise<boolean> {
   const day = startOfLocalDay(date);
   const exception = await client.lunchException.findUnique({
     where: { date: day },
@@ -132,8 +135,8 @@ async function assertLunchDateIsReservable(input: {
     throw new LunchReservationError("برای این تاریخ سرویس ناهار فعال نیست.");
   }
 
-  if (now > buildCutoffAt(day, settings.cutoffTime)) {
-    throw new LunchReservationError("مهلت رزرو یا تغییر ناهار برای این تاریخ گذشته است.");
+  if (now >= buildCutoffAt(day, settings.cutoffTime)) {
+    throw new LunchReservationError("مهلت رزرو، تغییر یا لغو ناهار برای این تاریخ گذشته است.");
   }
 }
 
@@ -297,6 +300,12 @@ export async function cancelLunchReservationByUser(input: {
     ) {
       throw new LunchReservationError("رزرو ناهار پیدا نشد.");
     }
+
+    await assertLunchDateIsReservable({
+      date: current.date,
+      now: input.now,
+      client: tx,
+    });
 
     const cancelled = await tx.lunchReservation.update({
       where: { id: current.id },
@@ -743,7 +752,7 @@ export async function getLunchDayState(input: {
       isServiceDay &&
       date >= startOfLocalDay(now) &&
       date <= addDays(startOfLocalDay(now), settings.maxAdvanceDays) &&
-      now <= cutoffAt,
+      now < cutoffAt,
     isServiceDay,
   };
 }

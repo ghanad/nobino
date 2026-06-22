@@ -11,6 +11,8 @@ export const passwordHash = "test-password-hash";
 export const poolId = "company-systems";
 export const lunchLocationId = "building-a";
 export const secondLunchLocationId = "building-b";
+export const lunchReportRecipientId = "lunch-report-recipient-a";
+export const secondLunchReportRecipientId = "lunch-report-recipient-b";
 export const userId = "normal-user";
 export const secondUserId = "second-user";
 export const managerId = "manager-user";
@@ -119,6 +121,8 @@ export async function nextIranHolidayDateAtHour(hour: number): Promise<Date> {
 }
 
 export async function resetDatabase() {
+  await db.baleLunchReportDelivery.deleteMany();
+  await db.baleLunchReportRecipient.deleteMany();
   await db.baleNotificationDelivery.deleteMany();
   await db.notification.deleteMany();
   await db.baleLinkToken.deleteMany();
@@ -247,6 +251,24 @@ export async function createReservation(input: {
       endAt: input.endAt,
       partySize: input.partySize ?? 1,
       status: input.status,
+    },
+  });
+}
+
+export async function createLunchReportRecipient(input?: {
+  active?: boolean;
+  chatId?: string | null;
+  id?: string;
+  name?: string;
+  userId?: string;
+}) {
+  return db.baleLunchReportRecipient.create({
+    data: {
+      active: input?.active ?? true,
+      chatId: input?.userId ? null : (input?.chatId ?? "lunch-report-chat"),
+      id: input?.id ?? lunchReportRecipientId,
+      name: input?.name ?? "گروه عملیات",
+      userId: input?.userId,
     },
   });
 }
