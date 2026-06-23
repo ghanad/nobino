@@ -738,8 +738,13 @@ test("lunch report skips non-service days and disabled lunch settings", async ()
   let fetchCalls = 0;
   await createDefaultLunchReportRecipient();
 
-  await db.lunchException.create({
-    data: {
+  await db.lunchException.upsert({
+    where: { date: startOfLocalDay(targetDate) },
+    update: {
+      isServiceDay: false,
+      reason: "No lunch",
+    },
+    create: {
       date: startOfLocalDay(targetDate),
       isServiceDay: false,
       reason: "No lunch",

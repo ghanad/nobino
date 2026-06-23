@@ -12,7 +12,9 @@ import {
 
 import {
   addDays,
+  db,
   lunchLocationId,
+  nextMidweekIranHolidayDateAtHour,
   nextWorkingDateAtHour,
   registerBusinessRuleTestHooks,
   secondLunchLocationId,
@@ -187,4 +189,49 @@ test("friday lunch is disabled by default", async () => {
       }),
     LunchReservationError,
   );
+});
+
+test("official Iran holidays disable lunch service on midweek days", async () => {
+  const targetDate = await nextMidweekIranHolidayDateAtHour(12);
+  const day = startOfLocalDay(targetDate);
+  const beforeCutoff = addDays(startOfLocalDay(targetDate), -1);
+  beforeCutoff.setHours(12, 0, 0, 0);
+
+  await db.lunchException.deleteMany({ where: { date: day } });
+
+  await assert.rejects(
+    () =>
+      createLunchReservation({
+        userId,
+        locationId: lunchLocationId,
+        date: targetDate,
+        now: beforeCutoff,
+      }),
+    LunchReservationError,
+  );
+});
+
+test("lunch exceptions can enable service on official Iran holidays", async () => {
+  const targetDate = await nextMidweekIranHolidayDateAtHour(12);
+  const day = startOfLocalDay(targetDate);
+  const beforeCutoff = addDays(day, -1);
+  beforeCutoff.setHours(12, 0, 0, 0);
+
+  await db.lunchException.upsert({
+    where: { date: day },
+    update: { isServiceDay: true },
+    create: {
+      date: day,
+      isServiceDay: true,
+    },
+  });
+
+  const reservation = await createLunchReservation({
+    userId,
+    locationId: lunchLocationId,
+    date: targetDate,
+    now: beforeCutoff,
+  });
+
+  assert.equal(reservation.date.getTime(), day.getTime());
 });

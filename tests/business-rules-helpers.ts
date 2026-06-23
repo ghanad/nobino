@@ -120,6 +120,30 @@ export async function nextIranHolidayDateAtHour(hour: number): Promise<Date> {
   throw new Error("No future Iran holiday found for test.");
 }
 
+export async function nextMidweekIranHolidayDateAtHour(
+  hour: number,
+): Promise<Date> {
+  const currentJalaliYear = Number(formatJalaliDateParam(new Date()).slice(0, 4));
+
+  for (let year = currentJalaliYear; year <= currentJalaliYear + 2; year += 1) {
+    const holidays = await getIranHolidaysForJalaliYear(year);
+    const futureHoliday = holidays
+      .map((holiday) => {
+        const date = new Date(holiday.date);
+        date.setHours(hour, 0, 0, 0);
+
+        return date;
+      })
+      .find((date) => date.getDay() !== 5 && date.getTime() > Date.now());
+
+    if (futureHoliday) {
+      return futureHoliday;
+    }
+  }
+
+  throw new Error("No future midweek Iran holiday found for test.");
+}
+
 export async function resetDatabase() {
   await db.baleLunchReportDelivery.deleteMany();
   await db.baleLunchReportRecipient.deleteMany();
@@ -218,6 +242,13 @@ export async function resetDatabase() {
       dayOfWeek,
       isServiceDay: dayOfWeek !== 5,
     })),
+  });
+
+  await db.lunchException.create({
+    data: {
+      date: startOfLocalDay(nextWorkingDateAtHour(12)),
+      isServiceDay: true,
+    },
   });
 
   await db.lunchLocation.createMany({

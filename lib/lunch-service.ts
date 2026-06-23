@@ -3,6 +3,7 @@ import "server-only";
 import { LunchReservationStatus, UserRole, type Prisma } from "@prisma/client";
 
 import { db } from "@/lib/db";
+import { getIranHolidayForDate } from "@/lib/iran-holidays";
 
 type DbClient = typeof db | Prisma.TransactionClient;
 
@@ -99,6 +100,10 @@ export async function isLunchServiceDay(
 
   if (exception) {
     return exception.isServiceDay;
+  }
+
+  if (await getIranHolidayForDate(day)) {
+    return false;
   }
 
   const weeklySchedule = await client.lunchWeeklySchedule.findUnique({
