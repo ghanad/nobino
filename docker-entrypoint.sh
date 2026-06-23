@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-mkdir -p /data
+mkdir -p /data/document-images
 chown -R nextjs:nodejs /data
 
 gosu nextjs npx prisma migrate deploy

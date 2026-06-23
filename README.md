@@ -1,6 +1,7 @@
-# Nobino Reservations
+# Nobino
 
-Internal capacity-based reservation web application for a small company resource pool.
+Internal company portal with capacity-based reservations, lunch tools, notifications,
+and structured company documentation.
 
 ## Product Direction
 
@@ -101,6 +102,10 @@ The first operational version is implemented. Seeded users can sign in, create h
   requests and review their recent requests.
 - `/notifications` allows authenticated users to review unread notification
   events and mark them as read.
+- `/documents` and `/documents/[documentId]` allow every active authenticated
+  user to browse and read the hierarchical document library.
+- `/admin/documents` allows admins to create, edit, move, reorder, rename, and
+  delete document folders and pages, and upload images.
 - `/settings/bale` allows authenticated users to securely link or unlink their
   private Bale chat.
 - `/admin/lunch-notifications` lets admins manage lunch report recipients,
@@ -151,6 +156,9 @@ Use `.env.example` as the source of truth for required settings:
 - `DATABASE_URL`: SQLite database URL. For local development the default
   `file:./dev.db` creates `prisma/dev.db` because Prisma resolves relative
   SQLite paths from the `prisma/` directory.
+- `DOCUMENT_IMAGE_DIR`: writable directory for protected document images. The
+  local default is `./data/document-images`; Docker uses
+  `/data/document-images` inside the existing persistent `/data` mount.
 - `AUTH_SECRET`: long random secret used to sign HTTP-only session cookies.
   Generate a unique value for every shared or production environment.
 - `SESSION_TTL_SECONDS`: signed session lifetime in seconds. The default is
@@ -194,6 +202,28 @@ Use `.env.example` as the source of truth for required settings:
 - `BALE_BOT_USERNAME`: bot username without `@`; used by the account-linking UI.
 - `BALE_SYNC_SECRET`: long random bearer secret protecting the Bale sync route.
 - `NEXT_PUBLIC_APP_NAME`: display name used by the app shell.
+
+## Documents
+
+Document folders and pages are stored in SQLite as an ordered tree. Page bodies
+are validated Tiptap JSON rather than submitted HTML. Every active `USER`,
+`MANAGER`, and `ADMIN` can read documents; only `ADMIN` can mutate the tree,
+edit page content, or upload images. Concurrent page saves use the page update
+timestamp and reject stale edits instead of silently overwriting them.
+
+Images accept JPEG, PNG, and WebP input up to 5 MiB. Nobino validates and
+decodes each image, limits decoded pixels, auto-orients and resizes it within
+2000×2000, strips metadata, and stores a WebP result. Binaries remain outside
+SQLite in `DOCUMENT_IMAGE_DIR`; SQLite contains only protected metadata. Images
+are served through authenticated `/api/document-images/[imageId]` URLs and are
+never placed under `public/`.
+
+Back up the complete mounted `data` directory. In particular, the SQLite
+database and document image directory form one consistent unit and should be
+backed up and restored together. This local filesystem design assumes one
+Nobino application instance, matching the current SQLite deployment. Multiple
+application replicas require shared or object storage and are intentionally out
+of scope.
 
 LDAP authentication validates the password against LDAP. When an LDAP login is
 successful for an email that does not exist in Nobino yet, Nobino creates an

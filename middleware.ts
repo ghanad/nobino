@@ -4,6 +4,7 @@ import { SESSION_COOKIE_NAME } from "@/lib/session";
 
 const PROTECTED_PREFIXES = [
   "/reservations",
+  "/documents",
   "/notifications",
   "/settings",
   "/manager",
@@ -31,6 +32,7 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     "/reservations/:path*",
+    "/documents/:path*",
     "/notifications/:path*",
     "/settings/:path*",
     "/manager/:path*",

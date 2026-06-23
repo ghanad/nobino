@@ -15,6 +15,7 @@ services:
       BALE_BOT_USERNAME: ${BALE_BOT_USERNAME:-}
       BALE_SYNC_SECRET: ${BALE_SYNC_SECRET:-}
       DATABASE_URL: file:/data/nobino.sqlite
+      DOCUMENT_IMAGE_DIR: /data/document-images
       AUTH_SECRET: ${AUTH_SECRET}
       AUTH_PROVIDER: ${AUTH_PROVIDER:-local}
       LDAP_AUTH_METHOD: ${LDAP_AUTH_METHOD:-node}
@@ -31,7 +32,7 @@ services:
       LDAP_TIMEOUT_MS: ${LDAP_TIMEOUT_MS:-5000}
       LDAP_TLS_REJECT_UNAUTHORIZED: ${LDAP_TLS_REJECT_UNAUTHORIZED:-true}
       SESSION_COOKIE_SECURE: "false"
-      NEXT_PUBLIC_APP_NAME: Nobino Reservations
+      NEXT_PUBLIC_APP_NAME: Nobino
     volumes:
       - ./data:/data
     healthcheck:

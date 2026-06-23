@@ -31,13 +31,14 @@ ENV PORT=3000
 ENV TZ=Asia/Tehran
 ENV APP_TIMEZONE=Asia/Tehran
 ENV DATABASE_URL=file:/data/nobino.sqlite
+ENV DOCUMENT_IMAGE_DIR=/data/document-images
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates gosu ldap-utils openssl \
   && rm -rf /var/lib/apt/lists/* \
   && groupadd --system --gid 1001 nodejs \
   && useradd --system --uid 1001 --gid nodejs --create-home --home-dir /home/nextjs nextjs \
-  && mkdir -p /data \
+  && mkdir -p /data/document-images \
   && chown -R nextjs:nodejs /data
 
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./

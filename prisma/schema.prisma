@@ -54,6 +54,11 @@ enum BaleDeliveryStatus {
   SKIPPED
 }
 
+enum DocumentNodeType {
+  FOLDER
+  PAGE
+}
+
 model User {
   id           String   @id @default(cuid())
   name         String
@@ -80,6 +85,50 @@ model User {
   baleConnection            BaleConnection?
   baleLinkTokens            BaleLinkToken[]
   baleLunchReportRecipient  BaleLunchReportRecipient?
+  createdDocumentNodes      DocumentNode[]                   @relation("DocumentNodeCreator")
+  updatedDocumentNodes      DocumentNode[]                   @relation("DocumentNodeUpdater")
+  createdDocumentImages     DocumentImage[]                  @relation("DocumentImageCreator")
+}
+
+model DocumentNode {
+  id          String           @id @default(cuid())
+  type        DocumentNodeType
+  title       String
+  parentId    String?
+  position    Int
+  content     Json?
+  plainText   String           @default("")
+  createdById String
+  updatedById String
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  parent    DocumentNode?  @relation("DocumentTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children  DocumentNode[] @relation("DocumentTree")
+  createdBy User           @relation("DocumentNodeCreator", fields: [createdById], references: [id])
+  updatedBy User           @relation("DocumentNodeUpdater", fields: [updatedById], references: [id])
+  images    DocumentImage[]
+
+  @@index([parentId, position])
+  @@index([type])
+}
+
+model DocumentImage {
+  id               String   @id @default(cuid())
+  documentId       String
+  storedFileName   String   @unique
+  originalFileName String
+  mimeType         String
+  byteSize         Int
+  width            Int
+  height           Int
+  createdById      String
+  createdAt        DateTime @default(now())
+
+  document  DocumentNode @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdBy User         @relation("DocumentImageCreator", fields: [createdById], references: [id])
+
+  @@index([documentId])
 }
 
 model ResourcePool {

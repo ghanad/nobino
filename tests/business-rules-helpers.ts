@@ -145,6 +145,10 @@ export async function nextMidweekIranHolidayDateAtHour(
 }
 
 export async function resetDatabase() {
+  await db.documentImage.deleteMany();
+  while (await db.documentNode.count()) {
+    await db.documentNode.deleteMany({ where: { children: { none: {} } } });
+  }
   await db.baleLunchReportDelivery.deleteMany();
   await db.baleLunchReportRecipient.deleteMany();
   await db.baleNotificationDelivery.deleteMany();
