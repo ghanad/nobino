@@ -1,8 +1,9 @@
 import { BaleDeliveryStatus, UserRole } from "@prisma/client";
-import { Save } from "lucide-react";
+import { Save, Send } from "lucide-react";
 
 import {
   createBaleLunchReportRecipientAction,
+  sendBaleLunchReportNowAction,
   updateBaleLunchReportRecipientAction,
 } from "@/app/admin/lunch-notifications/actions";
 import { BaleLunchReportRecipientFields } from "@/app/admin/bale/recipient-form-fields";
@@ -12,6 +13,7 @@ import { UrlToast } from "@/components/ui/url-toast";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatJalaliDate, formatJalaliDateTime } from "@/lib/jalali-date";
+import { addDays, startOfLocalDay } from "@/lib/lunch-service";
 
 const PERSIAN_NUMBER_FORMATTER = new Intl.NumberFormat("fa-IR");
 
@@ -46,6 +48,8 @@ function getLunchReportStatusPresentation(status: BaleDeliveryStatus) {
 
 function getToast(params: {
   error?: string;
+  manualFailed?: string;
+  manualSent?: string;
   recipientCreated?: string;
   recipientUpdated?: string;
 }) {
@@ -54,6 +58,22 @@ function getToast(params: {
       consumeKeys: ["error"],
       message: params.error,
       variant: "error" as const,
+    };
+  }
+
+  if (params.manualFailed) {
+    return {
+      consumeKeys: ["manualFailed", "manualSent"],
+      message: `گزارش برای ${formatCount(Number(params.manualSent ?? 0))} گیرنده ارسال شد و ارسال به ${formatCount(Number(params.manualFailed))} گیرنده ناموفق بود.`,
+      variant: "error" as const,
+    };
+  }
+
+  if (params.manualSent) {
+    return {
+      consumeKeys: ["manualSent"],
+      message: `گزارش ناهار همین حالا برای ${formatCount(Number(params.manualSent))} گیرنده ارسال شد.`,
+      variant: "success" as const,
     };
   }
 
@@ -71,6 +91,8 @@ function getToast(params: {
 export default async function AdminLunchNotificationsPage(props: {
   searchParams?: Promise<{
     error?: string;
+    manualFailed?: string;
+    manualSent?: string;
     recipientCreated?: string;
     recipientUpdated?: string;
   }>;
@@ -127,6 +149,7 @@ export default async function AdminLunchNotificationsPage(props: {
   const reportStatus = latestLunchReport
     ? getLunchReportStatusPresentation(latestLunchReport.status)
     : null;
+  const nextReportDate = addDays(startOfLocalDay(new Date()), 1);
 
   return (
     <div className="grid gap-6 text-right" dir="rtl">
@@ -150,6 +173,21 @@ export default async function AdminLunchNotificationsPage(props: {
               {reportStatus.label}
             </span>
           ) : null}
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-blue-200 bg-blue-50 p-4">
+          <div className="text-sm text-blue-950">
+            <p className="font-medium">ارسال فوری گزارش {formatJalaliDate(nextReportDate)}</p>
+            <p className="mt-1 text-xs leading-5 text-blue-800">
+              گزارش فعلی برای همه گیرنده‌های فعال ارسال می‌شود. ارسال روزانه زمان‌بندی‌شده نیز در زمان خودش جداگانه انجام خواهد شد.
+            </p>
+          </div>
+          <form action={sendBaleLunchReportNowAction}>
+            <SubmitButton disabled={activeRecipientCount === 0} pendingLabel="در حال ارسال">
+              <Send className="h-4 w-4" />
+              همین حالا ارسال شود
+            </SubmitButton>
+          </form>
         </div>
 
         {activeRecipientCount === 0 ? (

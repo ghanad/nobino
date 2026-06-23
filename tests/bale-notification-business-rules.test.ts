@@ -7,7 +7,10 @@ import {
   LunchReservationStatus,
 } from "@prisma/client";
 
-import { syncBaleLunchReports } from "@/lib/bale-lunch-report-service";
+import {
+  sendBaleLunchReportNow,
+  syncBaleLunchReports,
+} from "@/lib/bale-lunch-report-service";
 import {
   BaleConnectionError,
   connectBaleChat,
@@ -258,6 +261,55 @@ test("lunch report does not claim or send before the eligible minute", async () 
 
   assert.equal(sentBodies.length, 0);
   assert.equal(await db.baleLunchReportDelivery.count(), 0);
+});
+
+test("manual lunch report sends immediately without consuming the scheduled delivery", async () => {
+  const targetDate = nextWorkingDateAtHour(12);
+  const manualNow = addDays(startOfLocalDay(targetDate), -1);
+  const sentBodies: string[] = [];
+  await createDefaultLunchReportRecipient();
+
+  await withBaleMock(
+    {
+      fetchImpl: async (_input, init) => {
+        sentBodies.push(String(init?.body));
+        return new Response(JSON.stringify({ ok: true }), {
+          headers: { "Content-Type": "application/json" },
+          status: 200,
+        });
+      },
+    },
+    async () => {
+      const manualResult = await sendBaleLunchReportNow({ now: manualNow });
+      assert.deepEqual(manualResult, {
+        configured: true,
+        failed: 0,
+        reportDate: startOfLocalDay(targetDate),
+        sent: 1,
+      });
+
+      const scheduledResult = await syncBaleLunchReports({
+        now: getLunchEligibleAt(targetDate),
+      });
+      assert.equal(scheduledResult.sent, 1);
+      assert.equal(scheduledResult.claimed, 1);
+    },
+  );
+
+  assert.equal(sentBodies.length, 2);
+  const deliveries = await db.baleLunchReportDelivery.findMany({
+    where: { recipientId: lunchReportRecipientId },
+    orderBy: { createdAt: "asc" },
+    select: { deliveryKey: true, status: true },
+  });
+  assert.equal(deliveries.length, 2);
+  assert.match(deliveries[0].deliveryKey, /^manual:/);
+  assert.equal(deliveries[0].status, BaleDeliveryStatus.SENT);
+  assert.equal(
+    deliveries[1].deliveryKey,
+    `${startOfLocalDay(targetDate).toISOString()}:${lunchReportRecipientId}`,
+  );
+  assert.equal(deliveries[1].status, BaleDeliveryStatus.SENT);
 });
 
 test("lunch report sends one minute after cutoff with Jalali date and Persian digits", async () => {

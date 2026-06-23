@@ -1,5 +1,7 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
+
 import { BaleDeliveryStatus, Prisma } from "@prisma/client";
 
 import { sendBaleMessage } from "@/lib/bale-client";
@@ -25,6 +27,13 @@ export type BaleLunchReportSyncResult = {
   failed: number;
   sent: number;
   skipped: number;
+};
+
+export type ManualBaleLunchReportResult = {
+  configured: boolean;
+  failed: number;
+  reportDate: Date;
+  sent: number;
 };
 
 type DueReportDate = {
@@ -115,6 +124,7 @@ async function createSkippedDelivery(input: {
 
 async function createFreshDelivery(input: {
   cutoffAt: Date;
+  deliveryKey?: string;
   message: string;
   reportDate: Date;
   recipient: LunchReportRecipient;
@@ -126,7 +136,9 @@ async function createFreshDelivery(input: {
         attempts: 1,
         chatId: input.recipient.chatId,
         cutoffAt: input.cutoffAt,
-        deliveryKey: buildDeliveryKey(input.reportDate, input.recipient.id),
+        deliveryKey:
+          input.deliveryKey ??
+          buildDeliveryKey(input.reportDate, input.recipient.id),
         message: input.message,
         recipientId: input.recipient.id,
         recipientName: input.recipient.name,
@@ -381,6 +393,67 @@ export async function syncBaleLunchReports(input?: {
   result.failed += retried.failed;
 
   await advanceLastCheck(now);
+
+  return result;
+}
+
+export async function sendBaleLunchReportNow(input?: {
+  now?: Date;
+}): Promise<ManualBaleLunchReportResult> {
+  const now = input?.now ?? new Date();
+  const reportDate = addDays(startOfLocalDay(now), 1);
+  const recipients = await db.baleLunchReportRecipient.findMany({
+    where: { active: true },
+    orderBy: { name: "asc" },
+    select: {
+      chatId: true,
+      id: true,
+      name: true,
+      userId: true,
+    },
+  });
+  const result: ManualBaleLunchReportResult = {
+    configured: recipients.length > 0,
+    failed: 0,
+    reportDate,
+    sent: 0,
+  };
+
+  if (recipients.length === 0) {
+    return result;
+  }
+
+  const settings = await getLunchSettings();
+  const summary = await getLunchReportSummary(reportDate);
+  const message = formatLunchReportMessage(summary);
+  const manualRunId = randomUUID();
+
+  for (const recipient of recipients) {
+    const delivery = await createFreshDelivery({
+      cutoffAt: buildCutoffAt(reportDate, settings.cutoffTime),
+      deliveryKey: `manual:${manualRunId}:${recipient.id}`,
+      message,
+      recipient,
+      reportDate,
+      totalCount: summary.totalCount,
+    });
+
+    if (!delivery) {
+      result.failed += 1;
+      continue;
+    }
+
+    if (
+      await sendClaimedLunchReport({
+        deliveryId: delivery.id,
+        message,
+      })
+    ) {
+      result.sent += 1;
+    } else {
+      result.failed += 1;
+    }
+  }
 
   return result;
 }

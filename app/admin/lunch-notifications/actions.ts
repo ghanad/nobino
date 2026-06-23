@@ -14,6 +14,7 @@ import {
   createBaleLunchReportRecipient,
   updateBaleLunchReportRecipient,
 } from "@/lib/admin-settings-service";
+import { sendBaleLunchReportNow } from "@/lib/bale-lunch-report-service";
 
 const createRecipientSchema = z
   .object({
@@ -106,4 +107,28 @@ export async function updateBaleLunchReportRecipientAction(
   }
 
   redirectToLunchNotifications({ recipientUpdated: "1" });
+}
+
+export async function sendBaleLunchReportNowAction(): Promise<void> {
+  await requireRole([UserRole.ADMIN]);
+  let result: Awaited<ReturnType<typeof sendBaleLunchReportNow>>;
+
+  try {
+    result = await sendBaleLunchReportNow();
+  } catch (error) {
+    redirectToLunchNotifications({ error: getActionErrorMessage(error) });
+  }
+
+  if (!result.configured) {
+    redirectToLunchNotifications({ error: "هیچ گیرنده فعالی برای ارسال گزارش وجود ندارد." });
+  }
+
+  if (result.failed > 0) {
+    redirectToLunchNotifications({
+      manualFailed: String(result.failed),
+      manualSent: String(result.sent),
+    });
+  }
+
+  redirectToLunchNotifications({ manualSent: String(result.sent) });
 }
