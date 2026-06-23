@@ -1,8 +1,9 @@
 import { BaleDeliveryStatus, UserRole } from "@prisma/client";
-import { MessageSquareText, Plus, Save, Send, Users } from "lucide-react";
+import { MessageSquareText, Plus, Save, Send, Trash2, Users } from "lucide-react";
 
 import {
   createBaleLunchReportRecipientAction,
+  deleteBaleLunchReportRecipientAction,
   sendBaleLunchReportNowAction,
   updateBaleLunchReportRecipientAction,
 } from "@/app/admin/lunch-notifications/actions";
@@ -52,6 +53,7 @@ function getToast(params: {
   manualFailed?: string;
   manualSent?: string;
   recipientCreated?: string;
+  recipientDeleted?: string;
   recipientUpdated?: string;
 }) {
   if (params.error) {
@@ -86,6 +88,14 @@ function getToast(params: {
     };
   }
 
+  if (params.recipientDeleted) {
+    return {
+      consumeKeys: ["recipientDeleted"],
+      message: "گیرنده گزارش ناهار حذف شد.",
+      variant: "success" as const,
+    };
+  }
+
   return null;
 }
 
@@ -95,6 +105,7 @@ export default async function AdminLunchNotificationsPage(props: {
     manualFailed?: string;
     manualSent?: string;
     recipientCreated?: string;
+    recipientDeleted?: string;
     recipientUpdated?: string;
   }>;
 }) {
@@ -335,10 +346,22 @@ export default async function AdminLunchNotificationsPage(props: {
                     <input className="h-4 w-4 accent-primary" defaultChecked={recipient.active} name="active" type="checkbox" />
                     گیرنده فعال باشد
                   </label>
-                  <SubmitButton pendingLabel="در حال ذخیره" size="sm" variant="outline">
-                    <Save className="h-4 w-4" />
-                    ذخیره تغییرات
-                  </SubmitButton>
+                  <div className="flex items-center gap-2">
+                    <SubmitButton
+                      formAction={deleteBaleLunchReportRecipientAction}
+                      className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
+                      pendingLabel="در حال حذف"
+                      size="sm"
+                      variant="outline"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      حذف
+                    </SubmitButton>
+                    <SubmitButton pendingLabel="در حال ذخیره" size="sm" variant="outline">
+                      <Save className="h-4 w-4" />
+                      ذخیره تغییرات
+                    </SubmitButton>
+                  </div>
                 </div>
               </form>
             ))

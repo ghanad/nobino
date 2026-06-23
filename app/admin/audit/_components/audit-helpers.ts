@@ -35,6 +35,9 @@ export const ACTION_LABELS: Record<string, string> = {
   ALTERNATIVE_ACCEPTED: "پیشنهاد جایگزین پذیرفته شد",
   ALTERNATIVE_PROPOSED: "زمان جایگزین پیشنهاد شد",
   ALTERNATIVE_REJECTED: "پیشنهاد جایگزین رد شد",
+  BALE_LUNCH_REPORT_RECIPIENT_CREATED: "گیرنده گزارش ناهار اضافه شد",
+  BALE_LUNCH_REPORT_RECIPIENT_DELETED: "گیرنده گزارش ناهار حذف شد",
+  BALE_LUNCH_REPORT_RECIPIENT_UPDATED: "گیرنده گزارش ناهار ویرایش شد",
   CAPACITY_CHANGED: "ظرفیت تغییر کرد",
   CAPACITY_EXCEPTION_CREATED: "استثنای ظرفیت اضافه شد",
   CAPACITY_EXCEPTION_DELETED: "استثنای ظرفیت حذف شد",
@@ -57,6 +60,7 @@ export const ACTION_LABELS: Record<string, string> = {
 };
 
 export const ENTITY_LABELS: Record<string, string> = {
+  BaleLunchReportRecipient: "گیرنده گزارش ناهار",
   Reservation: "رزرو",
   ReservationPolicy: "سیاست رزرو",
   ResourcePool: "ظرفیت",

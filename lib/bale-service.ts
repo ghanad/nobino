@@ -150,7 +150,7 @@ async function processBaleUpdate(update: BaleUpdate): Promise<boolean> {
   if (isBaleChatIdCommand(message.text)) {
     await replySafely(
       chatId,
-      `شناسه گفت‌وگوی خصوصی شما در بله:\n${chatId}\n\nاین شناسه را برای مدیر Nobino ارسال کنید تا دریافت گزارش ناهار برای شما فعال شود.`,
+      `شناسه گفت‌وگوی خصوصی شما در بله:\n${chatId}`,
     );
     return false;
   }

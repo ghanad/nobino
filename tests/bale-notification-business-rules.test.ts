@@ -25,6 +25,7 @@ import {
 } from "@/lib/bale-service";
 import {
   createBaleLunchReportRecipient,
+  deleteBaleLunchReportRecipient,
   updateBaleLunchReportRecipient,
 } from "@/lib/admin-settings-service";
 import { formatJalaliDate } from "@/lib/jalali-date";
@@ -180,7 +181,7 @@ test("/chatid in private chat sends the private chat ID and does not connect", a
   assert.deepEqual(sentMessages, [
     {
       chatId: "987654321",
-      text: "شناسه گفت‌وگوی خصوصی شما در بله:\n987654321\n\nاین شناسه را برای مدیر Nobino ارسال کنید تا دریافت گزارش ناهار برای شما فعال شود.",
+      text: "شناسه گفت‌وگوی خصوصی شما در بله:\n987654321",
     },
   ]);
   assert.equal(await db.baleConnection.count(), 0);
@@ -385,6 +386,50 @@ test("manual Bale chat ID recipients can be updated with numeric chat IDs", asyn
   });
 
   assert.equal(updated.chatId, "91234567891");
+});
+
+test("admins can delete a lunch report recipient without deleting delivery history", async () => {
+  const recipient = await createBaleLunchReportRecipient({
+    adminId,
+    chatId: "91234567890",
+    name: "گروه عملیات",
+  });
+  const reportDate = nextWorkingDateAtHour(12);
+  const delivery = await db.baleLunchReportDelivery.create({
+    data: {
+      chatId: recipient.chatId,
+      cutoffAt: getLunchCutoffAt(reportDate),
+      deliveryKey: `delete-recipient:${reportDate.toISOString()}`,
+      message: "گزارش آزمایشی",
+      recipientId: recipient.id,
+      recipientName: recipient.name,
+      reportDate,
+      totalCount: 1,
+    },
+  });
+
+  await deleteBaleLunchReportRecipient({
+    adminId,
+    recipientId: recipient.id,
+  });
+
+  assert.equal(
+    await db.baleLunchReportRecipient.findUnique({ where: { id: recipient.id } }),
+    null,
+  );
+  assert.equal(
+    (await db.baleLunchReportDelivery.findUniqueOrThrow({ where: { id: delivery.id } }))
+      .recipientId,
+    null,
+  );
+  assert.ok(
+    await db.auditLog.findFirst({
+      where: {
+        action: "BALE_LUNCH_REPORT_RECIPIENT_DELETED",
+        entityId: recipient.id,
+      },
+    }),
+  );
 });
 
 test("manual Bale chat ID recipients reject nonnumeric chat IDs", async () => {

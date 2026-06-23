@@ -12,6 +12,7 @@ import {
 import { requireRole } from "@/lib/auth";
 import {
   createBaleLunchReportRecipient,
+  deleteBaleLunchReportRecipient,
   normalizeBaleChatId,
   updateBaleLunchReportRecipient,
 } from "@/lib/admin-settings-service";
@@ -32,6 +33,10 @@ const updateRecipientSchema = z.intersection(
     recipientId: z.string().min(1),
   }),
 );
+
+const deleteRecipientSchema = z.object({
+  recipientId: z.string().min(1),
+});
 
 function redirectToLunchNotifications(
   params: Record<string, string | undefined>,
@@ -127,6 +132,30 @@ export async function updateBaleLunchReportRecipientAction(
   }
 
   redirectToLunchNotifications({ recipientUpdated: "1" });
+}
+
+export async function deleteBaleLunchReportRecipientAction(
+  formData: FormData,
+): Promise<void> {
+  const admin = await requireRole([UserRole.ADMIN]);
+  const parsed = deleteRecipientSchema.safeParse({
+    recipientId: formData.get("recipientId"),
+  });
+
+  if (!parsed.success) {
+    redirectToLunchNotifications({ error: "گیرنده گزارش ناهار معتبر نیست." });
+  }
+
+  try {
+    await deleteBaleLunchReportRecipient({
+      adminId: admin.id,
+      recipientId: parsed.data.recipientId,
+    });
+  } catch (error) {
+    redirectToLunchNotifications({ error: getActionErrorMessage(error) });
+  }
+
+  redirectToLunchNotifications({ recipientDeleted: "1" });
 }
 
 export async function sendBaleLunchReportNowAction(): Promise<void> {

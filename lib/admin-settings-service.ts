@@ -834,3 +834,47 @@ export async function updateBaleLunchReportRecipient(input: {
     throw error;
   }
 }
+
+export async function deleteBaleLunchReportRecipient(input: {
+  adminId: string;
+  recipientId: string;
+}) {
+  return db.$transaction(async (tx) => {
+    await assertAdmin(input.adminId, tx);
+
+    const current = await tx.baleLunchReportRecipient.findUnique({
+      where: { id: input.recipientId },
+      select: {
+        id: true,
+        active: true,
+        chatId: true,
+        name: true,
+        userId: true,
+      },
+    });
+
+    if (!current) {
+      throw new AdminSettingsError("گیرنده گزارش ناهار پیدا نشد.");
+    }
+
+    // Keep delivery history while removing its optional link to the recipient.
+    await tx.baleLunchReportDelivery.updateMany({
+      where: { recipientId: current.id },
+      data: { recipientId: null },
+    });
+
+    await tx.baleLunchReportRecipient.delete({
+      where: { id: current.id },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorUserId: input.adminId,
+        entityType: "BaleLunchReportRecipient",
+        entityId: current.id,
+        action: "BALE_LUNCH_REPORT_RECIPIENT_DELETED",
+        oldValue: current,
+      },
+    });
+  });
+}
