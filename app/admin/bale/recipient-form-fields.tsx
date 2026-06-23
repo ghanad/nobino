@@ -9,6 +9,7 @@ type ConnectedUser = {
 };
 
 export function BaleLunchReportRecipientFields(props: {
+  baleBotUsername?: string | null;
   chatId?: string | null;
   connectedUsers: ConnectedUser[];
   name?: string;
@@ -17,6 +18,9 @@ export function BaleLunchReportRecipientFields(props: {
   const [destinationType, setDestinationType] = useState<"chat" | "user">(
     props.userId ? "user" : "chat",
   );
+  const chatIdHelpText = props.baleBotUsername
+    ? `برای دریافت شناسه، همکار باید در گفت‌وگوی خصوصی بات بله فرمان /chatid را ارسال کند (مثلاً @${props.baleBotUsername}). دریافت پاسخ ممکن است تا اجرای بعدی زمان‌بند، حدود یک دقیقه، طول بکشد.`
+    : "برای دریافت شناسه، همکار باید در گفت‌وگوی خصوصی بات بله فرمان /chatid را ارسال کند. دریافت پاسخ ممکن است تا اجرای بعدی زمان‌بند، حدود یک دقیقه، طول بکشد.";
 
   return (
     <>
@@ -55,6 +59,7 @@ export function BaleLunchReportRecipientFields(props: {
             required
             type="text"
           />
+          <p className="text-xs leading-5 text-muted-foreground">{chatIdHelpText}</p>
         </label>
       ) : (
         <label className="grid gap-2 text-sm">

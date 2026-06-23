@@ -23,6 +23,27 @@ export class AdminSettingsError extends Error {
   }
 }
 
+const BALE_CHAT_ID_PATTERN = /^-?\d+$/;
+const BALE_CHAT_ID_MAX_LENGTH = 100;
+
+export function normalizeBaleChatId(chatId: string | null | undefined): string | null {
+  if (typeof chatId === "string" && chatId.trim().length === 0) {
+    throw new AdminSettingsError("شناسه گفت‌وگوی بله معتبر نیست.");
+  }
+
+  const value = chatId?.trim() || null;
+
+  if (!value) {
+    return null;
+  }
+
+  if (value.length > BALE_CHAT_ID_MAX_LENGTH || !BALE_CHAT_ID_PATTERN.test(value)) {
+    throw new AdminSettingsError("شناسه گفت‌وگوی بله معتبر نیست.");
+  }
+
+  return value;
+}
+
 async function assertAdmin(adminId: string, client: DbClient = db) {
   const user = await client.user.findUnique({
     where: { id: adminId },
@@ -642,7 +663,7 @@ export async function createBaleLunchReportRecipient(input: {
   userId?: string | null;
 }) {
   const name = input.name.trim();
-  const chatId = input.chatId?.trim() || null;
+  const chatId = normalizeBaleChatId(input.chatId);
   const userId = input.userId?.trim() || null;
 
   if (!name) {
@@ -720,7 +741,7 @@ export async function updateBaleLunchReportRecipient(input: {
   active: boolean;
 }) {
   const name = input.name.trim();
-  const chatId = input.chatId?.trim() || null;
+  const chatId = normalizeBaleChatId(input.chatId);
   const userId = input.userId?.trim() || null;
 
   if (!name) {

@@ -12,25 +12,17 @@ import {
 import { requireRole } from "@/lib/auth";
 import {
   createBaleLunchReportRecipient,
+  normalizeBaleChatId,
   updateBaleLunchReportRecipient,
 } from "@/lib/admin-settings-service";
 import { sendBaleLunchReportNow } from "@/lib/bale-lunch-report-service";
 
 const createRecipientSchema = z
   .object({
-    chatId: z.string().trim().max(100).optional(),
+    chatId: z.string().trim().optional(),
     destinationType: z.enum(["chat", "user"]),
     name: z.string().trim().min(1).max(100),
     userId: z.string().trim().optional(),
-  })
-  .superRefine((value, context) => {
-    if (value.destinationType === "chat" && !value.chatId) {
-      context.addIssue({ code: "custom", message: "chatId is required", path: ["chatId"] });
-    }
-
-    if (value.destinationType === "user" && !value.userId) {
-      context.addIssue({ code: "custom", message: "userId is required", path: ["userId"] });
-    }
   });
 
 const updateRecipientSchema = z.intersection(
@@ -62,10 +54,24 @@ export async function createBaleLunchReportRecipientAction(
     redirectToLunchNotifications({ error: "گیرنده گزارش ناهار معتبر نیست." });
   }
 
+  let chatId: string | null = null;
+
+  try {
+    if (parsed.data.destinationType === "chat") {
+      chatId = normalizeBaleChatId(parsed.data.chatId);
+
+      if (!chatId) {
+        redirectToLunchNotifications({ error: "شناسه گفت‌وگوی بله معتبر نیست." });
+      }
+    }
+  } catch (error) {
+    redirectToLunchNotifications({ error: getActionErrorMessage(error) });
+  }
+
   try {
     await createBaleLunchReportRecipient({
       adminId: admin.id,
-      chatId: parsed.data.destinationType === "chat" ? parsed.data.chatId : null,
+      chatId,
       name: parsed.data.name,
       userId: parsed.data.destinationType === "user" ? parsed.data.userId : null,
     });
@@ -93,11 +99,25 @@ export async function updateBaleLunchReportRecipientAction(
     redirectToLunchNotifications({ error: "گیرنده گزارش ناهار معتبر نیست." });
   }
 
+  let chatId: string | null = null;
+
+  try {
+    if (parsed.data.destinationType === "chat") {
+      chatId = normalizeBaleChatId(parsed.data.chatId);
+
+      if (!chatId) {
+        redirectToLunchNotifications({ error: "شناسه گفت‌وگوی بله معتبر نیست." });
+      }
+    }
+  } catch (error) {
+    redirectToLunchNotifications({ error: getActionErrorMessage(error) });
+  }
+
   try {
     await updateBaleLunchReportRecipient({
       adminId: admin.id,
       active: parsed.data.active,
-      chatId: parsed.data.destinationType === "chat" ? parsed.data.chatId : null,
+      chatId,
       name: parsed.data.name,
       recipientId: parsed.data.recipientId,
       userId: parsed.data.destinationType === "user" ? parsed.data.userId : null,

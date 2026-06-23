@@ -10,6 +10,7 @@ import { BaleLunchReportRecipientFields } from "@/app/admin/bale/recipient-form-
 import { PageHeader } from "@/components/app/page-header";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { UrlToast } from "@/components/ui/url-toast";
+import { getBaleBotUsername } from "@/lib/bale-client";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatJalaliDate, formatJalaliDateTime } from "@/lib/jalali-date";
@@ -100,6 +101,7 @@ export default async function AdminLunchNotificationsPage(props: {
   await requireRole([UserRole.ADMIN]);
   const params = (await props.searchParams) ?? {};
   const toast = getToast(params);
+  const baleBotUsername = getBaleBotUsername();
 
   const [users, botState, latestLunchReport, lunchReportRecipients] =
     await Promise.all([
@@ -256,7 +258,10 @@ export default async function AdminLunchNotificationsPage(props: {
         </div>
 
         <form action={createBaleLunchReportRecipientAction} className="grid gap-3 rounded-md border bg-background p-4 lg:grid-cols-[1fr_1fr_1fr_auto]">
-          <BaleLunchReportRecipientFields connectedUsers={connectedUsers} />
+          <BaleLunchReportRecipientFields
+            baleBotUsername={baleBotUsername}
+            connectedUsers={connectedUsers}
+          />
           <SubmitButton className="lg:self-end" pendingLabel="در حال افزودن">
             <Save className="h-4 w-4" />
             افزودن گیرنده
@@ -273,6 +278,7 @@ export default async function AdminLunchNotificationsPage(props: {
               <form action={updateBaleLunchReportRecipientAction} className="grid gap-3 rounded-md border bg-background p-4 lg:grid-cols-[1fr_1fr_1fr_auto_auto_auto]" key={recipient.id}>
                 <input name="recipientId" type="hidden" value={recipient.id} />
                 <BaleLunchReportRecipientFields
+                  baleBotUsername={baleBotUsername}
                   chatId={recipient.chatId}
                   connectedUsers={
                     recipient.userId &&

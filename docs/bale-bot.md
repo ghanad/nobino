@@ -54,47 +54,32 @@ A valid token returns a JSON object with `"ok": true`.
 
 ## Find the Destination Chat ID
 
-The destination user must first open the bot and send a message such as
-`/start`. Bots cannot start an unsolicited private conversation with a user.
+For a private conversation, the collaborator must first open the bot and send a
+message. Bots cannot start an unsolicited private conversation with a user.
 
-After the user sends a message, request the bot updates:
+The supported discovery flow is:
 
-```bash
-curl -sS "https://tapi.bale.ai/bot${BALE_BOT_TOKEN}/getUpdates"
-```
+1. The collaborator opens the bot in Bale.
+2. The collaborator sends `/chatid`.
+3. The bot replies with the private chat ID.
+4. The collaborator sends that ID to an admin.
+5. The admin opens `/admin/lunch-notifications`.
+6. The admin selects the destination type `گفت‌وگو یا گروه بله`.
+7. The admin enters the name and chat ID.
+8. The admin uses `ارسال همین حالا` to test the connection.
 
-Read the destination ID from `result[].message.chat.id`:
+The bot also accepts `/chatid@bot_username` for convenience when the bot
+username is known. The command only reveals the current private chat ID; it does
+not activate any Nobino setting by itself.
 
-```json
-{
-  "ok": true,
-  "result": [
-    {
-      "message": {
-        "chat": {
-          "id": 123456789,
-          "type": "private"
-        }
-      }
-    }
-  ]
-}
-```
+If you need to verify the raw API behavior manually, the current chat ID is
+still available through `getUpdates` from `result[].message.chat.id` after the
+user has sent any message. For a production bot, update consumption must track
+`update_id` and use an appropriate `offset` to avoid processing the same update
+repeatedly.
 
-Store the ID separately from the token:
-
-```bash
-export BALE_CHAT_ID="123456789"
-```
-
-If `result` is empty, send a new message to the bot and call `getUpdates`
-again. For a production bot, update consumption must track `update_id` and use
-an appropriate `offset` to avoid processing the same update repeatedly. This is
-not needed when `getUpdates` is used only once to discover a chat ID.
-
-For Nobino's lunch summary, the bot must already be a member of each target
-group or chat. The actual destination IDs are now managed from `/admin/bale`
-inside the application and must not be committed to Git.
+The destination ID should remain private and must not be published in chat
+groups, issue trackers, or Git.
 
 ## Send a Test Message
 
@@ -152,7 +137,7 @@ resulting private `chat.id` is unique across Nobino users.
 The deployment scheduler must invoke the protected sync endpoint once per
 minute. The endpoint consumes `getUpdates`, delivers new in-app notifications
 to linked users, and also sends the lunch summary to every active report
-recipient configured in `/admin/bale`:
+recipient configured in `/admin/lunch-notifications`:
 
 - A recipient can be a direct chat/group ID or a Nobino user with an active
   Bale connection.

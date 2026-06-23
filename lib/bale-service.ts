@@ -15,6 +15,7 @@ const LINK_TOKEN_TTL_MS = 10 * 60 * 1000;
 const MAX_DELIVERY_ATTEMPTS = 3;
 const DELIVERY_BATCH_SIZE = 50;
 const MAX_SYNC_ERROR_LENGTH = 500;
+const BALE_CHAT_ID_COMMAND_PATTERN = /^\/chatid(?:@\w+)?$/;
 
 export class BaleConnectionError extends Error {
   constructor(message: string) {
@@ -30,6 +31,10 @@ function hashToken(token: string): string {
 export function parseBaleConnectToken(text: string): string | null {
   const match = text.trim().match(/^\/connect(?:@\w+)?\s+([A-Za-z0-9_-]{20,})$/);
   return match?.[1] ?? null;
+}
+
+export function isBaleChatIdCommand(text: string): boolean {
+  return BALE_CHAT_ID_COMMAND_PATTERN.test(text.trim());
 }
 
 export async function createBaleLinkToken(userId: string) {
@@ -141,13 +146,22 @@ async function processBaleUpdate(update: BaleUpdate): Promise<boolean> {
   }
 
   const chatId = String(message.chat.id);
+
+  if (isBaleChatIdCommand(message.text)) {
+    await replySafely(
+      chatId,
+      `شناسه گفت‌وگوی خصوصی شما در بله:\n${chatId}\n\nاین شناسه را برای مدیر Nobino ارسال کنید تا دریافت گزارش ناهار برای شما فعال شود.`,
+    );
+    return false;
+  }
+
   const token = parseBaleConnectToken(message.text);
 
   if (!token) {
     if (message.text.trim().startsWith("/start")) {
       await replySafely(
         chatId,
-        "برای اتصال حساب، وارد Nobino شوید و کد اتصال را از بخش تنظیمات بله دریافت کنید.",
+        "اگر حساب Nobino دارید، کد اتصال را از بخش تنظیمات بله در Nobino بگیرید و برای بات بفرستید. اگر فقط می‌خواهید شناسه گفت‌وگوی خصوصی خود را ببینید، /chatid را ارسال کنید.",
       );
     }
 

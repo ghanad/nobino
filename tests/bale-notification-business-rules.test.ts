@@ -17,10 +17,16 @@ import {
   createBaleLinkToken,
   deliverPendingBaleNotifications,
   disconnectBaleAccount,
+  consumeBaleUpdates,
+  isBaleChatIdCommand,
   recordBaleSyncFailed,
   recordBaleSyncStarted,
   recordBaleSyncSucceeded,
 } from "@/lib/bale-service";
+import {
+  createBaleLunchReportRecipient,
+  updateBaleLunchReportRecipient,
+} from "@/lib/admin-settings-service";
 import { formatJalaliDate } from "@/lib/jalali-date";
 
 import {
@@ -35,6 +41,7 @@ import {
   secondLunchReportRecipientId,
   secondUserId,
   startOfLocalDay,
+  adminId,
   userId,
 } from "./business-rules-helpers";
 
@@ -42,6 +49,10 @@ registerBusinessRuleTestHooks();
 
 function tokenFromCommand(command: string): string {
   return command.slice("/connect ".length);
+}
+
+function getBaleApiMethod(input: string | URL): string {
+  return new URL(String(input)).pathname.split("/").pop() ?? "";
 }
 
 function getLunchCutoffAt(date: Date): Date {
@@ -93,6 +104,301 @@ async function createDefaultLunchReportRecipient() {
   await createLunchReportRecipient();
 }
 
+test("Bale chat ID parser accepts /chatid", () => {
+  assert.equal(isBaleChatIdCommand("/chatid"), true);
+});
+
+test("Bale chat ID parser accepts /chatid@bot_username", () => {
+  assert.equal(isBaleChatIdCommand("/chatid@bot_username"), true);
+});
+
+test("Bale chat ID parser ignores surrounding whitespace", () => {
+  assert.equal(isBaleChatIdCommand("  /chatid@bot_username  "), true);
+});
+
+test("Bale chat ID parser rejects lookalikes and extra arguments", () => {
+  assert.equal(isBaleChatIdCommand("/chatid something"), false);
+  assert.equal(isBaleChatIdCommand("text /chatid"), false);
+  assert.equal(isBaleChatIdCommand("/mychatid"), false);
+});
+
+test("/chatid in private chat sends the private chat ID and does not connect", async () => {
+  const sentMessages: Array<{ chatId: string; text: string }> = [];
+
+  await withBaleMock(
+    {
+      fetchImpl: async (input, init) => {
+        const method = getBaleApiMethod(input as string | URL);
+
+        if (method === "getUpdates") {
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              result: [
+                {
+                  message: {
+                    chat: { id: 987654321, type: "private" },
+                    text: "  /chatid  ",
+                  },
+                  update_id: 41,
+                },
+              ],
+            }),
+            {
+              headers: { "Content-Type": "application/json" },
+              status: 200,
+            },
+          );
+        }
+
+        if (method === "sendMessage") {
+          const body = new URLSearchParams(String(init?.body));
+          sentMessages.push({
+            chatId: body.get("chat_id") ?? "",
+            text: body.get("text") ?? "",
+          });
+
+          return new Response(JSON.stringify({ ok: true }), {
+            headers: { "Content-Type": "application/json" },
+            status: 200,
+          });
+        }
+
+        throw new Error(`Unexpected Bale method: ${method}`);
+      },
+    },
+    async () => {
+      const result = await consumeBaleUpdates();
+      assert.deepEqual(result, { connected: 0, updates: 1 });
+    },
+  );
+
+  const state = await db.baleBotState.findUniqueOrThrow({
+    where: { id: "default" },
+  });
+
+  assert.deepEqual(sentMessages, [
+    {
+      chatId: "987654321",
+      text: "شناسه گفت‌وگوی خصوصی شما در بله:\n987654321\n\nاین شناسه را برای مدیر Nobino ارسال کنید تا دریافت گزارش ناهار برای شما فعال شود.",
+    },
+  ]);
+  assert.equal(await db.baleConnection.count(), 0);
+  assert.equal(await db.baleLunchReportRecipient.count(), 0);
+  assert.equal(state.updateOffset, 42);
+});
+
+test("/chatid in a group does not send a reply", async () => {
+  let sendMessageCalls = 0;
+
+  await withBaleMock(
+    {
+      fetchImpl: async (input, init) => {
+        const method = getBaleApiMethod(input as string | URL);
+
+        if (method === "getUpdates") {
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              result: [
+                {
+                  message: {
+                    chat: { id: 123456789, type: "group" },
+                    text: "/chatid",
+                  },
+                  update_id: 51,
+                },
+              ],
+            }),
+            {
+              headers: { "Content-Type": "application/json" },
+              status: 200,
+            },
+          );
+        }
+
+        if (method === "sendMessage") {
+          sendMessageCalls += 1;
+          return new Response(JSON.stringify({ ok: true }), {
+            headers: { "Content-Type": "application/json" },
+            status: 200,
+          });
+        }
+
+        throw new Error(`Unexpected Bale method: ${method}`);
+      },
+    },
+    async () => {
+      const result = await consumeBaleUpdates();
+      assert.deepEqual(result, { connected: 0, updates: 1 });
+    },
+  );
+
+  const state = await db.baleBotState.findUniqueOrThrow({
+    where: { id: "default" },
+  });
+
+  assert.equal(sendMessageCalls, 0);
+  assert.equal(state.updateOffset, 52);
+});
+
+test("invalid commands do not send a /chatid reply", async () => {
+  let sendMessageCalls = 0;
+
+  await withBaleMock(
+    {
+      fetchImpl: async (input, init) => {
+        const method = getBaleApiMethod(input as string | URL);
+
+        if (method === "getUpdates") {
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              result: [
+                {
+                  message: {
+                    chat: { id: 123456789, type: "private" },
+                    text: "/chatid something",
+                  },
+                  update_id: 61,
+                },
+              ],
+            }),
+            {
+              headers: { "Content-Type": "application/json" },
+              status: 200,
+            },
+          );
+        }
+
+        if (method === "sendMessage") {
+          sendMessageCalls += 1;
+          return new Response(JSON.stringify({ ok: true }), {
+            headers: { "Content-Type": "application/json" },
+            status: 200,
+          });
+        }
+
+        throw new Error(`Unexpected Bale method: ${method}`);
+      },
+    },
+    async () => {
+      const result = await consumeBaleUpdates();
+      assert.deepEqual(result, { connected: 0, updates: 1 });
+    },
+  );
+
+  const state = await db.baleBotState.findUniqueOrThrow({
+    where: { id: "default" },
+  });
+
+  assert.equal(sendMessageCalls, 0);
+  assert.equal(state.updateOffset, 62);
+});
+
+test("/connect still links a private chat during update consumption", async () => {
+  const link = await createBaleLinkToken(userId);
+  const token = tokenFromCommand(link.command);
+  const sentMessages: string[] = [];
+
+  await withBaleMock(
+    {
+      fetchImpl: async (input, init) => {
+        const method = getBaleApiMethod(input as string | URL);
+
+        if (method === "getUpdates") {
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              result: [
+                {
+                  message: {
+                    chat: { id: 123456789, type: "private" },
+                    text: `/connect@bot_username ${token}`,
+                  },
+                  update_id: 71,
+                },
+              ],
+            }),
+            {
+              headers: { "Content-Type": "application/json" },
+              status: 200,
+            },
+          );
+        }
+
+        if (method === "sendMessage") {
+          const body = new URLSearchParams(String(init?.body));
+          sentMessages.push(body.get("text") ?? "");
+
+          return new Response(JSON.stringify({ ok: true }), {
+            headers: { "Content-Type": "application/json" },
+            status: 200,
+          });
+        }
+
+        throw new Error(`Unexpected Bale method: ${method}`);
+      },
+    },
+    async () => {
+      const result = await consumeBaleUpdates();
+      assert.deepEqual(result, { connected: 1, updates: 1 });
+    },
+  );
+
+  const connection = await db.baleConnection.findUnique({
+    where: { userId },
+  });
+
+  assert.equal(connection?.chatId, "123456789");
+  assert.equal(sentMessages.length, 1);
+  assert.match(sentMessages[0] ?? "", /موفقیت/);
+});
+
+test("manual Bale chat ID recipients accept numeric chat IDs", async () => {
+  const recipient = await createBaleLunchReportRecipient({
+    adminId,
+    chatId: "91234567890",
+    name: "گروه عملیات",
+  });
+
+  const stored = await db.baleLunchReportRecipient.findUniqueOrThrow({
+    where: { id: recipient.id },
+  });
+
+  assert.equal(stored.chatId, "91234567890");
+});
+
+test("manual Bale chat ID recipients can be updated with numeric chat IDs", async () => {
+  const recipient = await createBaleLunchReportRecipient({
+    adminId,
+    chatId: "91234567890",
+    name: "گروه عملیات",
+  });
+
+  const updated = await updateBaleLunchReportRecipient({
+    active: true,
+    adminId,
+    chatId: "91234567891",
+    name: "گروه عملیات",
+    recipientId: recipient.id,
+  });
+
+  assert.equal(updated.chatId, "91234567891");
+});
+
+test("manual Bale chat ID recipients reject nonnumeric chat IDs", async () => {
+  await assert.rejects(
+    () =>
+      createBaleLunchReportRecipient({
+        adminId,
+        chatId: "123abc",
+        name: "گروه عملیات",
+      }),
+    /شناسه گفت‌وگوی بله معتبر نیست\./,
+  );
+});
+
 test("Bale linking stores a token hash and binds a private chat once", async () => {
   const link = await createBaleLinkToken(userId);
   const token = tokenFromCommand(link.command);
@@ -120,9 +426,9 @@ test("a Bale chat cannot be linked to two Nobino users", async () => {
   const first = await createBaleLinkToken(userId);
   const second = await createBaleLinkToken(secondUserId);
 
-  await connectBaleChat(tokenFromCommand(first.command), "shared-chat");
+  await connectBaleChat(tokenFromCommand(first.command), "222222222");
   await assert.rejects(
-    () => connectBaleChat(tokenFromCommand(second.command), "shared-chat"),
+    () => connectBaleChat(tokenFromCommand(second.command), "222222222"),
     BaleConnectionError,
   );
 });
@@ -135,7 +441,7 @@ test("expired Bale connection tokens are rejected", async () => {
   });
 
   await assert.rejects(
-    () => connectBaleChat(tokenFromCommand(link.command), "expired-chat"),
+    () => connectBaleChat(tokenFromCommand(link.command), "333333333"),
     BaleConnectionError,
   );
   assert.equal(await db.baleConnection.count({ where: { userId } }), 0);
@@ -143,7 +449,7 @@ test("expired Bale connection tokens are rejected", async () => {
 
 test("disconnecting removes the Bale chat mapping", async () => {
   const link = await createBaleLinkToken(userId);
-  await connectBaleChat(tokenFromCommand(link.command), "disconnect-chat");
+  await connectBaleChat(tokenFromCommand(link.command), "444444444");
 
   await disconnectBaleAccount(userId);
 
@@ -183,7 +489,7 @@ test("Bale delivery sends only notifications created after linking", async () =>
     },
   });
   const link = await createBaleLinkToken(userId);
-  await connectBaleChat(tokenFromCommand(link.command), "delivery-chat");
+  await connectBaleChat(tokenFromCommand(link.command), "555555555");
   const currentNotification = await db.notification.create({
     data: {
       userId,
@@ -212,7 +518,7 @@ test("Bale delivery sends only notifications created after linking", async () =>
 
   assert.equal(sentBodies.length, 1);
   const sentMessage = new URLSearchParams(sentBodies[0]);
-  assert.equal(sentMessage.get("chat_id"), "delivery-chat");
+  assert.equal(sentMessage.get("chat_id"), "555555555");
   assert.equal(sentMessage.get("text"), "درخواست رزرو شما تایید شد.");
   assert.doesNotMatch(sentMessage.get("text") ?? "", /https?:\/\//);
   assert.equal(
@@ -380,7 +686,7 @@ test("lunch report sends one minute after cutoff with Jalali date and Persian di
   const sentMessage = new URLSearchParams(sentBodies[0]);
   const text = sentMessage.get("text") ?? "";
 
-  assert.equal(sentMessage.get("chat_id"), "lunch-report-chat");
+  assert.equal(sentMessage.get("chat_id"), "123456780");
   assert.match(text, /^گزارش ناهار\n/);
   assert.match(text, new RegExp(`تاریخ: ${formatJalaliDate(targetDate)}`));
   assert.match(text, /جمع کل: ۲/);
@@ -575,12 +881,12 @@ test("lunch report sends to all active recipients and stores one delivery per re
   const sentChatIds: string[] = [];
 
   await createLunchReportRecipient({
-    chatId: "lunch-report-chat-a",
+    chatId: "666666667",
     id: lunchReportRecipientId,
     name: "گروه عملیات",
   });
   await createLunchReportRecipient({
-    chatId: "lunch-report-chat-b",
+    chatId: "666666668",
     id: secondLunchReportRecipientId,
     name: "گروه پشتیبانی",
   });
@@ -611,8 +917,8 @@ test("lunch report sends to all active recipients and stores one delivery per re
   );
 
   assert.deepEqual(sentChatIds.sort(), [
-    "lunch-report-chat-a",
-    "lunch-report-chat-b",
+    "666666667",
+    "666666668",
   ]);
   assert.equal(
     await db.baleLunchReportDelivery.count({
@@ -655,7 +961,7 @@ test("lunch report resolves a user recipient's current Bale connection on retry"
 
       await db.baleConnection.create({
         data: {
-          chatId: "connected-user-chat",
+          chatId: "777777777",
           enabled: true,
           userId,
         },
@@ -673,11 +979,11 @@ test("lunch report resolves a user recipient's current Bale connection on retry"
     },
   );
 
-  assert.deepEqual(sentChatIds, ["connected-user-chat"]);
+  assert.deepEqual(sentChatIds, ["777777777"]);
   const delivered = await db.baleLunchReportDelivery.findFirstOrThrow({
     where: { recipientId: lunchReportRecipientId },
   });
-  assert.equal(delivered.chatId, "connected-user-chat");
+  assert.equal(delivered.chatId, "777777777");
   assert.equal(delivered.status, BaleDeliveryStatus.SENT);
 });
 
@@ -779,7 +1085,7 @@ test("lunch report stops retrying after three failed attempts", async () => {
       recipientName: "گروه عملیات",
       reportDate: startOfLocalDay(targetDate),
       cutoffAt: getLunchCutoffAt(targetDate),
-      chatId: "lunch-report-chat",
+      chatId: "123456780",
       message: "stored snapshot",
       totalCount: 0,
       status: BaleDeliveryStatus.FAILED,
@@ -827,7 +1133,7 @@ test("lunch report reclaims stale sending deliveries but not fresh ones", async 
       recipientName: "گروه عملیات",
       reportDate: startOfLocalDay(targetDate),
       cutoffAt: getLunchCutoffAt(targetDate),
-      chatId: "lunch-report-chat",
+      chatId: "123456780",
       message: "fresh snapshot",
       totalCount: 0,
       status: BaleDeliveryStatus.SENDING,

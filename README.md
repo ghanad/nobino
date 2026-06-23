@@ -103,6 +103,8 @@ The first operational version is implemented. Seeded users can sign in, create h
   events and mark them as read.
 - `/settings/bale` allows authenticated users to securely link or unlink their
   private Bale chat.
+- `/admin/lunch-notifications` lets admins manage lunch report recipients,
+  including direct Bale chat/group IDs and linked Nobino users.
 - `/admin/bale` shows admins which users have linked Bale and reports sync and
   delivery health.
 - `/manager` is available to managers and admins.
@@ -223,11 +225,17 @@ become eligible exactly one minute after the configured lunch cutoff, use the
 target date in Jalali form, skip days without lunch service, and still send a
 zero-count message for active service days without reservations. If lunch
 reservations are disabled in admin settings, no lunch report is sent. Report
-recipients are managed by admins from `/admin/bale`, and every active recipient
-can target either a Bale chat ID or a Nobino user with an active Bale connection.
-Every active recipient receives its own delivery snapshot. User destinations
-resolve their current Bale connection again on each retry. Run only one sync invocation at a time to
+recipients are managed by admins from `/admin/lunch-notifications`, and every
+active recipient can target either a Bale chat ID or a Nobino user with an
+active Bale connection. Every active recipient receives its own delivery
+snapshot. User destinations resolve their current Bale connection again on each
+retry. Run only one sync invocation at a time to
 avoid overlapping external requests.
+
+External collaborators do not need a Nobino account. They open the bot in Bale,
+send `/chatid` in a private chat, copy the private chat ID shown by the bot, and
+send that value to an admin. The admin then registers the ID in
+`/admin/lunch-notifications`.
 
 Lunch report rows are stored separately from user-notification deliveries so
 only one report can be claimed per date. The Bale API does not expose an

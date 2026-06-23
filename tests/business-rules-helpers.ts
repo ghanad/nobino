@@ -265,7 +265,7 @@ export async function createLunchReportRecipient(input?: {
   return db.baleLunchReportRecipient.create({
     data: {
       active: input?.active ?? true,
-      chatId: input?.userId ? null : (input?.chatId ?? "lunch-report-chat"),
+      chatId: input?.userId ? null : (input?.chatId ?? "123456780"),
       id: input?.id ?? lunchReportRecipientId,
       name: input?.name ?? "گروه عملیات",
       userId: input?.userId,
