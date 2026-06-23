@@ -770,7 +770,7 @@ export function ManagerWeeklyCalendar({
 
                           return (
                             <div
-                              className="pointer-events-none z-10 p-2"
+                              className="pointer-events-none z-10 p-2 hover:z-30 focus-within:z-30"
                               key={`${day.dateParam}-${block.detail.id}`}
                               style={{
                                 gridColumn: dayIndex + 2,

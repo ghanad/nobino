@@ -1,5 +1,5 @@
 import { BaleDeliveryStatus, UserRole } from "@prisma/client";
-import { Save, Send } from "lucide-react";
+import { MessageSquareText, Plus, Save, Send, Users } from "lucide-react";
 
 import {
   createBaleLunchReportRecipientAction,
@@ -257,57 +257,89 @@ export default async function AdminLunchNotificationsPage(props: {
           </p>
         </div>
 
-        <form action={createBaleLunchReportRecipientAction} className="grid gap-3 rounded-md border bg-background p-4 lg:grid-cols-[1fr_1fr_1fr_auto]">
-          <BaleLunchReportRecipientFields
-            baleBotUsername={baleBotUsername}
-            connectedUsers={connectedUsers}
-          />
-          <SubmitButton className="lg:self-end" pendingLabel="در حال افزودن">
-            <Save className="h-4 w-4" />
-            افزودن گیرنده
-          </SubmitButton>
+        <form action={createBaleLunchReportRecipientAction} className="overflow-hidden rounded-lg border bg-muted/20">
+          <div className="flex items-start gap-3 border-b bg-background px-4 py-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+              <Plus className="h-5 w-5" />
+            </span>
+            <div>
+              <h3 className="text-sm font-semibold text-slate-950">گیرنده جدید</h3>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                مشخصات مقصد دریافت گزارش روزانه را وارد کنید.
+              </p>
+            </div>
+          </div>
+          <div className="p-4">
+            <BaleLunchReportRecipientFields
+              baleBotUsername={baleBotUsername}
+              connectedUsers={connectedUsers}
+            />
+          </div>
+          <div className="flex justify-end border-t bg-background px-4 py-3">
+            <SubmitButton pendingLabel="در حال افزودن">
+              <Save className="h-4 w-4" />
+              افزودن گیرنده
+            </SubmitButton>
+          </div>
         </form>
 
         <div className="grid gap-3">
           {lunchReportRecipients.length === 0 ? (
-            <div className="rounded-md border border-dashed bg-background p-4 text-sm text-muted-foreground">
-              هنوز گیرنده‌ای ثبت نشده است.
+            <div className="flex flex-col items-center rounded-lg border border-dashed bg-muted/10 px-4 py-8 text-center">
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <Users className="h-5 w-5" />
+              </span>
+              <p className="mt-3 text-sm font-medium text-foreground">هنوز گیرنده‌ای ثبت نشده است</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                با فرم بالا اولین مقصد گزارش روزانه را اضافه کنید.
+              </p>
             </div>
           ) : (
             lunchReportRecipients.map((recipient) => (
-              <form action={updateBaleLunchReportRecipientAction} className="grid gap-3 rounded-md border bg-background p-4 lg:grid-cols-[1fr_1fr_1fr_auto_auto_auto]" key={recipient.id}>
+              <form action={updateBaleLunchReportRecipientAction} className="overflow-hidden rounded-lg border bg-background" key={recipient.id}>
                 <input name="recipientId" type="hidden" value={recipient.id} />
-                <BaleLunchReportRecipientFields
-                  baleBotUsername={baleBotUsername}
-                  chatId={recipient.chatId}
-                  connectedUsers={
-                    recipient.userId &&
-                    !connectedUsers.some((user) => user.id === recipient.userId) &&
-                    recipient.user
-                      ? [
-                          ...connectedUsers,
-                          {
-                            email: recipient.user.email,
-                            id: recipient.userId,
-                            name: `${recipient.user.name} (اتصال غیرفعال)`,
-                          },
-                        ]
-                      : connectedUsers
-                  }
-                  name={recipient.name}
-                  userId={recipient.userId}
-                />
-                <label className="flex h-10 items-center gap-2 text-sm lg:self-end">
-                  <input defaultChecked={recipient.active} name="active" type="checkbox" />
-                  فعال
-                </label>
-                <div className="text-xs text-muted-foreground lg:self-end lg:pb-2">
-                  {formatCount(recipient._count.deliveries)} ارسال
+                <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
+                  <div className="flex items-center gap-2 text-sm font-medium text-slate-950">
+                    <MessageSquareText className="h-4 w-4 text-muted-foreground" />
+                    {recipient.name}
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {formatCount(recipient._count.deliveries)} ارسال
+                  </span>
                 </div>
-                <SubmitButton className="lg:self-end" pendingLabel="در حال ذخیره" variant="outline">
-                  <Save className="h-4 w-4" />
-                  ذخیره
-                </SubmitButton>
+                <div className="p-4">
+                  <BaleLunchReportRecipientFields
+                    baleBotUsername={baleBotUsername}
+                    chatId={recipient.chatId}
+                    connectedUsers={
+                      recipient.userId &&
+                      !connectedUsers.some((user) => user.id === recipient.userId) &&
+                      recipient.user
+                        ? [
+                            ...connectedUsers,
+                            {
+                              email: recipient.user.email,
+                              id: recipient.userId,
+                              name: `${recipient.user.name} (اتصال غیرفعال)`,
+                            },
+                          ]
+                        : connectedUsers
+                    }
+                    name={recipient.name}
+                    showChatIdHelp={false}
+                    userId={recipient.userId}
+                  />
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t bg-muted/20 px-4 py-3">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input className="h-4 w-4 accent-primary" defaultChecked={recipient.active} name="active" type="checkbox" />
+                    گیرنده فعال باشد
+                  </label>
+                  <SubmitButton pendingLabel="در حال ذخیره" size="sm" variant="outline">
+                    <Save className="h-4 w-4" />
+                    ذخیره تغییرات
+                  </SubmitButton>
+                </div>
               </form>
             ))
           )}
