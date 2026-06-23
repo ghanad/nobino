@@ -67,6 +67,11 @@ function getNavItems(user: CurrentUser): GlobalNavItem[] {
           { href: "/admin/capacity", label: "ظرفیت", match: "prefix" },
           { href: "/admin/schedule", label: "زمان‌بندی", match: "prefix" },
           { href: "/admin/lunch", label: "ناهار", match: "prefix" },
+          {
+            href: "/admin/lunch-notifications",
+            label: "ارسال گزارش ناهار",
+            match: "prefix",
+          },
           { href: "/admin/announcements", label: "اعلان‌ها", match: "prefix" },
           { href: "/admin/bale", label: "پیام‌رسان بله", match: "prefix" },
         ],
