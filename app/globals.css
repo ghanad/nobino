@@ -35,6 +35,8 @@
 
 @layer components {
   .document-content { @apply text-base leading-8 text-slate-800; }
+  .document-content [dir="rtl"] { @apply text-right; }
+  .document-content [dir="ltr"] { @apply text-left; }
   .document-content p { @apply my-3; }
   .document-content h2 { @apply mb-3 mt-8 text-2xl font-bold text-slate-950; }
   .document-content h3 { @apply mb-2 mt-6 text-xl font-bold text-slate-950; }

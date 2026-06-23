@@ -97,6 +97,24 @@ test("editor JSON rejects unsupported nodes, unsafe links, and base64 images", (
   assert.throws(() => validateDocumentContent({ type: "doc", content: [{ type: "script" }] }));
   assert.throws(() => validateDocumentContent({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "x", marks: [{ type: "link", attrs: { href: "javascript:alert(1)" } }] }] }] }));
   assert.throws(() => validateDocumentContent({ type: "doc", content: [{ type: "image", attrs: { imageId: "x", src: "data:image/png;base64,abc", alt: "x" } }] }));
+  assert.throws(() => validateDocumentContent({ type: "doc", content: [{ type: "paragraph", attrs: { dir: "sideways" } }] }), /جهت متن نامعتبر/);
+});
+
+test("editor JSON preserves RTL and LTR text direction", () => {
+  const result = validateDocumentContent({
+    type: "doc",
+    content: [
+      { type: "paragraph", attrs: { dir: "rtl" }, content: [{ type: "text", text: "متن فارسی" }] },
+      { type: "heading", attrs: { level: 2, dir: "ltr" }, content: [{ type: "text", text: "English title" }] },
+    ],
+  });
+  assert.deepEqual(result.content, {
+    type: "doc",
+    content: [
+      { type: "paragraph", attrs: { dir: "rtl" }, content: [{ type: "text", text: "متن فارسی" }] },
+      { type: "heading", attrs: { level: 2, dir: "ltr" }, content: [{ type: "text", text: "English title" }] },
+    ],
+  });
 });
 
 test("page updates only accept images owned by that page", async () => {

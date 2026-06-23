@@ -21,6 +21,11 @@ export function DocumentEditor({ content, documentId, title, updatedAt }: { cont
   const [saving, setSaving] = useState(false);
   const editor = useEditor({ extensions: documentEditorExtensions, content, immediatelyRender: false, editorProps: { attributes: { class: "document-content", dir: "rtl" } } });
 
+  function setTextDirection(dir: "rtl" | "ltr") {
+    if (!editor) return;
+    editor.chain().focus().updateAttributes("paragraph", { dir }).updateAttributes("heading", { dir }).run();
+  }
+
   async function save() {
     if (!editor) return;
     setSaving(true); setError(""); setMessage("");
@@ -54,6 +59,8 @@ export function DocumentEditor({ content, documentId, title, updatedAt }: { cont
       <div className="flex flex-wrap gap-1.5 rounded-t-lg border border-slate-300 bg-slate-50 p-2" role="toolbar" aria-label="ابزارهای ویرایش">
         <ToolbarButton active={editor.isActive("bold")} label="پررنگ" onClick={() => editor.chain().focus().toggleBold().run()}>پررنگ</ToolbarButton>
         <ToolbarButton active={editor.isActive("italic")} label="مورب" onClick={() => editor.chain().focus().toggleItalic().run()}>مورب</ToolbarButton>
+        <ToolbarButton active={editor.isActive("paragraph", { dir: "rtl" }) || editor.isActive("heading", { dir: "rtl" })} label="نوشتن از راست به چپ" onClick={() => setTextDirection("rtl")}>راست‌به‌چپ</ToolbarButton>
+        <ToolbarButton active={editor.isActive("paragraph", { dir: "ltr" }) || editor.isActive("heading", { dir: "ltr" })} label="نوشتن از چپ به راست" onClick={() => setTextDirection("ltr")}>چپ‌به‌راست</ToolbarButton>
         <ToolbarButton label="عنوان سطح دو" onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>عنوان ۲</ToolbarButton>
         <ToolbarButton label="عنوان سطح سه" onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}>عنوان ۳</ToolbarButton>
         <ToolbarButton label="فهرست نشانه‌دار" onClick={() => editor.chain().focus().toggleBulletList().run()}>فهرست •</ToolbarButton>

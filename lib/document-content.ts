@@ -53,6 +53,14 @@ function assertKeys(value: JsonObject, keys: string[], label: string): void {
   }
 }
 
+function normalizeTextDirection(value: unknown): "rtl" | "ltr" | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (value !== "rtl" && value !== "ltr") {
+    throw new DocumentContentError("جهت متن نامعتبر است.");
+  }
+  return value;
+}
+
 export function isSafeDocumentLink(href: string): boolean {
   const value = href.trim();
   if (!value || value.startsWith("//")) return false;
@@ -141,11 +149,19 @@ export function validateDocumentContent(value: unknown): ValidatedDocumentConten
     let attrs: Prisma.InputJsonValue | undefined;
     if (node.type === "heading") {
       if (!isObject(node.attrs)) throw new DocumentContentError("سطح عنوان نامعتبر است.");
-      assertKeys(node.attrs, ["level"], "عنوان");
+      assertKeys(node.attrs, ["level", "dir"], "عنوان");
       if (![2, 3, 4].includes(Number(node.attrs.level))) {
         throw new DocumentContentError("سطح عنوان پشتیبانی نمی‌شود.");
       }
-      attrs = { level: Number(node.attrs.level) };
+      const dir = normalizeTextDirection(node.attrs.dir);
+      attrs = dir ? { level: Number(node.attrs.level), dir } : { level: Number(node.attrs.level) };
+    } else if (node.type === "paragraph") {
+      if (node.attrs !== undefined) {
+        if (!isObject(node.attrs)) throw new DocumentContentError("ویژگی پاراگراف نامعتبر است.");
+        assertKeys(node.attrs, ["dir"], "پاراگراف");
+        const dir = normalizeTextDirection(node.attrs.dir);
+        if (dir) attrs = { dir };
+      }
     } else if (node.type === "orderedList") {
       if (node.attrs !== undefined) {
         if (!isObject(node.attrs)) throw new DocumentContentError("فهرست نامعتبر است.");
