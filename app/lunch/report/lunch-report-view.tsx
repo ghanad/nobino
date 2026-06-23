@@ -4,12 +4,15 @@ import { FormEvent, MouseEvent, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 
+import { cancelLunchReservationByManagerAction } from "@/app/lunch/report/actions";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { Button } from "@/components/ui/button";
 import { JALALI_DATE_INPUT_PLACEHOLDER } from "@/lib/jalali-date";
 import type { LunchReportData } from "@/lib/lunch-report-service";
 import { cn } from "@/lib/utils";
 
 type LunchReportViewProps = {
+  canCancelReservations: boolean;
   initialReport: LunchReportData;
 };
 
@@ -47,7 +50,10 @@ function buildDataHref(dateParam: string): string {
   return `/lunch/report/data?date=${encodeURIComponent(dateParam)}`;
 }
 
-export function LunchReportView({ initialReport }: LunchReportViewProps) {
+export function LunchReportView({
+  canCancelReservations,
+  initialReport,
+}: LunchReportViewProps) {
   const [dateInput, setDateInput] = useState(initialReport.dateParam);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -252,21 +258,61 @@ export function LunchReportView({ initialReport }: LunchReportViewProps) {
             </div>
           ) : (
             <div className="overflow-hidden rounded-md border bg-background">
-              <div className="grid grid-cols-[1fr_1fr] border-b bg-muted/30 px-4 py-3 text-sm font-medium text-muted-foreground">
+              <div
+                className={`grid ${
+                  canCancelReservations
+                    ? "grid-cols-[1fr_1fr_auto]"
+                    : "grid-cols-[1fr_1fr]"
+                } border-b bg-muted/30 px-4 py-3 text-sm font-medium text-muted-foreground`}
+              >
                 <span>نام</span>
                 <span>ساختمان</span>
+                {canCancelReservations ? <span>عملیات</span> : null}
               </div>
               <div className="divide-y">
                 {report.locations.flatMap((location) =>
                   location.reservations.map((reservation) => (
                     <div
-                      className="grid grid-cols-[1fr_1fr] px-4 py-3 text-sm"
+                      className={`grid items-center gap-2 ${
+                        canCancelReservations
+                          ? "grid-cols-[1fr_1fr_auto]"
+                          : "grid-cols-[1fr_1fr]"
+                      } px-4 py-3 text-sm`}
                       key={reservation.id}
                     >
                       <span>{reservation.userName}</span>
                       <span className="text-muted-foreground">
                         {location.name}
                       </span>
+                      {canCancelReservations ? (
+                        <form
+                          action={cancelLunchReservationByManagerAction}
+                          onSubmit={(event) => {
+                            if (
+                              !confirm(
+                                `رزرو ناهار ${reservation.userName} لغو شود؟`,
+                              )
+                            ) {
+                              event.preventDefault();
+                            }
+                          }}
+                        >
+                          <input name="date" type="hidden" value={report.dateParam} />
+                          <input
+                            name="reservationId"
+                            type="hidden"
+                            value={reservation.id}
+                          />
+                          <SubmitButton
+                            className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            pendingLabel="در حال لغو..."
+                            size="sm"
+                            variant="outline"
+                          >
+                            لغو ناهار
+                          </SubmitButton>
+                        </form>
+                      ) : null}
                     </div>
                   )),
                 )}

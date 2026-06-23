@@ -42,6 +42,7 @@ export const ACTION_LABELS: Record<string, string> = {
   CAPACITY_EXCEPTION_CREATED: "استثنای ظرفیت اضافه شد",
   CAPACITY_EXCEPTION_DELETED: "استثنای ظرفیت حذف شد",
   CAPACITY_EXCEPTION_UPDATED: "استثنای ظرفیت ویرایش شد",
+  LUNCH_RESERVATION_CANCELLED_BY_MANAGER: "رزرو ناهار توسط مدیر لغو شد",
   RESERVATION_APPROVED: "رزرو تایید شد",
   RESERVATION_CANCELLED: "رزرو لغو شد",
   RESERVATION_CREATED: "درخواست رزرو ثبت شد",
@@ -61,6 +62,7 @@ export const ACTION_LABELS: Record<string, string> = {
 
 export const ENTITY_LABELS: Record<string, string> = {
   BaleLunchReportRecipient: "گیرنده گزارش ناهار",
+  LunchReservation: "رزرو ناهار",
   Reservation: "رزرو",
   ReservationPolicy: "سیاست رزرو",
   ResourcePool: "ظرفیت",

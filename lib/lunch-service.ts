@@ -75,6 +75,22 @@ async function assertAdmin(adminId: string, client: DbClient = db) {
   }
 }
 
+async function assertManagerOrAdmin(userId: string, client: DbClient = db) {
+  const user = await client.user.findUnique({
+    where: { id: userId },
+    select: { active: true, role: true },
+  });
+
+  if (
+    !user?.active ||
+    (user.role !== UserRole.MANAGER && user.role !== UserRole.ADMIN)
+  ) {
+    throw new LunchReservationError(
+      "فقط مدیر یا مدیر سیستم می‌تواند رزرو ناهار دیگران را لغو کند.",
+    );
+  }
+}
+
 export async function getLunchSettings(client: DbClient = db) {
   const settings = await client.lunchSettings.findUnique({
     where: { id: "default" },
@@ -343,6 +359,59 @@ export async function cancelLunchReservationByUser(input: {
         type: "LUNCH_CANCELLED",
         title: "رزرو ناهار لغو شد",
         body: "رزرو ناهار شما لغو شد.",
+      },
+    });
+
+    return cancelled;
+  });
+}
+
+export async function cancelLunchReservationByManager(input: {
+  reservationId: string;
+  managerId: string;
+  now?: Date;
+}) {
+  return db.$transaction(async (tx) => {
+    await assertManagerOrAdmin(input.managerId, tx);
+
+    const current = await tx.lunchReservation.findUnique({
+      where: { id: input.reservationId },
+    });
+
+    if (!current || current.status !== LunchReservationStatus.ACTIVE) {
+      throw new LunchReservationError("رزرو ناهار فعال پیدا نشد.");
+    }
+
+    const cancelled = await tx.lunchReservation.update({
+      where: { id: current.id },
+      data: {
+        status: LunchReservationStatus.CANCELLED_BY_ADMIN,
+        cancelledAt: input.now ?? new Date(),
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorUserId: input.managerId,
+        entityType: "LunchReservation",
+        entityId: cancelled.id,
+        action: "LUNCH_RESERVATION_CANCELLED_BY_MANAGER",
+        oldValue: { status: current.status },
+        newValue: {
+          status: cancelled.status,
+          cancelledAt: cancelled.cancelledAt?.toISOString() ?? null,
+          userId: cancelled.userId,
+        },
+      },
+    });
+
+    await tx.notification.create({
+      data: {
+        userId: cancelled.userId,
+        lunchReservationId: cancelled.id,
+        type: "LUNCH_CANCELLED",
+        title: "رزرو ناهار لغو شد",
+        body: "رزرو ناهار شما توسط مدیر لغو شد.",
       },
     });
 

@@ -4,6 +4,7 @@ import { test } from "node:test";
 import { LunchReservationStatus } from "@prisma/client";
 
 import {
+  cancelLunchReservationByManager,
   cancelLunchReservationByUser,
   createLunchReservation,
   LunchReservationError,
@@ -14,6 +15,7 @@ import {
   addDays,
   db,
   lunchLocationId,
+  managerId,
   nextMidweekIranHolidayDateAtHour,
   nextWorkingDateAtHour,
   registerBusinessRuleTestHooks,
@@ -164,6 +166,69 @@ test("users cannot cancel their own lunch reservation after cutoff", async () =>
         reservationId: reservation.id,
         userId,
         now: afterCutoff,
+      }),
+    LunchReservationError,
+  );
+});
+
+test("managers can cancel anyone's active lunch reservation after cutoff", async () => {
+  const targetDate = nextWorkingDateAtHour(12);
+  const beforeCutoff = addDays(startOfLocalDay(targetDate), -1);
+  beforeCutoff.setHours(12, 0, 0, 0);
+  const afterCutoff = addDays(startOfLocalDay(targetDate), -1);
+  afterCutoff.setHours(23, 59, 1, 0);
+
+  const reservation = await createLunchReservation({
+    userId,
+    locationId: lunchLocationId,
+    date: targetDate,
+    now: beforeCutoff,
+  });
+
+  const cancelled = await cancelLunchReservationByManager({
+    reservationId: reservation.id,
+    managerId,
+    now: afterCutoff,
+  });
+
+  assert.equal(cancelled.status, LunchReservationStatus.CANCELLED_BY_ADMIN);
+
+  const [auditLog, notification] = await Promise.all([
+    db.auditLog.findFirst({
+      where: {
+        entityId: reservation.id,
+        action: "LUNCH_RESERVATION_CANCELLED_BY_MANAGER",
+      },
+    }),
+    db.notification.findFirst({
+      where: { lunchReservationId: reservation.id, type: "LUNCH_CANCELLED" },
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
+
+  assert.equal(auditLog?.actorUserId, managerId);
+  assert.equal(auditLog?.action, "LUNCH_RESERVATION_CANCELLED_BY_MANAGER");
+  assert.equal(notification?.userId, userId);
+  assert.equal(notification?.body, "رزرو ناهار شما توسط مدیر لغو شد.");
+});
+
+test("regular users cannot use manager lunch cancellation", async () => {
+  const targetDate = nextWorkingDateAtHour(12);
+  const beforeCutoff = addDays(startOfLocalDay(targetDate), -1);
+  beforeCutoff.setHours(12, 0, 0, 0);
+
+  const reservation = await createLunchReservation({
+    userId,
+    locationId: lunchLocationId,
+    date: targetDate,
+    now: beforeCutoff,
+  });
+
+  await assert.rejects(
+    () =>
+      cancelLunchReservationByManager({
+        reservationId: reservation.id,
+        managerId: userId,
       }),
     LunchReservationError,
   );
