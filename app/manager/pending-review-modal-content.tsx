@@ -2,7 +2,8 @@
 
 import type { ReservationStatus as ReservationStatusType } from "@prisma/client";
 import { CalendarClock, Check, X } from "lucide-react";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useActionState, useEffect, useState } from "react";
 
 import {
   approveReservationAction,
@@ -51,9 +52,34 @@ export function PendingReviewModalContent({
   userEmail,
   userName,
 }: PendingReviewModalContentProps) {
+  const router = useRouter();
   const [activeAction, setActiveAction] = useState<ReviewAction>(null);
+  const [approvalState, approvalAction] = useActionState(
+    approveReservationAction,
+    null,
+  );
   const isPending = status === "PENDING";
   const returnDateParam = requestedDate;
+
+  useEffect(() => {
+    if (!approvalState) {
+      return;
+    }
+
+    if (approvalState.ok) {
+      router.refresh();
+      return;
+    }
+
+    delete document.getElementById(
+      `review-reservation-${reservationId}`,
+    )?.dataset.closed;
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${window.location.search}#review-reservation-${reservationId}`,
+    );
+  }, [approvalState, reservationId, router]);
 
   return (
     <div className="p-5 text-card-foreground">
@@ -104,8 +130,16 @@ export function PendingReviewModalContent({
           >
             {isPending ? (
               <form
-                action={approveReservationAction}
+                action={approvalAction}
                 onSubmit={() => {
+                  const modal = document.getElementById(
+                    `review-reservation-${reservationId}`,
+                  );
+
+                  if (modal) {
+                    modal.dataset.closed = "true";
+                  }
+
                   window.history.replaceState(
                     null,
                     "",
@@ -164,6 +198,12 @@ export function PendingReviewModalContent({
               </form>
             )}
           </div>
+
+          {approvalState && !approvalState.ok ? (
+            <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {approvalState.error}
+            </p>
+          ) : null}
 
           {activeAction === "time" ? (
             <form

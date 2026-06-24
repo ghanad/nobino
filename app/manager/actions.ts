@@ -66,8 +66,9 @@ function getActionErrorMessage(error: unknown): string {
 }
 
 export async function approveReservationAction(
+  _previousState: ManagerActionResult | null,
   formData: FormData,
-): Promise<void> {
+): Promise<ManagerActionResult> {
   const user = await requireCurrentUser();
   const parsed = reservationIdSchema.safeParse({
     reservationId: formData.get("reservationId"),
@@ -75,7 +76,10 @@ export async function approveReservationAction(
   });
 
   if (!parsed.success) {
-    redirectToQueue({ error: "Choose a valid reservation to approve." });
+    return {
+      ok: false,
+      error: "Choose a valid reservation to approve.",
+    };
   }
 
   try {
@@ -84,13 +88,15 @@ export async function approveReservationAction(
       managerId: user.id,
     });
   } catch (error) {
-    redirectToQueue({
-      date: parsed.data.date,
+    return {
+      ok: false,
       error: getActionErrorMessage(error),
-    });
+    };
   }
 
-  redirectToQueue({ date: parsed.data.date, approved: "1" });
+  revalidatePath("/manager");
+
+  return { ok: true };
 }
 
 export async function rejectReservationAction(
