@@ -11,11 +11,16 @@ import {
 } from "@/app/reservations/actions";
 import { Button } from "@/components/ui/button";
 import { SwipeDismissToast } from "@/components/ui/swipe-dismiss-toast";
-import { formatJalaliDate, formatJalaliDateParam } from "@/lib/jalali-date";
+import {
+  formatJalaliDate,
+  formatJalaliDateParam,
+  formatJalaliDateTime,
+} from "@/lib/jalali-date";
 import { cn } from "@/lib/utils";
 
 export type ActiveReservation = {
   id: string;
+  autoAcceptAt: Date | null;
   startAt: Date;
   endAt: Date;
   partySize: number;
@@ -46,6 +51,7 @@ type ActionToast = {
 
 type ActiveReservationsListProps = {
   activeLunchReservationByDate: Record<string, { id: string }>;
+  autoAcceptEnabled: boolean;
   cancelLunchReservationAction: (
     previousState: LunchActionState,
     formData: FormData,
@@ -418,9 +424,11 @@ function CancelReservationForm({
 }
 
 function ReservationCard({
+  autoAcceptEnabled,
   onCancelComplete,
   reservation,
 }: {
+  autoAcceptEnabled: boolean;
   onCancelComplete: (state: CancelReservationActionState) => void;
   reservation: ActiveReservation;
 }) {
@@ -474,6 +482,23 @@ function ReservationCard({
         </div>
       </div>
 
+      {isPending ? (
+        <div className="mt-2 rounded-md border bg-muted/30 px-3 py-2 text-xs leading-5 text-muted-foreground">
+          {autoAcceptEnabled && reservation.autoAcceptAt ? (
+            <>
+              <span className="font-medium text-foreground">
+                مهلت تایید خودکار:
+              </span>{" "}
+              <span dir="rtl">{formatJalaliDateTime(reservation.autoAcceptAt)}</span>
+            </>
+          ) : autoAcceptEnabled ? (
+            "برای این درخواست هنوز مهلت تایید خودکار ثبت نشده است."
+          ) : (
+            "تایید خودکار برای این درخواست غیرفعال است."
+          )}
+        </div>
+      ) : null}
+
       {showCardBody ? (
         <div className="mt-2 grid gap-2">
           {showReason || showRejectionReason ? (
@@ -515,6 +540,7 @@ function ReservationCard({
 
 export function ActiveReservationsList({
   activeLunchReservationByDate,
+  autoAcceptEnabled,
   cancelLunchReservationAction,
   onReservationCancelled,
   reservations,
@@ -623,6 +649,7 @@ export function ActiveReservationsList({
         <div className="mt-5 grid gap-3">
           {currentReservations.map((reservation) => (
             <ReservationCard
+              autoAcceptEnabled={autoAcceptEnabled}
               key={reservation.id}
               onCancelComplete={handleCancelComplete}
               reservation={reservation}

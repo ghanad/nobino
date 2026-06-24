@@ -214,6 +214,8 @@ export async function resetDatabase() {
   await db.reservationPolicy.create({
     data: {
       id: "default",
+      autoAcceptDelayHours: 4,
+      autoAcceptEnabled: false,
       dailyUserHourLimit: 3,
       oneReservationPerDayEnabled: true,
     },

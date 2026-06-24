@@ -40,6 +40,7 @@ type ReservationsPageProps = {
 
 type MyReservation = {
   id: string;
+  autoAcceptAt: Date | null;
   startAt: Date;
   endAt: Date;
   partySize: number;
@@ -213,7 +214,7 @@ function getReservationsToast(
   }
 
   const successMessage =
-    (params?.created && "درخواست رزرو ثبت شد و برای تایید مدیر ارسال شد.") ||
+    (params?.created && "درخواست رزرو ثبت شد و در انتظار بررسی است.") ||
     (params?.cancelled && "رزرو لغو شد و ظرفیت آن آزاد شد.") ||
     (params?.alternativeAccepted &&
       "زمان جایگزین پذیرفته شد و رزرو تایید شد.") ||
@@ -388,6 +389,7 @@ export default async function ReservationsPage({
     db.reservationPolicy.findUnique({
       where: { id: "default" },
       select: {
+        autoAcceptEnabled: true,
         dailyUserHourLimit: true,
         oneReservationPerDayEnabled: true,
       },
@@ -397,6 +399,7 @@ export default async function ReservationsPage({
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
+        autoAcceptAt: true,
         startAt: true,
         endAt: true,
         partySize: true,
@@ -715,6 +718,7 @@ export default async function ReservationsPage({
         action={createReservationInlineAction}
         activeReservations={activeReservations}
         activeLunchReservationByDate={activeLunchReservationByDate}
+        autoAcceptEnabled={reservationPolicy?.autoAcceptEnabled ?? false}
         cancelLunchReservationAction={cancelLunchReservationAction}
         currentDateParam={dateParam}
         dailyActiveReservationCountByDate={dailyActiveReservationCountByDate}

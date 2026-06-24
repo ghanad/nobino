@@ -44,6 +44,7 @@ export type CreateReservationActionState = {
   message: string;
   mutation?: {
     createdAt: string;
+    autoAcceptAt: string | null;
     endAt: string;
     partySize: number;
     reason: string | null;
@@ -180,9 +181,10 @@ export async function createReservationInlineAction(
     });
 
     return {
-      message: "درخواست رزرو ثبت شد و برای تایید مدیر ارسال شد.",
+      message: "درخواست رزرو ثبت شد و در انتظار بررسی است.",
       mutation: {
         createdAt: reservation.createdAt.toISOString(),
+        autoAcceptAt: reservation.autoAcceptAt?.toISOString() ?? null,
         endAt: reservation.endAt.toISOString(),
         partySize: reservation.partySize,
         reason: reservation.reason,

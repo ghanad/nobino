@@ -31,9 +31,36 @@ const resourcePoolSchema = z.object({
 });
 
 const reservationPolicySchema = z.object({
+  autoAcceptDelayHours: z.coerce.number().int().min(1).max(24),
+  autoAcceptEnabled: z.coerce.boolean(),
   dailyUserHourLimit: z.coerce.number().int().min(1).max(24),
   oneReservationPerDayEnabled: z.coerce.boolean(),
 });
+
+function getReservationPolicyValidationMessage(
+  issues: Array<{ path: (string | number)[] }>,
+): string {
+  const invalidDailyLimit = issues.some(
+    (issue) => issue.path[0] === "dailyUserHourLimit",
+  );
+  const invalidAutoAcceptDelay = issues.some(
+    (issue) => issue.path[0] === "autoAcceptDelayHours",
+  );
+
+  if (invalidDailyLimit && invalidAutoAcceptDelay) {
+    return "سقف ساعت رزرو روزانه هر کاربر و مدت انتظار تا تأیید خودکار باید عددی بین ۱ تا ۲۴ باشند.";
+  }
+
+  if (invalidDailyLimit) {
+    return "سقف ساعت رزرو روزانه هر کاربر باید عددی بین ۱ تا ۲۴ باشد.";
+  }
+
+  if (invalidAutoAcceptDelay) {
+    return "مدت انتظار تا تأیید خودکار باید عددی بین ۱ تا ۲۴ ساعت باشد.";
+  }
+
+  return "تنظیمات سیاست رزرو معتبر وارد کنید.";
+}
 
 const createCapacityExceptionSchema = z.object({
   resourcePoolId: z.string().min(1),
@@ -87,6 +114,8 @@ export async function updateReservationPolicyAction(
 ): Promise<void> {
   const admin = await requireRole([UserRole.ADMIN]);
   const parsed = reservationPolicySchema.safeParse({
+    autoAcceptDelayHours: formData.get("autoAcceptDelayHours"),
+    autoAcceptEnabled: checkboxToBoolean(formData.get("autoAcceptEnabled")),
     dailyUserHourLimit: formData.get("dailyUserHourLimit"),
     oneReservationPerDayEnabled: checkboxToBoolean(
       formData.get("oneReservationPerDayEnabled"),
@@ -95,22 +124,30 @@ export async function updateReservationPolicyAction(
 
   if (!parsed.success) {
     redirectToAdmin({
-      error: "Enter a valid daily user reservation limit.",
-      tab: "capacity",
+      error: getReservationPolicyValidationMessage(parsed.error.issues),
+      tab: "reservation-policy",
     });
   }
 
   try {
     await updateReservationPolicy({
       adminId: admin.id,
+      autoAcceptDelayHours: parsed.data.autoAcceptDelayHours,
+      autoAcceptEnabled: parsed.data.autoAcceptEnabled,
       dailyUserHourLimit: parsed.data.dailyUserHourLimit,
       oneReservationPerDayEnabled: parsed.data.oneReservationPerDayEnabled,
     });
   } catch (error) {
-    redirectToAdmin({ error: getActionErrorMessage(error), tab: "capacity" });
+    redirectToAdmin({
+      error: getActionErrorMessage(error),
+      tab: "reservation-policy",
+    });
   }
 
-  redirectToAdmin({ reservationPolicyUpdated: "1", tab: "capacity" });
+  redirectToAdmin({
+    reservationPolicyUpdated: "1",
+    tab: "reservation-policy",
+  });
 }
 
 export async function createCapacityExceptionAction(

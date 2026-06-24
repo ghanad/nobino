@@ -25,6 +25,8 @@ export function redirectToAdmin(
   const sectionPath =
     params.tab === "capacity"
       ? "/admin/capacity"
+      : params.tab === "reservation-policy"
+        ? "/admin/reservation-policy"
       : params.tab === "schedule"
         ? "/admin/schedule"
         : "/admin";

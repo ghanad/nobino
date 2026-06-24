@@ -137,6 +137,8 @@ model ReservationPolicy {
   id                          String   @id @default("default")
   dailyUserHourLimit          Int      @default(3)
   oneReservationPerDayEnabled Boolean  @default(true)
+  autoAcceptEnabled           Boolean  @default(false)
+  autoAcceptDelayHours        Int      @default(4)
   createdAt                   DateTime @default(now())
   updatedAt                   DateTime @updatedAt
 }
@@ -212,6 +214,7 @@ model Reservation {
   status          ReservationStatus @default(PENDING)
   reason          String?
   rejectionReason String?
+  autoAcceptAt    DateTime?
   approvedById    String?
   approvedAt      DateTime?
   cancelledById   String?

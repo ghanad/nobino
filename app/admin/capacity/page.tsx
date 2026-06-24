@@ -8,7 +8,6 @@ import {
   ADMIN_PAGE_LABELS,
   CapacityExceptions,
   getAdminToast,
-  ReservationPolicySettings,
   ResourcePoolSettings,
 } from "@/app/admin/_sections";
 
@@ -19,7 +18,6 @@ type AdminCapacityPageProps = {
     capacityExceptionDeleted?: string;
     capacityExceptionUpdated?: string;
     poolUpdated?: string;
-    reservationPolicyUpdated?: string;
   }>;
 };
 
@@ -29,57 +27,43 @@ export default async function AdminCapacityPage({
   await requireRole([UserRole.ADMIN]);
   const params = await searchParams;
   const toast = getAdminToast(params);
-  const [resourcePools, reservationPolicy, capacityExceptions] =
-    await Promise.all([
-      db.resourcePool.findMany({
-        orderBy: { name: "asc" },
-        select: {
-          id: true,
-          name: true,
-          capacity: true,
-          active: true,
-        },
-      }),
-      db.reservationPolicy.findUnique({
-        where: { id: "default" },
-        select: {
-          dailyUserHourLimit: true,
-          oneReservationPerDayEnabled: true,
-        },
-      }),
-      db.resourcePoolCapacityException.findMany({
-        orderBy: [{ date: "asc" }, { createdAt: "asc" }],
-        select: {
-          id: true,
-          date: true,
-          capacity: true,
-          reason: true,
-          resourcePool: {
-            select: {
-              id: true,
-              name: true,
-              capacity: true,
-            },
+  const [resourcePools, capacityExceptions] = await Promise.all([
+    db.resourcePool.findMany({
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+        capacity: true,
+        active: true,
+      },
+    }),
+    db.resourcePoolCapacityException.findMany({
+      orderBy: [{ date: "asc" }, { createdAt: "asc" }],
+      select: {
+        id: true,
+        date: true,
+        capacity: true,
+        reason: true,
+        resourcePool: {
+          select: {
+            id: true,
+            name: true,
+            capacity: true,
           },
         },
-      }),
-    ]);
+      },
+    }),
+  ]);
 
   return (
     <div className="grid gap-6">
       <PageHeader
-        subtitle="تنظیم ظرفیت سیستم‌ها و محدودیت‌های رزرو"
+        subtitle="تنظیم ظرفیت پایه سیستم‌ها و استثناهای ظرفیت روزانه"
         title={ADMIN_PAGE_LABELS.capacity}
       />
 
       {toast ? <UrlToast {...toast} /> : null}
       <ResourcePoolSettings resourcePools={resourcePools} />
-      <ReservationPolicySettings
-        dailyUserHourLimit={reservationPolicy?.dailyUserHourLimit ?? 3}
-        oneReservationPerDayEnabled={
-          reservationPolicy?.oneReservationPerDayEnabled ?? true
-        }
-      />
       <CapacityExceptions
         capacityExceptions={capacityExceptions}
         resourcePools={resourcePools}

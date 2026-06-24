@@ -7,6 +7,8 @@ type DbClient = typeof db | Prisma.TransactionClient;
 const ONE_HOUR_MS = 60 * 60 * 1000;
 const DEFAULT_DAILY_USER_HOUR_LIMIT = 3;
 const DEFAULT_ONE_RESERVATION_PER_DAY_ENABLED = true;
+const DEFAULT_AUTO_ACCEPT_ENABLED = false;
+const DEFAULT_AUTO_ACCEPT_DELAY_HOURS = 4;
 const PERSIAN_NUMBER_FORMATTER = new Intl.NumberFormat("fa-IR", {
   useGrouping: false,
 });
@@ -18,6 +20,8 @@ export const ACTIVE_REQUEST_STATUSES = [
 ];
 
 export type ReservationPolicy = {
+  autoAcceptDelayHours: number;
+  autoAcceptEnabled: boolean;
   dailyUserHourLimit: number;
   oneReservationPerDayEnabled: boolean;
 };
@@ -50,18 +54,42 @@ export async function getReservationPolicy(
   const policy = await client.reservationPolicy.findUnique({
     where: { id: "default" },
     select: {
+      autoAcceptDelayHours: true,
+      autoAcceptEnabled: true,
       dailyUserHourLimit: true,
       oneReservationPerDayEnabled: true,
     },
   });
 
   return {
+    autoAcceptDelayHours:
+      policy?.autoAcceptDelayHours ?? DEFAULT_AUTO_ACCEPT_DELAY_HOURS,
+    autoAcceptEnabled: policy?.autoAcceptEnabled ?? DEFAULT_AUTO_ACCEPT_ENABLED,
     dailyUserHourLimit:
       policy?.dailyUserHourLimit ?? DEFAULT_DAILY_USER_HOUR_LIMIT,
     oneReservationPerDayEnabled:
       policy?.oneReservationPerDayEnabled ??
       DEFAULT_ONE_RESERVATION_PER_DAY_ENABLED,
   };
+}
+
+export function calculateAutoAcceptAt(input: {
+  createdAt: Date;
+  policy: ReservationPolicy;
+  startAt: Date;
+}): Date | null {
+  if (!input.policy.autoAcceptEnabled) {
+    return null;
+  }
+
+  const deadline = new Date(
+    input.createdAt.getTime() +
+      input.policy.autoAcceptDelayHours * ONE_HOUR_MS,
+  );
+
+  return deadline.getTime() < input.startAt.getTime()
+    ? deadline
+    : input.startAt;
 }
 
 export function formatDailyUserHourLimitError(limitHours: number): string {

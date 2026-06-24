@@ -262,6 +262,13 @@ function getTypeBadge(notification: NotificationItem): {
     };
   }
 
+  if (notification.type === "RESERVATION_AUTO_APPROVED") {
+    return {
+      className: "bg-emerald-50 text-emerald-800 ring-emerald-200",
+      label: "تایید خودکار",
+    };
+  }
+
   if (notification.type === "RESERVATION_REJECTED") {
     return {
       className: "bg-rose-50 text-rose-800 ring-rose-200",
@@ -342,6 +349,14 @@ function getNotificationMessage(notification: NotificationItem): ReactNode {
     return (
       <>
         رزرو شما برای <bdi>{poolName}</bdi> تایید شد.
+      </>
+    );
+  }
+
+  if (notification.type === "RESERVATION_AUTO_APPROVED" && poolName) {
+    return (
+      <>
+        رزرو شما برای <bdi>{poolName}</bdi> به‌صورت خودکار تایید شد.
       </>
     );
   }

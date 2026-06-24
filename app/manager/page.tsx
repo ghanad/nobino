@@ -29,6 +29,7 @@ type ManagerPageProps = {
 
 type QueueReservation = {
   id: string;
+  autoAcceptAt: Date | null;
   resourcePoolId: string;
   startAt: Date;
   endAt: Date;
@@ -214,9 +215,11 @@ function getQueueToast(params: Awaited<ManagerPageProps["searchParams"]>) {
 function ReviewModal({
   item,
   dateParam,
+  autoAcceptEnabled,
 }: {
   item: QueueItem;
   dateParam: string;
+  autoAcceptEnabled: boolean;
 }) {
   const isPending = item.reservation.status === ReservationStatus.PENDING;
   const modalId = buildReviewModalId(item.reservation.id);
@@ -257,6 +260,8 @@ function ReviewModal({
           </ReviewModalCloseLink>
         </div>
         <PendingReviewModalContent
+          autoAcceptAt={item.reservation.autoAcceptAt}
+          autoAcceptEnabled={autoAcceptEnabled}
           defaultEndHour={item.reservation.endAt.getHours()}
           defaultStartHour={item.reservation.startAt.getHours()}
           durationLabel={formatDuration(
@@ -301,6 +306,13 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
       name: true,
     },
   });
+  const reservationPolicy = await db.reservationPolicy.findUnique({
+    where: { id: "default" },
+    select: {
+      autoAcceptDelayHours: true,
+      autoAcceptEnabled: true,
+    },
+  });
   const weekReservations: CalendarReservation[] =
     resourcePool
       ? await db.reservation.findMany({
@@ -329,6 +341,7 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
           orderBy: [{ startAt: "asc" }, { createdAt: "asc" }],
           select: {
             id: true,
+            autoAcceptAt: true,
             resourcePoolId: true,
             startAt: true,
             endAt: true,
@@ -443,6 +456,7 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
     orderBy: [{ startAt: "asc" }, { createdAt: "asc" }],
     select: {
       id: true,
+      autoAcceptAt: true,
       resourcePoolId: true,
       startAt: true,
       endAt: true,
@@ -498,6 +512,7 @@ export default async function ManagerPage({ searchParams }: ManagerPageProps) {
           <ReviewModal
             dateParam={dateParam}
             item={item}
+            autoAcceptEnabled={reservationPolicy?.autoAcceptEnabled ?? false}
             key={`review-modal-${item.reservation.id}`}
           />
         ))}

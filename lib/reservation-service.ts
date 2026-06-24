@@ -11,6 +11,7 @@ import { assertCapacityAvailableForApproval } from "@/lib/capacity-service";
 import { db } from "@/lib/db";
 import {
   ACTIVE_REQUEST_STATUSES,
+  calculateAutoAcceptAt,
   endOfLocalDay,
   formatDailyUserHourLimitError,
   getReservationPolicy,
@@ -97,6 +98,152 @@ async function assertDailyUserReservationPolicy(input: {
   }
 }
 
+async function assertApprovalPolicies(input: {
+  excludeReservationId?: string;
+  endAt: Date;
+  resourcePoolId: string;
+  startAt: Date;
+  userId: string;
+}, client: DbClient): Promise<void> {
+  await assertCapacityAvailableForApproval(
+    {
+      resourcePoolId: input.resourcePoolId,
+      startAt: input.startAt,
+      endAt: input.endAt,
+      excludeReservationId: input.excludeReservationId,
+    },
+    client,
+  );
+
+  const policy = await getReservationPolicy(client);
+
+  await assertDailyUserReservationPolicy(
+    {
+      userId: input.userId,
+      startAt: input.startAt,
+      endAt: input.endAt,
+      statuses: [ReservationStatus.APPROVED],
+      excludeReservationId: input.excludeReservationId,
+      allowSingleReservationOverDailyHourLimit:
+        reservationHours(input.startAt, input.endAt) >
+        policy.dailyUserHourLimit,
+    },
+    client,
+  );
+}
+
+async function finalizeApprovedReservation(
+  tx: DbClient,
+  input: {
+    actorUserId: string | null;
+    approvedAt: Date;
+    approvedById: string | null;
+    auditAction: string;
+    notificationBody: string;
+    notificationTitle: string;
+    notificationType: string;
+    reservationId: string;
+  },
+) {
+  const approvedReservation = await tx.reservation.update({
+    where: { id: input.reservationId },
+    data: {
+      approvedAt: input.approvedAt,
+      approvedById: input.approvedById,
+      autoAcceptAt: null,
+      rejectionReason: null,
+      status: ReservationStatus.APPROVED,
+    },
+  });
+
+  await tx.auditLog.create({
+    data: {
+      actorUserId: input.actorUserId,
+      entityType: "Reservation",
+      entityId: input.reservationId,
+      action: input.auditAction,
+      newValue: {
+        approvedAt: approvedReservation.approvedAt?.toISOString() ?? null,
+        approvedById: approvedReservation.approvedById,
+        status: approvedReservation.status,
+      },
+    },
+  });
+
+  await tx.notification.create({
+    data: {
+      body: input.notificationBody,
+      reservationId: input.reservationId,
+      title: input.notificationTitle,
+      type: input.notificationType,
+      userId: approvedReservation.userId,
+    },
+  });
+
+  return approvedReservation;
+}
+
+export async function approveReservationInTransaction(
+  tx: DbClient,
+  input: {
+    actorUserId: string | null;
+    approvedAt: Date;
+    approvedById: string | null;
+    auditAction: string;
+    notificationBody: string;
+    notificationTitle: string;
+    notificationType: string;
+    reservationId: string;
+  },
+) {
+  const reservation = await tx.reservation.findUnique({
+    where: { id: input.reservationId },
+    select: {
+      endAt: true,
+      id: true,
+      resourcePoolId: true,
+      startAt: true,
+      status: true,
+      userId: true,
+    },
+  });
+
+  if (!reservation) {
+    throw new ReservationTransitionError("Reservation was not found.");
+  }
+
+  if (
+    reservation.status !== ReservationStatus.PENDING &&
+    reservation.status !== ReservationStatus.ALTERNATIVE_PROPOSED
+  ) {
+    throw new ReservationTransitionError(
+      "Only pending or alternative-proposed reservations can be approved.",
+    );
+  }
+
+  await assertApprovalPolicies(
+    {
+      resourcePoolId: reservation.resourcePoolId,
+      startAt: reservation.startAt,
+      endAt: reservation.endAt,
+      excludeReservationId: reservation.id,
+      userId: reservation.userId,
+    },
+    tx,
+  );
+
+  return finalizeApprovedReservation(tx, {
+    actorUserId: input.actorUserId,
+    approvedAt: input.approvedAt,
+    approvedById: input.approvedById,
+    auditAction: input.auditAction,
+    notificationBody: input.notificationBody,
+    notificationTitle: input.notificationTitle,
+    notificationType: input.notificationType,
+    reservationId: reservation.id,
+  });
+}
+
 export async function createReservationRequest(input: {
   userId: string;
   resourcePoolId: string;
@@ -118,14 +265,6 @@ export async function createReservationRequest(input: {
     endAt: input.endAt,
   });
 
-  // Product choice for phase 4: already-full approved capacity blocks new requests.
-  // Pending requests remain non-blocking and do not count here.
-  await assertCapacityAvailableForApproval({
-    resourcePoolId: input.resourcePoolId,
-    startAt: input.startAt,
-    endAt: input.endAt,
-  });
-
   return db.$transaction(async (tx) => {
     await assertDailyUserReservationPolicy(
       {
@@ -137,15 +276,25 @@ export async function createReservationRequest(input: {
       tx,
     );
 
+    const policy = await getReservationPolicy(tx);
+    const createdAt = new Date();
+    const autoAcceptAt = calculateAutoAcceptAt({
+      createdAt,
+      policy,
+      startAt: input.startAt,
+    });
+
     const reservation = await tx.reservation.create({
       data: {
+        autoAcceptAt,
+        createdAt,
+        endAt: input.endAt,
+        partySize,
+        reason: input.reason?.trim() || null,
         userId: input.userId,
         resourcePoolId: input.resourcePoolId,
         startAt: input.startAt,
-        endAt: input.endAt,
-        partySize,
         status: ReservationStatus.PENDING,
-        reason: input.reason?.trim() || null,
       },
     });
 
@@ -156,6 +305,8 @@ export async function createReservationRequest(input: {
         entityId: reservation.id,
         action: "RESERVATION_CREATED",
         newValue: {
+          autoAcceptAt: reservation.autoAcceptAt?.toISOString() ?? null,
+          createdAt: reservation.createdAt.toISOString(),
           userId: reservation.userId,
           resourcePoolId: reservation.resourcePoolId,
           startAt: reservation.startAt.toISOString(),
@@ -182,7 +333,7 @@ export async function createReservationRequest(input: {
           reservationId: reservation.id,
           type: "NEW_PENDING_RESERVATION",
           title: "New pending reservation",
-          body: "A reservation request is waiting for manager review.",
+          body: "A reservation request is waiting for review.",
         })),
       });
     }
@@ -197,94 +348,16 @@ export async function approveReservation(input: {
 }) {
   return db.$transaction(async (tx) => {
     await assertManagerOrAdmin(input.managerId, tx);
-
-    const reservation = await tx.reservation.findUnique({
-      where: { id: input.reservationId },
-      select: {
-        id: true,
-        userId: true,
-        resourcePoolId: true,
-        startAt: true,
-        endAt: true,
-        status: true,
-      },
+    return approveReservationInTransaction(tx, {
+      actorUserId: input.managerId,
+      approvedAt: new Date(),
+      approvedById: input.managerId,
+      auditAction: "RESERVATION_APPROVED",
+      notificationBody: "Your reservation request has been approved.",
+      notificationTitle: "Reservation approved",
+      notificationType: "RESERVATION_APPROVED",
+      reservationId: input.reservationId,
     });
-
-    if (!reservation) {
-      throw new ReservationTransitionError("Reservation was not found.");
-    }
-
-    if (
-      reservation.status !== ReservationStatus.PENDING &&
-      reservation.status !== ReservationStatus.ALTERNATIVE_PROPOSED
-    ) {
-      throw new ReservationTransitionError(
-        "Only pending or alternative-proposed reservations can be approved.",
-      );
-    }
-
-    await assertCapacityAvailableForApproval(
-      {
-        resourcePoolId: reservation.resourcePoolId,
-        startAt: reservation.startAt,
-        endAt: reservation.endAt,
-        excludeReservationId: reservation.id,
-      },
-      tx,
-    );
-
-    const policy = await getReservationPolicy(tx);
-
-    await assertDailyUserReservationPolicy(
-      {
-        userId: reservation.userId,
-        startAt: reservation.startAt,
-        endAt: reservation.endAt,
-        statuses: [ReservationStatus.APPROVED],
-        excludeReservationId: reservation.id,
-        allowSingleReservationOverDailyHourLimit:
-          reservationHours(reservation.startAt, reservation.endAt) >
-          policy.dailyUserHourLimit,
-      },
-      tx,
-    );
-
-    const approvedReservation = await tx.reservation.update({
-      where: { id: reservation.id },
-      data: {
-        status: ReservationStatus.APPROVED,
-        approvedById: input.managerId,
-        approvedAt: new Date(),
-        rejectionReason: null,
-      },
-    });
-
-    await tx.auditLog.create({
-      data: {
-        actorUserId: input.managerId,
-        entityType: "Reservation",
-        entityId: reservation.id,
-        action: "RESERVATION_APPROVED",
-        oldValue: { status: reservation.status },
-        newValue: {
-          status: approvedReservation.status,
-          approvedById: approvedReservation.approvedById,
-          approvedAt: approvedReservation.approvedAt?.toISOString() ?? null,
-        },
-      },
-    });
-
-    await tx.notification.create({
-      data: {
-        userId: reservation.userId,
-        reservationId: reservation.id,
-        type: "RESERVATION_APPROVED",
-        title: "Reservation approved",
-        body: "Your reservation request has been approved.",
-      },
-    });
-
-    return approvedReservation;
   });
 }
 
@@ -321,6 +394,7 @@ export async function rejectReservation(input: {
     const rejectedReservation = await tx.reservation.update({
       where: { id: reservation.id },
       data: {
+        autoAcceptAt: null,
         status: ReservationStatus.REJECTED,
         rejectionReason: input.rejectionReason?.trim() || null,
       },
@@ -382,6 +456,7 @@ export async function updateReservationTimeByManager(input: {
     const reservation = await tx.reservation.findUnique({
       where: { id: input.reservationId },
       select: {
+        autoAcceptAt: true,
         id: true,
         userId: true,
         resourcePoolId: true,
@@ -438,10 +513,19 @@ export async function updateReservationTimeByManager(input: {
       },
     });
 
+    const policy = await getReservationPolicy(tx);
+    const changedAt = new Date();
     const keepsApproval = reservation.status === ReservationStatus.APPROVED;
     const updatedReservation = await tx.reservation.update({
       where: { id: reservation.id },
       data: {
+        autoAcceptAt: keepsApproval
+          ? null
+          : calculateAutoAcceptAt({
+              createdAt: changedAt,
+              policy,
+              startAt: input.proposedStartAt,
+            }),
         startAt: input.proposedStartAt,
         endAt: input.proposedEndAt,
         status: keepsApproval
@@ -460,11 +544,13 @@ export async function updateReservationTimeByManager(input: {
         entityId: reservation.id,
         action: "RESERVATION_TIME_UPDATED",
         oldValue: {
+          autoAcceptAt: reservation.autoAcceptAt?.toISOString() ?? null,
           status: reservation.status,
           startAt: reservation.startAt.toISOString(),
           endAt: reservation.endAt.toISOString(),
         },
         newValue: {
+          autoAcceptAt: updatedReservation.autoAcceptAt?.toISOString() ?? null,
           status: updatedReservation.status,
           startAt: updatedReservation.startAt.toISOString(),
           endAt: updatedReservation.endAt.toISOString(),
@@ -524,6 +610,7 @@ export async function cancelReservationByUser(input: {
     const cancelledReservation = await tx.reservation.update({
       where: { id: reservation.id },
       data: {
+        autoAcceptAt: null,
         status: ReservationStatus.CANCELLED_BY_USER,
         cancelledById: input.userId,
         cancelledAt: new Date(),
@@ -601,6 +688,7 @@ export async function cancelReservationByManager(input: {
     const cancelledReservation = await tx.reservation.update({
       where: { id: reservation.id },
       data: {
+        autoAcceptAt: null,
         status: ReservationStatus.CANCELLED_BY_ADMIN,
         cancelledById: input.managerId,
         cancelledAt: new Date(),
@@ -716,6 +804,7 @@ export async function acceptAlternative(input: {
     const approvedReservation = await tx.reservation.update({
       where: { id: alternative.reservation.id },
       data: {
+        autoAcceptAt: null,
         startAt: alternative.proposedStartAt,
         endAt: alternative.proposedEndAt,
         status: ReservationStatus.APPROVED,

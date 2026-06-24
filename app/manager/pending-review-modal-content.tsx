@@ -13,11 +13,16 @@ import {
 } from "@/app/manager/actions";
 import { Button } from "@/components/ui/button";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { JALALI_DATE_INPUT_PLACEHOLDER } from "@/lib/jalali-date";
+import {
+  JALALI_DATE_INPUT_PLACEHOLDER,
+  formatJalaliDateTime,
+} from "@/lib/jalali-date";
 
 type ReviewAction = "reject" | "time" | null;
 
 type PendingReviewModalContentProps = {
+  autoAcceptAt: Date | null;
+  autoAcceptEnabled: boolean;
   defaultEndHour: number;
   defaultStartHour: number;
   durationLabel: string;
@@ -36,6 +41,8 @@ type PendingReviewModalContentProps = {
 };
 
 export function PendingReviewModalContent({
+  autoAcceptAt,
+  autoAcceptEnabled,
   defaultEndHour,
   defaultStartHour,
   durationLabel,
@@ -120,6 +127,25 @@ export function PendingReviewModalContent({
               <p className="mt-2 rounded-md border bg-background px-3 py-2 text-sm leading-6 text-muted-foreground">
                 {reason}
               </p>
+            </div>
+          ) : null}
+
+          {isPending ? (
+            <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm leading-6 text-muted-foreground">
+              {autoAcceptEnabled && autoAcceptAt ? (
+                <>
+                  <span className="font-medium text-foreground">
+                    مهلت تایید خودکار:
+                  </span>{" "}
+                  <span dir="rtl">
+                    {formatJalaliDateTime(autoAcceptAt)}
+                  </span>
+                </>
+              ) : autoAcceptEnabled ? (
+                "برای این درخواست هنوز مهلت تایید خودکار ثبت نشده است."
+              ) : (
+                "تایید خودکار برای این درخواست غیرفعال است."
+              )}
             </div>
           ) : null}
         </div>

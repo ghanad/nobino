@@ -68,11 +68,15 @@ async function main() {
   await prisma.reservationPolicy.upsert({
     where: { id: "default" },
     update: {
+      autoAcceptDelayHours: 4,
+      autoAcceptEnabled: false,
       dailyUserHourLimit: 3,
       oneReservationPerDayEnabled: true,
     },
     create: {
       id: "default",
+      autoAcceptDelayHours: 4,
+      autoAcceptEnabled: false,
       dailyUserHourLimit: 3,
       oneReservationPerDayEnabled: true,
     },

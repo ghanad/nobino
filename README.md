@@ -6,7 +6,7 @@ Internal capacity-based reservation web application for a small company resource
 
 - Systems are identical and modeled as one configurable resource pool.
 - Users request one unit of capacity for an hourly time range.
-- Reservations start as `PENDING`.
+- Reservations start as `PENDING` and may be approved manually or by configured system auto-approval.
 - Only `APPROVED` reservations consume capacity.
 - Manager approval is required before a reservation is final.
 - Working days and working hours are configurable through weekly schedule rows
@@ -92,7 +92,7 @@ The seed script creates:
 
 ## Current Status
 
-The first operational version is implemented. Seeded users can sign in, create hourly reservation requests, see their own reservations grouped by status, cancel pending requests, and accept or reject manager-proposed alternatives. Managers can approve, reject, and propose alternatives from `/manager`. Admins can manage resource pool capacity and active state, Jalali date-specific capacity exceptions, weekly working schedule rows, Jalali date-specific schedule exceptions, users from `/admin`, and audit history from `/admin/audit`. Users and managers can review unread in-app notifications from `/notifications` and mark notifications as read. Capacity reductions are blocked when future approved reservations would exceed the new effective capacity. Core service rules are covered by automated tests.
+The first operational version is implemented. Seeded users can sign in, create hourly reservation requests, see their own reservations grouped by status, cancel pending requests, and accept or reject manager-proposed alternatives. Managers can approve, reject, propose alternatives, and review auto-approval deadlines from `/manager`. Admins can manage resource pool capacity and active state, Jalali date-specific capacity exceptions, weekly working schedule rows, Jalali date-specific schedule exceptions, reservation policy settings, users from `/admin`, and audit history from `/admin/audit`. Users and managers can review unread in-app notifications from `/notifications` and mark notifications as read. Capacity reductions are blocked when future approved reservations would exceed the new effective capacity. Core service rules are covered by automated tests.
 
 ## Auth Routes
 
@@ -130,10 +130,10 @@ Gregorian date pickers or Gregorian-formatted dates in product UI.
 ## Reservation Requests
 
 `lib/reservation-service.ts` provides `createReservationRequest`, which keeps
-business rules out of UI code. Pending reservations do not consume capacity.
-For the first operational version, request creation rejects ranges where
-approved reservations already fill any requested hour; final capacity is checked
-again during manager approval and when a user accepts an alternative proposal.
+business rules out of UI code. Pending reservations do not consume capacity and
+do not block new requests. Final capacity is checked again during manager
+approval, configured system auto-approval, and when a user accepts an
+alternative proposal.
 
 ## Capacity Exceptions
 
@@ -193,6 +193,7 @@ Use `.env.example` as the source of truth for required settings:
 - `BALE_BOT_TOKEN`: secret token received from Bale `@botfather`.
 - `BALE_BOT_USERNAME`: bot username without `@`; used by the account-linking UI.
 - `BALE_SYNC_SECRET`: long random bearer secret protecting the Bale sync route.
+- `AUTO_ACCEPT_CRON_SECRET`: long random bearer secret protecting the reservation auto-accept route.
 - `NEXT_PUBLIC_APP_NAME`: display name used by the app shell.
 
 LDAP authentication validates the password against LDAP. When an LDAP login is
@@ -217,6 +218,20 @@ curl --fail --silent --show-error -X POST \
   -H "Authorization: Bearer ${BALE_SYNC_SECRET}" \
   "${APP_BASE_URL}/api/integrations/bale/sync"
 ```
+
+Run reservation auto-approval once per minute from a separate scheduler entry:
+
+```bash
+flock -n /tmp/nobino-auto-accept.lock curl --fail --silent --show-error -X POST \
+  -H "Authorization: Bearer ${AUTO_ACCEPT_CRON_SECRET}" \
+  "${APP_BASE_URL}/api/internal/reservations/auto-accept"
+```
+
+The reservation auto-accept route is independent from the Bale sync route and
+only processes eligible pending reservations whose configured auto-approval
+deadline has arrived. Existing pending reservations are not backfilled when the
+feature is enabled; only new requests and subsequently rescheduled pending
+requests receive deadlines.
 
 The endpoint tracks Bale's `update_id` offset, records each notification
 delivery, and retries failed sends up to three times. It does not send

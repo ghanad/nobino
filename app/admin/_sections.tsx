@@ -26,11 +26,12 @@ type AdminPageProps = {
   }>;
 };
 
-type AdminTab = "users" | "capacity" | "schedule";
+type AdminTab = "users" | "capacity" | "reservationPolicy" | "schedule";
 
 export const ADMIN_PAGE_LABELS: Record<AdminTab, string> = {
   users: "کاربران",
   capacity: "ظرفیت",
+  reservationPolicy: "سیاست رزرو",
   schedule: "زمان‌بندی",
 };
 

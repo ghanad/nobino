@@ -10,7 +10,7 @@ Model systems as one capacity-based `ResourcePool`, not as physical devices. A r
 
 ## Non-Negotiable Rules
 
-- Reservations start as `PENDING`; final use requires manager/admin approval.
+- Reservations start as `PENDING`; final use requires manager/admin approval or configured system auto-approval.
 - Only `APPROVED` reservations consume capacity.
 - `PENDING` reservations are visible in calendars but must not block new requests.
 - Approval must re-check approved capacity inside a backend transaction and fail if any requested hour is full.
@@ -66,7 +66,7 @@ Only manager/admin users may approve, reject, or propose alternatives. Only admi
 
 Keep audit logs for reservation creation/approval/rejection/cancellation, alternatives, capacity changes, schedule changes, schedule exceptions, and user role/status changes.
 
-Keep in-app notifications for pending requests, approvals, rejections, alternatives, alternative responses, and cancellations.
+Keep in-app notifications for pending requests, manual approvals, automatic approvals, rejections, alternatives, alternative responses, and cancellations.
 
 ## Required Checks Before Finishing
 
@@ -89,5 +89,4 @@ For docs-only changes, typecheck/build are not required.
 - Add comments only for non-obvious business rules.
 - Preserve unrelated user changes in the worktree.
 - After coding, report files changed, commands run, manual test steps, and known limitations.
-
 
