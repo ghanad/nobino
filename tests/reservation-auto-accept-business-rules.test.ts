@@ -34,6 +34,18 @@ registerBusinessRuleTestHooks();
 
 const HOUR_MS = 60 * 60 * 1000;
 
+function futureReservationStart(hoursAhead: number) {
+  const startAt = new Date();
+  startAt.setMinutes(0, 0, 0);
+  startAt.setHours(startAt.getHours() + hoursAhead);
+
+  if (startAt.getHours() === 23) {
+    startAt.setHours(startAt.getHours() + 1);
+  }
+
+  return startAt;
+}
+
 async function enableAutoAccept(options?: {
   autoAcceptDelayHours?: number;
   dailyUserHourLimit?: number;
@@ -196,12 +208,8 @@ test("short notice requests clamp the deadline to the reservation start time", a
 });
 
 test("manager time changes reset the pending deadline", async () => {
-  const startAt = new Date();
-  startAt.setMinutes(0, 0, 0);
-  startAt.setHours(startAt.getHours() + 8);
-  const proposedStartAt = new Date();
-  proposedStartAt.setMinutes(0, 0, 0);
-  proposedStartAt.setHours(proposedStartAt.getHours() + 3);
+  const startAt = futureReservationStart(8);
+  const proposedStartAt = futureReservationStart(3);
   const proposedEndAt = addHours(proposedStartAt, 1);
   await setWorkingWindowForDate(startAt, "00:00", "23:00");
   await setWorkingWindowForDate(proposedStartAt, "00:00", "23:00");
