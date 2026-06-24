@@ -3,12 +3,28 @@
 import { useRef, useState } from "react";
 import type { JSONContent } from "@tiptap/react";
 import { EditorContent, useEditor } from "@tiptap/react";
+import {
+  Bold,
+  Code,
+  Heading2,
+  Heading3,
+  Italic,
+  Link,
+  List,
+  ListOrdered,
+  PilcrowLeft,
+  PilcrowRight,
+  SquareCode,
+  Table2,
+  TextQuote,
+  type LucideIcon,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { documentEditorExtensions } from "@/components/documents/editor-extensions";
 
-function ToolbarButton({ active = false, children, label, onClick }: { active?: boolean; children: React.ReactNode; label: string; onClick: () => void }) {
-  return <button aria-label={label} className={`rounded border px-2.5 py-1.5 text-sm ${active ? "border-blue-500 bg-blue-50 text-blue-800" : "bg-white hover:bg-slate-50"}`} onClick={onClick} type="button">{children}</button>;
+function ToolbarButton({ active = false, icon: Icon, label, onClick }: { active?: boolean; icon: LucideIcon; label: string; onClick: () => void }) {
+  return <button aria-label={label} className={`inline-flex size-9 items-center justify-center rounded border ${active ? "border-blue-500 bg-blue-50 text-blue-800" : "bg-white hover:bg-slate-50"}`} onClick={onClick} title={label} type="button"><Icon aria-hidden="true" className="size-4" /></button>;
 }
 
 export function DocumentEditor({ content, documentId, title, updatedAt }: { content: JSONContent; documentId: string; title: string; updatedAt: string }) {
@@ -57,22 +73,22 @@ export function DocumentEditor({ content, documentId, title, updatedAt }: { cont
     <div className="document-editor" dir="rtl">
       <div className="mb-4"><h2 className="text-xl font-bold">ویرایش «{title}»</h2><p className="mt-1 text-xs text-slate-500">محتوا فقط با دکمه ذخیره منتشر می‌شود.</p></div>
       <div className="flex flex-wrap gap-1.5 rounded-t-lg border border-slate-300 bg-slate-50 p-2" role="toolbar" aria-label="ابزارهای ویرایش">
-        <ToolbarButton active={editor.isActive("bold")} label="پررنگ" onClick={() => editor.chain().focus().toggleBold().run()}>پررنگ</ToolbarButton>
-        <ToolbarButton active={editor.isActive("italic")} label="مورب" onClick={() => editor.chain().focus().toggleItalic().run()}>مورب</ToolbarButton>
-        <ToolbarButton active={editor.isActive("paragraph", { dir: "rtl" }) || editor.isActive("heading", { dir: "rtl" })} label="نوشتن از راست به چپ" onClick={() => setTextDirection("rtl")}>راست‌به‌چپ</ToolbarButton>
-        <ToolbarButton active={editor.isActive("paragraph", { dir: "ltr" }) || editor.isActive("heading", { dir: "ltr" })} label="نوشتن از چپ به راست" onClick={() => setTextDirection("ltr")}>چپ‌به‌راست</ToolbarButton>
-        <ToolbarButton label="عنوان سطح دو" onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>عنوان ۲</ToolbarButton>
-        <ToolbarButton label="عنوان سطح سه" onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}>عنوان ۳</ToolbarButton>
-        <ToolbarButton label="فهرست نشانه‌دار" onClick={() => editor.chain().focus().toggleBulletList().run()}>فهرست •</ToolbarButton>
-        <ToolbarButton label="فهرست شماره‌دار" onClick={() => editor.chain().focus().toggleOrderedList().run()}>فهرست ۱.</ToolbarButton>
-        <ToolbarButton label="نقل قول" onClick={() => editor.chain().focus().toggleBlockquote().run()}>نقل قول</ToolbarButton>
-        <ToolbarButton label="کد درون‌خطی" onClick={() => editor.chain().focus().toggleCode().run()}>کد</ToolbarButton>
-        <ToolbarButton label="بلوک کد" onClick={() => editor.chain().focus().toggleCodeBlock().run()}>بلوک کد</ToolbarButton>
-        <ToolbarButton label="افزودن جدول" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>جدول</ToolbarButton>
+        <ToolbarButton active={editor.isActive("bold")} icon={Bold} label="پررنگ" onClick={() => editor.chain().focus().toggleBold().run()} />
+        <ToolbarButton active={editor.isActive("italic")} icon={Italic} label="مورب" onClick={() => editor.chain().focus().toggleItalic().run()} />
+        <ToolbarButton active={editor.isActive("paragraph", { dir: "rtl" }) || editor.isActive("heading", { dir: "rtl" })} icon={PilcrowRight} label="نوشتن از راست به چپ" onClick={() => setTextDirection("rtl")} />
+        <ToolbarButton active={editor.isActive("paragraph", { dir: "ltr" }) || editor.isActive("heading", { dir: "ltr" })} icon={PilcrowLeft} label="نوشتن از چپ به راست" onClick={() => setTextDirection("ltr")} />
+        <ToolbarButton active={editor.isActive("heading", { level: 2 })} icon={Heading2} label="عنوان سطح دو" onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} />
+        <ToolbarButton active={editor.isActive("heading", { level: 3 })} icon={Heading3} label="عنوان سطح سه" onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} />
+        <ToolbarButton active={editor.isActive("bulletList")} icon={List} label="فهرست نشانه‌دار" onClick={() => editor.chain().focus().toggleBulletList().run()} />
+        <ToolbarButton active={editor.isActive("orderedList")} icon={ListOrdered} label="فهرست شماره‌دار" onClick={() => editor.chain().focus().toggleOrderedList().run()} />
+        <ToolbarButton active={editor.isActive("blockquote")} icon={TextQuote} label="نقل قول" onClick={() => editor.chain().focus().toggleBlockquote().run()} />
+        <ToolbarButton active={editor.isActive("code")} icon={Code} label="کد درون‌خطی" onClick={() => editor.chain().focus().toggleCode().run()} />
+        <ToolbarButton active={editor.isActive("codeBlock")} icon={SquareCode} label="بلوک کد" onClick={() => editor.chain().focus().toggleCodeBlock().run()} />
+        <ToolbarButton icon={Table2} label="افزودن جدول" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} />
       </div>
       <div className="flex gap-2 border-x border-slate-300 bg-slate-50 px-2 pb-2">
         <input aria-label="نشانی پیوند" className="min-w-0 flex-1 rounded border bg-white px-2 py-1 text-left text-xs" dir="ltr" onChange={(event) => setLinkHref(event.target.value)} placeholder="https://example.com یا /documents/..." value={linkHref} />
-        <button className="rounded border bg-white px-3 py-1 text-xs hover:bg-slate-50" onClick={() => { if (linkHref.trim()) { editor.chain().focus().extendMarkRange("link").setLink({ href: linkHref.trim() }).run(); setLinkHref(""); } }} type="button">افزودن پیوند</button>
+        <button aria-label="افزودن پیوند" className="inline-flex size-9 shrink-0 items-center justify-center rounded border bg-white hover:bg-slate-50" onClick={() => { if (linkHref.trim()) { editor.chain().focus().extendMarkRange("link").setLink({ href: linkHref.trim() }).run(); setLinkHref(""); } }} title="افزودن پیوند" type="button"><Link aria-hidden="true" className="size-4" /></button>
       </div>
       <EditorContent editor={editor} />
       <div className="mt-4 rounded-lg border bg-slate-50 p-3">
