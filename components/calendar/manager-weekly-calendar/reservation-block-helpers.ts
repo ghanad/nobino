@@ -80,6 +80,43 @@ export function getPositionedReservationBlocks(
   }));
 }
 
+export function getFocusedDayWidth(
+  blocks: PositionedReservationBlock[],
+): number {
+  const laneCount = Math.max(blocks[0]?.laneCount ?? 1, 1);
+  const longestNameLength = blocks.reduce(
+    (length, block) => Math.max(length, block.detail.userName.trim().length),
+    0,
+  );
+  const readableLaneWidth = Math.min(
+    Math.max(longestNameLength * 7 + 24, 88),
+    128,
+  );
+
+  return Math.min(Math.max(laneCount * readableLaneWidth + 16, 280), 720);
+}
+
+export function needsFocusedDayExpansion(
+  blocks: PositionedReservationBlock[],
+): boolean {
+  if (blocks.length === 0) {
+    return false;
+  }
+
+  const laneCount = Math.max(blocks[0]?.laneCount ?? 1, 1);
+
+  if (laneCount > 1) {
+    return true;
+  }
+
+  const longestNameLength = blocks.reduce(
+    (length, block) => Math.max(length, block.detail.userName.trim().length),
+    0,
+  );
+
+  return longestNameLength * 7 + 24 > 116;
+}
+
 function getLaneStyle(block: PositionedReservationBlock) {
   const laneWidth = 100 / block.laneCount;
 

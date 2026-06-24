@@ -60,7 +60,7 @@ export function MobileReservationBlock({
           <span className="h-1.5 w-14 rounded-full border border-amber-500/70 bg-white/90 shadow-sm" />
         </span>
       ) : null}
-      <ReservationUserName detail={detail} />
+      <ReservationUserName detail={detail} isDayFocused={false} />
       <span className="inline-flex shrink-0 items-center gap-1 text-[11px] leading-4 opacity-80">
         <Users aria-hidden="true" className="h-3 w-3" />
         {formatPersianNumber(detail.partySize)} نفر

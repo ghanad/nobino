@@ -19,6 +19,7 @@ import {
 
 export function ReservationBlock({
   block,
+  isDayFocused,
   isDragging,
   isResizing,
   onDragEnd,
@@ -26,6 +27,7 @@ export function ReservationBlock({
   onResizeStart,
 }: {
   block: PositionedReservationBlock;
+  isDayFocused: boolean;
   isDragging: boolean;
   isResizing: boolean;
   onDragEnd: () => void;
@@ -41,6 +43,7 @@ export function ReservationBlock({
   const suppressNextClickRef = useRef(false);
   const className = cn(
     "group pointer-events-auto relative flex h-full min-w-0 flex-col items-center justify-between gap-2 rounded-md px-1.5 py-2 text-xs font-medium leading-5 shadow-sm ring-1 transition sm:hover:z-40",
+    isDayFocused ? "px-2" : null,
     getDetailClass(detail.status),
     canDrag ? "cursor-grab active:cursor-grabbing" : null,
     isDragging || isResizing ? "opacity-45" : null,
@@ -84,15 +87,17 @@ export function ReservationBlock({
           title="برای تغییر زمان شروع بکشید"
         />
       ) : null}
-      <ReservationUserName detail={detail} />
-      <span
-        aria-hidden="true"
-        className="pointer-events-none invisible absolute left-1/2 top-1/2 z-30 max-w-56 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-md bg-slate-950 px-2.5 py-1.5 text-center text-xs font-medium leading-5 text-white opacity-0 shadow-lg transition-opacity group-hover:visible group-hover:opacity-100"
-        dir="rtl"
-        role="tooltip"
-      >
-        {detail.userName}
-      </span>
+      <ReservationUserName detail={detail} isDayFocused={isDayFocused} />
+      {!isDayFocused ? (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none invisible absolute left-1/2 top-1/2 z-30 max-w-56 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-md bg-slate-950 px-2.5 py-1.5 text-center text-xs font-medium leading-5 text-white opacity-0 shadow-lg transition-opacity group-hover:visible group-hover:opacity-100"
+          dir="rtl"
+          role="tooltip"
+        >
+          {detail.userName}
+        </span>
+      ) : null}
       <span className="inline-flex shrink-0 items-center gap-0.5 text-[9px] leading-3 opacity-80">
         <Users aria-hidden="true" className="h-2.5 w-2.5" />
         {detail.partySize}

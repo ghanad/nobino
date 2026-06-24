@@ -12,7 +12,11 @@ import {
   buildMobileSlotAriaLabel,
   getMobileSlotStatusLabel,
 } from "@/components/calendar/manager-weekly-calendar/mobile-slot-helpers";
-import { getPositionedReservationBlocks } from "@/components/calendar/manager-weekly-calendar/reservation-block-helpers";
+import {
+  getFocusedDayWidth,
+  getPositionedReservationBlocks,
+  needsFocusedDayExpansion,
+} from "@/components/calendar/manager-weekly-calendar/reservation-block-helpers";
 import type {
   ManagerWeekDay,
   ManagerWeekSlot,
@@ -190,6 +194,66 @@ test("overlapping reservations are split across separate lanes with shared laneC
       { endHour: 12, id: "beta", lane: 1, laneCount: 2, startHour: 10 },
     ],
   );
+});
+
+test("focused day width grows with concurrent lanes and requester name length", () => {
+  const blocks = [
+    {
+      detail: { ...createDetail("alpha"), userName: "علی رضایی" },
+      endHour: 13,
+      lane: 0,
+      laneCount: 5,
+      startHour: 9,
+    },
+  ];
+
+  assert.equal(getFocusedDayWidth([]), 280);
+  assert.equal(getFocusedDayWidth(blocks), 456);
+});
+
+test("focused day expands only when its names need more room", () => {
+  const singleReadableBlock = {
+    detail: { ...createDetail("alpha"), userName: "علی رضایی" },
+    endHour: 13,
+    lane: 0,
+    laneCount: 1,
+    startHour: 9,
+  };
+  const singleLongNameBlock = {
+    ...singleReadableBlock,
+    detail: {
+      ...singleReadableBlock.detail,
+      userName: "امیرحسین عبدالهی‌زاده",
+    },
+  };
+
+  assert.equal(needsFocusedDayExpansion([]), false);
+  assert.equal(needsFocusedDayExpansion([singleReadableBlock]), false);
+  assert.equal(needsFocusedDayExpansion([singleLongNameBlock]), true);
+  assert.equal(
+    needsFocusedDayExpansion([
+      { ...singleReadableBlock, laneCount: 2 },
+      { ...singleReadableBlock, lane: 1, laneCount: 2 },
+    ]),
+    true,
+  );
+});
+
+test("focused day width is capped for unusually busy days", () => {
+  const blocks = [
+    {
+      detail: {
+        ...createDetail("alpha"),
+        userName: "نام بسیار طولانی درخواست کننده برای آزمایش",
+      },
+      endHour: 13,
+      lane: 0,
+      laneCount: 20,
+      startHour: 9,
+    },
+  ];
+
+  assert.equal(getFocusedDayWidth(blocks), 720);
 });
 
 test("multi-hour reservation blocks preserve their start and end hours", () => {

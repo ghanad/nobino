@@ -39,7 +39,9 @@ import { PendingRequestsBadge } from "@/components/calendar/manager-weekly-calen
 import { ReservationBlock } from "@/components/calendar/manager-weekly-calendar/reservation-block";
 import {
   canUpdateReservationTime,
+  getFocusedDayWidth,
   getPositionedReservationBlocks,
+  needsFocusedDayExpansion,
 } from "@/components/calendar/manager-weekly-calendar/reservation-block-helpers";
 import type {
   DraggedReservation,
@@ -118,6 +120,9 @@ export function ManagerWeeklyCalendar({
   const [dragOverSlotKey, setDragOverSlotKey] = useState<string | null>(null);
   const [dropError, setDropError] = useState<string | null>(null);
   const [localWeekDays, setLocalWeekDays] = useState(weekDays);
+  const [focusedDesktopDay, setFocusedDesktopDay] = useState<string | null>(null);
+  const dayFocusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dayFocusTargetRef = useRef<string | null>(null);
   const mobileDayTabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const mobileDayTabsContainerRef = useRef<HTMLDivElement | null>(null);
   const [resizeOverSlotKey, setResizeOverSlotKey] = useState<string | null>(null);
@@ -131,6 +136,23 @@ export function ManagerWeeklyCalendar({
       getPositionedReservationBlocks(day),
     ]),
   );
+  const desktopGridTemplateColumns = `64px ${localWeekDays
+    .map((day) => {
+      if (day.dateParam !== focusedDesktopDay) {
+        return "minmax(124px, 1fr)";
+      }
+
+      const blocks = reservationBlocksByDate.get(day.dateParam) ?? [];
+
+      if (!needsFocusedDayExpansion(blocks)) {
+        return "minmax(124px, 1fr)";
+      }
+
+      const width = getFocusedDayWidth(blocks);
+
+      return `minmax(${width}px, ${width}px)`;
+    })
+    .join(" ")}`;
   const firstHour = hours[0] ?? 0;
   const isCurrentWeek = weekDays.some((day) => day.dateParam === todayDateParam);
   const mobileDayKey = localWeekDays.map((day) => day.dateParam).join("|");
@@ -145,8 +167,75 @@ export function ManagerWeeklyCalendar({
     localWeekDays[selectedMobileDayIndex] ?? localWeekDays[0] ?? null;
 
   useEffect(() => {
+    if (dayFocusTimerRef.current) {
+      clearTimeout(dayFocusTimerRef.current);
+      dayFocusTimerRef.current = null;
+    }
+
     setLocalWeekDays(weekDays);
+    setFocusedDesktopDay(null);
+    dayFocusTargetRef.current = null;
   }, [weekDays]);
+
+  useEffect(
+    () => () => {
+      if (dayFocusTimerRef.current) {
+        clearTimeout(dayFocusTimerRef.current);
+      }
+    },
+    [],
+  );
+
+  function focusDesktopDay(dateParam: string, immediate = false) {
+    if (dayFocusTargetRef.current === dateParam && !immediate) {
+      return;
+    }
+
+    if (dayFocusTimerRef.current) {
+      clearTimeout(dayFocusTimerRef.current);
+    }
+
+    dayFocusTargetRef.current = dateParam;
+
+    if (immediate) {
+      setFocusedDesktopDay(dateParam);
+      return;
+    }
+
+    dayFocusTimerRef.current = setTimeout(() => {
+      setFocusedDesktopDay(dateParam);
+      dayFocusTimerRef.current = null;
+    }, 200);
+  }
+
+  function clearDesktopDayFocus(immediate = false) {
+    if (dayFocusTimerRef.current) {
+      clearTimeout(dayFocusTimerRef.current);
+    }
+
+    dayFocusTargetRef.current = null;
+
+    if (immediate) {
+      setFocusedDesktopDay(null);
+      return;
+    }
+
+    dayFocusTimerRef.current = setTimeout(() => {
+      setFocusedDesktopDay(null);
+      dayFocusTimerRef.current = null;
+    }, 120);
+  }
+
+  function getDayParamFromTarget(target: EventTarget | null): string | null {
+    if (!(target instanceof HTMLElement)) {
+      return null;
+    }
+
+    return (
+      target.closest<HTMLElement>("[data-manager-calendar-day]")?.dataset
+        .managerCalendarDay ?? null
+    );
+  }
 
   useEffect(() => {
     setSelectedMobileDayIndex(
@@ -650,17 +739,68 @@ export function ManagerWeeklyCalendar({
             className="mt-5 hidden overflow-hidden rounded-lg border bg-background shadow-sm sm:block"
             dir="ltr"
           >
-            <div className="overflow-x-auto">
+            <div
+              className="overflow-x-auto"
+              onBlurCapture={(event) => {
+                const nextDayParam = getDayParamFromTarget(event.relatedTarget);
+
+                if (nextDayParam) {
+                  focusDesktopDay(nextDayParam, true);
+                } else {
+                  clearDesktopDayFocus(true);
+                }
+              }}
+              onFocusCapture={(event) => {
+                const dateParam = getDayParamFromTarget(event.target);
+
+                if (dateParam) {
+                  focusDesktopDay(dateParam, true);
+                }
+              }}
+              onMouseLeave={() => clearDesktopDayFocus()}
+              onMouseOver={(event) => {
+                const dateParam = getDayParamFromTarget(event.target);
+
+                if (dateParam) {
+                  focusDesktopDay(dateParam);
+                } else {
+                  clearDesktopDayFocus();
+                }
+              }}
+              onPointerDown={(event) => {
+                if (event.pointerType !== "touch") {
+                  return;
+                }
+
+                const dateParam = getDayParamFromTarget(event.target);
+
+                if (dateParam) {
+                  focusDesktopDay(dateParam, true);
+                }
+              }}
+            >
               <div className="min-w-[980px]">
                 <div>
-                  <div className="sticky top-0 z-20 grid grid-cols-[64px_repeat(7,minmax(124px,1fr))] border-b bg-slate-50/80">
+                  <div
+                    className="sticky top-0 z-20 grid border-b bg-slate-50/80 transition-[grid-template-columns] duration-200 ease-out"
+                    style={{ gridTemplateColumns: desktopGridTemplateColumns }}
+                  >
                     <div className="border-r px-3 py-3 text-center text-sm font-semibold text-slate-500" dir="rtl">
                       ساعت
                     </div>
                     {localWeekDays.map((day) => (
                       <div
-                        className="border-r px-3 py-3 text-center text-sm font-semibold last:border-r-0"
+                        className={cn(
+                          "border-r px-3 py-3 text-center text-sm font-semibold transition-colors last:border-r-0",
+                          focusedDesktopDay === day.dateParam
+                            ? "bg-white shadow-[0_0_18px_rgba(15,23,42,0.12)]"
+                            : focusedDesktopDay
+                              ? "text-slate-500"
+                              : null,
+                        )}
+                        data-manager-calendar-day={day.dateParam}
                         key={day.dateParam}
+                        onClick={() => focusDesktopDay(day.dateParam, true)}
                         title={day.dateLabel}
                         dir="rtl"
                       >
@@ -675,8 +815,9 @@ export function ManagerWeeklyCalendar({
                   </div>
 
                   <div
-                    className="grid grid-cols-[64px_repeat(7,minmax(124px,1fr))]"
+                    className="grid transition-[grid-template-columns] duration-200 ease-out"
                     style={{
+                      gridTemplateColumns: desktopGridTemplateColumns,
                       gridTemplateRows: `repeat(${hours.length}, minmax(5.75rem, auto))`,
                     }}
                   >
@@ -717,6 +858,7 @@ export function ManagerWeeklyCalendar({
                                 : null,
                             )}
                             data-date-param={day.dateParam}
+                            data-manager-calendar-day={day.dateParam}
                             data-manager-calendar-cell="true"
                             data-slot-end-hour={slot?.slotEndHour}
                             data-slot-start-hour={slot?.slotStartHour}
@@ -770,7 +912,15 @@ export function ManagerWeeklyCalendar({
 
                           return (
                             <div
-                              className="pointer-events-none z-10 p-2 hover:z-30 focus-within:z-30"
+                              className={cn(
+                                "pointer-events-none z-10 p-2 hover:z-30 focus-within:z-30",
+                                focusedDesktopDay === day.dateParam
+                                  ? "z-30"
+                                  : focusedDesktopDay
+                                    ? "opacity-70"
+                                    : null,
+                              )}
+                              data-manager-calendar-day={day.dateParam}
                               key={`${day.dateParam}-${block.detail.id}`}
                               style={{
                                 gridColumn: dayIndex + 2,
@@ -779,6 +929,7 @@ export function ManagerWeeklyCalendar({
                             >
                               <ReservationBlock
                                 block={block}
+                                isDayFocused={focusedDesktopDay === day.dateParam}
                                 isDragging={
                                   draggedReservation?.reservationId ===
                                   block.detail.id
