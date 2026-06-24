@@ -103,7 +103,16 @@ export function PendingReviewModalContent({
             className={isPending ? "grid gap-2 sm:grid-cols-3" : "grid gap-2 sm:grid-cols-2"}
           >
             {isPending ? (
-              <form action={approveReservationAction}>
+              <form
+                action={approveReservationAction}
+                onSubmit={() => {
+                  window.history.replaceState(
+                    null,
+                    "",
+                    `${window.location.pathname}${window.location.search}`,
+                  );
+                }}
+              >
                 <input name="reservationId" type="hidden" value={reservationId} />
                 <input name="date" type="hidden" value={returnDateParam} />
                 <SubmitButton
