@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ChangeEvent } from "react";
-import { Save } from "lucide-react";
+import { AlertTriangle, Save } from "lucide-react";
 
 import { updateReservationPolicyAction } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
@@ -206,6 +206,29 @@ export function ReservationPolicySettings({
                   بررسی می‌شود.
                 </p>
               </div>
+
+              <aside className="grid gap-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-amber-950">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+                  <div className="grid gap-1 text-xs leading-5">
+                    <p className="font-semibold">نکته عملیاتی</p>
+                    <p>
+                      فعال‌کردن این گزینه به‌تنهایی درخواست‌ها را پردازش نمی‌کند.
+                      یک زمان‌بند خارجی باید endpoint تأیید خودکار را ترجیحاً هر
+                      دقیقه فراخوانی کند. متغیرهای{" "}
+                      <code dir="ltr">APP_BASE_URL</code> و{" "}
+                      <code dir="ltr">AUTO_ACCEPT_CRON_SECRET</code> باید در محیط
+                      اجرای cron تنظیم شده باشند.
+                    </p>
+                  </div>
+                </div>
+                <pre
+                  className="overflow-x-auto rounded-md border border-amber-200 bg-white/80 p-3 text-left text-xs leading-5 text-slate-900"
+                  dir="ltr"
+                >
+                  <code>{`* * * * * flock -n /tmp/nobino-auto-accept.lock curl --fail --silent --show-error -X POST -H "Authorization: Bearer \${AUTO_ACCEPT_CRON_SECRET}" "\${APP_BASE_URL}/api/internal/reservations/auto-accept"`}</code>
+                </pre>
+              </aside>
             </div>
           </section>
         </div>
