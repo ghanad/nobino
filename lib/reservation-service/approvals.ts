@@ -1,14 +1,7 @@
 import { ReservationStatus } from "@prisma/client";
 
 import { db } from "@/lib/db";
-import {
-  calculateAutoAcceptAt,
-  getReservationPolicy,
-} from "@/lib/reservation-service/helpers";
-
-import {
-  assertApprovalPolicies,
-} from "./approval-policies";
+import { assertApprovalPolicies } from "./approval-policies";
 import {
   assertManagerOrAdmin,
   ReservationTransitionError,

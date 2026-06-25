@@ -1,16 +1,14 @@
 import { AlternativeStatus, ReservationStatus } from "@prisma/client";
 
 import { db } from "@/lib/db";
+import { assertCapacityAvailableForApproval } from "@/lib/capacity-service";
 import {
   calculateAutoAcceptAt,
   getReservationPolicy,
 } from "@/lib/reservation-service/helpers";
 import { validateReservationTimeRange } from "@/lib/schedule";
 
-import {
-  assertDailyUserReservationPolicy,
-  assertApprovalPolicies,
-} from "./approval-policies";
+import { assertDailyUserReservationPolicy } from "./approval-policies";
 import {
   assertManagerOrAdmin,
   ReservationTransitionError,
@@ -66,13 +64,24 @@ export async function updateReservationTimeByManager(input: {
       );
     }
 
-    await assertApprovalPolicies(
+    await assertCapacityAvailableForApproval(
       {
         resourcePoolId: reservation.resourcePoolId,
         startAt: input.proposedStartAt,
         endAt: input.proposedEndAt,
         excludeReservationId: reservation.id,
+      },
+      tx,
+    );
+
+    await assertDailyUserReservationPolicy(
+      {
         userId: reservation.userId,
+        startAt: input.proposedStartAt,
+        endAt: input.proposedEndAt,
+        statuses: [ReservationStatus.APPROVED],
+        excludeReservationId: reservation.id,
+        allowSingleReservationOverDailyHourLimit: true,
       },
       tx,
     );
