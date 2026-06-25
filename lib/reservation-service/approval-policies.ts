@@ -1,3 +1,5 @@
+import "server-only";
+
 import { ReservationStatus } from "@prisma/client";
 
 import { assertCapacityAvailableForApproval } from "@/lib/capacity-service";

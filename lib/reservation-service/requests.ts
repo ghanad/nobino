@@ -1,3 +1,5 @@
+import "server-only";
+
 import { ReservationStatus, UserRole } from "@prisma/client";
 
 import { db } from "@/lib/db";

@@ -1,3 +1,5 @@
+import "server-only";
+
 import { AlternativeStatus, ReservationStatus } from "@prisma/client";
 
 import { db } from "@/lib/db";
