@@ -29,7 +29,7 @@ const NOTIFICATION_TITLE_LABELS: Record<string, string> = {
   LUNCH_UPDATED: "رزرو ناهار تغییر کرد",
   NEW_PENDING_RESERVATION: "درخواست رزرو جدید",
   RESERVATION_APPROVED: "رزرو تایید شد",
-  RESERVATION_AUTO_APPROVED: "رزرو خودکار تایید شد",
+  RESERVATION_AUTO_APPROVED: "رزرو تایید شد",
   RESERVATION_CANCELLED: "رزرو لغو شد",
   RESERVATION_REJECTED: "رزرو رد شد",
   RESERVATION_TIME_UPDATED: "زمان رزرو تغییر کرد",
@@ -53,7 +53,7 @@ const NOTIFICATION_BODY_LABELS: Record<string, string> = {
   "A reservation request is waiting for review.":
     "یک درخواست رزرو در انتظار بررسی است.",
   "Your reservation request was automatically approved.":
-    "درخواست رزرو شما به‌صورت خودکار تایید شد.",
+    "درخواست رزرو شما تایید شد.",
   "Your reservation request has been approved.":
     "درخواست رزرو شما تایید شد.",
   "Your reservation request has been rejected.":

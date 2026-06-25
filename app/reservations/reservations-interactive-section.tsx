@@ -21,7 +21,6 @@ import { formatJalaliDateParam } from "@/lib/jalali-date";
 type ReservationsInteractiveSectionProps = CreateReservationFormProps & {
   activeReservations: ActiveReservation[];
   activeLunchReservationByDate: Record<string, { id: string }>;
-  autoAcceptEnabled: boolean;
   cancelLunchReservationAction: (
     previousState: LunchActionState,
     formData: FormData,
@@ -141,7 +140,6 @@ function addPendingReservationToWeekDays(
 export function ReservationsInteractiveSection({
   activeReservations,
   activeLunchReservationByDate,
-  autoAcceptEnabled,
   cancelLunchReservationAction,
   dailyActiveReservationCountByDate,
   dailyReservedHoursByDate,
@@ -273,10 +271,9 @@ export function ReservationsInteractiveSection({
           </Button>
         </div>
 
-      <ActiveReservationsList
-        activeLunchReservationByDate={activeLunchReservationByDate}
-        autoAcceptEnabled={autoAcceptEnabled}
-        cancelLunchReservationAction={cancelLunchReservationAction}
+        <ActiveReservationsList
+          activeLunchReservationByDate={activeLunchReservationByDate}
+          cancelLunchReservationAction={cancelLunchReservationAction}
           onReservationCancelled={handleReservationCancelled}
           reservations={currentActiveReservations}
         />

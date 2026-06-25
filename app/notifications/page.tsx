@@ -265,7 +265,7 @@ function getTypeBadge(notification: NotificationItem): {
   if (notification.type === "RESERVATION_AUTO_APPROVED") {
     return {
       className: "bg-emerald-50 text-emerald-800 ring-emerald-200",
-      label: "تایید خودکار",
+      label: "رزرو تایید شد",
     };
   }
 
@@ -356,7 +356,7 @@ function getNotificationMessage(notification: NotificationItem): ReactNode {
   if (notification.type === "RESERVATION_AUTO_APPROVED" && poolName) {
     return (
       <>
-        رزرو شما برای <bdi>{poolName}</bdi> به‌صورت خودکار تایید شد.
+        رزرو شما برای <bdi>{poolName}</bdi> تایید شد.
       </>
     );
   }

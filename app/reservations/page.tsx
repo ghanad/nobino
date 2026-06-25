@@ -718,7 +718,6 @@ export default async function ReservationsPage({
         action={createReservationInlineAction}
         activeReservations={activeReservations}
         activeLunchReservationByDate={activeLunchReservationByDate}
-        autoAcceptEnabled={reservationPolicy?.autoAcceptEnabled ?? false}
         cancelLunchReservationAction={cancelLunchReservationAction}
         currentDateParam={dateParam}
         dailyActiveReservationCountByDate={dailyActiveReservationCountByDate}
