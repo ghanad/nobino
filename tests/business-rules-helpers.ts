@@ -9,6 +9,8 @@ export const db = new PrismaClient();
 
 export const passwordHash = "test-password-hash";
 export const poolId = "company-systems";
+export const meetingRoomId = "main-meeting-room";
+export const secondMeetingRoomId = "second-meeting-room";
 export const lunchLocationId = "building-a";
 export const secondLunchLocationId = "building-b";
 export const lunchReportRecipientId = "lunch-report-recipient-a";
@@ -160,6 +162,10 @@ export async function resetDatabase() {
   await db.lunchSettings.deleteMany();
   await db.reservationAlternative.deleteMany();
   await db.reservation.deleteMany();
+  await db.meetingRoomReservation.deleteMany();
+  await db.meetingRoomScheduleException.deleteMany();
+  await db.meetingRoomWeeklySchedule.deleteMany();
+  await db.meetingRoom.deleteMany();
   await db.resourcePoolCapacityException.deleteMany();
   await db.scheduleException.deleteMany();
   await db.workingSchedule.deleteMany();
@@ -230,6 +236,37 @@ export async function resetDatabase() {
     })),
   });
 
+  await db.meetingRoom.createMany({
+    data: [
+      {
+        id: meetingRoomId,
+        name: "Main Meeting Room",
+        isActive: true,
+        sortOrder: 1,
+        autoApprovalEnabled: false,
+      },
+      {
+        id: secondMeetingRoomId,
+        name: "Second Meeting Room",
+        isActive: true,
+        sortOrder: 2,
+        autoApprovalEnabled: false,
+      },
+    ],
+  });
+
+  await db.meetingRoomWeeklySchedule.createMany({
+    data: [meetingRoomId, secondMeetingRoomId].flatMap((roomId) =>
+      Array.from({ length: 7 }, (_, dayOfWeek) => ({
+        roomId,
+        dayOfWeek,
+        isWorkingDay: dayOfWeek !== 5,
+        startTime: "09:00",
+        endTime: "17:00",
+      })),
+    ),
+  });
+
   await db.lunchSettings.create({
     data: {
       id: "default",
@@ -266,6 +303,34 @@ export async function resetDatabase() {
         active: true,
       },
     ],
+  });
+}
+
+export async function markMeetingRoomDateWorkingForTest(
+  date: Date,
+  roomId = meetingRoomId,
+) {
+  await db.meetingRoomScheduleException.upsert({
+    where: {
+      roomId_date: {
+        roomId,
+        date: startOfLocalDay(date),
+      },
+    },
+    update: {
+      isWorkingDay: true,
+      startTime: "09:00",
+      endTime: "17:00",
+      reason: "Test meeting room working day",
+    },
+    create: {
+      roomId,
+      date: startOfLocalDay(date),
+      isWorkingDay: true,
+      startTime: "09:00",
+      endTime: "17:00",
+      reason: "Test meeting room working day",
+    },
   });
 }
 

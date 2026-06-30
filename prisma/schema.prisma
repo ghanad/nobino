@@ -67,9 +67,12 @@ model User {
   updatedAt    DateTime @updatedAt
 
   reservations              Reservation[]                   @relation("ReservationUser")
+  meetingRoomReservations   MeetingRoomReservation[]        @relation("MeetingRoomReservationUser")
   lunchReservations         LunchReservation[]              @relation("LunchReservationUser")
   approvedReservations      Reservation[]                   @relation("ReservationApprover")
+  approvedMeetingRoomReservations MeetingRoomReservation[]   @relation("MeetingRoomReservationApprover")
   cancelledReservations     Reservation[]                   @relation("ReservationCanceller")
+  cancelledMeetingRoomReservations MeetingRoomReservation[]  @relation("MeetingRoomReservationCanceller")
   proposedAlternatives      ReservationAlternative[]        @relation("AlternativeProposer")
   createdCapacityExceptions ResourcePoolCapacityException[] @relation("CapacityExceptionCreator")
   auditLogs                 AuditLog[]                      @relation("AuditActor")
@@ -131,6 +134,58 @@ model ScheduleException {
   reason       String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+model MeetingRoom {
+  id                  String   @id @default(cuid())
+  name                String
+  description         String?
+  location            String?
+  isActive            Boolean  @default(true)
+  sortOrder           Int      @default(0)
+  autoApprovalEnabled Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  weeklySchedules MeetingRoomWeeklySchedule[]
+  exceptions      MeetingRoomScheduleException[]
+  reservations    MeetingRoomReservation[]
+
+  @@index([isActive, sortOrder, name])
+}
+
+model MeetingRoomWeeklySchedule {
+  id           String   @id @default(cuid())
+  roomId       String
+  /// Uses JavaScript Date.getDay(): Sunday=0, Monday=1, ..., Friday=5, Saturday=6.
+  dayOfWeek    Int
+  isWorkingDay Boolean  @default(true)
+  startTime    String
+  endTime      String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  room MeetingRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, dayOfWeek])
+  @@index([dayOfWeek])
+}
+
+model MeetingRoomScheduleException {
+  id           String   @id @default(cuid())
+  roomId       String
+  date         DateTime
+  isWorkingDay Boolean
+  startTime    String?
+  endTime      String?
+  reason       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  room MeetingRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, date])
+  @@index([date])
 }
 
 model ReservationPolicy {
@@ -234,6 +289,33 @@ model Reservation {
   @@index([userId, startAt])
 }
 
+model MeetingRoomReservation {
+  id              String            @id @default(cuid())
+  roomId          String
+  userId          String
+  startAt         DateTime
+  endAt           DateTime
+  status          ReservationStatus @default(PENDING)
+  title           String?
+  rejectionReason String?
+  approvedById    String?
+  approvedAt      DateTime?
+  cancelledById   String?
+  cancelledAt     DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  room        MeetingRoom @relation(fields: [roomId], references: [id])
+  user        User        @relation("MeetingRoomReservationUser", fields: [userId], references: [id])
+  approvedBy  User?       @relation("MeetingRoomReservationApprover", fields: [approvedById], references: [id])
+  cancelledBy User?       @relation("MeetingRoomReservationCanceller", fields: [cancelledById], references: [id])
+  notifications Notification[]
+
+  @@index([roomId, startAt, endAt])
+  @@index([status, startAt])
+  @@index([userId, startAt])
+}
+
 model ReservationAlternative {
   id              String            @id @default(cuid())
   reservationId   String
@@ -310,6 +392,7 @@ model Notification {
   id            String    @id @default(cuid())
   userId        String
   reservationId String?
+  meetingRoomReservationId String?
   lunchReservationId String?
   type          String
   title         String
@@ -319,11 +402,13 @@ model Notification {
 
   user        User         @relation("NotificationUser", fields: [userId], references: [id])
   reservation Reservation? @relation(fields: [reservationId], references: [id])
+  meetingRoomReservation MeetingRoomReservation? @relation(fields: [meetingRoomReservationId], references: [id])
   lunchReservation LunchReservation? @relation(fields: [lunchReservationId], references: [id])
   baleDelivery BaleNotificationDelivery?
 
   @@index([userId, readAt])
   @@index([reservationId])
+  @@index([meetingRoomReservationId])
   @@index([lunchReservationId])
 }
 

@@ -26,6 +26,7 @@ function getNavItems(user: CurrentUser): GlobalNavItem[] {
   const canViewLunchReport = canAccessLunchReport(user);
   const navItems: GlobalNavItem[] = [
     { href: "/reservations", label: "رزروها", match: "prefix" },
+    { href: "/meeting-rooms", label: "اتاق جلسه", match: "prefix" },
     {
       href: "/lunch",
       label: "ناهار",
@@ -46,6 +47,11 @@ function getNavItems(user: CurrentUser): GlobalNavItem[] {
       match: "prefix",
       children: [
         { href: "/manager", label: "تقویم رزروها", match: "exact" },
+        {
+          href: "/manager/meeting-rooms",
+          label: "اتاق‌های جلسه",
+          match: "prefix",
+        },
         {
           href: "/manager/team-report",
           label: "گزارش تیم‌ها",
@@ -71,6 +77,11 @@ function getNavItems(user: CurrentUser): GlobalNavItem[] {
             match: "prefix",
           },
           { href: "/admin/schedule", label: "زمان‌بندی", match: "prefix" },
+          {
+            href: "/admin/meeting-rooms",
+            label: "اتاق‌های جلسه",
+            match: "prefix",
+          },
           { href: "/admin/lunch", label: "ناهار", match: "prefix" },
           {
             href: "/admin/lunch-notifications",

@@ -100,6 +100,50 @@ async function main() {
     });
   }
 
+  await prisma.meetingRoom.upsert({
+    where: { id: "main-meeting-room" },
+    update: {
+      name: "اتاق جلسه اصلی",
+      description: "اتاق جلسه پیش‌فرض",
+      location: "دفتر مرکزی",
+      isActive: true,
+      sortOrder: 1,
+      autoApprovalEnabled: false,
+    },
+    create: {
+      id: "main-meeting-room",
+      name: "اتاق جلسه اصلی",
+      description: "اتاق جلسه پیش‌فرض",
+      location: "دفتر مرکزی",
+      isActive: true,
+      sortOrder: 1,
+      autoApprovalEnabled: false,
+    },
+  });
+
+  for (const day of weeklySchedule) {
+    await prisma.meetingRoomWeeklySchedule.upsert({
+      where: {
+        roomId_dayOfWeek: {
+          roomId: "main-meeting-room",
+          dayOfWeek: day.dayOfWeek,
+        },
+      },
+      update: {
+        isWorkingDay: day.isWorkingDay,
+        startTime: day.startTime,
+        endTime: day.endTime,
+      },
+      create: {
+        roomId: "main-meeting-room",
+        dayOfWeek: day.dayOfWeek,
+        isWorkingDay: day.isWorkingDay,
+        startTime: day.startTime,
+        endTime: day.endTime,
+      },
+    });
+  }
+
   await prisma.lunchSettings.upsert({
     where: { id: "default" },
     update: {

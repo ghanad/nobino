@@ -58,6 +58,7 @@ function isActiveNavItem(pathname: string, item: GlobalNavItem): boolean {
 function getMobileNavSections(navItems: GlobalNavItem[]): MobileNavSection[] {
   const sections: MobileNavSection[] = [];
   const reservationsItem = navItems.find((item) => item.href === "/reservations");
+  const meetingRoomsItem = navItems.find((item) => item.href === "/meeting-rooms");
   const lunchItem = navItems.find((item) => item.href === "/lunch");
   const managerItem = navItems.find((item) => item.href === "/manager");
   const adminItem = navItems.find((item) => item.href === "/admin");
@@ -67,6 +68,13 @@ function getMobileNavSections(navItems: GlobalNavItem[]): MobileNavSection[] {
     sections.push({
       entries: [{ item: reservationsItem }],
       id: "reservations",
+    });
+  }
+
+  if (meetingRoomsItem) {
+    sections.push({
+      entries: [{ item: meetingRoomsItem }],
+      id: "meeting-rooms",
     });
   }
 
