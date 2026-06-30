@@ -3,6 +3,7 @@ import { test } from "node:test";
 
 import { ReservationStatus } from "@prisma/client";
 
+import { runAutoAcceptBatch } from "@/lib/auto-accept-service";
 import { CapacityUnavailableError } from "@/lib/capacity-service";
 import {
   assertMeetingRoomCapacityAvailableForApproval,
@@ -102,6 +103,40 @@ test("meeting room auto approval uses its own delay and approves only when capac
   assert.equal(reservations[0].status, ReservationStatus.APPROVED);
   assert.equal(reservations[0].autoApprovalAt, null);
   assert.equal(reservations[1].status, ReservationStatus.PENDING);
+});
+
+test("shared auto accept batch also runs meeting room auto accept", async () => {
+  const startAt = nextWorkingDateAtHour(9);
+  const endAt = addHours(startAt, 1);
+  await markMeetingRoomDateWorkingForTest(startAt);
+  await db.meetingRoom.update({
+    where: { id: meetingRoomId },
+    data: { autoApprovalDelayHours: 1, autoApprovalEnabled: true },
+  });
+
+  const pending = await createMeetingRoomReservationRequest({
+    userId,
+    roomId: meetingRoomId,
+    startAt,
+    endAt,
+  });
+  assert.ok(pending.autoApprovalAt);
+
+  await db.meetingRoomReservation.update({
+    where: { id: pending.id },
+    data: { autoApprovalAt: addHours(new Date(), -1) },
+  });
+
+  const result = await runAutoAcceptBatch();
+  const reservation = await db.meetingRoomReservation.findUniqueOrThrow({
+    where: { id: pending.id },
+    select: { status: true },
+  });
+
+  assert.equal(result.meetingRooms.approved, 1);
+  assert.equal(result.reservations.approved, 0);
+  assert.equal(result.totals.approved, 1);
+  assert.equal(reservation.status, ReservationStatus.APPROVED);
 });
 
 test("pending meeting room reservations are visible but do not block another request", async () => {

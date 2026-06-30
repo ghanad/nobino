@@ -438,9 +438,10 @@ export default async function AdminMeetingRoomsPage({
                           accept رزرو سیستم‌هاست.
                         </span>
                         <span className="text-xs leading-5 text-muted-foreground">
-                          پردازش زمان‌دار با endpoint جدا انجام می‌شود:{" "}
+                          پردازش زمان‌دار با همان endpoint auto accept انجام
+                          می‌شود:{" "}
                           <code dir="ltr">
-                            /api/internal/meeting-rooms/auto-accept
+                            /api/internal/reservations/auto-accept
                           </code>
                         </span>
                       </span>
