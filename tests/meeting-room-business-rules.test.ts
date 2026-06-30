@@ -8,6 +8,7 @@ import {
   assertMeetingRoomCapacityAvailableForApproval,
   getMeetingRoomSlotUsage,
 } from "@/lib/meeting-room-capacity-service";
+import { runMeetingRoomAutoAcceptBatch } from "@/lib/meeting-room-auto-accept-service";
 import { updateMeetingRoom } from "@/lib/meeting-room-admin-service";
 import {
   approveMeetingRoomReservation,
@@ -56,33 +57,51 @@ test("meeting room reservation starts pending when auto approval is disabled", a
   assert.equal(reservation.title, "Planning");
 });
 
-test("meeting room auto approval approves only when capacity is available", async () => {
+test("meeting room auto approval uses its own delay and approves only when capacity is available", async () => {
   const startAt = nextWorkingDateAtHour(9);
   const endAt = addHours(startAt, 1);
   await markMeetingRoomDateWorkingForTest(startAt);
   await db.meetingRoom.update({
     where: { id: meetingRoomId },
-    data: { autoApprovalEnabled: true },
+    data: { autoApprovalDelayHours: 2, autoApprovalEnabled: true },
   });
 
-  const approved = await createMeetingRoomReservationRequest({
+  const pending = await createMeetingRoomReservationRequest({
     userId,
     roomId: meetingRoomId,
     startAt,
     endAt,
   });
 
-  assert.equal(approved.status, ReservationStatus.APPROVED);
-  await assert.rejects(
-    () =>
-      createMeetingRoomReservationRequest({
-        userId: secondUserId,
-        roomId: meetingRoomId,
-        startAt,
-        endAt,
-      }),
-    CapacityUnavailableError,
+  assert.equal(pending.status, ReservationStatus.PENDING);
+  assert.ok(pending.autoApprovalAt);
+  assert.equal(
+    pending.autoApprovalAt.getTime(),
+    Math.min(pending.createdAt.getTime() + 2 * 60 * 60 * 1000, startAt.getTime()),
   );
+
+  await createMeetingRoomReservationRequest({
+    userId: secondUserId,
+    roomId: meetingRoomId,
+    startAt,
+    endAt,
+  });
+
+  const result = await runMeetingRoomAutoAcceptBatch(
+    addHours(pending.autoApprovalAt, 1),
+  );
+  const reservations = await db.meetingRoomReservation.findMany({
+    where: { roomId: meetingRoomId, startAt, endAt },
+    orderBy: { createdAt: "asc" },
+    select: { autoApprovalAt: true, status: true },
+  });
+
+  assert.equal(result.considered, 2);
+  assert.equal(result.approved, 1);
+  assert.equal(result.stillPending, 1);
+  assert.equal(reservations[0].status, ReservationStatus.APPROVED);
+  assert.equal(reservations[0].autoApprovalAt, null);
+  assert.equal(reservations[1].status, ReservationStatus.PENDING);
 });
 
 test("pending meeting room reservations are visible but do not block another request", async () => {
@@ -372,6 +391,7 @@ test("admin room updates create audit logs", async () => {
     isActive: false,
     sortOrder: 1,
     autoApprovalEnabled: true,
+    autoApprovalDelayHours: 3,
   });
 
   const auditLog = await db.auditLog.findFirst({

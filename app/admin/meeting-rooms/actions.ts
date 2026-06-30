@@ -29,10 +29,12 @@ const roomSchema = z.object({
   isActive: z.coerce.boolean(),
   sortOrder: z.coerce.number().int().min(0).max(1000),
   autoApprovalEnabled: z.coerce.boolean(),
+  autoApprovalDelayHours: z.coerce.number().int().min(1).max(24),
 });
 
 const weeklyScheduleSchema = z.object({
   scheduleId: z.string().min(1),
+  roomId: z.string().optional(),
   isWorkingDay: z.coerce.boolean(),
   startTime: timeSchema.optional(),
   endTime: timeSchema.optional(),
@@ -51,10 +53,12 @@ const exceptionUpdateSchema = exceptionCreateSchema
   .omit({ date: true, roomId: true })
   .extend({
     exceptionId: z.string().min(1),
+    roomId: z.string().optional(),
   });
 
 const exceptionDeleteSchema = z.object({
   exceptionId: z.string().min(1),
+  roomId: z.string().optional(),
 });
 
 function checkboxToBoolean(value: FormDataEntryValue | null): boolean {
@@ -98,19 +102,21 @@ export async function createMeetingRoomAction(formData: FormData): Promise<void>
     isActive: checkboxToBoolean(formData.get("isActive")),
     sortOrder: formData.get("sortOrder"),
     autoApprovalEnabled: checkboxToBoolean(formData.get("autoApprovalEnabled")),
+    autoApprovalDelayHours: formData.get("autoApprovalDelayHours"),
   });
 
   if (!parsed.success) {
-    redirectToAdminMeetingRooms({ error: "مشخصات اتاق جلسه را معتبر وارد کنید." });
+    redirectToAdminMeetingRooms({
+      error: "مشخصات اتاق جلسه و مدت auto accept را معتبر وارد کنید.",
+    });
   }
 
   try {
-    await createMeetingRoom({ adminId: admin.id, ...parsed.data });
+    const room = await createMeetingRoom({ adminId: admin.id, ...parsed.data });
+    redirectToAdminMeetingRooms({ roomCreated: "1", roomId: room.id });
   } catch (error) {
     redirectToAdminMeetingRooms({ error: getActionErrorMessage(error) });
   }
-
-  redirectToAdminMeetingRooms({ roomCreated: "1" });
 }
 
 export async function updateMeetingRoomAction(formData: FormData): Promise<void> {
@@ -123,10 +129,13 @@ export async function updateMeetingRoomAction(formData: FormData): Promise<void>
     isActive: checkboxToBoolean(formData.get("isActive")),
     sortOrder: formData.get("sortOrder"),
     autoApprovalEnabled: checkboxToBoolean(formData.get("autoApprovalEnabled")),
+    autoApprovalDelayHours: formData.get("autoApprovalDelayHours"),
   });
 
   if (!parsed.success) {
-    redirectToAdminMeetingRooms({ error: "مشخصات اتاق جلسه را معتبر وارد کنید." });
+    redirectToAdminMeetingRooms({
+      error: "مشخصات اتاق جلسه و مدت auto accept را معتبر وارد کنید.",
+    });
   }
 
   try {
@@ -135,7 +144,10 @@ export async function updateMeetingRoomAction(formData: FormData): Promise<void>
     redirectToAdminMeetingRooms({ error: getActionErrorMessage(error) });
   }
 
-  redirectToAdminMeetingRooms({ roomUpdated: "1" });
+  redirectToAdminMeetingRooms({
+    roomId: parsed.data.roomId,
+    roomUpdated: "1",
+  });
 }
 
 export async function updateMeetingRoomWeeklyScheduleAction(
@@ -144,6 +156,7 @@ export async function updateMeetingRoomWeeklyScheduleAction(
   const admin = await requireRole([UserRole.ADMIN]);
   const parsed = weeklyScheduleSchema.safeParse({
     scheduleId: formData.get("scheduleId"),
+    roomId: formData.get("roomId") || undefined,
     isWorkingDay: checkboxToBoolean(formData.get("isWorkingDay")),
     startTime: emptyToUndefined(formData.get("startTime")),
     endTime: emptyToUndefined(formData.get("endTime")),
@@ -154,12 +167,21 @@ export async function updateMeetingRoomWeeklyScheduleAction(
   }
 
   try {
-    await updateMeetingRoomWeeklySchedule({ adminId: admin.id, ...parsed.data });
+    await updateMeetingRoomWeeklySchedule({
+      adminId: admin.id,
+      scheduleId: parsed.data.scheduleId,
+      isWorkingDay: parsed.data.isWorkingDay,
+      startTime: parsed.data.startTime,
+      endTime: parsed.data.endTime,
+    });
   } catch (error) {
     redirectToAdminMeetingRooms({ error: getActionErrorMessage(error) });
   }
 
-  redirectToAdminMeetingRooms({ scheduleUpdated: "1" });
+  redirectToAdminMeetingRooms({
+    roomId: parsed.data.roomId,
+    scheduleUpdated: "1",
+  });
 }
 
 export async function createMeetingRoomScheduleExceptionAction(
@@ -195,7 +217,10 @@ export async function createMeetingRoomScheduleExceptionAction(
     redirectToAdminMeetingRooms({ error: getActionErrorMessage(error) });
   }
 
-  redirectToAdminMeetingRooms({ exceptionCreated: "1" });
+  redirectToAdminMeetingRooms({
+    exceptionCreated: "1",
+    roomId: parsed.data.roomId,
+  });
 }
 
 export async function updateMeetingRoomScheduleExceptionAction(
@@ -204,6 +229,7 @@ export async function updateMeetingRoomScheduleExceptionAction(
   const admin = await requireRole([UserRole.ADMIN]);
   const parsed = exceptionUpdateSchema.safeParse({
     exceptionId: formData.get("exceptionId"),
+    roomId: formData.get("roomId") || undefined,
     isWorkingDay: checkboxToBoolean(formData.get("isWorkingDay")),
     startTime: emptyToUndefined(formData.get("startTime")),
     endTime: emptyToUndefined(formData.get("endTime")),
@@ -217,13 +243,20 @@ export async function updateMeetingRoomScheduleExceptionAction(
   try {
     await updateMeetingRoomScheduleException({
       adminId: admin.id,
-      ...parsed.data,
+      exceptionId: parsed.data.exceptionId,
+      isWorkingDay: parsed.data.isWorkingDay,
+      startTime: parsed.data.startTime,
+      endTime: parsed.data.endTime,
+      reason: parsed.data.reason,
     });
   } catch (error) {
     redirectToAdminMeetingRooms({ error: getActionErrorMessage(error) });
   }
 
-  redirectToAdminMeetingRooms({ exceptionUpdated: "1" });
+  redirectToAdminMeetingRooms({
+    exceptionUpdated: "1",
+    roomId: parsed.data.roomId,
+  });
 }
 
 export async function deleteMeetingRoomScheduleExceptionAction(
@@ -232,6 +265,7 @@ export async function deleteMeetingRoomScheduleExceptionAction(
   const admin = await requireRole([UserRole.ADMIN]);
   const parsed = exceptionDeleteSchema.safeParse({
     exceptionId: formData.get("exceptionId"),
+    roomId: formData.get("roomId") || undefined,
   });
 
   if (!parsed.success) {
@@ -247,5 +281,8 @@ export async function deleteMeetingRoomScheduleExceptionAction(
     redirectToAdminMeetingRooms({ error: getActionErrorMessage(error) });
   }
 
-  redirectToAdminMeetingRooms({ exceptionDeleted: "1" });
+  redirectToAdminMeetingRooms({
+    exceptionDeleted: "1",
+    roomId: parsed.data.roomId,
+  });
 }

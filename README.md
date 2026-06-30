@@ -193,7 +193,8 @@ Use `.env.example` as the source of truth for required settings:
 - `BALE_BOT_TOKEN`: secret token received from Bale `@botfather`.
 - `BALE_BOT_USERNAME`: bot username without `@`; used by the account-linking UI.
 - `BALE_SYNC_SECRET`: long random bearer secret protecting the Bale sync route.
-- `AUTO_ACCEPT_CRON_SECRET`: long random bearer secret protecting the reservation auto-accept route.
+- `AUTO_ACCEPT_CRON_SECRET`: long random bearer secret protecting the reservation
+  and meeting-room auto-accept routes.
 - `NEXT_PUBLIC_APP_NAME`: display name used by the app shell.
 
 LDAP authentication validates the password against LDAP. When an LDAP login is
@@ -227,11 +228,22 @@ flock -n /tmp/nobino-auto-accept.lock curl --fail --silent --show-error -X POST 
   "${APP_BASE_URL}/api/internal/reservations/auto-accept"
 ```
 
-The reservation auto-accept route is independent from the Bale sync route and
-only processes eligible pending reservations whose configured auto-approval
-deadline has arrived. Existing pending reservations are not backfilled when the
-feature is enabled; only new requests and subsequently rescheduled pending
-requests receive deadlines.
+Run meeting-room auto-approval from its own scheduler entry if any room uses
+meeting-room auto accept:
+
+```bash
+flock -n /tmp/nobino-meeting-room-auto-accept.lock curl --fail --silent --show-error -X POST \
+  -H "Authorization: Bearer ${AUTO_ACCEPT_CRON_SECRET}" \
+  "${APP_BASE_URL}/api/internal/meeting-rooms/auto-accept"
+```
+
+The reservation auto-accept route and meeting-room auto-accept route are
+independent from each other and from the Bale sync route. Reservation auto accept
+uses `/admin/reservation-policy`; meeting-room auto accept uses per-room settings
+from `/admin/meeting-rooms`. Both routes only process eligible pending requests
+whose configured auto-approval deadline has arrived. Existing pending
+reservations are not backfilled when the feature is enabled; only new requests
+and subsequently rescheduled pending reservation requests receive deadlines.
 
 The endpoint tracks Bale's `update_id` offset, records each notification
 delivery, and retries failed sends up to three times. It does not send

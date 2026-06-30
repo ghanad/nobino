@@ -244,6 +244,7 @@ export async function resetDatabase() {
         isActive: true,
         sortOrder: 1,
         autoApprovalEnabled: false,
+        autoApprovalDelayHours: 4,
       },
       {
         id: secondMeetingRoomId,
@@ -251,6 +252,7 @@ export async function resetDatabase() {
         isActive: true,
         sortOrder: 2,
         autoApprovalEnabled: false,
+        autoApprovalDelayHours: 4,
       },
     ],
   });

@@ -12,6 +12,7 @@ export async function createMeetingRoom(input: {
   isActive: boolean;
   sortOrder: number;
   autoApprovalEnabled: boolean;
+  autoApprovalDelayHours: number;
 }) {
   const name = input.name.trim();
 
@@ -23,11 +24,22 @@ export async function createMeetingRoom(input: {
     throw new AdminSettingsError("Sort order must be a whole number.");
   }
 
+  if (
+    !Number.isInteger(input.autoApprovalDelayHours) ||
+    input.autoApprovalDelayHours < 1 ||
+    input.autoApprovalDelayHours > 24
+  ) {
+    throw new AdminSettingsError(
+      "Meeting room auto accept delay must be between 1 and 24 hours.",
+    );
+  }
+
   return db.$transaction(async (tx) => {
     await assertAdmin(input.adminId, tx);
 
     const room = await tx.meetingRoom.create({
       data: {
+        autoApprovalDelayHours: input.autoApprovalDelayHours,
         autoApprovalEnabled: input.autoApprovalEnabled,
         description: input.description?.trim() || null,
         isActive: input.isActive,
@@ -53,6 +65,7 @@ export async function createMeetingRoom(input: {
         action: "MEETING_ROOM_CREATED",
         newValue: {
           autoApprovalEnabled: room.autoApprovalEnabled,
+          autoApprovalDelayHours: room.autoApprovalDelayHours,
           description: room.description,
           isActive: room.isActive,
           location: room.location,
@@ -75,11 +88,22 @@ export async function updateMeetingRoom(input: {
   isActive: boolean;
   sortOrder: number;
   autoApprovalEnabled: boolean;
+  autoApprovalDelayHours: number;
 }) {
   const name = input.name.trim();
 
   if (!name) {
     throw new AdminSettingsError("Meeting room name is required.");
+  }
+
+  if (
+    !Number.isInteger(input.autoApprovalDelayHours) ||
+    input.autoApprovalDelayHours < 1 ||
+    input.autoApprovalDelayHours > 24
+  ) {
+    throw new AdminSettingsError(
+      "Meeting room auto accept delay must be between 1 and 24 hours.",
+    );
   }
 
   return db.$transaction(async (tx) => {
@@ -96,6 +120,7 @@ export async function updateMeetingRoom(input: {
     const updated = await tx.meetingRoom.update({
       where: { id: current.id },
       data: {
+        autoApprovalDelayHours: input.autoApprovalDelayHours,
         autoApprovalEnabled: input.autoApprovalEnabled,
         description: input.description?.trim() || null,
         isActive: input.isActive,
@@ -116,6 +141,7 @@ export async function updateMeetingRoom(input: {
             : "MEETING_ROOM_UPDATED",
         oldValue: {
           autoApprovalEnabled: current.autoApprovalEnabled,
+          autoApprovalDelayHours: current.autoApprovalDelayHours,
           description: current.description,
           isActive: current.isActive,
           location: current.location,
@@ -124,6 +150,7 @@ export async function updateMeetingRoom(input: {
         },
         newValue: {
           autoApprovalEnabled: updated.autoApprovalEnabled,
+          autoApprovalDelayHours: updated.autoApprovalDelayHours,
           description: updated.description,
           isActive: updated.isActive,
           location: updated.location,

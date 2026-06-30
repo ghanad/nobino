@@ -109,6 +109,7 @@ async function main() {
       isActive: true,
       sortOrder: 1,
       autoApprovalEnabled: false,
+      autoApprovalDelayHours: 4,
     },
     create: {
       id: "main-meeting-room",
@@ -118,6 +119,7 @@ async function main() {
       isActive: true,
       sortOrder: 1,
       autoApprovalEnabled: false,
+      autoApprovalDelayHours: 4,
     },
   });
 

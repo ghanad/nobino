@@ -11,6 +11,27 @@ import {
   type DbClient,
 } from "@/lib/reservation-service/shared";
 
+const ONE_HOUR_MS = 60 * 60 * 1000;
+
+export function calculateMeetingRoomAutoApprovalAt(input: {
+  autoApprovalDelayHours: number;
+  autoApprovalEnabled: boolean;
+  createdAt: Date;
+  startAt: Date;
+}): Date | null {
+  if (!input.autoApprovalEnabled) {
+    return null;
+  }
+
+  const deadline = new Date(
+    input.createdAt.getTime() + input.autoApprovalDelayHours * ONE_HOUR_MS,
+  );
+
+  return deadline.getTime() < input.startAt.getTime()
+    ? deadline
+    : input.startAt;
+}
+
 async function notifyManagers(
   tx: DbClient,
   input: {
@@ -99,6 +120,7 @@ export async function approveMeetingRoomReservationInTransaction(
   const approvedReservation = await tx.meetingRoomReservation.update({
     where: { id: reservation.id },
     data: {
+      autoApprovalAt: null,
       approvedAt: input.approvedAt,
       approvedById: input.approvedById,
       rejectionReason: null,
@@ -158,6 +180,7 @@ export async function createMeetingRoomReservationRequest(input: {
     const room = await tx.meetingRoom.findUnique({
       where: { id: input.roomId },
       select: {
+        autoApprovalDelayHours: true,
         autoApprovalEnabled: true,
         id: true,
         isActive: true,
@@ -169,8 +192,18 @@ export async function createMeetingRoomReservationRequest(input: {
       throw new ReservationTransitionError("Meeting room is not available.");
     }
 
+    const createdAt = new Date();
+    const autoApprovalAt = calculateMeetingRoomAutoApprovalAt({
+      autoApprovalDelayHours: room.autoApprovalDelayHours,
+      autoApprovalEnabled: room.autoApprovalEnabled,
+      createdAt,
+      startAt: input.startAt,
+    });
+
     const reservation = await tx.meetingRoomReservation.create({
       data: {
+        autoApprovalAt,
+        createdAt,
         endAt: input.endAt,
         roomId: input.roomId,
         startAt: input.startAt,
@@ -188,6 +221,7 @@ export async function createMeetingRoomReservationRequest(input: {
         action: "MEETING_ROOM_RESERVATION_CREATED",
         newValue: {
           createdAt: reservation.createdAt.toISOString(),
+          autoApprovalAt: reservation.autoApprovalAt?.toISOString() ?? null,
           endAt: reservation.endAt.toISOString(),
           roomId: reservation.roomId,
           startAt: reservation.startAt.toISOString(),
@@ -197,19 +231,6 @@ export async function createMeetingRoomReservationRequest(input: {
         },
       },
     });
-
-    if (room.autoApprovalEnabled) {
-      return approveMeetingRoomReservationInTransaction(tx, {
-        actorUserId: null,
-        approvedAt: new Date(),
-        approvedById: null,
-        auditAction: "MEETING_ROOM_RESERVATION_AUTO_APPROVED",
-        notificationBody: "درخواست رزرو اتاق جلسه شما به صورت خودکار تایید شد.",
-        notificationTitle: "رزرو اتاق جلسه تایید شد",
-        notificationType: "MEETING_ROOM_RESERVATION_AUTO_APPROVED",
-        reservationId: reservation.id,
-      });
-    }
 
     await notifyManagers(tx, {
       reservationId: reservation.id,
@@ -268,6 +289,7 @@ export async function rejectMeetingRoomReservation(input: {
     const updated = await tx.meetingRoomReservation.update({
       where: { id: reservation.id },
       data: {
+        autoApprovalAt: null,
         rejectionReason: input.rejectionReason?.trim() || null,
         status: ReservationStatus.REJECTED,
       },
@@ -334,6 +356,7 @@ export async function cancelMeetingRoomReservationByUser(input: {
     const updated = await tx.meetingRoomReservation.update({
       where: { id: reservation.id },
       data: {
+        autoApprovalAt: null,
         cancelledAt: new Date(),
         cancelledById: input.userId,
         status: ReservationStatus.CANCELLED_BY_USER,
@@ -408,6 +431,7 @@ export async function cancelMeetingRoomReservationByManager(input: {
     const updated = await tx.meetingRoomReservation.update({
       where: { id: reservation.id },
       data: {
+        autoApprovalAt: null,
         cancelledAt: new Date(),
         cancelledById: input.managerId,
         status: ReservationStatus.CANCELLED_BY_ADMIN,
