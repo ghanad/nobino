@@ -71,6 +71,10 @@ function emptyToUndefined(value: FormDataEntryValue | null) {
   return text || undefined;
 }
 
+function getFormString(formData: FormData, name: string) {
+  return emptyToUndefined(formData.get(name));
+}
+
 function getActionErrorMessage(error: unknown): string {
   if (error instanceof AdminSettingsError) {
     return error.message;
@@ -107,15 +111,23 @@ export async function createMeetingRoomAction(formData: FormData): Promise<void>
 
   if (!parsed.success) {
     redirectToAdminMeetingRooms({
-      error: "مشخصات اتاق جلسه و مدت auto accept را معتبر وارد کنید.",
+      error: "مشخصات اتاق جلسه و مدت تأیید خودکار را معتبر وارد کنید.",
+      view: "new",
     });
   }
 
   try {
     const room = await createMeetingRoom({ adminId: admin.id, ...parsed.data });
-    redirectToAdminMeetingRooms({ roomCreated: "1", roomId: room.id });
+    redirectToAdminMeetingRooms({
+      roomCreated: "1",
+      roomId: room.id,
+      view: "details",
+    });
   } catch (error) {
-    redirectToAdminMeetingRooms({ error: getActionErrorMessage(error) });
+    redirectToAdminMeetingRooms({
+      error: getActionErrorMessage(error),
+      view: "new",
+    });
   }
 }
 
@@ -134,19 +146,26 @@ export async function updateMeetingRoomAction(formData: FormData): Promise<void>
 
   if (!parsed.success) {
     redirectToAdminMeetingRooms({
-      error: "مشخصات اتاق جلسه و مدت auto accept را معتبر وارد کنید.",
+      error: "مشخصات اتاق جلسه و مدت تأیید خودکار را معتبر وارد کنید.",
+      roomId: getFormString(formData, "roomId"),
+      view: "details",
     });
   }
 
   try {
     await updateMeetingRoom({ adminId: admin.id, ...parsed.data });
   } catch (error) {
-    redirectToAdminMeetingRooms({ error: getActionErrorMessage(error) });
+    redirectToAdminMeetingRooms({
+      error: getActionErrorMessage(error),
+      roomId: parsed.data.roomId,
+      view: "details",
+    });
   }
 
   redirectToAdminMeetingRooms({
     roomId: parsed.data.roomId,
     roomUpdated: "1",
+    view: "details",
   });
 }
 
@@ -163,7 +182,11 @@ export async function updateMeetingRoomWeeklyScheduleAction(
   });
 
   if (!parsed.success) {
-    redirectToAdminMeetingRooms({ error: "ساعت‌های زمان‌بندی را مثل 09:00 وارد کنید." });
+    redirectToAdminMeetingRooms({
+      error: "ساعت‌های زمان‌بندی را مثل 09:00 وارد کنید.",
+      roomId: getFormString(formData, "roomId"),
+      view: "schedule",
+    });
   }
 
   try {
@@ -175,12 +198,17 @@ export async function updateMeetingRoomWeeklyScheduleAction(
       endTime: parsed.data.endTime,
     });
   } catch (error) {
-    redirectToAdminMeetingRooms({ error: getActionErrorMessage(error) });
+    redirectToAdminMeetingRooms({
+      error: getActionErrorMessage(error),
+      roomId: parsed.data.roomId,
+      view: "schedule",
+    });
   }
 
   redirectToAdminMeetingRooms({
     roomId: parsed.data.roomId,
     scheduleUpdated: "1",
+    view: "schedule",
   });
 }
 
@@ -198,13 +226,21 @@ export async function createMeetingRoomScheduleExceptionAction(
   });
 
   if (!parsed.success) {
-    redirectToAdminMeetingRooms({ error: "استثنای اتاق جلسه را معتبر وارد کنید." });
+    redirectToAdminMeetingRooms({
+      error: "استثنای اتاق جلسه را معتبر وارد کنید.",
+      roomId: getFormString(formData, "roomId"),
+      view: "exceptions",
+    });
   }
 
   const date = parseJalaliDateParam(parsed.data.date);
 
   if (!date) {
-    redirectToAdminMeetingRooms({ error: "تاریخ جلالی معتبر وارد کنید." });
+    redirectToAdminMeetingRooms({
+      error: "تاریخ جلالی معتبر وارد کنید.",
+      roomId: parsed.data.roomId,
+      view: "exceptions",
+    });
   }
 
   try {
@@ -214,12 +250,17 @@ export async function createMeetingRoomScheduleExceptionAction(
       date,
     });
   } catch (error) {
-    redirectToAdminMeetingRooms({ error: getActionErrorMessage(error) });
+    redirectToAdminMeetingRooms({
+      error: getActionErrorMessage(error),
+      roomId: parsed.data.roomId,
+      view: "exceptions",
+    });
   }
 
   redirectToAdminMeetingRooms({
     exceptionCreated: "1",
     roomId: parsed.data.roomId,
+    view: "exceptions",
   });
 }
 
@@ -237,7 +278,11 @@ export async function updateMeetingRoomScheduleExceptionAction(
   });
 
   if (!parsed.success) {
-    redirectToAdminMeetingRooms({ error: "استثنای اتاق جلسه را معتبر وارد کنید." });
+    redirectToAdminMeetingRooms({
+      error: "استثنای اتاق جلسه را معتبر وارد کنید.",
+      roomId: getFormString(formData, "roomId"),
+      view: "exceptions",
+    });
   }
 
   try {
@@ -250,12 +295,17 @@ export async function updateMeetingRoomScheduleExceptionAction(
       reason: parsed.data.reason,
     });
   } catch (error) {
-    redirectToAdminMeetingRooms({ error: getActionErrorMessage(error) });
+    redirectToAdminMeetingRooms({
+      error: getActionErrorMessage(error),
+      roomId: parsed.data.roomId,
+      view: "exceptions",
+    });
   }
 
   redirectToAdminMeetingRooms({
     exceptionUpdated: "1",
     roomId: parsed.data.roomId,
+    view: "exceptions",
   });
 }
 
@@ -269,7 +319,11 @@ export async function deleteMeetingRoomScheduleExceptionAction(
   });
 
   if (!parsed.success) {
-    redirectToAdminMeetingRooms({ error: "استثنای معتبر انتخاب کنید." });
+    redirectToAdminMeetingRooms({
+      error: "استثنای معتبر انتخاب کنید.",
+      roomId: getFormString(formData, "roomId"),
+      view: "exceptions",
+    });
   }
 
   try {
@@ -278,11 +332,16 @@ export async function deleteMeetingRoomScheduleExceptionAction(
       exceptionId: parsed.data.exceptionId,
     });
   } catch (error) {
-    redirectToAdminMeetingRooms({ error: getActionErrorMessage(error) });
+    redirectToAdminMeetingRooms({
+      error: getActionErrorMessage(error),
+      roomId: parsed.data.roomId,
+      view: "exceptions",
+    });
   }
 
   redirectToAdminMeetingRooms({
     exceptionDeleted: "1",
     roomId: parsed.data.roomId,
+    view: "exceptions",
   });
 }
