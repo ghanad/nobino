@@ -53,7 +53,7 @@ export function DeleteMeetingRoomButton({
                   حذف اتاق جلسه
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  آیا از حذف «{roomName}» مطمئن هستید؟ history و نوبت‌های گذشته
+                  آیا از حذف «{roomName}» مطمئن هستید؟ تاریخچه و نوبت‌های گذشته
                   حفظ می‌شوند، اما تمام نوبت‌های آینده حذف خواهند شد.
                 </p>
               </div>

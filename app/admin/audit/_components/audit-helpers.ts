@@ -45,6 +45,7 @@ export const ACTION_LABELS: Record<string, string> = {
   LUNCH_RESERVATION_CANCELLED_BY_MANAGER: "رزرو ناهار توسط مدیر لغو شد",
   MEETING_ROOM_ACTIVE_STATUS_CHANGED: "وضعیت اتاق جلسه تغییر کرد",
   MEETING_ROOM_CREATED: "اتاق جلسه ساخته شد",
+  MEETING_ROOM_DELETED: "اتاق جلسه حذف شد",
   MEETING_ROOM_EXCEPTION_CREATED: "استثنای اتاق جلسه اضافه شد",
   MEETING_ROOM_EXCEPTION_DELETED: "استثنای اتاق جلسه حذف شد",
   MEETING_ROOM_EXCEPTION_UPDATED: "استثنای اتاق جلسه ویرایش شد",
