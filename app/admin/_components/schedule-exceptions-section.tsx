@@ -16,13 +16,11 @@ import {
   updateScheduleExceptionAction,
 } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
-import {
-  JALALI_DATE_INPUT_PLACEHOLDER,
-  formatJalaliDate,
-} from "@/lib/jalali-date";
+import { formatJalaliDate } from "@/lib/jalali-date";
 
 import { FieldLabel, TextInput } from "./admin-form-fields";
 import { formatPersianNumber, formatWorkingWindow } from "./admin-formatting";
+import { JalaliDatePicker } from "./jalali-date-picker";
 
 export function ScheduleExceptions({
   currentJalaliYear,
@@ -105,11 +103,9 @@ export function ScheduleExceptions({
         <div className="grid gap-4 lg:grid-cols-[150px_120px_120px_1fr_160px_auto] lg:items-end">
           <div className="grid gap-2">
             <FieldLabel htmlFor="exception-date">تاریخ جلالی</FieldLabel>
-            <TextInput
+            <JalaliDatePicker
               id="exception-date"
               name="date"
-              placeholder={JALALI_DATE_INPUT_PLACEHOLDER}
-              required
             />
           </div>
           <div className="grid gap-2">
