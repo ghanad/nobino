@@ -164,6 +164,43 @@ export async function updateMeetingRoom(input: {
   });
 }
 
+export async function setMeetingRoomActiveStatus(input: {
+  adminId: string;
+  roomId: string;
+  isActive: boolean;
+}) {
+  return db.$transaction(async (tx) => {
+    await assertAdmin(input.adminId, tx);
+
+    const current = await tx.meetingRoom.findUnique({
+      where: { id: input.roomId },
+      select: { id: true, isActive: true, deletedAt: true },
+    });
+
+    if (!current || current.deletedAt) {
+      throw new AdminSettingsError("Meeting room was not found.");
+    }
+
+    const updated = await tx.meetingRoom.update({
+      where: { id: current.id },
+      data: { isActive: input.isActive },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorUserId: input.adminId,
+        entityType: "MeetingRoom",
+        entityId: updated.id,
+        action: "MEETING_ROOM_ACTIVE_STATUS_CHANGED",
+        oldValue: { isActive: current.isActive },
+        newValue: { isActive: updated.isActive },
+      },
+    });
+
+    return updated;
+  });
+}
+
 export async function deleteMeetingRoom(input: {
   adminId: string;
   roomId: string;

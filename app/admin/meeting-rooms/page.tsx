@@ -8,6 +8,7 @@ import {
   Save,
   Settings2,
   Trash2,
+  Power,
 } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -17,6 +18,7 @@ import {
   createMeetingRoomScheduleExceptionAction,
   deleteMeetingRoomAction,
   deleteMeetingRoomScheduleExceptionAction,
+  setMeetingRoomActiveStatusAction,
   updateMeetingRoomAction,
   updateMeetingRoomScheduleExceptionAction,
   updateMeetingRoomWeeklyScheduleAction,
@@ -450,11 +452,25 @@ export default async function AdminMeetingRoomsPage({
                   {selectedRoom.location || "موقعیت ثبت نشده است"}
                 </p>
               </div>
-              <DeleteMeetingRoomButton
-                action={deleteMeetingRoomAction}
-                roomId={selectedRoom.id}
-                roomName={selectedRoom.name}
-              />
+              <div className="flex flex-wrap items-center gap-2">
+                <DeleteMeetingRoomButton
+                  action={deleteMeetingRoomAction}
+                  roomId={selectedRoom.id}
+                  roomName={selectedRoom.name}
+                />
+                <form action={setMeetingRoomActiveStatusAction}>
+                  <input name="roomId" type="hidden" value={selectedRoom.id} />
+                  <input
+                    name="isActive"
+                    type="hidden"
+                    value={selectedRoom.isActive ? "false" : "true"}
+                  />
+                  <Button size="sm" type="submit" variant="outline">
+                    <Power className="h-4 w-4" />
+                    {selectedRoom.isActive ? "غیرفعال کردن" : "فعال کردن"}
+                  </Button>
+                </form>
+              </div>
             </div>
             <MeetingRoomViewNavigation
               activeView={activeView}

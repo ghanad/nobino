@@ -10,6 +10,7 @@ import {
   createMeetingRoomScheduleException,
   deleteMeetingRoom,
   deleteMeetingRoomScheduleException,
+  setMeetingRoomActiveStatus,
   updateMeetingRoom,
   updateMeetingRoomScheduleException,
   updateMeetingRoomWeeklySchedule,
@@ -63,6 +64,10 @@ const exceptionDeleteSchema = z.object({
 });
 
 const roomDeleteSchema = z.object({ roomId: z.string().min(1) });
+const roomActiveStatusSchema = z.object({
+  roomId: z.string().min(1),
+  isActive: z.enum(["true", "false"]).transform((value) => value === "true"),
+});
 
 function checkboxToBoolean(value: FormDataEntryValue | null): boolean {
   return value === "on" || value === "true";
@@ -191,6 +196,36 @@ export async function deleteMeetingRoomAction(formData: FormData): Promise<void>
   }
 
   redirectToAdminMeetingRooms({ roomDeleted: "1" });
+}
+
+export async function setMeetingRoomActiveStatusAction(
+  formData: FormData,
+): Promise<void> {
+  const admin = await requireRole([UserRole.ADMIN]);
+  const parsed = roomActiveStatusSchema.safeParse({
+    roomId: formData.get("roomId"),
+    isActive: formData.get("isActive"),
+  });
+
+  if (!parsed.success) {
+    redirectToAdminMeetingRooms({ error: "وضعیت اتاق جلسه معتبر نیست." });
+  }
+
+  try {
+    await setMeetingRoomActiveStatus({ adminId: admin.id, ...parsed.data });
+  } catch (error) {
+    redirectToAdminMeetingRooms({
+      error: getActionErrorMessage(error),
+      roomId: parsed.data.roomId,
+      view: "details",
+    });
+  }
+
+  redirectToAdminMeetingRooms({
+    roomId: parsed.data.roomId,
+    roomUpdated: "1",
+    view: "details",
+  });
 }
 
 export async function updateMeetingRoomWeeklyScheduleAction(
