@@ -25,7 +25,7 @@ import {
 } from "@/app/admin/meeting-rooms/actions";
 import { MeetingRoomPicker } from "@/app/admin/meeting-rooms/meeting-room-picker";
 import { JalaliDatePicker } from "@/app/admin/meeting-rooms/jalali-date-picker";
-import { DeleteMeetingRoomButton } from "@/app/admin/meeting-rooms/delete-meeting-room-button";
+import { GeneralSettingsForm } from "@/app/admin/meeting-rooms/general-settings-form";
 import { PageHeader } from "@/components/app/page-header";
 import { Button } from "@/components/ui/button";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -67,11 +67,11 @@ const DAY_LABELS = [
 ];
 
 const inputClass =
-  "h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm outline-none ring-offset-background transition focus-visible:ring-2 focus-visible:ring-ring";
+  "h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm text-slate-900 outline-none ring-offset-background transition placeholder:text-slate-400 hover:border-slate-400 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring invalid:border-red-400 invalid:focus-visible:ring-red-200";
 const mutedInputClass = cn(inputClass, "text-left");
 const panelClass = "overflow-hidden rounded-xl border bg-card shadow-sm";
 const panelHeaderClass =
-  "flex flex-col gap-2 border-b px-5 py-4 sm:flex-row sm:items-center sm:justify-between";
+  "flex flex-col gap-3 border-b px-5 py-4 sm:flex-row sm:items-center sm:justify-between";
 
 function getMeetingRoomView(value: string | undefined): MeetingRoomView {
   if (value === "schedule" || value === "exceptions") {
@@ -295,19 +295,19 @@ function MeetingRoomViewNavigation({
   }> = [
     {
       description: "نام، وضعیت و تأیید خودکار",
-      icon: <Settings2 className="h-4 w-4" />,
-      label: "مشخصات اتاق",
+      icon: <Settings2 className="h-[18px] w-[18px]" strokeWidth={1.8} />,
+      label: "اطلاعات اتاق",
       view: "details",
     },
     {
       description: "روزها و ساعت‌های قابل رزرو",
-      icon: <Clock3 className="h-4 w-4" />,
+      icon: <Clock3 className="h-[18px] w-[18px]" strokeWidth={1.8} />,
       label: "برنامه هفتگی",
       view: "schedule",
     },
     {
       description: `${exceptionCount} استثنای ثبت‌شده`,
-      icon: <CalendarDays className="h-4 w-4" />,
+      icon: <CalendarDays className="h-[18px] w-[18px]" strokeWidth={1.8} />,
       label: "استثناهای تقویم",
       view: "exceptions",
     },
@@ -316,7 +316,7 @@ function MeetingRoomViewNavigation({
   return (
     <nav
       aria-label="بخش‌های تنظیمات اتاق"
-      className="grid gap-2 border-t bg-muted/40 p-2 sm:grid-cols-3"
+      className="flex overflow-x-auto border-t bg-slate-50 px-2 pt-2 sm:grid sm:grid-cols-3"
     >
       {items.map((item) => {
         const isActive = item.view === activeView;
@@ -325,10 +325,10 @@ function MeetingRoomViewNavigation({
           <Link
             aria-current={isActive ? "page" : undefined}
             className={cn(
-              "grid min-w-0 gap-1 rounded-lg px-4 py-3 text-right transition-colors",
+              "relative grid min-w-[190px] flex-1 gap-1 rounded-t-lg px-4 py-3 text-right outline-none transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary sm:min-w-0",
               isActive
-                ? "bg-background text-slate-950 shadow-sm ring-1 ring-border"
-                : "text-muted-foreground hover:bg-background/70 hover:text-slate-950",
+                ? "bg-background text-slate-950 shadow-sm after:absolute after:inset-x-4 after:bottom-0 after:h-0.5 after:bg-primary"
+                : "text-slate-600 hover:bg-background/70 hover:text-slate-950",
             )}
             href={getMeetingRoomHref(roomId, item.view)}
             key={item.view}
@@ -380,9 +380,9 @@ export default async function AdminMeetingRoomsPage({
       <PageHeader
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <StatusPill tone="good">{activeRoomsCount} فعال</StatusPill>
+            <StatusPill tone="good">{activeRoomsCount} اتاق فعال</StatusPill>
             <StatusPill>
-              {autoApprovedRoomsCount} با تأیید خودکار
+              {autoApprovedRoomsCount} اتاق با تأیید خودکار
             </StatusPill>
             <Button asChild size="sm">
               <Link href="/admin/meeting-rooms?view=new">
@@ -398,16 +398,17 @@ export default async function AdminMeetingRoomsPage({
 
       {toast ? <UrlToast {...toast} /> : null}
 
-      <section className={panelClass}>
-        <div className={panelHeaderClass}>
-          <div className="grid gap-1">
-            <h2 className="text-base font-semibold">انتخاب اتاق</h2>
-            <p className="text-xs text-muted-foreground">
+      <section className={cn(panelClass, "p-4")}>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="grid min-w-fit gap-0.5">
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-semibold">انتخاب اتاق</h2>
+              <StatusPill tone="muted">{rooms.length} اتاق</StatusPill>
+            </div>
+            <p className="text-xs text-slate-600">
               تنظیمات هر اتاق مستقل است؛ برای ادامه یکی را انتخاب کنید.
             </p>
           </div>
-          <StatusPill tone="muted">{rooms.length} اتاق</StatusPill>
-        </div>
         {rooms.length === 0 ? (
           <div className="m-4 grid justify-items-center gap-3 rounded-lg border border-dashed bg-muted/20 p-6 text-center">
             <DoorOpen className="h-8 w-8 text-muted-foreground" />
@@ -429,6 +430,7 @@ export default async function AdminMeetingRoomsPage({
             view={activeView}
           />
         )}
+        </div>
       </section>
 
       {isCreatingRoom ? (
@@ -436,7 +438,7 @@ export default async function AdminMeetingRoomsPage({
       ) : selectedRoom ? (
         <main className="grid min-w-0 gap-6">
           <section className={cn(panelClass, "min-w-0")}>
-            <div className={panelHeaderClass}>
+            <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center">
               <div className="grid gap-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <DoorOpen className="h-5 w-5 text-primary" />
@@ -448,17 +450,12 @@ export default async function AdminMeetingRoomsPage({
                     <StatusPill>تأیید خودکار</StatusPill>
                   ) : null}
                 </div>
-                <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <MapPin className="h-3.5 w-3.5" />
+                <p className="flex items-center gap-1 text-xs text-slate-600">
+                  <MapPin className="h-[18px] w-[18px]" strokeWidth={1.8} />
                   {selectedRoom.location || "موقعیت ثبت نشده است"}
                 </p>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <DeleteMeetingRoomButton
-                  action={deleteMeetingRoomAction}
-                  roomId={selectedRoom.id}
-                  roomName={selectedRoom.name}
-                />
+              <div className="flex flex-wrap items-center gap-2 sm:mr-auto">
                 <form action={setMeetingRoomActiveStatusAction}>
                   <input name="roomId" type="hidden" value={selectedRoom.id} />
                   <input
@@ -487,20 +484,21 @@ export default async function AdminMeetingRoomsPage({
                   <Settings2 className="mt-0.5 h-5 w-5 text-primary" />
                   <div className="grid gap-1">
                     <h2 className="text-base font-semibold">
-                      مشخصات و رفتار اتاق
+                      تنظیمات عمومی اتاق
                     </h2>
-                    <p className="text-xs text-muted-foreground">
-                      اطلاعات نمایشی، وضعیت دسترسی و شیوه تأیید درخواست‌ها
+                    <p className="text-xs text-slate-600">
+                      اطلاعات اتاق، وضعیت نمایش و نحوه تأیید رزروها را مدیریت کنید.
                     </p>
                   </div>
                 </div>
               </div>
-              <form
-                action={updateMeetingRoomAction}
-                className="grid gap-4 p-5"
+              <GeneralSettingsForm
+                deleteAction={deleteMeetingRoomAction}
+                roomId={selectedRoom.id}
+                roomName={selectedRoom.name}
+                updateAction={updateMeetingRoomAction}
               >
-                <input name="roomId" type="hidden" value={selectedRoom.id} />
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-6 md:grid-cols-2">
                   <Field label="نام">
                     <input
                       className={inputClass}
@@ -600,17 +598,8 @@ export default async function AdminMeetingRoomsPage({
                       </details>
                     </div>
                   </div>
-                  <div className="flex justify-start">
-                    <SubmitButton
-                      className="w-full sm:w-auto sm:min-w-36"
-                      pendingLabel="در حال ذخیره"
-                    >
-                      <Save className="h-4 w-4" />
-                      ذخیره اتاق
-                    </SubmitButton>
-                  </div>
                 </div>
-              </form>
+              </GeneralSettingsForm>
             </section>
 
           ) : null}

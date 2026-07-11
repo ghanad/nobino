@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, Trash2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -18,17 +18,28 @@ export function DeleteMeetingRoomButton({
   roomName,
 }: DeleteMeetingRoomButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    cancelButtonRef.current?.focus();
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsOpen(false);
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [isOpen]);
 
   return (
     <>
       <Button
-        className="text-red-700 hover:bg-red-50 hover:text-red-800"
+        className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
         onClick={() => setIsOpen(true)}
         size="sm"
         type="button"
         variant="outline"
       >
-        <Trash2 className="h-4 w-4" />
+        <Trash2 className="h-[18px] w-[18px]" />
         حذف اتاق
       </Button>
 
@@ -69,7 +80,7 @@ export function DeleteMeetingRoomButton({
             </div>
             <form action={action} className="mt-6 flex justify-start gap-2">
               <input name="roomId" type="hidden" value={roomId} />
-              <Button onClick={() => setIsOpen(false)} type="button" variant="outline">
+              <Button ref={cancelButtonRef} onClick={() => setIsOpen(false)} type="button" variant="outline">
                 انصراف
               </Button>
               <SubmitButton
