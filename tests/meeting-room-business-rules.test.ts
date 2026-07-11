@@ -10,7 +10,10 @@ import {
   getMeetingRoomSlotUsage,
 } from "@/lib/meeting-room-capacity-service";
 import { runMeetingRoomAutoAcceptBatch } from "@/lib/meeting-room-auto-accept-service";
-import { updateMeetingRoom } from "@/lib/meeting-room-admin-service";
+import {
+  deleteMeetingRoom,
+  updateMeetingRoom,
+} from "@/lib/meeting-room-admin-service";
 import {
   approveMeetingRoomReservation,
   cancelMeetingRoomReservationByUser,
@@ -32,6 +35,7 @@ import {
   markMeetingRoomDateWorkingForTest,
   meetingRoomId,
   nextWorkingDateAtHour,
+  previousWorkingDateAtHour,
   registerBusinessRuleTestHooks,
   secondMeetingRoomId,
   secondUserId,
@@ -438,4 +442,49 @@ test("admin room updates create audit logs", async () => {
   });
 
   assert.ok(auditLog);
+});
+
+test("deleting a meeting room preserves history and removes future reservations", async () => {
+  const futureStart = nextWorkingDateAtHour(10);
+  const pastStart = previousWorkingDateAtHour(10);
+  await markMeetingRoomDateWorkingForTest(futureStart);
+  await markMeetingRoomDateWorkingForTest(pastStart);
+
+  const futureReservation = await db.meetingRoomReservation.create({
+    data: {
+      endAt: addHours(futureStart, 1),
+      roomId: meetingRoomId,
+      startAt: futureStart,
+      userId,
+      status: ReservationStatus.APPROVED,
+    },
+  });
+  const historicalReservation = await db.meetingRoomReservation.create({
+    data: {
+      endAt: addHours(pastStart, 1),
+      roomId: meetingRoomId,
+      startAt: pastStart,
+      userId,
+      status: ReservationStatus.APPROVED,
+    },
+  });
+
+  await deleteMeetingRoom({ adminId, roomId: meetingRoomId });
+
+  const room = await db.meetingRoom.findUniqueOrThrow({
+    where: { id: meetingRoomId },
+  });
+  assert.equal(room.isActive, false);
+  assert.ok(room.deletedAt);
+  assert.equal(
+    await db.meetingRoomReservation.findUnique({
+      where: { id: futureReservation.id },
+    }),
+    null,
+  );
+  assert.ok(
+    await db.meetingRoomReservation.findUnique({
+      where: { id: historicalReservation.id },
+    }),
+  );
 });

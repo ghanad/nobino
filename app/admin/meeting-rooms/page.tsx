@@ -15,12 +15,14 @@ import type { ReactNode } from "react";
 import {
   createMeetingRoomAction,
   createMeetingRoomScheduleExceptionAction,
+  deleteMeetingRoomAction,
   deleteMeetingRoomScheduleExceptionAction,
   updateMeetingRoomAction,
   updateMeetingRoomScheduleExceptionAction,
   updateMeetingRoomWeeklyScheduleAction,
 } from "@/app/admin/meeting-rooms/actions";
 import { MeetingRoomPicker } from "@/app/admin/meeting-rooms/meeting-room-picker";
+import { DeleteMeetingRoomButton } from "@/app/admin/meeting-rooms/delete-meeting-room-button";
 import { PageHeader } from "@/components/app/page-header";
 import { Button } from "@/components/ui/button";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -41,6 +43,7 @@ type AdminMeetingRoomsPageProps = {
     exceptionDeleted?: string;
     exceptionUpdated?: string;
     roomCreated?: string;
+    roomDeleted?: string;
     roomId?: string;
     roomUpdated?: string;
     scheduleUpdated?: string;
@@ -91,6 +94,7 @@ function getToast(params: Awaited<AdminMeetingRoomsPageProps["searchParams"]>) {
   const successMessage =
     (params?.roomCreated && "اتاق جلسه ایجاد شد.") ||
     (params?.roomUpdated && "اتاق جلسه به‌روزرسانی شد.") ||
+    (params?.roomDeleted && "اتاق جلسه و نوبت‌های آینده آن حذف شد.") ||
     (params?.scheduleUpdated && "زمان‌بندی اتاق به‌روزرسانی شد.") ||
     (params?.exceptionCreated && "استثنای اتاق ثبت شد.") ||
     (params?.exceptionUpdated && "استثنای اتاق به‌روزرسانی شد.") ||
@@ -101,6 +105,7 @@ function getToast(params: Awaited<AdminMeetingRoomsPageProps["searchParams"]>) {
         consumeKeys: [
           "roomCreated",
           "roomUpdated",
+          "roomDeleted",
           "scheduleUpdated",
           "exceptionCreated",
           "exceptionUpdated",
@@ -344,6 +349,7 @@ export default async function AdminMeetingRoomsPage({
   const params = await searchParams;
   const toast = getToast(params);
   const rooms = await db.meetingRoom.findMany({
+    where: { deletedAt: null },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     include: {
       weeklySchedules: {
@@ -444,6 +450,11 @@ export default async function AdminMeetingRoomsPage({
                   {selectedRoom.location || "موقعیت ثبت نشده است"}
                 </p>
               </div>
+              <DeleteMeetingRoomButton
+                action={deleteMeetingRoomAction}
+                roomId={selectedRoom.id}
+                roomName={selectedRoom.name}
+              />
             </div>
             <MeetingRoomViewNavigation
               activeView={activeView}

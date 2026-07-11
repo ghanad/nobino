@@ -113,7 +113,7 @@ export async function updateMeetingRoom(input: {
       where: { id: input.roomId },
     });
 
-    if (!current) {
+    if (!current || current.deletedAt) {
       throw new AdminSettingsError("Meeting room was not found.");
     }
 
@@ -161,6 +161,54 @@ export async function updateMeetingRoom(input: {
     });
 
     return updated;
+  });
+}
+
+export async function deleteMeetingRoom(input: {
+  adminId: string;
+  roomId: string;
+}) {
+  return db.$transaction(async (tx) => {
+    await assertAdmin(input.adminId, tx);
+
+    const current = await tx.meetingRoom.findUnique({
+      where: { id: input.roomId },
+      select: { id: true, name: true, deletedAt: true },
+    });
+
+    if (!current || current.deletedAt) {
+      throw new AdminSettingsError("Meeting room was not found.");
+    }
+
+    const deletedAt = new Date();
+    const deletedFutureReservations = await tx.meetingRoomReservation.deleteMany({
+      where: {
+        roomId: current.id,
+        startAt: { gte: deletedAt },
+      },
+    });
+
+    await tx.meetingRoom.update({
+      where: { id: current.id },
+      data: { deletedAt, isActive: false },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorUserId: input.adminId,
+        entityType: "MeetingRoom",
+        entityId: current.id,
+        action: "MEETING_ROOM_DELETED",
+        oldValue: { name: current.name },
+        newValue: {
+          deletedAt: deletedAt.toISOString(),
+          deletedFutureReservations: deletedFutureReservations.count,
+          name: current.name,
+        },
+      },
+    });
+
+    return { deletedFutureReservations: deletedFutureReservations.count };
   });
 }
 

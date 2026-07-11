@@ -145,6 +145,7 @@ model MeetingRoom {
   sortOrder              Int      @default(0)
   autoApprovalEnabled    Boolean  @default(false)
   autoApprovalDelayHours Int      @default(4)
+  deletedAt              DateTime?
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 

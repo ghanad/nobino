@@ -214,7 +214,7 @@ export default async function MeetingRoomsPage({
   const weekSpansMultipleJalaliMonths = !isSameJalaliMonth(weekDates);
   const weekEnd = addDays(weekStart, 7);
   const rooms = await db.meetingRoom.findMany({
-    where: { isActive: true },
+    where: { deletedAt: null, isActive: true },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     select: {
       description: true,

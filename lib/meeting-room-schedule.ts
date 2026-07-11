@@ -204,10 +204,10 @@ export async function validateMeetingRoomReservationTimeRange(
 
   const room = await client.meetingRoom.findUnique({
     where: { id: input.roomId },
-    select: { isActive: true },
+    select: { deletedAt: true, isActive: true },
   });
 
-  if (!room?.isActive) {
+  if (!room?.isActive || room.deletedAt) {
     throw new ReservationTimeRangeError("Meeting room is not available.");
   }
 

@@ -8,6 +8,7 @@ import { requireRole } from "@/lib/auth";
 import {
   createMeetingRoom,
   createMeetingRoomScheduleException,
+  deleteMeetingRoom,
   deleteMeetingRoomScheduleException,
   updateMeetingRoom,
   updateMeetingRoomScheduleException,
@@ -60,6 +61,8 @@ const exceptionDeleteSchema = z.object({
   exceptionId: z.string().min(1),
   roomId: z.string().optional(),
 });
+
+const roomDeleteSchema = z.object({ roomId: z.string().min(1) });
 
 function checkboxToBoolean(value: FormDataEntryValue | null): boolean {
   return value === "on" || value === "true";
@@ -167,6 +170,27 @@ export async function updateMeetingRoomAction(formData: FormData): Promise<void>
     roomUpdated: "1",
     view: "details",
   });
+}
+
+export async function deleteMeetingRoomAction(formData: FormData): Promise<void> {
+  const admin = await requireRole([UserRole.ADMIN]);
+  const parsed = roomDeleteSchema.safeParse({ roomId: formData.get("roomId") });
+
+  if (!parsed.success) {
+    redirectToAdminMeetingRooms({ error: "اتاق جلسه معتبر نیست." });
+  }
+
+  try {
+    await deleteMeetingRoom({ adminId: admin.id, roomId: parsed.data.roomId });
+  } catch (error) {
+    redirectToAdminMeetingRooms({
+      error: getActionErrorMessage(error),
+      roomId: parsed.data.roomId,
+      view: "details",
+    });
+  }
+
+  redirectToAdminMeetingRooms({ roomDeleted: "1" });
 }
 
 export async function updateMeetingRoomWeeklyScheduleAction(

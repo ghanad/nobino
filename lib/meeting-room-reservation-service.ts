@@ -184,11 +184,12 @@ export async function createMeetingRoomReservationRequest(input: {
         autoApprovalEnabled: true,
         id: true,
         isActive: true,
+        deletedAt: true,
         name: true,
       },
     });
 
-    if (!room?.isActive) {
+    if (!room?.isActive || room.deletedAt) {
       throw new ReservationTransitionError("Meeting room is not available.");
     }
 
