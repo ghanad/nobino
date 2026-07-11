@@ -24,6 +24,7 @@ import {
   updateMeetingRoomWeeklyScheduleAction,
 } from "@/app/admin/meeting-rooms/actions";
 import { MeetingRoomPicker } from "@/app/admin/meeting-rooms/meeting-room-picker";
+import { JalaliDatePicker } from "@/app/admin/meeting-rooms/jalali-date-picker";
 import { DeleteMeetingRoomButton } from "@/app/admin/meeting-rooms/delete-meeting-room-button";
 import { PageHeader } from "@/components/app/page-header";
 import { Button } from "@/components/ui/button";
@@ -727,14 +728,11 @@ export default async function AdminMeetingRoomsPage({
                 >
                   <input name="roomId" type="hidden" value={selectedRoom.id} />
                   <Field label="تاریخ جلالی">
-                    <input
-                      aria-label="تاریخ"
-                      className={mutedInputClass}
+                    <JalaliDatePicker
                       defaultValue={currentDateParam}
-                      dir="ltr"
+                      inputClassName={mutedInputClass}
                       name="date"
                       placeholder={JALALI_DATE_INPUT_PLACEHOLDER}
-                      type="text"
                     />
                   </Field>
                   <div className="grid gap-1.5 text-sm font-medium text-slate-700">
