@@ -1,6 +1,7 @@
 import { UserRole } from "@prisma/client";
 import {
   CalendarDays,
+  ChevronDown,
   Clock3,
   DoorOpen,
   MapPin,
@@ -67,7 +68,7 @@ const DAY_LABELS = [
 ];
 
 const inputClass =
-  "h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm text-slate-900 outline-none ring-offset-background transition placeholder:text-slate-400 hover:border-slate-400 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring invalid:border-red-400 invalid:focus-visible:ring-red-200";
+  "h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm text-slate-900 outline-none ring-offset-background transition placeholder:text-slate-400 hover:border-slate-400 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring invalid:border-red-400 invalid:focus-visible:ring-red-200";
 const mutedInputClass = cn(inputClass, "text-left");
 const panelClass = "overflow-hidden rounded-xl border bg-card shadow-sm";
 const panelHeaderClass =
@@ -156,6 +157,64 @@ function Field({
   );
 }
 
+function ToggleSwitch({
+  defaultChecked = false,
+  description,
+  label,
+  name,
+}: {
+  defaultChecked?: boolean;
+  description: string;
+  label: string;
+  name: string;
+}) {
+  return (
+    <label className="group flex min-h-24 cursor-pointer items-start justify-between gap-4 rounded-lg border bg-background p-4 text-sm transition-colors hover:border-blue-200 hover:bg-blue-50/30">
+      <span className="grid gap-1.5">
+        <span className="font-medium text-slate-800">{label}</span>
+        <span className="text-xs leading-5 text-muted-foreground">{description}</span>
+      </span>
+      <span className="relative mt-0.5 inline-flex shrink-0">
+        <input
+          className="peer sr-only"
+          defaultChecked={defaultChecked}
+          name={name}
+          role="switch"
+          type="checkbox"
+        />
+        <span className="h-6 w-11 rounded-full bg-slate-300 transition-colors peer-checked:bg-primary peer-focus-visible:ring-2 peer-focus-visible:ring-primary peer-focus-visible:ring-offset-2 peer-disabled:cursor-not-allowed peer-disabled:opacity-50" />
+        <span className="pointer-events-none absolute right-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform peer-checked:-translate-x-5" />
+      </span>
+    </label>
+  );
+}
+
+function DurationField({ defaultValue }: { defaultValue: number }) {
+  return (
+    <Field label="مدت انتظار تا تأیید خودکار">
+      <div className="flex h-11 overflow-hidden rounded-md border border-input bg-background transition focus-within:border-primary focus-within:ring-2 focus-within:ring-ring hover:border-slate-400 has-[:invalid]:border-red-400">
+        <input
+          aria-describedby="auto-approval-delay-help"
+          className="min-w-0 flex-1 bg-transparent px-3 text-left text-sm text-slate-900 outline-none"
+          defaultValue={defaultValue}
+          inputMode="numeric"
+          max={24}
+          min={1}
+          name="autoApprovalDelayHours"
+          required
+          type="number"
+        />
+        <span className="inline-flex items-center border-r bg-slate-50 px-4 text-sm text-slate-500" aria-hidden="true">
+          ساعت
+        </span>
+      </div>
+      <span className="text-xs font-normal leading-5 text-muted-foreground" id="auto-approval-delay-help">
+        عددی بین ۱ تا ۲۴ ساعت وارد کنید.
+      </span>
+    </Field>
+  );
+}
+
 function NewMeetingRoomForm({ defaultSortOrder }: { defaultSortOrder: number }) {
   return (
     <section className={panelClass}>
@@ -220,48 +279,13 @@ function NewMeetingRoomForm({ defaultSortOrder }: { defaultSortOrder: number }) 
             </p>
           </div>
           <div className="grid gap-1.5 md:col-span-2 md:max-w-sm">
-            <Field label="مدت انتظار تا تأیید خودکار">
-              <div className="flex items-center gap-2">
-                <input
-                  className={mutedInputClass}
-                  defaultValue={4}
-                  inputMode="numeric"
-                  max={24}
-                  min={1}
-                  name="autoApprovalDelayHours"
-                  type="number"
-                />
-                <span className="inline-flex h-10 items-center rounded-md border bg-muted/30 px-3 text-sm text-muted-foreground">
-                  ساعت
-                </span>
-              </div>
-            </Field>
+            <DurationField defaultValue={4} />
           </div>
         </div>
 
         <div className="grid gap-3 md:grid-cols-2">
-          <label className="flex min-h-24 items-start justify-between gap-4 rounded-lg border bg-muted/20 p-4 text-sm">
-            <span className="grid gap-1">
-              <span className="font-medium">اتاق فعال باشد</span>
-              <span className="text-xs leading-5 text-muted-foreground">
-                اتاق فعال در صفحه رزرو کاربران نمایش داده می‌شود.
-              </span>
-            </span>
-            <input className="mt-1" defaultChecked name="isActive" type="checkbox" />
-          </label>
-          <label className="flex min-h-24 items-start justify-between gap-4 rounded-lg border bg-muted/20 p-4 text-sm">
-            <span className="grid gap-1">
-              <span className="font-medium">تأیید خودکار درخواست‌ها</span>
-              <span className="text-xs leading-5 text-muted-foreground">
-                درخواست پس از مدت انتظار و فقط در صورت وجود ظرفیت تأیید می‌شود.
-              </span>
-            </span>
-            <input
-              className="mt-1"
-              name="autoApprovalEnabled"
-              type="checkbox"
-            />
-          </label>
+          <ToggleSwitch defaultChecked description="اتاق فعال در صفحه رزرو کاربران نمایش داده می‌شود." label="اتاق فعال باشد" name="isActive" />
+          <ToggleSwitch description="درخواست پس از مدت انتظار و فقط در صورت وجود ظرفیت تأیید می‌شود." label="تأیید خودکار درخواست‌ها" name="autoApprovalEnabled" />
         </div>
 
         <div className="flex justify-start border-t pt-5">
@@ -327,8 +351,8 @@ function MeetingRoomViewNavigation({
             className={cn(
               "relative grid min-w-[190px] flex-1 gap-1 rounded-t-lg px-4 py-3 text-right outline-none transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary sm:min-w-0",
               isActive
-                ? "bg-background text-slate-950 shadow-sm after:absolute after:inset-x-4 after:bottom-0 after:h-0.5 after:bg-primary"
-                : "text-slate-600 hover:bg-background/70 hover:text-slate-950",
+                ? "bg-blue-50/70 text-slate-950 shadow-sm after:absolute after:inset-x-4 after:bottom-0 after:h-0.5 after:bg-primary"
+                : "text-slate-600 hover:bg-blue-50/40 hover:text-slate-950 active:bg-blue-50/70",
             )}
             href={getMeetingRoomHref(roomId, item.view)}
             key={item.view}
@@ -455,7 +479,7 @@ export default async function AdminMeetingRoomsPage({
                   {selectedRoom.location || "موقعیت ثبت نشده است"}
                 </p>
               </div>
-              <div className="flex flex-wrap items-center gap-2 sm:mr-auto">
+              <div className="flex flex-wrap items-center gap-2 sm:mr-2">
                 <form action={setMeetingRoomActiveStatusAction}>
                   <input name="roomId" type="hidden" value={selectedRoom.id} />
                   <input
@@ -536,63 +560,19 @@ export default async function AdminMeetingRoomsPage({
                       type="number"
                     />
                   </Field>
-                  <Field label="مدت انتظار تا تأیید خودکار">
-                    <div className="flex items-center gap-2">
-                      <input
-                        className={mutedInputClass}
-                        defaultValue={selectedRoom.autoApprovalDelayHours}
-                        inputMode="numeric"
-                        max={24}
-                        min={1}
-                        name="autoApprovalDelayHours"
-                        type="number"
-                      />
-                      <span className="inline-flex h-10 items-center rounded-md border bg-muted/30 px-3 text-sm text-muted-foreground">
-                        ساعت
-                      </span>
-                    </div>
-                  </Field>
+                  <DurationField defaultValue={selectedRoom.autoApprovalDelayHours} />
                 </div>
                 <div className="grid gap-3 rounded-md bg-muted/40 p-4">
                   <div className="grid gap-3 md:grid-cols-2">
-                    <label className="flex min-h-24 items-start justify-between gap-3 rounded-lg border bg-background p-4 text-sm">
-                      <span className="grid gap-1">
-                        <span className="font-medium">فعال بودن اتاق</span>
-                        <span className="text-xs leading-5 text-muted-foreground">
-                          اتاق غیرفعال در صفحه رزرو کاربران نمایش داده نمی‌شود.
-                        </span>
-                      </span>
-                      <input
-                        className="mt-1"
-                        defaultChecked={selectedRoom.isActive}
-                        name="isActive"
-                        type="checkbox"
-                      />
-                    </label>
+                    <ToggleSwitch defaultChecked={selectedRoom.isActive} description="اتاق غیرفعال در صفحه رزرو کاربران نمایش داده نمی‌شود." label="فعال بودن اتاق" name="isActive" />
                     <div className="grid min-h-24 gap-3 rounded-lg border bg-background p-4 text-sm">
-                      <label className="flex items-start justify-between gap-3">
-                        <span className="grid gap-1">
-                          <span className="font-medium">
-                            تأیید خودکار درخواست‌ها
-                          </span>
-                          <span className="text-xs leading-5 text-muted-foreground">
-                            درخواست‌های جدید پس از مدت انتظار و فقط در صورت وجود
-                            ظرفیت تأیید می‌شوند. درخواست‌های در انتظار قبلی تغییر
-                            نمی‌کنند.
-                          </span>
-                        </span>
-                        <input
-                          className="mt-1"
-                          defaultChecked={selectedRoom.autoApprovalEnabled}
-                          name="autoApprovalEnabled"
-                          type="checkbox"
-                        />
-                      </label>
-                      <details className="border-t pt-3 text-xs text-muted-foreground">
-                        <summary className="cursor-pointer font-medium text-slate-600">
-                          جزئیات فنی پردازش زمان‌دار
+                      <ToggleSwitch defaultChecked={selectedRoom.autoApprovalEnabled} description="درخواست‌های جدید پس از مدت انتظار و فقط در صورت وجود ظرفیت تأیید می‌شوند. درخواست‌های در انتظار قبلی تغییر نمی‌کنند." label="تأیید خودکار درخواست‌ها" name="autoApprovalEnabled" />
+                      <details className="group border-t text-xs text-muted-foreground">
+                        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between rounded-md px-2 font-medium text-slate-700 outline-none transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-primary [&::-webkit-details-marker]:hidden">
+                          <span>جزئیات فنی پردازش زمان‌دار</span>
+                          <ChevronDown className="h-[18px] w-[18px] transition-transform group-open:rotate-180" />
                         </summary>
-                        <code className="mt-2 block break-all" dir="ltr">
+                        <code className="block break-all px-2 pb-2 pt-1" dir="ltr">
                           /api/internal/reservations/auto-accept
                         </code>
                       </details>

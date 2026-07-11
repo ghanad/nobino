@@ -128,10 +128,10 @@ export async function AppShell({ user, children }: AppShellProps) {
           userName={user.name}
         />
       </header>
-      <div className="mx-auto w-full max-w-6xl flex-1 px-6 py-8">
+      <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
         {children}
       </div>
-      <footer className="mx-auto w-full max-w-6xl px-6 pb-6">
+      <footer className="mx-auto w-full max-w-7xl px-4 pb-8 pt-2 sm:px-6">
         <ProductSignature />
       </footer>
     </main>

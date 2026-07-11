@@ -8,7 +8,7 @@ export function ProductSignature({ className }: ProductSignatureProps) {
   return (
     <p
       className={cn(
-        "text-center text-xs font-medium leading-6 text-muted-foreground",
+        "text-center text-[13px] font-medium leading-6 text-slate-500",
         className,
       )}
     >

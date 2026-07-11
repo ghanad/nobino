@@ -18,6 +18,7 @@ export function DeleteMeetingRoomButton({
   roomName,
 }: DeleteMeetingRoomButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [confirmation, setConfirmation] = useState("");
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -40,7 +41,7 @@ export function DeleteMeetingRoomButton({
         variant="outline"
       >
         <Trash2 className="h-[18px] w-[18px]" />
-        حذف اتاق
+        حذف دائمی اتاق
       </Button>
 
       {isOpen ? (
@@ -61,11 +62,12 @@ export function DeleteMeetingRoomButton({
               </span>
               <div className="min-w-0 flex-1">
                 <h2 className="text-base font-semibold" id="delete-meeting-room-title">
-                  حذف اتاق جلسه
+                  حذف دائمی اتاق جلسه
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  آیا از حذف «{roomName}» مطمئن هستید؟ تاریخچه و نوبت‌های گذشته
-                  حفظ می‌شوند، اما تمام نوبت‌های آینده حذف خواهند شد.
+                  این عملیات قابل بازگشت نیست. اتاق «{roomName}»، برنامه هفتگی،
+                  استثناها و تنظیمات مرتبط با آن حذف می‌شوند. تاریخچه گذشته حفظ
+                  می‌شود.
                 </p>
               </div>
               <Button
@@ -78,17 +80,29 @@ export function DeleteMeetingRoomButton({
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            <form action={action} className="mt-6 flex justify-start gap-2">
+            <form action={action} className="mt-6 grid gap-4">
               <input name="roomId" type="hidden" value={roomId} />
-              <Button ref={cancelButtonRef} onClick={() => setIsOpen(false)} type="button" variant="outline">
-                انصراف
-              </Button>
-              <SubmitButton
-                className="bg-red-600 text-white hover:bg-red-700"
-                pendingLabel="در حال حذف"
-              >
-                حذف قطعی اتاق
-              </SubmitButton>
+              <label className="grid gap-2 text-sm font-medium text-slate-700">
+                برای تأیید، نام اتاق را وارد کنید: <strong>{roomName}</strong>
+                <input
+                  autoComplete="off"
+                  className="h-11 rounded-md border bg-background px-3 outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                  onChange={(event) => setConfirmation(event.target.value)}
+                  value={confirmation}
+                />
+              </label>
+              <div className="flex justify-start gap-2">
+                <Button ref={cancelButtonRef} onClick={() => setIsOpen(false)} type="button" variant="outline">
+                  انصراف
+                </Button>
+                <SubmitButton
+                  className="bg-red-600 text-white hover:bg-red-700"
+                  disabled={confirmation.trim() !== roomName}
+                  pendingLabel="در حال حذف"
+                >
+                  حذف دائمی اتاق
+                </SubmitButton>
+              </div>
             </form>
           </div>
         </div>

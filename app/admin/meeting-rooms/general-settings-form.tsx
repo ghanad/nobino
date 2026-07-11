@@ -52,7 +52,7 @@ export function GeneralSettingsForm({
     <>
       <form
         action={updateAction}
-        className="grid gap-6 p-5 pb-6"
+        className="grid gap-6 p-4 pb-6 sm:p-5"
         onChange={() => setIsDirty(true)}
         onSubmit={() => setIsDirty(false)}
         ref={formRef}
@@ -63,14 +63,14 @@ export function GeneralSettingsForm({
         <div
           aria-live="polite"
           className={cn(
-            "sticky bottom-3 z-20 flex flex-col gap-3 rounded-xl border bg-background/95 p-3 shadow-lg backdrop-blur sm:flex-row sm:items-center sm:justify-between",
+            "sticky bottom-3 z-20 flex flex-col gap-3 rounded-xl border bg-background/95 p-3 shadow-lg backdrop-blur sm:flex-row sm:items-center sm:justify-start sm:gap-4",
             isDirty ? "border-blue-200" : "border-slate-200",
           )}
         >
           <p className={cn("text-sm font-medium", isDirty ? "text-slate-800" : "text-slate-500")}>
             {isDirty ? "تغییرات ذخیره‌نشده دارید" : "همه تغییرات ذخیره شده‌اند"}
           </p>
-          <div className="flex gap-2">
+          <div className="flex gap-2 sm:border-r sm:pr-4">
             <Button
               className="flex-1 sm:flex-none"
               disabled={!isDirty}
@@ -95,12 +95,13 @@ export function GeneralSettingsForm({
           </div>
         </div>
       </form>
-      <div className="border-t border-red-100 px-5 py-5">
-        <div className="flex flex-col gap-3 rounded-lg border border-red-100 bg-red-50/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="border-t border-red-100 px-4 py-5 sm:px-5">
+        <div className="flex flex-col gap-4 rounded-lg border border-red-200 bg-red-50/50 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 className="text-sm font-semibold text-slate-800">حذف اتاق</h3>
             <p className="mt-1 text-xs leading-5 text-slate-600">
-              این عملیات برای مدیریت‌های روزمره توصیه نمی‌شود؛ برای توقف رزروها از گزینه غیرفعال‌کردن استفاده کنید.
+              با حذف اتاق، برنامه هفتگی، استثناها و تنظیمات مرتبط با آن نیز حذف
+              می‌شوند. این عملیات قابل بازگشت نیست.
             </p>
           </div>
           <DeleteMeetingRoomButton action={deleteAction} roomId={roomId} roomName={roomName} />

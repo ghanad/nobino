@@ -32,7 +32,7 @@ export function MeetingRoomPicker({
       <div className="relative">
         <select
           className={cn(
-            "h-10 w-full appearance-none rounded-md border border-input bg-background py-2 pr-4 pl-10 text-sm font-medium shadow-sm outline-none ring-offset-background transition-colors",
+            "h-11 w-full appearance-none rounded-md border border-input bg-background py-2 pr-4 pl-10 text-sm font-medium shadow-sm outline-none ring-offset-background transition-colors",
             "hover:border-primary/50 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring",
           )}
           id="roomId"
