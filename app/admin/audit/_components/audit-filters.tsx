@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { Filter, RotateCcw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { JALALI_DATE_INPUT_PLACEHOLDER } from "@/lib/jalali-date";
+import { JalaliDatePicker } from "@/components/ui/jalali-date-picker";
 
 import {
   ACTION_LABELS,
@@ -22,15 +22,6 @@ function FieldLabel({
     <label className="text-sm font-medium" htmlFor={htmlFor}>
       {children}
     </label>
-  );
-}
-
-function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <input
-      {...props}
-      className="h-10 w-full rounded-md border border-input bg-background px-3 text-right text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-    />
   );
 }
 
@@ -124,21 +115,19 @@ export function AuditFilters({
 
         <div className="grid gap-2">
           <FieldLabel htmlFor="audit-from">از تاریخ</FieldLabel>
-          <TextInput
-            defaultValue={params?.from ?? ""}
+          <JalaliDatePicker
             id="audit-from"
             name="from"
-            placeholder={JALALI_DATE_INPUT_PLACEHOLDER}
+            value={params?.from ?? ""}
           />
         </div>
 
         <div className="grid gap-2">
           <FieldLabel htmlFor="audit-to">تا تاریخ</FieldLabel>
-          <TextInput
-            defaultValue={params?.to ?? ""}
+          <JalaliDatePicker
             id="audit-to"
             name="to"
-            placeholder={JALALI_DATE_INPUT_PLACEHOLDER}
+            value={params?.to ?? ""}
           />
         </div>
 

@@ -16,11 +16,11 @@ import {
   updateScheduleExceptionAction,
 } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
+import { JalaliDatePicker } from "@/components/ui/jalali-date-picker";
 import { formatJalaliDate } from "@/lib/jalali-date";
 
 import { FieldLabel, TextInput } from "./admin-form-fields";
 import { formatPersianNumber, formatWorkingWindow } from "./admin-formatting";
-import { JalaliDatePicker } from "./jalali-date-picker";
 
 export function ScheduleExceptions({
   currentJalaliYear,
@@ -106,6 +106,7 @@ export function ScheduleExceptions({
             <JalaliDatePicker
               id="exception-date"
               name="date"
+              required
             />
           </div>
           <div className="grid gap-2">

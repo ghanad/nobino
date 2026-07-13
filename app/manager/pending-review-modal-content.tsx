@@ -12,11 +12,9 @@ import {
   rejectReservationAction,
 } from "@/app/manager/actions";
 import { Button } from "@/components/ui/button";
+import { JalaliDatePicker } from "@/components/ui/jalali-date-picker";
 import { SubmitButton } from "@/components/ui/submit-button";
-import {
-  JALALI_DATE_INPUT_PLACEHOLDER,
-  formatJalaliDateTime,
-} from "@/lib/jalali-date";
+import { formatJalaliDateTime } from "@/lib/jalali-date";
 
 type ReviewAction = "reject" | "time" | null;
 
@@ -245,16 +243,11 @@ export function PendingReviewModalContent({
                 >
                   تاریخ جدید
                 </label>
-                <input
-                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                  defaultValue={requestedDate}
-                  dir="ltr"
+                <JalaliDatePicker
                   id={`modal-proposedDate-${reservationId}`}
                   name="proposedDate"
-                  pattern="\d{4}[-/]\d{1,2}[-/]\d{1,2}"
-                  placeholder={JALALI_DATE_INPUT_PLACEHOLDER}
-                  title={`تاریخ جلالی مثل ${JALALI_DATE_INPUT_PLACEHOLDER} وارد کنید`}
-                  type="text"
+                  required
+                  value={requestedDate}
                 />
               </div>
               <div className="grid gap-3 sm:grid-cols-2">

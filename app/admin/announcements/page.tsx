@@ -11,13 +11,13 @@ import {
 } from "@/app/admin/actions";
 import { PageHeader } from "@/components/app/page-header";
 import { Button } from "@/components/ui/button";
+import { JalaliDatePicker } from "@/components/ui/jalali-date-picker";
 import { UrlToast } from "@/components/ui/url-toast";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
   formatJalaliDate,
   formatJalaliDateParam,
-  JALALI_DATE_INPUT_PLACEHOLDER,
 } from "@/lib/jalali-date";
 
 type AnnouncementsPageProps = {
@@ -185,23 +185,17 @@ export default async function AdminAnnouncementsPage({
 
             <label className="grid gap-2 text-sm font-medium">
               شروع نمایش
-              <input
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+              <JalaliDatePicker
                 name="startsAt"
-                placeholder={JALALI_DATE_INPUT_PLACEHOLDER}
                 required
-                type="text"
-                defaultValue={today}
+                value={today}
               />
             </label>
 
             <label className="grid gap-2 text-sm font-medium">
               پایان نمایش
-              <input
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+              <JalaliDatePicker
                 name="endsAt"
-                placeholder={JALALI_DATE_INPUT_PLACEHOLDER}
-                type="text"
               />
             </label>
 

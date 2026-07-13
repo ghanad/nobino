@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { JalaliDatePicker } from "@/components/ui/jalali-date-picker";
 import { formatJalaliDate, formatLocalTime } from "@/lib/jalali-date";
 
 type Slot = {
@@ -95,15 +96,10 @@ export function DailyCapacityCalendar({
             Previous day
           </Link>
           <form className="flex items-center gap-2" method="get">
-            <input
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-              defaultValue={dateParam}
-              dir="ltr"
+            <JalaliDatePicker
+              inputClassName="h-9"
               name="date"
-              pattern="\d{4}[-/]\d{1,2}[-/]\d{1,2}"
-              placeholder="1405-02-31"
-              title="Enter a Jalali date like 1405-02-31"
-              type="text"
+              value={dateParam}
             />
             <button
               className="inline-flex h-9 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"

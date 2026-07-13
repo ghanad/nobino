@@ -12,14 +12,12 @@ import {
   updateLunchWeeklyScheduleAction,
 } from "@/app/admin/lunch/actions";
 import { PageHeader } from "@/components/app/page-header";
+import { JalaliDatePicker } from "@/components/ui/jalali-date-picker";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { UrlToast } from "@/components/ui/url-toast";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
-import {
-  formatJalaliDate,
-  JALALI_DATE_INPUT_PLACEHOLDER,
-} from "@/lib/jalali-date";
+import { formatJalaliDate } from "@/lib/jalali-date";
 
 type AdminLunchPageProps = {
   searchParams?: Promise<{
@@ -287,7 +285,7 @@ export default async function AdminLunchPage({
           action={createLunchExceptionAction}
           className="grid gap-3 md:grid-cols-[auto_auto_1fr_auto]"
         >
-          <InputText name="date" placeholder={JALALI_DATE_INPUT_PLACEHOLDER} />
+          <JalaliDatePicker name="date" required />
           <label className="flex h-10 items-center gap-2 text-sm">
             <input name="isServiceDay" type="checkbox" />
             سرویس فعال

@@ -12,10 +12,8 @@ import {
   updateCapacityExceptionAction,
 } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
-import {
-  JALALI_DATE_INPUT_PLACEHOLDER,
-  formatJalaliDate,
-} from "@/lib/jalali-date";
+import { JalaliDatePicker } from "@/components/ui/jalali-date-picker";
+import { formatJalaliDate } from "@/lib/jalali-date";
 
 import { FieldLabel, SelectInput, TextInput } from "./admin-form-fields";
 import { formatPersianNumber } from "./admin-formatting";
@@ -90,10 +88,9 @@ export function CapacityExceptions({
             <FieldLabel htmlFor="capacity-exception-date">
               تاریخ جلالی
             </FieldLabel>
-            <TextInput
+            <JalaliDatePicker
               id="capacity-exception-date"
               name="date"
-              placeholder={JALALI_DATE_INPUT_PLACEHOLDER}
               required
             />
           </div>

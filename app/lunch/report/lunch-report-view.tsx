@@ -7,7 +7,7 @@ import Link from "next/link";
 import { cancelLunchReservationByManagerAction } from "@/app/lunch/report/actions";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { Button } from "@/components/ui/button";
-import { JALALI_DATE_INPUT_PLACEHOLDER } from "@/lib/jalali-date";
+import { JalaliDatePicker } from "@/components/ui/jalali-date-picker";
 import type { LunchReportData } from "@/lib/lunch-report-service";
 import { cn } from "@/lib/utils";
 
@@ -15,32 +15,6 @@ type LunchReportViewProps = {
   canCancelReservations: boolean;
   initialReport: LunchReportData;
 };
-
-function InputText({
-  disabled,
-  name,
-  onChange,
-  placeholder,
-  value,
-}: {
-  disabled?: boolean;
-  name: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  value: string;
-}) {
-  return (
-    <input
-      className="h-10 rounded-md border border-input bg-background px-3 text-sm disabled:opacity-60"
-      disabled={disabled}
-      name={name}
-      onChange={(event) => onChange(event.target.value)}
-      placeholder={placeholder}
-      type="text"
-      value={value}
-    />
-  );
-}
 
 function buildReportHref(dateParam: string): string {
   return `/lunch/report?date=${dateParam}`;
@@ -144,11 +118,10 @@ export function LunchReportView({
         </div>
         <div className="hidden flex-col gap-2 md:flex md:flex-row">
           <form className="flex gap-2" onSubmit={handleSubmit}>
-            <InputText
+            <JalaliDatePicker
               disabled={isLoading}
               name="date"
-              onChange={setDateInput}
-              placeholder={JALALI_DATE_INPUT_PLACEHOLDER}
+              onValueChange={setDateInput}
               value={dateInput}
             />
             <Button disabled={isLoading} type="submit" variant="outline">
