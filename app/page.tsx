@@ -1,6 +1,12 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, CalendarClock, ExternalLink, Utensils } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarClock,
+  DoorOpen,
+  ExternalLink,
+  Utensils,
+} from "lucide-react";
 
 import { AppShell } from "@/components/app/app-shell";
 import { PageHeader } from "@/components/app/page-header";
@@ -26,6 +32,12 @@ const serviceLinks: ServiceLink[] = [
     description: "ثبت درخواست استفاده از سیستم‌های شرکت",
     href: "/reservations",
     icon: CalendarClock,
+  },
+  {
+    title: "رزرو اتاق جلسه",
+    description: "ثبت یا مشاهده رزرو اتاق‌های جلسه",
+    href: "/meeting-rooms",
+    icon: DoorOpen,
   },
 ];
 
@@ -82,7 +94,7 @@ function ServicesGateway({ user }: { user: CurrentUser }) {
 
         <section
           aria-label="فهرست خدمات"
-          className="grid gap-4 sm:grid-cols-2"
+          className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
         >
           {serviceLinks.map((service) => (
             <ServiceCard key={service.href} service={service} />
