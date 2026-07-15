@@ -26,6 +26,7 @@ function getNavItems(user: CurrentUser): GlobalNavItem[] {
   const canViewLunchReport = canAccessLunchReport(user);
   const navItems: GlobalNavItem[] = [
     { href: "/reservations", label: "رزروها", match: "prefix" },
+    { href: "/meeting-rooms", label: "اتاق جلسه", match: "prefix" },
     {
       href: "/lunch",
       label: "ناهار",
@@ -46,6 +47,11 @@ function getNavItems(user: CurrentUser): GlobalNavItem[] {
       match: "prefix",
       children: [
         { href: "/manager", label: "تقویم رزروها", match: "exact" },
+        {
+          href: "/manager/meeting-rooms",
+          label: "اتاق‌های جلسه",
+          match: "prefix",
+        },
         {
           href: "/manager/team-report",
           label: "گزارش تیم‌ها",
@@ -71,6 +77,11 @@ function getNavItems(user: CurrentUser): GlobalNavItem[] {
             match: "prefix",
           },
           { href: "/admin/schedule", label: "زمان‌بندی", match: "prefix" },
+          {
+            href: "/admin/meeting-rooms",
+            label: "اتاق‌های جلسه",
+            match: "prefix",
+          },
           { href: "/admin/lunch", label: "ناهار", match: "prefix" },
           {
             href: "/admin/lunch-notifications",
@@ -117,10 +128,10 @@ export async function AppShell({ user, children }: AppShellProps) {
           userName={user.name}
         />
       </header>
-      <div className="mx-auto w-full max-w-6xl flex-1 px-6 py-8">
+      <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
         {children}
       </div>
-      <footer className="mx-auto w-full max-w-6xl px-6 pb-6">
+      <footer className="mx-auto w-full max-w-7xl px-4 pb-8 pt-2 sm:px-6">
         <ProductSignature />
       </footer>
     </main>

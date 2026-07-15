@@ -55,31 +55,34 @@ enum BaleDeliveryStatus {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  name         String
-  email        String   @unique
-  passwordHash String
-  role         UserRole @default(USER)
-  active       Boolean  @default(true)
-  canViewLunchReport Boolean @default(false)
-  deletedAt    DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                 String    @id @default(cuid())
+  name               String
+  email              String    @unique
+  passwordHash       String
+  role               UserRole  @default(USER)
+  active             Boolean   @default(true)
+  canViewLunchReport Boolean   @default(false)
+  deletedAt          DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  reservations              Reservation[]                   @relation("ReservationUser")
-  lunchReservations         LunchReservation[]              @relation("LunchReservationUser")
-  approvedReservations      Reservation[]                   @relation("ReservationApprover")
-  cancelledReservations     Reservation[]                   @relation("ReservationCanceller")
-  proposedAlternatives      ReservationAlternative[]        @relation("AlternativeProposer")
-  createdCapacityExceptions ResourcePoolCapacityException[] @relation("CapacityExceptionCreator")
-  auditLogs                 AuditLog[]                      @relation("AuditActor")
-  notifications             Notification[]                  @relation("NotificationUser")
-  createdAnnouncements      Announcement[]                  @relation("AnnouncementCreator")
-  announcementReceipts      AnnouncementReceipt[]           @relation("AnnouncementReceiptUser")
-  teamMemberships           TeamMembership[]
-  baleConnection            BaleConnection?
-  baleLinkTokens            BaleLinkToken[]
-  baleLunchReportRecipient  BaleLunchReportRecipient?
+  reservations                     Reservation[]                   @relation("ReservationUser")
+  meetingRoomReservations          MeetingRoomReservation[]        @relation("MeetingRoomReservationUser")
+  lunchReservations                LunchReservation[]              @relation("LunchReservationUser")
+  approvedReservations             Reservation[]                   @relation("ReservationApprover")
+  approvedMeetingRoomReservations  MeetingRoomReservation[]        @relation("MeetingRoomReservationApprover")
+  cancelledReservations            Reservation[]                   @relation("ReservationCanceller")
+  cancelledMeetingRoomReservations MeetingRoomReservation[]        @relation("MeetingRoomReservationCanceller")
+  proposedAlternatives             ReservationAlternative[]        @relation("AlternativeProposer")
+  createdCapacityExceptions        ResourcePoolCapacityException[] @relation("CapacityExceptionCreator")
+  auditLogs                        AuditLog[]                      @relation("AuditActor")
+  notifications                    Notification[]                  @relation("NotificationUser")
+  createdAnnouncements             Announcement[]                  @relation("AnnouncementCreator")
+  announcementReceipts             AnnouncementReceipt[]           @relation("AnnouncementReceiptUser")
+  teamMemberships                  TeamMembership[]
+  baleConnection                   BaleConnection?
+  baleLinkTokens                   BaleLinkToken[]
+  baleLunchReportRecipient         BaleLunchReportRecipient?
 }
 
 model ResourcePool {
@@ -131,6 +134,60 @@ model ScheduleException {
   reason       String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+model MeetingRoom {
+  id                     String   @id @default(cuid())
+  name                   String
+  description            String?
+  location               String?
+  isActive               Boolean  @default(true)
+  sortOrder              Int      @default(0)
+  autoApprovalEnabled    Boolean  @default(false)
+  autoApprovalDelayHours Int      @default(4)
+  deletedAt              DateTime?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  weeklySchedules MeetingRoomWeeklySchedule[]
+  exceptions      MeetingRoomScheduleException[]
+  reservations    MeetingRoomReservation[]
+
+  @@index([isActive, sortOrder, name])
+}
+
+model MeetingRoomWeeklySchedule {
+  id           String   @id @default(cuid())
+  roomId       String
+  /// Uses JavaScript Date.getDay(): Sunday=0, Monday=1, ..., Friday=5, Saturday=6.
+  dayOfWeek    Int
+  isWorkingDay Boolean  @default(true)
+  startTime    String
+  endTime      String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  room MeetingRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, dayOfWeek])
+  @@index([dayOfWeek])
+}
+
+model MeetingRoomScheduleException {
+  id           String   @id @default(cuid())
+  roomId       String
+  date         DateTime
+  isWorkingDay Boolean
+  startTime    String?
+  endTime      String?
+  reason       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  room MeetingRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, date])
+  @@index([date])
 }
 
 model ReservationPolicy {
@@ -186,17 +243,17 @@ model LunchException {
 }
 
 model LunchReservation {
-  id            String                 @id @default(cuid())
-  userId        String
-  locationId    String
-  date          DateTime
-  status        LunchReservationStatus @default(ACTIVE)
-  cancelledAt   DateTime?
-  createdAt     DateTime               @default(now())
-  updatedAt     DateTime               @updatedAt
+  id          String                 @id @default(cuid())
+  userId      String
+  locationId  String
+  date        DateTime
+  status      LunchReservationStatus @default(ACTIVE)
+  cancelledAt DateTime?
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
 
-  user          User                   @relation("LunchReservationUser", fields: [userId], references: [id])
-  location      LunchLocation          @relation(fields: [locationId], references: [id])
+  user          User           @relation("LunchReservationUser", fields: [userId], references: [id])
+  location      LunchLocation  @relation(fields: [locationId], references: [id])
   notifications Notification[]
 
   @@index([userId, date])
@@ -230,6 +287,34 @@ model Reservation {
   notifications Notification[]
 
   @@index([resourcePoolId, startAt, endAt])
+  @@index([status, startAt])
+  @@index([userId, startAt])
+}
+
+model MeetingRoomReservation {
+  id              String            @id @default(cuid())
+  roomId          String
+  userId          String
+  startAt         DateTime
+  endAt           DateTime
+  status          ReservationStatus @default(PENDING)
+  title           String?
+  rejectionReason String?
+  autoApprovalAt  DateTime?
+  approvedById    String?
+  approvedAt      DateTime?
+  cancelledById   String?
+  cancelledAt     DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  room          MeetingRoom    @relation(fields: [roomId], references: [id])
+  user          User           @relation("MeetingRoomReservationUser", fields: [userId], references: [id])
+  approvedBy    User?          @relation("MeetingRoomReservationApprover", fields: [approvedById], references: [id])
+  cancelledBy   User?          @relation("MeetingRoomReservationCanceller", fields: [cancelledById], references: [id])
+  notifications Notification[]
+
+  @@index([roomId, startAt, endAt])
   @@index([status, startAt])
   @@index([userId, startAt])
 }
@@ -307,23 +392,26 @@ model AnnouncementReceipt {
 }
 
 model Notification {
-  id            String    @id @default(cuid())
-  userId        String
-  reservationId String?
-  lunchReservationId String?
-  type          String
-  title         String
-  body          String
-  readAt        DateTime?
-  createdAt     DateTime  @default(now())
+  id                       String    @id @default(cuid())
+  userId                   String
+  reservationId            String?
+  meetingRoomReservationId String?
+  lunchReservationId       String?
+  type                     String
+  title                    String
+  body                     String
+  readAt                   DateTime?
+  createdAt                DateTime  @default(now())
 
-  user        User         @relation("NotificationUser", fields: [userId], references: [id])
-  reservation Reservation? @relation(fields: [reservationId], references: [id])
-  lunchReservation LunchReservation? @relation(fields: [lunchReservationId], references: [id])
-  baleDelivery BaleNotificationDelivery?
+  user                   User                      @relation("NotificationUser", fields: [userId], references: [id])
+  reservation            Reservation?              @relation(fields: [reservationId], references: [id])
+  meetingRoomReservation MeetingRoomReservation?   @relation(fields: [meetingRoomReservationId], references: [id])
+  lunchReservation       LunchReservation?         @relation(fields: [lunchReservationId], references: [id])
+  baleDelivery           BaleNotificationDelivery?
 
   @@index([userId, readAt])
   @@index([reservationId])
+  @@index([meetingRoomReservationId])
   @@index([lunchReservationId])
 }
 
@@ -353,14 +441,14 @@ model BaleLinkToken {
 }
 
 model BaleBotState {
-  id                  String    @id @default("default")
-  updateOffset        Int       @default(0)
-  lastSyncStartedAt   DateTime?
-  lastSyncSucceededAt DateTime?
-  lastSyncFailedAt    DateTime?
-  lastSyncError       String?
+  id                     String    @id @default("default")
+  updateOffset           Int       @default(0)
+  lastSyncStartedAt      DateTime?
+  lastSyncSucceededAt    DateTime?
+  lastSyncFailedAt       DateTime?
+  lastSyncError          String?
   lastLunchReportCheckAt DateTime?
-  updatedAt           DateTime  @updatedAt
+  updatedAt              DateTime  @updatedAt
 }
 
 model BaleNotificationDelivery {
@@ -380,23 +468,23 @@ model BaleNotificationDelivery {
 }
 
 model BaleLunchReportDelivery {
-  id         String             @id @default(cuid())
-  deliveryKey String            @unique
-  recipientId String?
+  id            String             @id @default(cuid())
+  deliveryKey   String             @unique
+  recipientId   String?
   recipientName String
-  reportDate DateTime
-  cutoffAt   DateTime
-  chatId     String?
-  message    String
-  totalCount Int
-  status     BaleDeliveryStatus @default(SENDING)
-  attempts   Int                @default(1)
-  lastError  String?
-  sentAt     DateTime?
-  createdAt  DateTime           @default(now())
-  updatedAt  DateTime           @updatedAt
+  reportDate    DateTime
+  cutoffAt      DateTime
+  chatId        String?
+  message       String
+  totalCount    Int
+  status        BaleDeliveryStatus @default(SENDING)
+  attempts      Int                @default(1)
+  lastError     String?
+  sentAt        DateTime?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
 
-  recipient  BaleLunchReportRecipient? @relation(fields: [recipientId], references: [id])
+  recipient BaleLunchReportRecipient? @relation(fields: [recipientId], references: [id])
 
   @@index([status, updatedAt])
   @@index([reportDate, recipientId])

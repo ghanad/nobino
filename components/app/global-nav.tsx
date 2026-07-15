@@ -58,6 +58,7 @@ function isActiveNavItem(pathname: string, item: GlobalNavItem): boolean {
 function getMobileNavSections(navItems: GlobalNavItem[]): MobileNavSection[] {
   const sections: MobileNavSection[] = [];
   const reservationsItem = navItems.find((item) => item.href === "/reservations");
+  const meetingRoomsItem = navItems.find((item) => item.href === "/meeting-rooms");
   const lunchItem = navItems.find((item) => item.href === "/lunch");
   const managerItem = navItems.find((item) => item.href === "/manager");
   const adminItem = navItems.find((item) => item.href === "/admin");
@@ -67,6 +68,13 @@ function getMobileNavSections(navItems: GlobalNavItem[]): MobileNavSection[] {
     sections.push({
       entries: [{ item: reservationsItem }],
       id: "reservations",
+    });
+  }
+
+  if (meetingRoomsItem) {
+    sections.push({
+      entries: [{ item: meetingRoomsItem }],
+      id: "meeting-rooms",
     });
   }
 
@@ -147,7 +155,7 @@ function NavLink({
           aria-current={isActive ? "page" : undefined}
           aria-haspopup="menu"
           className={cn(
-            "relative inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 text-sm font-medium transition-colors",
+            "relative inline-flex h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border px-3 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
             isActive
               ? "border-slate-200 bg-slate-100 text-slate-950"
               : "border-transparent text-slate-700 hover:bg-slate-50 hover:text-slate-950",
@@ -192,7 +200,7 @@ function NavLink({
     <Link
       aria-current={isActive ? "page" : undefined}
       className={cn(
-        "relative inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 text-sm font-medium transition-colors",
+        "relative inline-flex h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border px-3 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
         isActive
           ? "border-slate-200 bg-slate-100 text-slate-950"
           : "border-transparent text-slate-700 hover:bg-slate-50 hover:text-slate-950",
@@ -726,11 +734,11 @@ export function GlobalNav({
   }, [isMobileDrawerOpen]);
 
   return (
-    <div className="mx-auto flex h-16 w-full max-w-6xl flex-col justify-center px-4 md:h-auto md:gap-3 md:px-6 md:py-3">
+    <div className="mx-auto flex h-16 w-full max-w-7xl flex-col justify-center px-4 md:h-[72px] md:px-6">
       <div className="flex items-center justify-between gap-3">
-        <div className="flex shrink-0 items-center gap-1.5">
+        <div className="flex shrink-0 items-center gap-3 md:border-l md:border-slate-200 md:pl-5">
           <Link
-            className="text-sm font-semibold tracking-normal text-slate-950"
+            className="text-base font-bold tracking-normal text-slate-950 outline-none focus-visible:ring-2 focus-visible:ring-ring"
             href="/"
           >
             Nobino
@@ -750,7 +758,7 @@ export function GlobalNav({
 
         <nav
           aria-label="ناوبری اصلی"
-          className="hidden min-w-0 flex-1 items-center justify-start gap-1.5 md:flex"
+          className="hidden min-w-0 flex-1 items-center justify-start gap-2 md:flex"
         >
           {navItems.map((item) => (
             <NavLink

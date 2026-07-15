@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 
-import { runReservationAutoAcceptBatch } from "@/lib/reservation-auto-accept-service";
+import { runAutoAcceptBatch } from "@/lib/auto-accept-service";
 
 function secretsMatch(actual: string, expected: string): boolean {
   const actualBuffer = Buffer.from(actual);
@@ -32,13 +32,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const result = await runReservationAutoAcceptBatch();
+  const result = await runAutoAcceptBatch();
 
-  return NextResponse.json({
-    approved: result.approved,
-    considered: result.considered,
-    failed: result.failed,
-    skipped: result.skipped,
-    stillPending: result.stillPending,
-  });
+  return NextResponse.json(result);
 }
