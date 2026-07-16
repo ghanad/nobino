@@ -1,41 +1,25 @@
 import Link from "next/link";
-import {
-  Mail,
-  ShieldCheck,
-  Users,
-  UserCheck,
-  UserPlus,
-  UserX,
-} from "lucide-react";
+import { Mail, Users, UserPlus } from "lucide-react";
 import { UserRole } from "@prisma/client";
 
-import { addTeamMemberAction } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
-import { SubmitButton } from "@/components/ui/submit-button";
 import { formatJalaliDate } from "@/lib/jalali-date";
 
 import {
   formatPersianNumber,
   getUserRoleBadgeClass,
-  USER_ROLE_DESCRIPTIONS,
   USER_ROLE_LABELS,
 } from "./admin-formatting";
 
 export function UserManagement({
-  teams,
   users,
 }: {
-  teams: Array<{
-    id: string;
-    name: string;
-  }>;
   users: Array<{
     id: string;
     name: string;
     email: string;
     role: UserRole;
     active: boolean;
-    canViewLunchReport: boolean;
     createdAt: Date;
     teamMemberships: Array<{
       team: {
@@ -56,7 +40,7 @@ export function UserManagement({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="grid gap-1">
           <h2 className="text-lg font-semibold text-slate-950">
-            مدیریت کاربران
+            نمای کلی کاربران
           </h2>
           <p className="text-sm leading-6 text-muted-foreground">
             این صفحه فقط نمای کلی کاربران است. ساخت، ویرایش و تنظیم رمز در
@@ -99,26 +83,25 @@ export function UserManagement({
           const userTeams = user.teamMemberships.map(
             (membership) => membership.team,
           );
+          const visibleTeam = userTeams[0];
+          const additionalTeamCount = Math.max(userTeams.length - 1, 0);
 
           return (
             <div
-              className="rounded-lg border bg-card p-4 shadow-sm"
+              className="rounded-lg border bg-card px-4 py-3 shadow-sm"
               key={user.id}
             >
-              <div className="grid gap-4 lg:grid-cols-[minmax(220px,0.8fr)_1fr_auto] lg:items-center">
-                <div className="flex min-w-0 items-start gap-3">
+              <div className="grid gap-3 md:grid-cols-[minmax(240px,1.2fr)_minmax(180px,0.8fr)_auto] md:items-center">
+                <div className="flex min-w-0 items-center gap-3">
                   <span
                     className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md ${
                       user.active
-                        ? "bg-emerald-50 text-emerald-700"
+                        ? "bg-emerald-50 font-semibold text-emerald-700"
                         : "bg-slate-100 text-slate-500"
                     }`}
+                    aria-hidden="true"
                   >
-                    {user.active ? (
-                      <UserCheck className="h-5 w-5" />
-                    ) : (
-                      <UserX className="h-5 w-5" />
-                    )}
+                    {user.name.trim().charAt(0) || "؟"}
                   </span>
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
@@ -141,11 +124,6 @@ export function UserManagement({
                       >
                         {user.active ? "فعال" : "غیرفعال"}
                       </span>
-                      {user.canViewLunchReport ? (
-                        <span className="inline-flex h-6 items-center rounded-full bg-cyan-50 px-2 text-xs font-medium text-cyan-800">
-                          گزارش ناهار
-                        </span>
-                      ) : null}
                     </div>
                     <p className="mt-1 flex items-center gap-1.5 truncate text-sm text-muted-foreground">
                       <Mail className="h-3.5 w-3.5 shrink-0" />
@@ -154,74 +132,33 @@ export function UserManagement({
                   </div>
                 </div>
 
-                <div className="grid gap-2 rounded-md bg-muted/30 p-3 text-sm text-muted-foreground md:grid-cols-2">
-                  <div className="flex items-start gap-2">
-                    <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
-                    <span>{USER_ROLE_DESCRIPTIONS[user.role]}</span>
-                  </div>
-                  <div>
-                    ساخته شده در{" "}
-                    <span className="font-medium text-slate-700">
-                      {formatJalaliDate(user.createdAt)}
-                    </span>
-                  </div>
-                  <div className="flex items-start gap-2 md:col-span-2">
-                    <Users className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
-                    {userTeams.length > 0 ? (
-                      <div className="flex flex-wrap gap-1.5">
-                        {userTeams.map((team) => (
-                          <span
-                            className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-800"
-                            key={team.id}
-                          >
-                            {team.name}
+                <div className="grid min-w-0 gap-1.5 text-sm">
+                  <div className="flex min-w-0 items-center gap-2 text-slate-700">
+                    <Users className="h-4 w-4 shrink-0 text-slate-500" />
+                    {visibleTeam ? (
+                      <div
+                        className="flex min-w-0 items-center gap-1.5"
+                        title={userTeams.map((team) => team.name).join("، ")}
+                      >
+                        <span className="truncate font-medium">
+                          {visibleTeam.name}
+                        </span>
+                        {additionalTeamCount > 0 ? (
+                          <span className="shrink-0 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-800">
+                            +{formatPersianNumber(additionalTeamCount)}
                           </span>
-                        ))}
+                        ) : null}
                       </div>
                     ) : (
-                      <span>بدون تیم</span>
+                      <span className="text-muted-foreground">بدون تیم</span>
                     )}
                   </div>
-                  {userTeams.length === 0 && teams.length > 0 ? (
-                    <form
-                      action={addTeamMemberAction}
-                      className="flex flex-col gap-2 sm:flex-row md:col-span-2"
-                    >
-                      <input name="redirectPath" type="hidden" value="/admin" />
-                      <input name="userId" type="hidden" value={user.id} />
-                      <select
-                        aria-label={`انتخاب تیم برای ${user.name}`}
-                        className="h-9 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-                        defaultValue=""
-                        name="teamId"
-                        required
-                      >
-                        <option disabled value="">
-                          انتخاب تیم
-                        </option>
-                        {teams.map((team) => (
-                          <option key={team.id} value={team.id}>
-                            {team.name}
-                          </option>
-                        ))}
-                      </select>
-                      <SubmitButton
-                        className="h-9"
-                        pendingLabel="در حال افزودن..."
-                        size="sm"
-                      >
-                        افزودن به تیم
-                      </SubmitButton>
-                    </form>
-                  ) : null}
-                  {userTeams.length === 0 && teams.length === 0 ? (
-                    <p className="text-xs md:col-span-2">
-                      ابتدا از صفحه تیم‌ها یک تیم بسازید.
-                    </p>
-                  ) : null}
+                  <p className="text-xs text-muted-foreground">
+                    ساخته شده در {formatJalaliDate(user.createdAt)}
+                  </p>
                 </div>
 
-                <Button asChild className="w-full lg:w-auto" variant="outline">
+                <Button asChild className="w-full md:w-auto" variant="outline">
                   <Link href={`/admin/users/${user.id}`}>جزئیات و ویرایش</Link>
                 </Button>
               </div>

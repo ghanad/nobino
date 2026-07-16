@@ -25,49 +25,39 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   await requireRole([UserRole.ADMIN]);
   const params = await searchParams;
   const toast = getAdminToast(params);
-  const [users, teams] = await Promise.all([
-    db.user.findMany({
-      where: { deletedAt: null },
-      orderBy: [{ active: "desc" }, { name: "asc" }],
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        active: true,
-        canViewLunchReport: true,
-        createdAt: true,
-        teamMemberships: {
-          orderBy: { team: { name: "asc" } },
-          select: {
-            team: {
-              select: {
-                id: true,
-                name: true,
-              },
+  const users = await db.user.findMany({
+    where: { deletedAt: null },
+    orderBy: [{ active: "desc" }, { name: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      active: true,
+      createdAt: true,
+      teamMemberships: {
+        orderBy: { team: { name: "asc" } },
+        select: {
+          team: {
+            select: {
+              id: true,
+              name: true,
             },
           },
         },
       },
-    }),
-    db.team.findMany({
-      orderBy: { name: "asc" },
-      select: {
-        id: true,
-        name: true,
-      },
-    }),
-  ]);
+    },
+  });
 
   return (
     <div className="grid gap-6">
       <PageHeader
-        subtitle="ساخت، ویرایش و مدیریت نقش کاربران"
+        subtitle="نمای کلی کاربران، نقش‌ها، وضعیت و عضویت تیمی"
         title={ADMIN_PAGE_LABELS.users}
       />
 
       {toast ? <UrlToast {...toast} /> : null}
-      <UserManagement teams={teams} users={users} />
+      <UserManagement users={users} />
     </div>
   );
 }

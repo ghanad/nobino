@@ -21,6 +21,8 @@ export const USER_ROLE_DESCRIPTIONS: Record<UserRole, string> = {
 
 export function getUserManagementToast(params?: {
   error?: string;
+  memberAdded?: string;
+  memberRemoved?: string;
   passwordReset?: string;
   userCreated?: string;
   userDeleted?: string;
@@ -35,6 +37,8 @@ export function getUserManagementToast(params?: {
   }
 
   const successMessage =
+    (params?.memberAdded && "کاربر به تیم اضافه شد.") ||
+    (params?.memberRemoved && "کاربر از تیم حذف شد.") ||
     (params?.userCreated && "کاربر ساخته شد.") ||
     (params?.userDeleted && "کاربر حذف شد.") ||
     (params?.userUpdated && "اطلاعات کاربر ذخیره شد.") ||
@@ -42,7 +46,14 @@ export function getUserManagementToast(params?: {
 
   return successMessage
     ? {
-        consumeKeys: ["userCreated", "userDeleted", "userUpdated", "passwordReset"],
+        consumeKeys: [
+          "memberAdded",
+          "memberRemoved",
+          "userCreated",
+          "userDeleted",
+          "userUpdated",
+          "passwordReset",
+        ],
         message: successMessage,
         variant: "success" as const,
       }
@@ -54,6 +65,8 @@ export function UserManagementToast({
 }: {
   params?: {
     error?: string;
+    memberAdded?: string;
+    memberRemoved?: string;
     passwordReset?: string;
     userCreated?: string;
     userDeleted?: string;

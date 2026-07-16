@@ -7,11 +7,16 @@ import {
   Save,
   ShieldCheck,
   Trash2,
+  UserMinus,
+  UserPlus,
+  Users,
 } from "lucide-react";
 import { UserRole } from "@prisma/client";
 
 import {
+  addTeamMemberAction,
   deleteUserAction,
+  removeTeamMemberAction,
   resetUserPasswordAction,
   updateUserAction,
 } from "@/app/admin/actions";
@@ -36,6 +41,8 @@ type UserDetailPageProps = {
   }>;
   searchParams?: Promise<{
     error?: string;
+    memberAdded?: string;
+    memberRemoved?: string;
     passwordReset?: string;
     userDeleted?: string;
     userUpdated?: string;
@@ -64,19 +71,40 @@ export default async function UserDetailPage({
       params,
       searchParams,
     ]);
-  const user = await db.user.findUnique({
-    where: { id: resolvedParams.userId },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      role: true,
-      active: true,
-      canViewLunchReport: true,
-      deletedAt: true,
-      createdAt: true,
-    },
-  });
+  const [user, teams] = await Promise.all([
+    db.user.findUnique({
+      where: { id: resolvedParams.userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        active: true,
+        canViewLunchReport: true,
+        deletedAt: true,
+        createdAt: true,
+        teamMemberships: {
+          orderBy: { team: { name: "asc" } },
+          select: {
+            id: true,
+            team: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    }),
+    db.team.findMany({
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+      },
+    }),
+  ]);
 
   if (!user || user.deletedAt) {
     notFound();
@@ -84,6 +112,10 @@ export default async function UserDetailPage({
 
   const redirectPath = `/admin/users/${user.id}`;
   const isCurrentAdmin = user.id === currentAdmin.id;
+  const assignedTeamIds = new Set(
+    user.teamMemberships.map((membership) => membership.team.id),
+  );
+  const availableTeams = teams.filter((team) => !assignedTeamIds.has(team.id));
 
   return (
     <div className="grid gap-6" dir="rtl">
@@ -96,7 +128,7 @@ export default async function UserDetailPage({
             </Link>
           </Button>
         }
-        subtitle="ویرایش نقش، وضعیت فعال بودن و رمز موقت کاربر"
+        subtitle="مدیریت نقش، دسترسی‌ها، تیم‌ها و رمز موقت کاربر"
         title={user.name}
       />
 
@@ -217,6 +249,111 @@ export default async function UserDetailPage({
             ذخیره
           </Button>
         </form>
+      </section>
+
+      <section className="rounded-lg border bg-card p-5 text-card-foreground shadow-sm">
+        <div className="grid gap-1 border-b pb-5">
+          <h2 className="font-medium text-slate-950">تیم‌ها</h2>
+          <p className="text-sm leading-6 text-muted-foreground">
+            عضویت‌های تیمی این کاربر را از همین صفحه مدیریت کنید.
+          </p>
+        </div>
+
+        <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_minmax(280px,0.8fr)]">
+          <div className="grid content-start gap-3">
+            <h3 className="text-sm font-medium text-slate-950">
+              تیم‌های اختصاص‌یافته
+            </h3>
+            {user.teamMemberships.length === 0 ? (
+              <div className="rounded-md border border-dashed bg-muted/20 p-4 text-sm text-muted-foreground">
+                این کاربر هنوز عضو هیچ تیمی نیست.
+              </div>
+            ) : (
+              user.teamMemberships.map((membership) => (
+                <div
+                  className="flex flex-col gap-3 rounded-md border bg-background p-3 sm:flex-row sm:items-center sm:justify-between"
+                  key={membership.id}
+                >
+                  <div className="flex min-w-0 items-center gap-2">
+                    <Users className="h-4 w-4 shrink-0 text-slate-500" />
+                    <span className="truncate text-sm font-medium text-slate-900">
+                      {membership.team.name}
+                    </span>
+                  </div>
+                  <form action={removeTeamMemberAction}>
+                    <input
+                      name="redirectPath"
+                      type="hidden"
+                      value={redirectPath}
+                    />
+                    <input
+                      name="teamId"
+                      type="hidden"
+                      value={membership.team.id}
+                    />
+                    <input name="userId" type="hidden" value={user.id} />
+                    <Button
+                      className="w-full sm:w-auto"
+                      size="sm"
+                      type="submit"
+                      variant="outline"
+                    >
+                      <UserMinus className="h-4 w-4" />
+                      حذف از تیم
+                    </Button>
+                  </form>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="grid content-start gap-3 rounded-md bg-muted/30 p-4">
+            <div className="grid gap-1">
+              <h3 className="text-sm font-medium text-slate-950">
+                افزودن به تیم
+              </h3>
+              <p className="text-xs leading-5 text-muted-foreground">
+                هر کاربر می‌تواند همزمان عضو چند تیم باشد.
+              </p>
+            </div>
+            {availableTeams.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                تیم دیگری برای افزودن وجود ندارد.
+              </p>
+            ) : (
+              <form action={addTeamMemberAction} className="grid gap-3">
+                <input
+                  name="redirectPath"
+                  type="hidden"
+                  value={redirectPath}
+                />
+                <input name="userId" type="hidden" value={user.id} />
+                <div className="grid gap-2">
+                  <FieldLabel htmlFor="user-team">تیم</FieldLabel>
+                  <SelectInput
+                    defaultValue=""
+                    id="user-team"
+                    name="teamId"
+                    required
+                  >
+                    <option disabled value="">
+                      انتخاب تیم…
+                    </option>
+                    {availableTeams.map((team) => (
+                      <option key={team.id} value={team.id}>
+                        {team.name}
+                      </option>
+                    ))}
+                  </SelectInput>
+                </div>
+                <Button className="w-full" type="submit">
+                  <UserPlus className="h-4 w-4" />
+                  افزودن به تیم
+                </Button>
+              </form>
+            )}
+          </div>
+        </div>
       </section>
 
       <section className="rounded-lg border bg-card p-5 text-card-foreground shadow-sm">
