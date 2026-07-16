@@ -14,6 +14,7 @@ type AdminPageProps = {
   searchParams?: Promise<{
     error?: string;
     passwordReset?: string;
+    memberAdded?: string;
     userCreated?: string;
     userDeleted?: string;
     userUpdated?: string;
@@ -24,19 +25,39 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   await requireRole([UserRole.ADMIN]);
   const params = await searchParams;
   const toast = getAdminToast(params);
-  const users = await db.user.findMany({
-    where: { deletedAt: null },
-    orderBy: [{ active: "desc" }, { name: "asc" }],
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      role: true,
-      active: true,
-      canViewLunchReport: true,
-      createdAt: true,
-    },
-  });
+  const [users, teams] = await Promise.all([
+    db.user.findMany({
+      where: { deletedAt: null },
+      orderBy: [{ active: "desc" }, { name: "asc" }],
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        active: true,
+        canViewLunchReport: true,
+        createdAt: true,
+        teamMemberships: {
+          orderBy: { team: { name: "asc" } },
+          select: {
+            team: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    }),
+    db.team.findMany({
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+      },
+    }),
+  ]);
 
   return (
     <div className="grid gap-6">
@@ -46,7 +67,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       />
 
       {toast ? <UrlToast {...toast} /> : null}
-      <UserManagement users={users} />
+      <UserManagement teams={teams} users={users} />
     </div>
   );
 }

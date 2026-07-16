@@ -16,6 +16,7 @@ type AdminPageProps = {
     exceptionDeleted?: string;
     exceptionUpdated?: string;
     holidayImported?: string;
+    memberAdded?: string;
     passwordReset?: string;
     poolUpdated?: string;
     reservationPolicyUpdated?: string;
@@ -56,6 +57,7 @@ export function getAdminToast(params: Awaited<AdminPageProps["searchParams"]>) {
     (params?.exceptionDeleted && "Schedule exception deleted.") ||
     (params?.holidayImported &&
       `${params.holidayImported} Iran holiday schedule exceptions imported.`) ||
+    (params?.memberAdded && "کاربر به تیم اضافه شد.") ||
     (params?.userCreated && "User created.") ||
     (params?.userDeleted && "User deleted.") ||
     (params?.userUpdated && "User updated.") ||
@@ -77,6 +79,7 @@ export function getAdminToast(params: Awaited<AdminPageProps["searchParams"]>) {
       "exceptionUpdated",
       "exceptionDeleted",
       "holidayImported",
+      "memberAdded",
       "userCreated",
       "userDeleted",
       "userUpdated",
