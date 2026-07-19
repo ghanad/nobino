@@ -61,7 +61,11 @@ function getMobileNavSections(navItems: GlobalNavItem[]): MobileNavSection[] {
   const meetingRoomsItem = navItems.find((item) => item.href === "/meeting-rooms");
   const lunchItem = navItems.find((item) => item.href === "/lunch");
   const managerItem = navItems.find((item) => item.href === "/manager");
-  const adminItem = navItems.find((item) => item.href === "/admin");
+  const adminSettingsItem = navItems.find((item) => item.href === "/admin");
+  const adminCapacityItem = navItems.find((item) => item.href === "/admin/capacity");
+  const adminMeetingRoomsItem = navItems.find((item) => item.href === "/admin/meeting-rooms");
+  const adminLunchItem = navItems.find((item) => item.href === "/admin/lunch");
+  const adminAnnouncementsItem = navItems.find((item) => item.href === "/admin/announcements");
   const auditItem = navItems.find((item) => item.href === "/admin/audit");
 
   if (reservationsItem) {
@@ -101,14 +105,43 @@ function getMobileNavSections(navItems: GlobalNavItem[]): MobileNavSection[] {
     });
   }
 
-  if (adminItem?.children?.length) {
+  if (adminSettingsItem?.children?.length) {
     sections.push({
-      entries: adminItem.children.map((child) => ({
-        item: child,
-        label: child.href === "/admin/lunch" ? "تنظیمات غذا" : child.label,
-      })),
-      id: "management",
-      label: "مدیریت",
+      entries: adminSettingsItem.children.map((child) => ({ item: child })),
+      id: "admin-settings",
+      label: "تنظیمات",
+    });
+  }
+
+  if (adminCapacityItem?.children?.length) {
+    sections.push({
+      entries: adminCapacityItem.children.map((child) => ({ item: child })),
+      id: "admin-reservations",
+      label: "رزروها",
+    });
+  }
+
+  if (adminMeetingRoomsItem?.children?.length) {
+    sections.push({
+      entries: adminMeetingRoomsItem.children.map((child) => ({ item: child })),
+      id: "admin-meeting-rooms",
+      label: "اتاق‌ها",
+    });
+  }
+
+  if (adminLunchItem?.children?.length) {
+    sections.push({
+      entries: adminLunchItem.children.map((child) => ({ item: child })),
+      id: "admin-lunch",
+      label: "غذا",
+    });
+  }
+
+  if (adminAnnouncementsItem?.children?.length) {
+    sections.push({
+      entries: adminAnnouncementsItem.children.map((child) => ({ item: child })),
+      id: "admin-communications",
+      label: "ارتباطات",
     });
   }
 
@@ -116,7 +149,7 @@ function getMobileNavSections(navItems: GlobalNavItem[]): MobileNavSection[] {
     sections.push({
       entries: [{ item: auditItem }],
       id: "reports",
-      label: "گزارش‌ها",
+      label: "گزارش فعالیت‌ها",
     });
   }
 

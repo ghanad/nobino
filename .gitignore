@@ -1,13 +1,51 @@
-node_modules
-.next
-.npm-cache
-out
-dist
-.test-build
+```
+# Dependencies
+node_modules/
+
+# Build outputs
+.next/
+dist/
+build/
+out/
+
+# Environment variables
 .env
-.env*.local
-dev.db
-dev.db-journal
-prisma/dev.db
-prisma/dev.db-journal
+.env.local
+.env.*
+!.env.example
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.tmp
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# TypeScript
 *.tsbuildinfo
+.next/cache/
+
+# Prisma
+prisma/migrations/
+
+# Next.js
+.next/
+.cache/
+
+# Temporary files
+*.tmp
+*.temp
+
+```

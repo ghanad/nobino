@@ -65,11 +65,18 @@ function getNavItems(user: CurrentUser): GlobalNavItem[] {
     navItems.push(
       {
         href: "/admin",
-        label: "مدیریت",
+        label: "تنظیمات",
         match: "exact",
         children: [
           { href: "/admin", label: "کاربران", match: "exact" },
           { href: "/admin/teams", label: "تیم‌ها", match: "prefix" },
+        ],
+      },
+      {
+        href: "/admin/capacity",
+        label: "رزروها",
+        match: "prefix",
+        children: [
           { href: "/admin/capacity", label: "ظرفیت", match: "prefix" },
           {
             href: "/admin/reservation-policy",
@@ -77,17 +84,38 @@ function getNavItems(user: CurrentUser): GlobalNavItem[] {
             match: "prefix",
           },
           { href: "/admin/schedule", label: "زمان‌بندی", match: "prefix" },
+        ],
+      },
+      {
+        href: "/admin/meeting-rooms",
+        label: "اتاق‌ها",
+        match: "prefix",
+        children: [
           {
             href: "/admin/meeting-rooms",
             label: "اتاق‌های جلسه",
             match: "prefix",
           },
-          { href: "/admin/lunch", label: "غذا", match: "prefix" },
+        ],
+      },
+      {
+        href: "/admin/lunch",
+        label: "غذا",
+        match: "prefix",
+        children: [
+          { href: "/admin/lunch", label: "تنظیمات غذا", match: "prefix" },
           {
             href: "/admin/lunch-notifications",
-            label: "ارسال گزارش غذا",
+            label: "گزارش غذا",
             match: "prefix",
           },
+        ],
+      },
+      {
+        href: "/admin/announcements",
+        label: "ارتباطات",
+        match: "prefix",
+        children: [
           { href: "/admin/announcements", label: "اعلان‌ها", match: "prefix" },
           { href: "/admin/bale", label: "پیام‌رسان بله", match: "prefix" },
         ],
