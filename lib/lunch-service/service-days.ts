@@ -44,23 +44,23 @@ export async function assertLunchDateIsReservable(input: {
   const settings = await getLunchSettings(input.client);
 
   if (!settings.enabled) {
-    throw new LunchReservationError("رزرو ناهار فعلا غیرفعال است.");
+    throw new LunchReservationError("رزرو غذا فعلا غیرفعال است.");
   }
 
   if (day < today) {
-    throw new LunchReservationError("امکان رزرو ناهار برای روزهای گذشته وجود ندارد.");
+    throw new LunchReservationError("امکان رزرو غذا برای روزهای گذشته وجود ندارد.");
   }
 
   if (day > addDays(today, settings.maxAdvanceDays)) {
-    throw new LunchReservationError("این تاریخ خارج از بازه مجاز رزرو ناهار است.");
+    throw new LunchReservationError("این تاریخ خارج از بازه مجاز رزرو غذا است.");
   }
 
   if (!(await isLunchServiceDay(day, input.client))) {
-    throw new LunchReservationError("برای این تاریخ سرویس ناهار فعال نیست.");
+    throw new LunchReservationError("برای این تاریخ سرویس غذا فعال نیست.");
   }
 
   if (now >= buildCutoffAt(day, settings.cutoffTime)) {
-    throw new LunchReservationError("مهلت رزرو، تغییر یا لغو ناهار برای این تاریخ گذشته است.");
+    throw new LunchReservationError("مهلت رزرو، تغییر یا لغو غذا برای این تاریخ گذشته است.");
   }
 }
 

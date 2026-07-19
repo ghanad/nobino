@@ -155,6 +155,8 @@ export function ReservationsInteractiveSection({
   ] = useState(dailyActiveReservationCountByDate);
   const [currentDailyReservedHoursByDate, setCurrentDailyReservedHoursByDate] =
     useState(dailyReservedHoursByDate);
+  const [currentLunchReservationByDate, setCurrentLunchReservationByDate] =
+    useState(activeLunchReservationByDate);
 
   useEffect(() => {
     setCurrentWeekDays(weekDays);
@@ -173,6 +175,10 @@ export function ReservationsInteractiveSection({
   useEffect(() => {
     setCurrentDailyReservedHoursByDate(dailyReservedHoursByDate);
   }, [dailyReservedHoursByDate]);
+
+  useEffect(() => {
+    setCurrentLunchReservationByDate(activeLunchReservationByDate);
+  }, [activeLunchReservationByDate]);
 
   const handleReservationCancelled = useCallback(
     (reservation: ActiveReservation) => {
@@ -243,6 +249,27 @@ export function ReservationsInteractiveSection({
     [],
   );
 
+  const handleFoodReservationChanged = useCallback(
+    (mutation: NonNullable<LunchActionState["mutation"]>) => {
+      if (mutation.type === "cancel") {
+        setCurrentLunchReservationByDate((previousReservations) =>
+          Object.fromEntries(
+            Object.entries(previousReservations).filter(
+              ([, reservation]) => reservation.id !== mutation.reservationId,
+            ),
+          ),
+        );
+        return;
+      }
+
+      setCurrentLunchReservationByDate((previousReservations) => ({
+        ...previousReservations,
+        [mutation.dateParam]: { id: mutation.reservation.id },
+      }));
+    },
+    [],
+  );
+
   return (
     <>
       <CreateReservationForm
@@ -252,6 +279,7 @@ export function ReservationsInteractiveSection({
         }
         dailyReservedHoursByDate={currentDailyReservedHoursByDate}
         onReservationCreated={handleReservationCreated}
+        onFoodReservationChanged={handleFoodReservationChanged}
         weekDays={currentWeekDays}
       />
 
@@ -272,7 +300,7 @@ export function ReservationsInteractiveSection({
         </div>
 
         <ActiveReservationsList
-          activeLunchReservationByDate={activeLunchReservationByDate}
+          activeLunchReservationByDate={currentLunchReservationByDate}
           cancelLunchReservationAction={cancelLunchReservationAction}
           onReservationCancelled={handleReservationCancelled}
           reservations={currentActiveReservations}

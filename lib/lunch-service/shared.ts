@@ -23,7 +23,7 @@ export async function assertAdmin(adminId: string, client: DbClient = db) {
   });
 
   if (!user?.active || user.role !== UserRole.ADMIN) {
-    throw new LunchReservationError("فقط مدیر سیستم می‌تواند تنظیمات ناهار را تغییر دهد.");
+    throw new LunchReservationError("فقط مدیر سیستم می‌تواند تنظیمات غذا را تغییر دهد.");
   }
 }
 
@@ -38,7 +38,7 @@ export async function assertManagerOrAdmin(userId: string, client: DbClient = db
     (user.role !== UserRole.MANAGER && user.role !== UserRole.ADMIN)
   ) {
     throw new LunchReservationError(
-      "فقط مدیر یا مدیر سیستم می‌تواند رزرو ناهار دیگران را لغو کند.",
+      "فقط مدیر یا مدیر سیستم می‌تواند رزرو غذای دیگران را لغو کند.",
     );
   }
 }

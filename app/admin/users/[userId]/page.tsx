@@ -278,10 +278,10 @@ export default async function UserDetailPage({
                   />
                   <span className="grid gap-1">
                     <span className="font-medium text-slate-900">
-                      دسترسی گزارش ناهار
+                      دسترسی گزارش غذا
                     </span>
                     <span className="text-xs font-normal leading-5 text-muted-foreground">
-                      نمایش گزارش روزانه ناهار برای این کاربر
+                      نمایش گزارش روزانه غذا برای این کاربر
                     </span>
                   </span>
                 </label>

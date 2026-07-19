@@ -138,8 +138,8 @@ export default async function AdminLunchPage({
   return (
     <div className="grid gap-6 text-right" dir="rtl">
       <PageHeader
-        subtitle="تنظیمات رزرو ناهار، ساختمان‌ها، روزهای سرویس و استثناها"
-        title="مدیریت ناهار"
+        subtitle="تنظیمات رزرو غذا، ساختمان‌ها، روزهای سرویس و استثناها"
+        title="مدیریت غذا"
       />
 
       {toast ? <UrlToast {...toast} /> : null}
@@ -182,7 +182,7 @@ export default async function AdminLunchPage({
               name="enabled"
               type="checkbox"
             />
-            رزرو ناهار فعال باشد
+            رزرو غذا فعال باشد
           </label>
           <SubmitButton pendingLabel="در حال ذخیره">
             <Save className="h-4 w-4" />
@@ -249,7 +249,7 @@ export default async function AdminLunchPage({
       </section>
 
       <section className="grid gap-4 rounded-lg border bg-card p-5">
-        <h2 className="font-medium">برنامه هفتگی ناهار</h2>
+        <h2 className="font-medium">برنامه هفتگی غذا</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {weeklySchedule.map((day) => (
             <form
@@ -276,7 +276,7 @@ export default async function AdminLunchPage({
 
       <section className="grid gap-4 rounded-lg border bg-card p-5">
         <div>
-          <h2 className="font-medium">استثناهای ناهار</h2>
+          <h2 className="font-medium">استثناهای غذا</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             برای تعطیلی یا فعال‌سازی یک تاریخ خاص، تاریخ شمسی وارد کنید.
           </p>

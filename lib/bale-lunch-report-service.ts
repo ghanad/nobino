@@ -188,7 +188,7 @@ async function sendClaimedLunchReport(input: {
     });
 
     if (!delivery) {
-      throw new Error("Lunch report delivery was not found.");
+      throw new Error("Food report delivery was not found.");
     }
 
     let chatId = delivery.recipient?.chatId ?? delivery.chatId;
@@ -204,7 +204,7 @@ async function sendClaimedLunchReport(input: {
     }
 
     if (!chatId) {
-      throw new Error("مقصد بله برای گیرنده گزارش ناهار در دسترس نیست.");
+      throw new Error("مقصد بله برای گیرنده گزارش غذا در دسترس نیست.");
     }
 
     await sendBaleMessage(chatId, input.message);

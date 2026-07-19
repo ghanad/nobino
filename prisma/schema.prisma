@@ -137,17 +137,17 @@ model ScheduleException {
 }
 
 model MeetingRoom {
-  id                     String   @id @default(cuid())
+  id                     String    @id @default(cuid())
   name                   String
   description            String?
   location               String?
-  isActive               Boolean  @default(true)
-  sortOrder              Int      @default(0)
-  autoApprovalEnabled    Boolean  @default(false)
-  autoApprovalDelayHours Int      @default(4)
+  isActive               Boolean   @default(true)
+  sortOrder              Int       @default(0)
+  autoApprovalEnabled    Boolean   @default(false)
+  autoApprovalDelayHours Int       @default(4)
   deletedAt              DateTime?
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
 
   weeklySchedules MeetingRoomWeeklySchedule[]
   exceptions      MeetingRoomScheduleException[]
@@ -243,21 +243,26 @@ model LunchException {
 }
 
 model LunchReservation {
-  id          String                 @id @default(cuid())
-  userId      String
-  locationId  String
-  date        DateTime
-  status      LunchReservationStatus @default(ACTIVE)
-  cancelledAt DateTime?
-  createdAt   DateTime               @default(now())
-  updatedAt   DateTime               @updatedAt
+  id                  String                 @id @default(cuid())
+  userId              String
+  locationId          String
+  sourceReservationId String?
+  date                DateTime
+  breakfastReserved   Boolean                @default(false)
+  lunchReserved       Boolean                @default(true)
+  status              LunchReservationStatus @default(ACTIVE)
+  cancelledAt         DateTime?
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
 
-  user          User           @relation("LunchReservationUser", fields: [userId], references: [id])
-  location      LunchLocation  @relation(fields: [locationId], references: [id])
-  notifications Notification[]
+  user              User           @relation("LunchReservationUser", fields: [userId], references: [id])
+  location          LunchLocation  @relation(fields: [locationId], references: [id])
+  sourceReservation Reservation?   @relation(fields: [sourceReservationId], references: [id], onDelete: SetNull)
+  notifications     Notification[]
 
   @@index([userId, date])
   @@index([locationId, date])
+  @@index([sourceReservationId])
   @@index([status, date])
 }
 
@@ -279,12 +284,13 @@ model Reservation {
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
-  user          User                     @relation("ReservationUser", fields: [userId], references: [id])
-  resourcePool  ResourcePool             @relation(fields: [resourcePoolId], references: [id])
-  approvedBy    User?                    @relation("ReservationApprover", fields: [approvedById], references: [id])
-  cancelledBy   User?                    @relation("ReservationCanceller", fields: [cancelledById], references: [id])
-  alternatives  ReservationAlternative[]
-  notifications Notification[]
+  user                   User                     @relation("ReservationUser", fields: [userId], references: [id])
+  resourcePool           ResourcePool             @relation(fields: [resourcePoolId], references: [id])
+  approvedBy             User?                    @relation("ReservationApprover", fields: [approvedById], references: [id])
+  cancelledBy            User?                    @relation("ReservationCanceller", fields: [cancelledById], references: [id])
+  alternatives           ReservationAlternative[]
+  linkedFoodReservations LunchReservation[]
+  notifications          Notification[]
 
   @@index([resourcePoolId, startAt, endAt])
   @@index([status, startAt])

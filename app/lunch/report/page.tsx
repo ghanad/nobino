@@ -32,7 +32,7 @@ export default async function LunchReportPage({
     ? { message: params.error, variant: "error" as const, consumeKeys: ["error"] }
     : params?.cancelled
       ? {
-          message: "رزرو ناهار توسط مدیر لغو شد.",
+          message: "رزرو غذا توسط مدیر لغو شد.",
           variant: "success" as const,
           consumeKeys: ["cancelled"],
         }
@@ -41,8 +41,8 @@ export default async function LunchReportPage({
   return (
     <div className="grid gap-6 text-right" dir="rtl">
       <PageHeader
-        subtitle="لیست روزانه رزروهای فعال ناهار بر اساس ساختمان"
-        title="گزارش روزانه ناهار"
+        subtitle="لیست روزانه صبحانه و ناهار بر اساس ساختمان"
+        title="گزارش روزانه غذا"
       />
 
       {toast ? <UrlToast {...toast} /> : null}

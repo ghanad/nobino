@@ -31,6 +31,7 @@
     "../lib/iran-holidays.ts",
     "../lib/jalali-date.ts",
     "../lib/lunch-service.ts",
+    "../lib/food-reservation-rules.ts",
     "../lib/lunch-report-service.ts",
     "../lib/notification-service.ts",
     "../lib/reservation-service.ts",

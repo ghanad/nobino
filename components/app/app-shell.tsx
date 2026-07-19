@@ -29,12 +29,12 @@ function getNavItems(user: CurrentUser): GlobalNavItem[] {
     { href: "/meeting-rooms", label: "اتاق جلسه", match: "prefix" },
     {
       href: "/lunch",
-      label: "ناهار",
+      label: "غذا",
       match: "exact",
       children: canViewLunchReport
         ? [
-            { href: "/lunch", label: "رزرو ناهار", match: "exact" },
-            { href: "/lunch/report", label: "گزارش ناهار", match: "prefix" },
+            { href: "/lunch", label: "رزرو غذا", match: "exact" },
+            { href: "/lunch/report", label: "گزارش غذا", match: "prefix" },
           ]
         : undefined,
     },
@@ -82,10 +82,10 @@ function getNavItems(user: CurrentUser): GlobalNavItem[] {
             label: "اتاق‌های جلسه",
             match: "prefix",
           },
-          { href: "/admin/lunch", label: "ناهار", match: "prefix" },
+          { href: "/admin/lunch", label: "غذا", match: "prefix" },
           {
             href: "/admin/lunch-notifications",
-            label: "ارسال گزارش ناهار",
+            label: "ارسال گزارش غذا",
             match: "prefix",
           },
           { href: "/admin/announcements", label: "اعلان‌ها", match: "prefix" },

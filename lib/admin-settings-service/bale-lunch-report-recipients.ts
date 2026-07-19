@@ -17,7 +17,7 @@ export async function createBaleLunchReportRecipient(input: {
   const userId = input.userId?.trim() || null;
 
   if (!name) {
-    throw new AdminSettingsError("نام گیرنده گزارش ناهار الزامی است.");
+    throw new AdminSettingsError("نام گیرنده گزارش غذا الزامی است.");
   }
 
   if (Boolean(chatId) === Boolean(userId)) {
@@ -95,7 +95,7 @@ export async function updateBaleLunchReportRecipient(input: {
   const userId = input.userId?.trim() || null;
 
   if (!name) {
-    throw new AdminSettingsError("نام گیرنده گزارش ناهار الزامی است.");
+    throw new AdminSettingsError("نام گیرنده گزارش غذا الزامی است.");
   }
 
   if (Boolean(chatId) === Boolean(userId)) {
@@ -142,7 +142,7 @@ export async function updateBaleLunchReportRecipient(input: {
       });
 
       if (!current) {
-        throw new AdminSettingsError("گیرنده گزارش ناهار پیدا نشد.");
+        throw new AdminSettingsError("گیرنده گزارش غذا پیدا نشد.");
       }
 
       const updated = await tx.baleLunchReportRecipient.update({
@@ -204,7 +204,7 @@ export async function deleteBaleLunchReportRecipient(input: {
     });
 
     if (!current) {
-      throw new AdminSettingsError("گیرنده گزارش ناهار پیدا نشد.");
+      throw new AdminSettingsError("گیرنده گزارش غذا پیدا نشد.");
     }
 
     // Keep delivery history while removing its optional link to the recipient.

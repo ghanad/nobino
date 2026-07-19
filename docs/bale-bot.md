@@ -136,7 +136,7 @@ resulting private `chat.id` is unique across Nobino users.
 
 The deployment scheduler must invoke the protected sync endpoint once per
 minute. The endpoint consumes `getUpdates`, delivers new in-app notifications
-to linked users, and also sends the lunch summary to every active report
+to linked users, and also sends the food summary (breakfast and lunch) to every active report
 recipient configured in `/admin/lunch-notifications`:
 
 - A recipient can be a direct chat/group ID or a Nobino user with an active
@@ -154,9 +154,10 @@ delivery is stored separately, failed sends are retried up to three times, and
 notifications created before the user's latest connection are not sent
 retroactively.
 
-Lunch reports use the same one-minute scheduler. A report becomes eligible one
-minute after the lunch cutoff for its target date. Days without lunch service do
-not produce a message, disabled lunch reservations also suppress the report, and
-active service days with zero reservations still send a zero-count summary.
+Food reports use the same one-minute scheduler. A report becomes eligible one
+minute after the shared food cutoff for its target date. Days without food service do
+not produce a message, disabled food reservations also suppress the report, and
+active service days with zero reservations still send a zero-count breakfast and
+lunch summary grouped by delivery location.
 Because Bale does not provide an idempotency key, an ambiguous network failure
-can still lead to a duplicate lunch report on retry.
+can still lead to a duplicate food report on retry.

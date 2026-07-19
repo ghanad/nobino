@@ -22,7 +22,7 @@ export async function createLunchException(input: {
     });
 
     if (existing) {
-      throw new LunchReservationError("برای این تاریخ قبلا استثنای ناهار ثبت شده است.");
+      throw new LunchReservationError("برای این تاریخ قبلا استثنای غذا ثبت شده است.");
     }
 
     const exception = await tx.lunchException.create({
@@ -65,7 +65,7 @@ export async function updateLunchException(input: {
     });
 
     if (!current) {
-      throw new LunchReservationError("استثنای ناهار پیدا نشد.");
+      throw new LunchReservationError("استثنای غذا پیدا نشد.");
     }
 
     const updated = await tx.lunchException.update({
@@ -111,7 +111,7 @@ export async function deleteLunchException(input: {
     });
 
     if (!current) {
-      throw new LunchReservationError("استثنای ناهار پیدا نشد.");
+      throw new LunchReservationError("استثنای غذا پیدا نشد.");
     }
 
     await tx.lunchException.delete({ where: { id: current.id } });

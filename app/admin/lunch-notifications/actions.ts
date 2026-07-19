@@ -56,7 +56,7 @@ export async function createBaleLunchReportRecipientAction(
   });
 
   if (!parsed.success) {
-    redirectToLunchNotifications({ error: "گیرنده گزارش ناهار معتبر نیست." });
+    redirectToLunchNotifications({ error: "گیرنده گزارش غذا معتبر نیست." });
   }
 
   let chatId: string | null = null;
@@ -101,7 +101,7 @@ export async function updateBaleLunchReportRecipientAction(
   });
 
   if (!parsed.success) {
-    redirectToLunchNotifications({ error: "گیرنده گزارش ناهار معتبر نیست." });
+    redirectToLunchNotifications({ error: "گیرنده گزارش غذا معتبر نیست." });
   }
 
   let chatId: string | null = null;
@@ -143,7 +143,7 @@ export async function deleteBaleLunchReportRecipientAction(
   });
 
   if (!parsed.success) {
-    redirectToLunchNotifications({ error: "گیرنده گزارش ناهار معتبر نیست." });
+    redirectToLunchNotifications({ error: "گیرنده گزارش غذا معتبر نیست." });
   }
 
   try {

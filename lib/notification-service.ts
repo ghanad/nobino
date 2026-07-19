@@ -24,9 +24,12 @@ const NOTIFICATION_TITLE_LABELS: Record<string, string> = {
   ALTERNATIVE_ACCEPTED: "زمان پیشنهادی پذیرفته شد",
   ALTERNATIVE_PROPOSED: "زمان جایگزین پیشنهاد شد",
   ALTERNATIVE_REJECTED: "زمان پیشنهادی رد شد",
-  LUNCH_CANCELLED: "رزرو ناهار لغو شد",
-  LUNCH_RESERVED: "رزرو ناهار ثبت شد",
-  LUNCH_UPDATED: "رزرو ناهار تغییر کرد",
+  FOOD_CANCELLED: "رزرو غذا لغو شد",
+  FOOD_RESERVED: "رزرو غذا ثبت شد",
+  FOOD_UPDATED: "رزرو غذا تغییر کرد",
+  LUNCH_CANCELLED: "رزرو غذا لغو شد",
+  LUNCH_RESERVED: "رزرو غذا ثبت شد",
+  LUNCH_UPDATED: "رزرو غذا تغییر کرد",
   NEW_PENDING_RESERVATION: "درخواست رزرو جدید",
   RESERVATION_APPROVED: "رزرو تایید شد",
   RESERVATION_AUTO_APPROVED: "رزرو تایید شد",
@@ -61,6 +64,9 @@ const NOTIFICATION_BODY_LABELS: Record<string, string> = {
 };
 
 const HIDDEN_FROM_FLOATING_TOAST_TYPES = [
+  "FOOD_CANCELLED",
+  "FOOD_RESERVED",
+  "FOOD_UPDATED",
   "LUNCH_CANCELLED",
   "LUNCH_RESERVED",
   "LUNCH_UPDATED",

@@ -84,7 +84,7 @@ export function ReservationRequestDialog({
         <div className="flex items-start justify-between gap-4">
           <div>
             <h3 className="font-medium" id="reservation-reason-dialog-title">
-              {lunchPrompt ? "رزرو ناهار" : "تکمیل درخواست رزرو"}
+              {lunchPrompt ? "رزرو غذا" : "تکمیل درخواست رزرو"}
             </h3>
             {lunchPrompt ? (
               <div className="mt-1 grid gap-1 text-sm text-muted-foreground">
@@ -119,40 +119,93 @@ export function ReservationRequestDialog({
         {lunchPrompt ? (
           <>
             <div className="grid gap-3 rounded-md border border-sky-100 bg-sky-50/60 p-3 text-sm">
-              <p className="font-medium">ناهار هم برای این روز رزرو شود؟</p>
+              <p className="font-medium">برای این روز غذا هم رزرو می‌کنید؟</p>
               <p className="text-xs leading-5 text-muted-foreground">
                 {lunchAvailability?.cutoffLabel ??
-                  "وضعیت رزرو ناهار برای این روز مشخص نیست."}
+                  "وضعیت رزرو غذا برای این روز مشخص نیست."}
               </p>
 
               <input name="date" type="hidden" value={lunchPrompt.dateParam} />
+              <input
+                name="sourceReservationId"
+                type="hidden"
+                value={lunchPrompt.sourceReservationId}
+              />
+              {lunchAvailability?.existingReservation ? (
+                <input
+                  name="reservationId"
+                  type="hidden"
+                  value={lunchAvailability.existingReservation.id}
+                />
+              ) : null}
 
               {canSubmitLunchReservation ? (
-                <label className="grid gap-2 font-medium">
-                  <span>محل دریافت ناهار</span>
-                  <select
-                    className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    defaultValue={lunchLocations[0]?.id ?? ""}
-                    name="locationId"
-                  >
-                    {lunchLocations.map((location) => (
-                      <option key={location.id} value={location.id}>
-                        {location.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <>
+                  <fieldset className="grid gap-2 rounded-md border bg-white/70 p-3">
+                    <legend className="px-1 font-medium">وعده‌ها</legend>
+                    {lunchPrompt.canOfferBreakfast ? (
+                      <label className="flex items-center gap-2">
+                        <input
+                          defaultChecked={
+                            lunchAvailability?.existingReservation
+                              ?.breakfastReserved ?? false
+                          }
+                          name="breakfastReserved"
+                          type="checkbox"
+                        />
+                        صبحانه
+                      </label>
+                    ) : lunchAvailability?.existingReservation
+                        ?.breakfastReserved ? (
+                      <>
+                        <input name="breakfastReserved" type="hidden" value="on" />
+                        <p className="text-xs text-muted-foreground">
+                          صبحانه‌ای که قبلاً رزرو کرده‌اید بدون تغییر باقی می‌ماند.
+                        </p>
+                      </>
+                    ) : null}
+                    <label className="flex items-center gap-2">
+                      <input
+                        defaultChecked={
+                          lunchAvailability?.existingReservation?.lunchReserved ??
+                          true
+                        }
+                        name="lunchReserved"
+                        type="checkbox"
+                      />
+                      ناهار
+                    </label>
+                  </fieldset>
+                  <label className="grid gap-2 font-medium">
+                    <span>محل مشترک دریافت غذا</span>
+                    <select
+                      className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      defaultValue={
+                        lunchAvailability?.existingReservation?.locationId ??
+                        lunchLocations[0]?.id ??
+                        ""
+                      }
+                      name="locationId"
+                    >
+                      {lunchLocations.map((location) => (
+                        <option key={location.id} value={location.id}>
+                          {location.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </>
               ) : (
                 <p className="rounded-md border border-amber-200 bg-white/80 px-3 py-2 text-xs leading-5 text-amber-900">
                   {lunchAvailability?.unavailableReason ??
-                    "در حال حاضر امکان رزرو ناهار برای این تاریخ وجود ندارد."}
+                    "در حال حاضر امکان رزرو غذا برای این تاریخ وجود ندارد."}
                 </p>
               )}
 
               {lunchPrompt.partySize > 1 ? (
                 <p className="rounded-md border border-amber-200 bg-white/80 px-3 py-2 text-xs leading-5 text-amber-900">
-                  ناهار فقط برای خود شما رزرو می‌شود. نفرات دیگر باید با حساب
-                  کاربری خودشان ناهار رزرو کنند.
+                  غذا فقط برای خود شما رزرو می‌شود. نفرات دیگر باید با حساب
+                  کاربری خودشان غذا رزرو کنند.
                 </p>
               ) : null}
             </div>
@@ -169,9 +222,9 @@ export function ReservationRequestDialog({
                 className="h-11 w-full sm:h-10 sm:w-auto"
                 disabled={!canSubmitLunchReservation}
                 formAction={lunchFormAction}
-                pendingLabel="در حال ثبت ناهار..."
+                pendingLabel="در حال ثبت غذا..."
               >
-                رزرو ناهار
+                ذخیره رزرو غذا
               </SubmitButton>
             </div>
           </>

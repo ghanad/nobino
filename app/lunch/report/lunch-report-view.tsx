@@ -113,7 +113,7 @@ export function LunchReportView({
         <div>
           <h2 className="font-medium">گزارش روزانه</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            {report.dateLabel}، {report.activeReservationCount} رزرو فعال
+            {report.dateLabel}، {report.breakfastCount} صبحانه و {report.lunchCount} ناهار
           </p>
         </div>
         <div className="hidden flex-col gap-2 md:flex md:flex-row">
@@ -203,7 +203,7 @@ export function LunchReportView({
 
       {report.locations.length === 0 ? (
         <div className="rounded-md border bg-muted/30 p-4 text-sm text-muted-foreground">
-          هنوز ساختمان فعالی برای گزارش ناهار تعریف نشده است.
+          هنوز ساختمان فعالی برای گزارش غذا تعریف نشده است.
         </div>
       ) : (
         <div
@@ -217,8 +217,8 @@ export function LunchReportView({
               <div className="rounded-md border bg-background p-4" key={location.id}>
                 <div className="flex items-center justify-between gap-3">
                   <h3 className="font-medium">{location.name}</h3>
-                  <span className="text-2xl font-semibold text-primary">
-                    {location.reservations.length}
+                  <span className="text-sm font-medium text-primary">
+                    {location.breakfastCount} صبحانه · {location.lunchCount} ناهار
                   </span>
                 </div>
               </div>
@@ -227,19 +227,20 @@ export function LunchReportView({
 
           {report.activeReservationCount === 0 ? (
             <div className="rounded-md border bg-muted/30 p-4 text-sm text-muted-foreground">
-              برای این تاریخ رزرو ناهار ثبت نشده است.
+              برای این تاریخ رزرو غذا ثبت نشده است.
             </div>
           ) : (
             <div className="overflow-hidden rounded-md border bg-background">
               <div
                 className={`grid ${
                   canCancelReservations
-                    ? "grid-cols-[1fr_1fr_auto]"
-                    : "grid-cols-[1fr_1fr]"
+                    ? "grid-cols-[1fr_1fr_1fr_auto]"
+                    : "grid-cols-[1fr_1fr_1fr]"
                 } border-b bg-muted/30 px-4 py-3 text-sm font-medium text-muted-foreground`}
               >
                 <span>نام</span>
                 <span>ساختمان</span>
+                <span>وعده‌ها</span>
                 {canCancelReservations ? <span>عملیات</span> : null}
               </div>
               <div className="divide-y">
@@ -248,8 +249,8 @@ export function LunchReportView({
                     <div
                       className={`grid items-center gap-2 ${
                         canCancelReservations
-                          ? "grid-cols-[1fr_1fr_auto]"
-                          : "grid-cols-[1fr_1fr]"
+                          ? "grid-cols-[1fr_1fr_1fr_auto]"
+                          : "grid-cols-[1fr_1fr_1fr]"
                       } px-4 py-3 text-sm`}
                       key={reservation.id}
                     >
@@ -257,13 +258,21 @@ export function LunchReportView({
                       <span className="text-muted-foreground">
                         {location.name}
                       </span>
+                      <span className="text-muted-foreground">
+                        {[
+                          reservation.breakfastReserved ? "صبحانه" : null,
+                          reservation.lunchReserved ? "ناهار" : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" و ")}
+                      </span>
                       {canCancelReservations ? (
                         <form
                           action={cancelLunchReservationByManagerAction}
                           onSubmit={(event) => {
                             if (
                               !confirm(
-                                `رزرو ناهار ${reservation.userName} لغو شود؟`,
+                                `رزرو غذای ${reservation.userName} لغو شود؟`,
                               )
                             ) {
                               event.preventDefault();
@@ -282,7 +291,7 @@ export function LunchReportView({
                             size="sm"
                             variant="outline"
                           >
-                            لغو ناهار
+                            لغو غذا
                           </SubmitButton>
                         </form>
                       ) : null}

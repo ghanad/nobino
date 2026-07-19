@@ -36,7 +36,7 @@ function getLunchToast(params: Awaited<LunchPageProps["searchParams"]>) {
   if (params?.reserved) {
     return {
       consumeKeys: ["reserved"],
-      message: "رزرو ناهار ثبت شد.",
+      message: "رزرو غذا ثبت شد.",
       variant: "success" as const,
     };
   }
@@ -44,7 +44,7 @@ function getLunchToast(params: Awaited<LunchPageProps["searchParams"]>) {
   if (params?.updated) {
     return {
       consumeKeys: ["updated"],
-      message: "محل دریافت ناهار تغییر کرد.",
+      message: "رزرو غذا تغییر کرد.",
       variant: "success" as const,
     };
   }
@@ -52,7 +52,7 @@ function getLunchToast(params: Awaited<LunchPageProps["searchParams"]>) {
   if (params?.cancelled) {
     return {
       consumeKeys: ["cancelled"],
-      message: "رزرو ناهار لغو شد.",
+      message: "رزرو غذا لغو شد.",
       variant: "success" as const,
     };
   }
@@ -92,6 +92,8 @@ export default async function LunchPage({ searchParams }: LunchPageProps) {
         id: true,
         date: true,
         locationId: true,
+        breakfastReserved: true,
+        lunchReserved: true,
         location: {
           select: {
             name: true,
@@ -134,6 +136,8 @@ export default async function LunchPage({ searchParams }: LunchPageProps) {
             id: reservation.id,
             locationId: reservation.locationId,
             locationName: reservation.location.name,
+            breakfastReserved: reservation.breakfastReserved,
+            lunchReserved: reservation.lunchReserved,
           }
         : null,
     };
@@ -142,8 +146,8 @@ export default async function LunchPage({ searchParams }: LunchPageProps) {
   return (
     <div className="grid gap-6 text-right" dir="rtl">
       <PageHeader
-        subtitle="رزرو روزانه ناهار برای روزهای آینده"
-        title="رزرو ناهار"
+        subtitle="رزرو روزانه صبحانه و ناهار با یک محل تحویل مشترک"
+        title="رزرو غذا"
       />
 
       {toast ? <UrlToast {...toast} /> : null}
@@ -151,7 +155,7 @@ export default async function LunchPage({ searchParams }: LunchPageProps) {
       <section className="grid gap-4 rounded-lg border bg-card p-5 text-card-foreground">
         {locations.length === 0 ? (
           <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-            هنوز ساختمان فعالی برای دریافت ناهار تعریف نشده است.
+            هنوز ساختمان فعالی برای دریافت غذا تعریف نشده است.
           </div>
         ) : null}
 

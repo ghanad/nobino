@@ -22,7 +22,7 @@ type ServiceLink = {
 
 const serviceLinks: ServiceLink[] = [
   {
-    title: "رزرو ناهار",
+    title: "رزرو غذا",
     description: "ثبت یا مشاهده رزرو غذای روزانه",
     href: "/lunch",
     icon: Utensils,

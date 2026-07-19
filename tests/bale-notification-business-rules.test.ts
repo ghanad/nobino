@@ -673,6 +673,7 @@ test("lunch report sends one minute after cutoff with Jalali date and Persian di
         userId,
         locationId: lunchLocationId,
         date: startOfLocalDay(targetDate),
+        breakfastReserved: true,
         status: LunchReservationStatus.ACTIVE,
       },
       {
@@ -732,18 +733,19 @@ test("lunch report sends one minute after cutoff with Jalali date and Persian di
   const text = sentMessage.get("text") ?? "";
 
   assert.equal(sentMessage.get("chat_id"), "123456780");
-  assert.match(text, /^گزارش ناهار\n/);
+  assert.match(text, /^گزارش غذا\n/);
   assert.match(text, new RegExp(`تاریخ: ${formatJalaliDate(targetDate)}`));
-  assert.match(text, /جمع کل: ۲/);
-  assert.match(text, /Building A: ۱/);
-  assert.match(text, /Building B: ۰/);
-  assert.match(text, /Building C: ۱/);
+  assert.match(text, /جمع صبحانه: ۱/);
+  assert.match(text, /جمع ناهار: ۲/);
+  assert.match(text, /Building A:\nصبحانه: ۱\nناهار: ۱/);
+  assert.match(text, /Building B:\nصبحانه: ۰\nناهار: ۰/);
+  assert.match(text, /Building C:\nصبحانه: ۰\nناهار: ۱/);
   assert.doesNotMatch(text, /Normal User|Second User|@example\.test/);
 
   const delivery = await db.baleLunchReportDelivery.findFirstOrThrow({
     where: { reportDate: startOfLocalDay(targetDate), recipientId: lunchReportRecipientId },
   });
-  assert.equal(delivery.totalCount, 2);
+  assert.equal(delivery.totalCount, 3);
   assert.equal(delivery.status, BaleDeliveryStatus.SENT);
 });
 
@@ -773,9 +775,10 @@ test("lunch report sends zero totals for a service day without reservations", as
   );
 
   const text = new URLSearchParams(sentBodies[0]).get("text") ?? "";
-  assert.match(text, /جمع کل: ۰/);
-  assert.match(text, /Building A: ۰/);
-  assert.match(text, /Building B: ۰/);
+  assert.match(text, /جمع صبحانه: ۰/);
+  assert.match(text, /جمع ناهار: ۰/);
+  assert.match(text, /Building A:\nصبحانه: ۰\nناهار: ۰/);
+  assert.match(text, /Building B:\nصبحانه: ۰\nناهار: ۰/);
 });
 
 test("lunch report skips non-service days and disabled lunch settings", async () => {
@@ -1117,8 +1120,8 @@ test("lunch report failures are stored and retries send the original snapshot", 
       assert.equal(storedAfterRetry.status, BaleDeliveryStatus.SENT);
       assert.equal(storedAfterRetry.attempts, 2);
       assert.equal(sentTexts[0], storedAfterFailure.message);
-      assert.match(sentTexts[0] ?? "", /جمع کل: ۱/);
-      assert.doesNotMatch(sentTexts[0] ?? "", /جمع کل: ۲/);
+      assert.match(sentTexts[0] ?? "", /جمع ناهار: ۱/);
+      assert.doesNotMatch(sentTexts[0] ?? "", /جمع ناهار: ۲/);
     },
   );
 });

@@ -75,7 +75,7 @@ function getToast(params: {
   if (params.manualSent) {
     return {
       consumeKeys: ["manualSent"],
-      message: `گزارش ناهار همین حالا برای ${formatCount(Number(params.manualSent))} گیرنده ارسال شد.`,
+      message: `گزارش غذا همین حالا برای ${formatCount(Number(params.manualSent))} گیرنده ارسال شد.`,
       variant: "success" as const,
     };
   }
@@ -83,7 +83,7 @@ function getToast(params: {
   if (params.recipientCreated || params.recipientUpdated) {
     return {
       consumeKeys: [params.recipientCreated ? "recipientCreated" : "recipientUpdated"],
-      message: "تغییرات گیرنده گزارش ناهار ذخیره شد.",
+      message: "تغییرات گیرنده گزارش غذا ذخیره شد.",
       variant: "success" as const,
     };
   }
@@ -91,7 +91,7 @@ function getToast(params: {
   if (params.recipientDeleted) {
     return {
       consumeKeys: ["recipientDeleted"],
-      message: "گیرنده گزارش ناهار حذف شد.",
+      message: "گیرنده گزارش غذا حذف شد.",
       variant: "success" as const,
     };
   }
@@ -167,8 +167,8 @@ export default async function AdminLunchNotificationsPage(props: {
   return (
     <div className="grid gap-6 text-right" dir="rtl">
       <PageHeader
-        subtitle="وضعیت ارسال روزانه و مدیریت گیرنده‌های گزارش ناهار"
-        title="ارسال گزارش ناهار"
+        subtitle="وضعیت ارسال روزانه و مدیریت گیرنده‌های گزارش غذا"
+        title="ارسال گزارش غذا"
       />
 
       {toast ? <UrlToast {...toast} /> : null}
@@ -205,7 +205,7 @@ export default async function AdminLunchNotificationsPage(props: {
 
         {activeRecipientCount === 0 ? (
           <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-            هنوز گیرنده فعالی برای گزارش ناهار تعریف نشده است، بنابراین گزارشی ارسال نمی‌شود.
+            هنوز گیرنده فعالی برای گزارش غذا تعریف نشده است، بنابراین گزارشی ارسال نمی‌شود.
           </div>
         ) : null}
 
@@ -221,7 +221,7 @@ export default async function AdminLunchNotificationsPage(props: {
             </p>
           </div>
           <div className="rounded-md border bg-background p-4">
-            <p className="text-xs text-muted-foreground">جمع کل گزارش</p>
+            <p className="text-xs text-muted-foreground">جمع وعده‌های گزارش</p>
             <p className="mt-2 text-lg font-semibold text-slate-950">
               {latestLunchReport ? formatCount(latestLunchReport.totalCount) : "۰"}
             </p>
@@ -254,7 +254,7 @@ export default async function AdminLunchNotificationsPage(props: {
 
         {latestLunchReport?.lastError ? (
           <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-900">
-            <p className="font-medium">آخرین خطای گزارش ناهار</p>
+            <p className="font-medium">آخرین خطای گزارش غذا</p>
             <p className="mt-1 break-words text-xs leading-5">{latestLunchReport.lastError}</p>
           </div>
         ) : null}
@@ -262,7 +262,7 @@ export default async function AdminLunchNotificationsPage(props: {
 
       <section className="grid gap-4 rounded-lg border bg-card p-5 text-card-foreground">
         <div>
-          <h2 className="font-semibold text-slate-950">گیرنده‌های گزارش ناهار</h2>
+          <h2 className="font-semibold text-slate-950">گیرنده‌های گزارش غذا</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             مقصد می‌تواند یک گروه یا گفت‌وگو، یا یکی از کاربران متصل به بله باشد.
           </p>

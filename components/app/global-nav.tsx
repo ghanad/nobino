@@ -82,11 +82,11 @@ function getMobileNavSections(navItems: GlobalNavItem[]): MobileNavSection[] {
     sections.push({
       entries: lunchItem.children.map((child) => ({ item: child })),
       id: "lunch",
-      label: "ناهار",
+      label: "غذا",
     });
   } else if (lunchItem) {
     sections.push({
-      entries: [{ item: lunchItem, label: "رزرو ناهار" }],
+      entries: [{ item: lunchItem, label: "رزرو غذا" }],
       id: "lunch",
     });
   }
@@ -105,7 +105,7 @@ function getMobileNavSections(navItems: GlobalNavItem[]): MobileNavSection[] {
     sections.push({
       entries: adminItem.children.map((child) => ({
         item: child,
-        label: child.href === "/admin/lunch" ? "تنظیمات ناهار" : child.label,
+        label: child.href === "/admin/lunch" ? "تنظیمات غذا" : child.label,
       })),
       id: "management",
       label: "مدیریت",

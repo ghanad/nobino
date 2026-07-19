@@ -38,6 +38,8 @@ type LunchReservationRow = {
     id: string;
     locationId: string;
     locationName: string;
+    breakfastReserved: boolean;
+    lunchReserved: boolean;
   } | null;
 };
 
@@ -85,6 +87,40 @@ function LocationSelect({
         </option>
       ))}
     </select>
+  );
+}
+
+function MealChoices({
+  breakfastReserved = false,
+  disabled,
+  lunchReserved = true,
+}: {
+  breakfastReserved?: boolean;
+  disabled: boolean;
+  lunchReserved?: boolean;
+}) {
+  return (
+    <fieldset className="flex min-h-10 flex-wrap items-center gap-4 rounded-md border px-3 py-2 text-sm">
+      <legend className="sr-only">انتخاب وعده‌ها</legend>
+      <label className="flex items-center gap-2">
+        <input
+          defaultChecked={breakfastReserved}
+          disabled={disabled}
+          name="breakfastReserved"
+          type="checkbox"
+        />
+        صبحانه
+      </label>
+      <label className="flex items-center gap-2">
+        <input
+          defaultChecked={lunchReserved}
+          disabled={disabled}
+          name="lunchReserved"
+          type="checkbox"
+        />
+        ناهار
+      </label>
+    </fieldset>
   );
 }
 
@@ -178,6 +214,7 @@ function CreateLunchReservationForm({
     >
       <ActionResultBridge onComplete={onComplete} state={state} />
       <input name="date" type="hidden" value={row.dateParam} />
+      <MealChoices disabled={disabled} />
       <LocationSelect
         className="w-full sm:w-auto"
         disabled={disabled}
@@ -225,6 +262,11 @@ function UpdateLunchReservationForm({
       <ActionResultBridge onComplete={onComplete} state={state} />
       <input name="reservationId" type="hidden" value={row.reservation.id} />
       <input name="date" type="hidden" value={row.dateParam} />
+      <MealChoices
+        breakfastReserved={row.reservation.breakfastReserved}
+        disabled={disabled}
+        lunchReserved={row.reservation.lunchReserved}
+      />
       <LocationSelect
         className="col-span-2 w-full sm:w-auto"
         currentLocationId={row.reservation.locationId}
@@ -371,12 +413,17 @@ export function LunchReservationList({
                 {reservation ? (
                   <p className="flex items-center gap-2 text-sm text-emerald-800">
                     <Building2 className="h-4 w-4" />
-                    رزرو شده برای دریافت از {reservation.locationName}
+                    {[
+                      reservation.breakfastReserved ? "صبحانه" : null,
+                      reservation.lunchReserved ? "ناهار" : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" و ")}، دریافت از {reservation.locationName}
                   </p>
                 ) : (
                   <p className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Utensils className="h-4 w-4" />
-                    برای این روز رزرو ناهار ندارید.
+                    برای این روز رزرو غذا ندارید.
                   </p>
                 )}
               </div>

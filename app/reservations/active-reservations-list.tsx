@@ -266,7 +266,7 @@ function CancelLunchReservationPrompt({
       role="dialog"
     >
       <button
-        aria-label="بستن پرسش لغو ناهار"
+        aria-label="بستن پرسش لغو غذا"
         className="absolute inset-0 cursor-default"
         onClick={onClose}
         type="button"
@@ -279,14 +279,14 @@ function CancelLunchReservationPrompt({
         <div className="flex items-start justify-between gap-4">
           <div className="grid gap-1">
             <h3 className="font-medium" id="cancel-lunch-dialog-title">
-              لغو ناهار
+              لغو غذا
             </h3>
             <p className="text-sm leading-6 text-muted-foreground">
-              برای {prompt.dateLabel} ناهار هم رزرو کرده‌اید. ناهار هم لغو شود؟
+              برای {prompt.dateLabel} غذا هم رزرو کرده‌اید. رزرو غذا هم لغو شود؟
             </p>
           </div>
           <button
-            aria-label="بستن پرسش لغو ناهار"
+            aria-label="بستن پرسش لغو غذا"
             className="inline-flex h-9 w-9 items-center justify-center rounded-md border bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
             onClick={onClose}
             type="button"
@@ -301,7 +301,7 @@ function CancelLunchReservationPrompt({
             onClick={onClose}
             type="button"
           >
-            نگه داشتن ناهار
+            نگه داشتن غذا
           </button>
           <form action={formAction}>
             <input
@@ -320,7 +320,7 @@ function CancelLunchReservationPrompt({
                   در حال لغو...
                 </>
               ) : (
-                "لغو ناهار"
+                "لغو غذا"
               )}
             </Button>
           </form>

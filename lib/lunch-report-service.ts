@@ -12,12 +12,16 @@ import {
 export type LunchReportReservation = {
   id: string;
   userName: string;
+  breakfastReserved: boolean;
+  lunchReserved: boolean;
 };
 
 export type LunchReportLocation = {
   id: string;
   name: string;
   reservations: LunchReportReservation[];
+  breakfastCount: number;
+  lunchCount: number;
 };
 
 export type LunchReportQuickDay = {
@@ -31,9 +35,11 @@ export type LunchReportQuickDay = {
 
 export type LunchReportData = {
   activeReservationCount: number;
+  breakfastCount: number;
   dateLabel: string;
   dateParam: string;
   locations: LunchReportLocation[];
+  lunchCount: number;
   nextDateParam: string;
   previousDateParam: string;
   quickDays: LunchReportQuickDay[];
@@ -43,13 +49,16 @@ export type LunchReportData = {
 export type LunchReportSummaryLocation = {
   id: string;
   name: string;
-  count: number;
+  breakfastCount: number;
+  lunchCount: number;
 };
 
 export type LunchReportSummary = {
   date: Date;
   dateLabel: string;
   dateParam: string;
+  breakfastCount: number;
+  lunchCount: number;
   totalCount: number;
   locations: LunchReportSummaryLocation[];
 };
@@ -83,6 +92,8 @@ export function startOfLocalDay(date: Date): Date {
 type ReportReservationRecord = {
   id: string;
   locationId: string;
+  breakfastReserved: boolean;
+  lunchReserved: boolean;
   location: {
     id: string;
     name: string;
@@ -112,6 +123,8 @@ async function getLunchReportRecords(reportDay: Date): Promise<{
       select: {
         id: true,
         locationId: true,
+        breakfastReserved: true,
+        lunchReserved: true,
         location: {
           select: {
             id: true,
@@ -131,16 +144,24 @@ function getSummaryLocations(input: {
   activeLocations: Array<{ id: string; name: string }>;
   reservations: ReportReservationRecord[];
 }): LunchReportSummaryLocation[] {
-  const countByLocationId = new Map<string, number>();
+  const countByLocationId = new Map<
+    string,
+    { breakfastCount: number; lunchCount: number }
+  >();
   const locationById = new Map(
     input.activeLocations.map((location) => [location.id, location]),
   );
 
   for (const reservation of input.reservations) {
-    countByLocationId.set(
-      reservation.locationId,
-      (countByLocationId.get(reservation.locationId) ?? 0) + 1,
-    );
+    const current = countByLocationId.get(reservation.locationId) ?? {
+      breakfastCount: 0,
+      lunchCount: 0,
+    };
+    countByLocationId.set(reservation.locationId, {
+      breakfastCount:
+        current.breakfastCount + (reservation.breakfastReserved ? 1 : 0),
+      lunchCount: current.lunchCount + (reservation.lunchReserved ? 1 : 0),
+    });
 
     if (!locationById.has(reservation.locationId)) {
       locationById.set(reservation.locationId, {
@@ -154,7 +175,9 @@ function getSummaryLocations(input: {
     .sort((left, right) => left.name.localeCompare(right.name, "fa"))
     .map((location) => ({
       ...location,
-      count: countByLocationId.get(location.id) ?? 0,
+      breakfastCount:
+        countByLocationId.get(location.id)?.breakfastCount ?? 0,
+      lunchCount: countByLocationId.get(location.id)?.lunchCount ?? 0,
     }));
 }
 
@@ -179,6 +202,8 @@ export async function getLunchReportForDate(date: Date): Promise<LunchReportData
       current.push({
         id: reservation.id,
         userName: reservation.user.name,
+        breakfastReserved: reservation.breakfastReserved,
+        lunchReserved: reservation.lunchReserved,
       });
       groups.set(key, current);
 
@@ -189,12 +214,18 @@ export async function getLunchReportForDate(date: Date): Promise<LunchReportData
 
   return {
     activeReservationCount: reportReservations.length,
+    breakfastCount: reportReservations.filter(
+      (reservation) => reservation.breakfastReserved,
+    ).length,
     dateLabel: formatJalaliDate(reportDay),
     dateParam: reportDateParam,
     locations: locations.map((location) => ({
       ...location,
       reservations: groupedReport.get(location.id) ?? [],
     })),
+    lunchCount: reportReservations.filter(
+      (reservation) => reservation.lunchReserved,
+    ).length,
     nextDateParam: formatJalaliDateParam(addLocalDays(reportDay, 1)),
     previousDateParam: formatJalaliDateParam(addLocalDays(reportDay, -1)),
     quickDays: Array.from({ length: 7 }, (_, index) => {
@@ -223,20 +254,35 @@ export async function getLunchReportSummary(date: Date): Promise<LunchReportSumm
     date: reportDay,
     dateLabel: formatJalaliDate(reportDay),
     dateParam: formatJalaliDateParam(reportDay),
-    totalCount: reservations.length,
+    breakfastCount: reservations.filter(
+      (reservation) => reservation.breakfastReserved,
+    ).length,
+    lunchCount: reservations.filter((reservation) => reservation.lunchReserved)
+      .length,
+    totalCount: reservations.reduce(
+      (total, reservation) =>
+        total +
+        (reservation.breakfastReserved ? 1 : 0) +
+        (reservation.lunchReserved ? 1 : 0),
+      0,
+    ),
     locations,
   };
 }
 
 export function formatLunchReportMessage(summary: LunchReportSummary): string {
   const lines = [
-    "گزارش ناهار",
+    "گزارش غذا",
     `تاریخ: ${summary.dateLabel}`,
-    `جمع کل: ${PERSIAN_NUMBER_FORMATTER.format(summary.totalCount)}`,
-    ...summary.locations.map(
-      (location) =>
-        `${location.name}: ${PERSIAN_NUMBER_FORMATTER.format(location.count)}`,
-    ),
+    `جمع صبحانه: ${PERSIAN_NUMBER_FORMATTER.format(summary.breakfastCount)}`,
+    `جمع ناهار: ${PERSIAN_NUMBER_FORMATTER.format(summary.lunchCount)}`,
+    "",
+    ...summary.locations.flatMap((location, index) => [
+      ...(index > 0 ? [""] : []),
+      `${location.name}:`,
+      `صبحانه: ${PERSIAN_NUMBER_FORMATTER.format(location.breakfastCount)}`,
+      `ناهار: ${PERSIAN_NUMBER_FORMATTER.format(location.lunchCount)}`,
+    ]),
   ];
 
   return lines.join("\n");

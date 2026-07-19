@@ -1,6 +1,6 @@
 import "server-only";
 
-import { LunchReservationStatus } from "@prisma/client";
+import { LunchReservationStatus, ReservationStatus } from "@prisma/client";
 
 import { db } from "@/lib/db";
 
@@ -9,20 +9,70 @@ import { assertLunchDateIsReservable } from "./service-days";
 import {
   assertActiveLocation,
   assertManagerOrAdmin,
+  type DbClient,
   LunchReservationError,
 } from "./shared";
+
+function assertAtLeastOneMeal(input: {
+  breakfastReserved: boolean;
+  lunchReserved: boolean;
+}) {
+  if (!input.breakfastReserved && !input.lunchReserved) {
+    throw new LunchReservationError("حداقل یکی از وعده‌های صبحانه یا ناهار را انتخاب کنید.");
+  }
+}
+
+async function assertValidSourceReservation(input: {
+  sourceReservationId?: string;
+  userId: string;
+  date: Date;
+  client: DbClient;
+}) {
+  if (!input.sourceReservationId) {
+    return;
+  }
+
+  const source = await input.client.reservation.findUnique({
+    where: { id: input.sourceReservationId },
+    select: { userId: true, startAt: true, status: true },
+  });
+
+  if (
+    !source ||
+    source.userId !== input.userId ||
+    startOfLocalDay(source.startAt).getTime() !== input.date.getTime() ||
+    source.status !== ReservationStatus.PENDING &&
+    source.status !== ReservationStatus.APPROVED &&
+    source.status !== ReservationStatus.ALTERNATIVE_PROPOSED
+  ) {
+    throw new LunchReservationError("رزرو سیستم مرتبط با این درخواست غذا معتبر نیست.");
+  }
+}
 
 export async function createLunchReservation(input: {
   userId: string;
   locationId: string;
   date: Date;
+  breakfastReserved?: boolean;
+  lunchReserved?: boolean;
+  sourceReservationId?: string;
   now?: Date;
 }) {
   const date = startOfLocalDay(input.date);
+  const breakfastReserved = input.breakfastReserved ?? false;
+  const lunchReserved = input.lunchReserved ?? true;
+
+  assertAtLeastOneMeal({ breakfastReserved, lunchReserved });
 
   return db.$transaction(async (tx) => {
     await assertLunchDateIsReservable({ date, now: input.now, client: tx });
     await assertActiveLocation(input.locationId, tx);
+    await assertValidSourceReservation({
+      sourceReservationId: input.sourceReservationId,
+      userId: input.userId,
+      date,
+      client: tx,
+    });
 
     const existing = await tx.lunchReservation.findFirst({
       where: {
@@ -34,14 +84,17 @@ export async function createLunchReservation(input: {
     });
 
     if (existing) {
-      throw new LunchReservationError("برای این روز قبلا ناهار رزرو کرده‌اید.");
+      throw new LunchReservationError("برای این روز قبلا غذا رزرو کرده‌اید.");
     }
 
     const reservation = await tx.lunchReservation.create({
       data: {
         userId: input.userId,
         locationId: input.locationId,
+        sourceReservationId: input.sourceReservationId,
         date,
+        breakfastReserved,
+        lunchReserved,
         status: LunchReservationStatus.ACTIVE,
       },
     });
@@ -49,13 +102,16 @@ export async function createLunchReservation(input: {
     await tx.auditLog.create({
       data: {
         actorUserId: input.userId,
-        entityType: "LunchReservation",
+        entityType: "FoodReservation",
         entityId: reservation.id,
-        action: "LUNCH_RESERVATION_CREATED",
+        action: "FOOD_RESERVATION_CREATED",
         newValue: {
           userId: reservation.userId,
           locationId: reservation.locationId,
+          sourceReservationId: reservation.sourceReservationId,
           date: reservation.date.toISOString(),
+          breakfastReserved: reservation.breakfastReserved,
+          lunchReserved: reservation.lunchReserved,
           status: reservation.status,
         },
       },
@@ -65,9 +121,9 @@ export async function createLunchReservation(input: {
       data: {
         userId: input.userId,
         lunchReservationId: reservation.id,
-        type: "LUNCH_RESERVED",
-        title: "رزرو ناهار ثبت شد",
-        body: "رزرو ناهار شما ثبت شد.",
+        type: "FOOD_RESERVED",
+        title: "رزرو غذا ثبت شد",
+        body: "رزرو غذای شما ثبت شد.",
       },
     });
 
@@ -79,6 +135,9 @@ export async function updateLunchReservationLocation(input: {
   reservationId: string;
   userId: string;
   locationId: string;
+  breakfastReserved?: boolean;
+  lunchReserved?: boolean;
+  sourceReservationId?: string;
   now?: Date;
 }) {
   return db.$transaction(async (tx) => {
@@ -91,8 +150,13 @@ export async function updateLunchReservationLocation(input: {
       current.userId !== input.userId ||
       current.status !== LunchReservationStatus.ACTIVE
     ) {
-      throw new LunchReservationError("رزرو ناهار پیدا نشد.");
+      throw new LunchReservationError("رزرو غذا پیدا نشد.");
     }
+
+    const breakfastReserved =
+      input.breakfastReserved ?? current.breakfastReserved;
+    const lunchReserved = input.lunchReserved ?? current.lunchReserved;
+    assertAtLeastOneMeal({ breakfastReserved, lunchReserved });
 
     await assertLunchDateIsReservable({
       date: current.date,
@@ -100,23 +164,42 @@ export async function updateLunchReservationLocation(input: {
       client: tx,
     });
     await assertActiveLocation(input.locationId, tx);
+    await assertValidSourceReservation({
+      sourceReservationId: input.sourceReservationId,
+      userId: input.userId,
+      date: startOfLocalDay(current.date),
+      client: tx,
+    });
 
     const updated = await tx.lunchReservation.update({
       where: { id: current.id },
-      data: { locationId: input.locationId },
+      data: {
+        locationId: input.locationId,
+        breakfastReserved,
+        lunchReserved,
+        // A manually-created food reservation remains independent. A source is
+        // only attached when this reservation was already created from a system booking.
+        sourceReservationId: current.sourceReservationId
+          ? current.sourceReservationId
+          : undefined,
+      },
     });
 
     await tx.auditLog.create({
       data: {
         actorUserId: input.userId,
-        entityType: "LunchReservation",
+        entityType: "FoodReservation",
         entityId: updated.id,
-        action: "LUNCH_RESERVATION_UPDATED",
+        action: "FOOD_RESERVATION_UPDATED",
         oldValue: {
           locationId: current.locationId,
+          breakfastReserved: current.breakfastReserved,
+          lunchReserved: current.lunchReserved,
         },
         newValue: {
           locationId: updated.locationId,
+          breakfastReserved: updated.breakfastReserved,
+          lunchReserved: updated.lunchReserved,
         },
       },
     });
@@ -125,9 +208,9 @@ export async function updateLunchReservationLocation(input: {
       data: {
         userId: input.userId,
         lunchReservationId: updated.id,
-        type: "LUNCH_UPDATED",
-        title: "رزرو ناهار تغییر کرد",
-        body: "محل دریافت ناهار شما تغییر کرد.",
+        type: "FOOD_UPDATED",
+        title: "رزرو غذا تغییر کرد",
+        body: "وعده‌ها یا محل دریافت غذای شما تغییر کرد.",
       },
     });
 
@@ -150,7 +233,7 @@ export async function cancelLunchReservationByUser(input: {
       current.userId !== input.userId ||
       current.status !== LunchReservationStatus.ACTIVE
     ) {
-      throw new LunchReservationError("رزرو ناهار پیدا نشد.");
+      throw new LunchReservationError("رزرو غذا پیدا نشد.");
     }
 
     await assertLunchDateIsReservable({
@@ -170,9 +253,9 @@ export async function cancelLunchReservationByUser(input: {
     await tx.auditLog.create({
       data: {
         actorUserId: input.userId,
-        entityType: "LunchReservation",
+        entityType: "FoodReservation",
         entityId: cancelled.id,
-        action: "LUNCH_RESERVATION_CANCELLED_BY_USER",
+        action: "FOOD_RESERVATION_CANCELLED_BY_USER",
         oldValue: {
           status: current.status,
         },
@@ -187,9 +270,9 @@ export async function cancelLunchReservationByUser(input: {
       data: {
         userId: input.userId,
         lunchReservationId: cancelled.id,
-        type: "LUNCH_CANCELLED",
-        title: "رزرو ناهار لغو شد",
-        body: "رزرو ناهار شما لغو شد.",
+        type: "FOOD_CANCELLED",
+        title: "رزرو غذا لغو شد",
+        body: "رزرو غذای شما لغو شد.",
       },
     });
 
@@ -210,7 +293,7 @@ export async function cancelLunchReservationByManager(input: {
     });
 
     if (!current || current.status !== LunchReservationStatus.ACTIVE) {
-      throw new LunchReservationError("رزرو ناهار فعال پیدا نشد.");
+      throw new LunchReservationError("رزرو غذای فعال پیدا نشد.");
     }
 
     const cancelled = await tx.lunchReservation.update({
@@ -224,9 +307,9 @@ export async function cancelLunchReservationByManager(input: {
     await tx.auditLog.create({
       data: {
         actorUserId: input.managerId,
-        entityType: "LunchReservation",
+        entityType: "FoodReservation",
         entityId: cancelled.id,
-        action: "LUNCH_RESERVATION_CANCELLED_BY_MANAGER",
+        action: "FOOD_RESERVATION_CANCELLED_BY_MANAGER",
         oldValue: { status: current.status },
         newValue: {
           status: cancelled.status,
@@ -240,12 +323,65 @@ export async function cancelLunchReservationByManager(input: {
       data: {
         userId: cancelled.userId,
         lunchReservationId: cancelled.id,
-        type: "LUNCH_CANCELLED",
-        title: "رزرو ناهار لغو شد",
-        body: "رزرو ناهار شما توسط مدیر لغو شد.",
+        type: "FOOD_CANCELLED",
+        title: "رزرو غذا لغو شد",
+        body: "رزرو غذای شما توسط مدیر لغو شد.",
       },
     });
 
     return cancelled;
   });
+}
+
+export async function cancelLinkedFoodReservationInTransaction(input: {
+  sourceReservationId: string;
+  actorUserId: string;
+  client: DbClient;
+  now?: Date;
+}) {
+  const current = await input.client.lunchReservation.findFirst({
+    where: {
+      sourceReservationId: input.sourceReservationId,
+      status: LunchReservationStatus.ACTIVE,
+    },
+  });
+
+  if (!current) {
+    return null;
+  }
+
+  const cancelled = await input.client.lunchReservation.update({
+    where: { id: current.id },
+    data: {
+      status: LunchReservationStatus.CANCELLED_BY_ADMIN,
+      cancelledAt: input.now ?? new Date(),
+    },
+  });
+
+  await input.client.auditLog.create({
+    data: {
+      actorUserId: input.actorUserId,
+      entityType: "FoodReservation",
+      entityId: cancelled.id,
+      action: "FOOD_RESERVATION_CANCELLED_WITH_SYSTEM_RESERVATION",
+      oldValue: { status: current.status },
+      newValue: {
+        status: cancelled.status,
+        sourceReservationId: input.sourceReservationId,
+        cancelledAt: cancelled.cancelledAt?.toISOString() ?? null,
+      },
+    },
+  });
+
+  await input.client.notification.create({
+    data: {
+      userId: cancelled.userId,
+      lunchReservationId: cancelled.id,
+      type: "FOOD_CANCELLED",
+      title: "رزرو غذا لغو شد",
+      body: "با لغو یا رد رزرو سیستم، رزرو غذای مرتبط نیز لغو شد.",
+    },
+  });
+
+  return cancelled;
 }

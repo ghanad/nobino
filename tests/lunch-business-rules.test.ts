@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { LunchReservationStatus } from "@prisma/client";
+import { LunchReservationStatus, ReservationStatus } from "@prisma/client";
 
 import {
   cancelLunchReservationByManager,
@@ -10,14 +10,21 @@ import {
   LunchReservationError,
   updateLunchReservationLocation,
 } from "@/lib/lunch-service";
+import { shouldOfferBreakfastForStart } from "@/lib/food-reservation-rules";
+import {
+  cancelReservationByManager,
+  rejectReservation,
+} from "@/lib/reservation-service";
 
 import {
   addDays,
+  addHours,
   db,
   lunchLocationId,
   managerId,
   nextMidweekIranHolidayDateAtHour,
   nextWorkingDateAtHour,
+  poolId,
   registerBusinessRuleTestHooks,
   secondLunchLocationId,
   startOfLocalDay,
@@ -25,6 +32,158 @@ import {
 } from "./business-rules-helpers";
 
 registerBusinessRuleTestHooks();
+
+test("breakfast is suggested only when a system reservation starts before 12", () => {
+  const beforeNoon = new Date(2026, 6, 19, 11, 0, 0, 0);
+  const atNoon = new Date(2026, 6, 19, 12, 0, 0, 0);
+  const afterNoon = new Date(2026, 6, 19, 13, 0, 0, 0);
+
+  assert.equal(shouldOfferBreakfastForStart(beforeNoon), true);
+  assert.equal(shouldOfferBreakfastForStart(atNoon), false);
+  assert.equal(shouldOfferBreakfastForStart(afterNoon), false);
+});
+
+test("food reservations store breakfast and lunch with one shared location", async () => {
+  const targetDate = nextWorkingDateAtHour(9);
+  const reservation = await createLunchReservation({
+    userId,
+    locationId: lunchLocationId,
+    date: targetDate,
+    breakfastReserved: true,
+    lunchReserved: true,
+  });
+
+  assert.equal(reservation.breakfastReserved, true);
+  assert.equal(reservation.lunchReserved, true);
+  assert.equal(reservation.locationId, lunchLocationId);
+
+  const updated = await updateLunchReservationLocation({
+    reservationId: reservation.id,
+    userId,
+    locationId: secondLunchLocationId,
+    breakfastReserved: true,
+    lunchReserved: false,
+  });
+
+  assert.equal(updated.breakfastReserved, true);
+  assert.equal(updated.lunchReserved, false);
+  assert.equal(updated.locationId, secondLunchLocationId);
+});
+
+test("food reservations require at least one meal", async () => {
+  const targetDate = nextWorkingDateAtHour(9);
+
+  await assert.rejects(
+    () =>
+      createLunchReservation({
+        userId,
+        locationId: lunchLocationId,
+        date: targetDate,
+        breakfastReserved: false,
+        lunchReserved: false,
+      }),
+    LunchReservationError,
+  );
+});
+
+test("manager cancellation and rejection cancel linked food but preserve manual food", async () => {
+  const firstStartAt = nextWorkingDateAtHour(9);
+  const firstSystemReservation = await db.reservation.create({
+    data: {
+      userId,
+      resourcePoolId: poolId,
+      startAt: firstStartAt,
+      endAt: addHours(firstStartAt, 1),
+      status: ReservationStatus.APPROVED,
+    },
+  });
+  const linkedFood = await createLunchReservation({
+    userId,
+    locationId: lunchLocationId,
+    date: firstStartAt,
+    breakfastReserved: true,
+    lunchReserved: true,
+    sourceReservationId: firstSystemReservation.id,
+  });
+
+  await cancelReservationByManager({
+    reservationId: firstSystemReservation.id,
+    managerId,
+  });
+
+  assert.equal(
+    (
+      await db.lunchReservation.findUniqueOrThrow({
+        where: { id: linkedFood.id },
+      })
+    ).status,
+    LunchReservationStatus.CANCELLED_BY_ADMIN,
+  );
+
+  const secondStartAt = addDays(firstStartAt, firstStartAt.getDay() === 4 ? 2 : 1);
+  const pendingSystemReservation = await db.reservation.create({
+    data: {
+      userId,
+      resourcePoolId: poolId,
+      startAt: secondStartAt,
+      endAt: addHours(secondStartAt, 1),
+      status: ReservationStatus.PENDING,
+    },
+  });
+  const linkedToPendingFood = await createLunchReservation({
+    userId,
+    locationId: lunchLocationId,
+    date: secondStartAt,
+    breakfastReserved: true,
+    lunchReserved: false,
+    sourceReservationId: pendingSystemReservation.id,
+  });
+
+  await rejectReservation({
+    reservationId: pendingSystemReservation.id,
+    managerId,
+  });
+
+  assert.equal(
+    (
+      await db.lunchReservation.findUniqueOrThrow({
+        where: { id: linkedToPendingFood.id },
+      })
+    ).status,
+    LunchReservationStatus.CANCELLED_BY_ADMIN,
+  );
+
+  const unrelatedPendingReservation = await db.reservation.create({
+    data: {
+      userId,
+      resourcePoolId: poolId,
+      startAt: secondStartAt,
+      endAt: addHours(secondStartAt, 1),
+      status: ReservationStatus.PENDING,
+    },
+  });
+  const manualFood = await createLunchReservation({
+    userId,
+    locationId: lunchLocationId,
+    date: secondStartAt,
+    breakfastReserved: true,
+    lunchReserved: false,
+  });
+
+  await rejectReservation({
+    reservationId: unrelatedPendingReservation.id,
+    managerId,
+  });
+
+  assert.equal(
+    (
+      await db.lunchReservation.findUniqueOrThrow({
+        where: { id: manualFood.id },
+      })
+    ).status,
+    LunchReservationStatus.ACTIVE,
+  );
+});
 
 test("lunch reservation closes at and after the previous-day cutoff", async () => {
   const targetDate = nextWorkingDateAtHour(12);
@@ -197,19 +356,19 @@ test("managers can cancel anyone's active lunch reservation after cutoff", async
     db.auditLog.findFirst({
       where: {
         entityId: reservation.id,
-        action: "LUNCH_RESERVATION_CANCELLED_BY_MANAGER",
+        action: "FOOD_RESERVATION_CANCELLED_BY_MANAGER",
       },
     }),
     db.notification.findFirst({
-      where: { lunchReservationId: reservation.id, type: "LUNCH_CANCELLED" },
+      where: { lunchReservationId: reservation.id, type: "FOOD_CANCELLED" },
       orderBy: { createdAt: "desc" },
     }),
   ]);
 
   assert.equal(auditLog?.actorUserId, managerId);
-  assert.equal(auditLog?.action, "LUNCH_RESERVATION_CANCELLED_BY_MANAGER");
+  assert.equal(auditLog?.action, "FOOD_RESERVATION_CANCELLED_BY_MANAGER");
   assert.equal(notification?.userId, userId);
-  assert.equal(notification?.body, "رزرو ناهار شما توسط مدیر لغو شد.");
+  assert.equal(notification?.body, "رزرو غذای شما توسط مدیر لغو شد.");
 });
 
 test("regular users cannot use manager lunch cancellation", async () => {

@@ -108,7 +108,7 @@ export async function updateLunchSettingsAction(
   });
 
   if (!parsed.success) {
-    redirectToLunchAdmin({ error: "تنظیمات ناهار معتبر نیست." });
+    redirectToLunchAdmin({ error: "تنظیمات غذا معتبر نیست." });
   }
 
   try {
@@ -233,7 +233,7 @@ export async function createLunchExceptionAction(
   });
 
   if (!parsed.success) {
-    redirectToLunchAdmin({ error: "استثنای ناهار معتبر نیست." });
+    redirectToLunchAdmin({ error: "استثنای غذا معتبر نیست." });
   }
 
   try {
@@ -261,7 +261,7 @@ export async function updateLunchExceptionAction(
   });
 
   if (!parsed.success) {
-    redirectToLunchAdmin({ error: "استثنای ناهار معتبر نیست." });
+    redirectToLunchAdmin({ error: "استثنای غذا معتبر نیست." });
   }
 
   try {
@@ -285,7 +285,7 @@ export async function deleteLunchExceptionAction(
   });
 
   if (!parsed.success) {
-    redirectToLunchAdmin({ error: "استثنای ناهار معتبر نیست." });
+    redirectToLunchAdmin({ error: "استثنای غذا معتبر نیست." });
   }
 
   try {

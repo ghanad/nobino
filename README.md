@@ -98,12 +98,19 @@ The first operational version is implemented. Seeded users can sign in, create h
 
 - `/login` accepts seeded user credentials.
 - `/reservations` allows authenticated users to create pending reservation
-  requests and review their recent requests.
+  requests and review their recent requests. After a successful request, it
+  offers breakfast only for starts before `12:00` and offers lunch for every
+  start while the shared food window is open.
+- `/lunch` is the unified food-reservation page. Each user has one active food
+  reservation per day with breakfast and/or lunch and one shared delivery
+  location for both meals.
+- `/lunch/report` shows breakfast and lunch counts and reservation details by
+  delivery location.
 - `/notifications` allows authenticated users to review unread notification
   events and mark them as read.
 - `/settings/bale` allows authenticated users to securely link or unlink their
   private Bale chat.
-- `/admin/lunch-notifications` lets admins manage lunch report recipients,
+- `/admin/lunch-notifications` lets admins manage food report recipients,
   including direct Bale chat/group IDs and linked Nobino users.
 - `/admin/bale` shows admins which users have linked Bale and reports sync and
   delivery health.
@@ -211,7 +218,7 @@ The verified bot setup and test-message procedure for Bale are documented in
 `/settings/bale` using a hashed, single-use, 10-minute connection token.
 
 The protected sync endpoint consumes bot updates, sends pending in-app
-notifications to linked users, and also handles the lunch summary delivery.
+notifications to linked users, and also handles the breakfast-and-lunch food summary delivery.
 Invoke the same endpoint once per minute from the deployment scheduler:
 
 ```bash
@@ -238,11 +245,11 @@ rescheduled pending reservation requests receive deadlines.
 
 The endpoint tracks Bale's `update_id` offset, records each notification
 delivery, and retries failed sends up to three times. It does not send
-notifications that predate the user's latest account connection. Lunch reports
-become eligible exactly one minute after the configured lunch cutoff, use the
-target date in Jalali form, skip days without lunch service, and still send a
-zero-count message for active service days without reservations. If lunch
-reservations are disabled in admin settings, no lunch report is sent. Report
+notifications that predate the user's latest account connection. Food reports
+become eligible exactly one minute after the configured shared food cutoff, use the
+target date in Jalali form, skip days without food service, and still send a
+zero-count breakfast-and-lunch message for active service days without reservations. If food
+reservations are disabled in admin settings, no food report is sent. Report
 recipients are managed by admins from `/admin/lunch-notifications`, and every
 active recipient can target either a Bale chat ID or a Nobino user with an
 active Bale connection. Every active recipient receives its own delivery
@@ -255,7 +262,7 @@ send `/chatid` in a private chat, copy the private chat ID shown by the bot, and
 send that value to an admin. The admin then registers the ID in
 `/admin/lunch-notifications`.
 
-Lunch report rows are stored separately from user-notification deliveries so
+Food report rows are stored separately from user-notification deliveries so
 only one report can be claimed per date. The Bale API does not expose an
 idempotency key, so an ambiguous network failure can still produce a duplicate
 report on retry even though Nobino preserves and retries the same stored

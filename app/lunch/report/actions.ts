@@ -34,7 +34,7 @@ export async function cancelLunchReservationByManagerAction(
   });
 
   if (!parsed.success) {
-    redirect("/lunch/report?error=رزرو ناهار معتبر نیست.");
+    redirect("/lunch/report?error=رزرو غذا معتبر نیست.");
   }
 
   try {
@@ -52,5 +52,6 @@ export async function cancelLunchReservationByManagerAction(
 
   revalidatePath("/lunch/report");
   revalidatePath("/lunch");
+  revalidatePath("/reservations");
   redirectToLunchReport(parsed.data.date, { cancelled: "1" });
 }

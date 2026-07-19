@@ -31,7 +31,7 @@ export async function updateLunchSettings(input: {
   cutoffTime: string;
 }) {
   if (input.maxAdvanceDays < 1 || input.maxAdvanceDays > 31) {
-    throw new LunchReservationError("بازه رزرو ناهار باید بین ۱ تا ۳۱ روز باشد.");
+    throw new LunchReservationError("بازه رزرو غذا باید بین ۱ تا ۳۱ روز باشد.");
   }
 
   assertTime(input.cutoffTime);

@@ -13,6 +13,7 @@ export {
 } from "./lunch-service/locations";
 export { getLunchReport } from "./lunch-service/reports";
 export {
+  cancelLinkedFoodReservationInTransaction,
   cancelLunchReservationByManager,
   cancelLunchReservationByUser,
   createLunchReservation,

@@ -46,6 +46,7 @@ import type {
   SelectionSource,
 } from "@/components/reservation/create-reservation/types";
 import { formatJalaliDateParam } from "@/lib/jalali-date";
+import { shouldOfferBreakfastForStart } from "@/lib/food-reservation-rules";
 import { cn } from "@/lib/utils";
 
 export type {
@@ -76,6 +77,7 @@ export function CreateReservationForm({
   lunchReservationAction,
   nextWeekDateParam,
   oneReservationPerDayEnabled,
+  onFoodReservationChanged,
   onReservationCreated,
   previousWeekDateParam,
   resourcePools,
@@ -284,9 +286,11 @@ export function CreateReservationForm({
         if (promptAvailability?.isOpen) {
           setToast(null);
           setLunchPrompt({
+            canOfferBreakfast: shouldOfferBreakfastForStart(reservationStartAt),
             dateLabel: reservationDay?.modalDateLabel ?? reservationDateParam,
             dateParam: reservationDateParam,
             partySize: nextState.mutation.partySize,
+            sourceReservationId: nextState.mutation.reservationId,
           });
           setIsReasonDialogOpen(true);
           return;
@@ -312,10 +316,13 @@ export function CreateReservationForm({
       });
 
       if (nextState.status === "success") {
+        if (nextState.mutation) {
+          onFoodReservationChanged?.(nextState.mutation);
+        }
         clearSelection();
       }
     },
-    [clearSelection],
+    [clearSelection, onFoodReservationChanged],
   );
 
   function selectMobileSingleHour(dayIndex: number, hour: number) {

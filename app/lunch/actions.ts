@@ -19,6 +19,10 @@ import {
 const lunchReservationSchema = z.object({
   date: z.string().refine(isValidJalaliDateParam),
   locationId: z.string().min(1),
+  breakfastReserved: z.boolean(),
+  lunchReserved: z.boolean(),
+  reservationId: z.string().min(1).optional(),
+  sourceReservationId: z.string().min(1).optional(),
 });
 
 const updateLunchReservationSchema = lunchReservationSchema.extend({
@@ -38,6 +42,8 @@ export type LunchActionState = {
           id: string;
           locationId: string;
           locationName: string;
+          breakfastReserved: boolean;
+          lunchReserved: boolean;
         };
         type: "create" | "update";
       }
@@ -81,6 +87,10 @@ export async function createLunchReservationAction(
   const parsed = lunchReservationSchema.safeParse({
     date: formData.get("date"),
     locationId: formData.get("locationId"),
+    breakfastReserved: formData.has("breakfastReserved"),
+    lunchReserved: formData.has("lunchReserved"),
+    reservationId: formData.get("reservationId") || undefined,
+    sourceReservationId: formData.get("sourceReservationId") || undefined,
   });
 
   if (!parsed.success) {
@@ -90,29 +100,51 @@ export async function createLunchReservationAction(
   let reservation: {
     id: string;
     locationId: string;
+    breakfastReserved: boolean;
+    lunchReserved: boolean;
   };
 
   try {
-    reservation = await createLunchReservation({
-      userId: user.id,
-      locationId: parsed.data.locationId,
-      date: buildLocalDateAtHourFromJalali(parsed.data.date, 0),
-    });
+    reservation = parsed.data.reservationId
+      ? await updateLunchReservationLocation({
+          reservationId: parsed.data.reservationId,
+          userId: user.id,
+          locationId: parsed.data.locationId,
+          breakfastReserved: parsed.data.breakfastReserved,
+          lunchReserved: parsed.data.lunchReserved,
+          sourceReservationId: parsed.data.sourceReservationId,
+        })
+      : await createLunchReservation({
+          userId: user.id,
+          locationId: parsed.data.locationId,
+          date: buildLocalDateAtHourFromJalali(parsed.data.date, 0),
+          breakfastReserved: parsed.data.breakfastReserved,
+          lunchReserved: parsed.data.lunchReserved,
+          sourceReservationId: parsed.data.sourceReservationId,
+        });
   } catch (error) {
     return createActionState("error", getActionErrorMessage(error));
   }
 
   revalidatePath("/lunch");
+  revalidatePath("/lunch/report");
+  revalidatePath("/reservations");
 
-  return createActionState("success", "رزرو ناهار ثبت شد.", {
+  return createActionState(
+    "success",
+    parsed.data.reservationId ? "رزرو غذا تغییر کرد." : "رزرو غذا ثبت شد.",
+    {
     dateParam: parsed.data.date,
     reservation: {
       id: reservation.id,
       locationId: reservation.locationId,
       locationName: await getLocationName(reservation.locationId),
+      breakfastReserved: reservation.breakfastReserved,
+      lunchReserved: reservation.lunchReserved,
     },
-    type: "create",
-  });
+      type: parsed.data.reservationId ? "update" : "create",
+    },
+  );
 }
 
 export async function updateLunchReservationAction(
@@ -124,6 +156,9 @@ export async function updateLunchReservationAction(
     reservationId: formData.get("reservationId"),
     date: formData.get("date"),
     locationId: formData.get("locationId"),
+    breakfastReserved: formData.has("breakfastReserved"),
+    lunchReserved: formData.has("lunchReserved"),
+    sourceReservationId: formData.get("sourceReservationId") || undefined,
   });
 
   if (!parsed.success) {
@@ -133,6 +168,8 @@ export async function updateLunchReservationAction(
   let reservation: {
     id: string;
     locationId: string;
+    breakfastReserved: boolean;
+    lunchReserved: boolean;
   };
 
   try {
@@ -140,19 +177,26 @@ export async function updateLunchReservationAction(
       reservationId: parsed.data.reservationId,
       userId: user.id,
       locationId: parsed.data.locationId,
+      breakfastReserved: parsed.data.breakfastReserved,
+      lunchReserved: parsed.data.lunchReserved,
+      sourceReservationId: parsed.data.sourceReservationId,
     });
   } catch (error) {
     return createActionState("error", getActionErrorMessage(error));
   }
 
   revalidatePath("/lunch");
+  revalidatePath("/lunch/report");
+  revalidatePath("/reservations");
 
-  return createActionState("success", "محل دریافت ناهار تغییر کرد.", {
+  return createActionState("success", "رزرو غذا تغییر کرد.", {
     dateParam: parsed.data.date,
     reservation: {
       id: reservation.id,
       locationId: reservation.locationId,
       locationName: await getLocationName(reservation.locationId),
+      breakfastReserved: reservation.breakfastReserved,
+      lunchReserved: reservation.lunchReserved,
     },
     type: "update",
   });
@@ -181,8 +225,10 @@ export async function cancelLunchReservationAction(
   }
 
   revalidatePath("/lunch");
+  revalidatePath("/lunch/report");
+  revalidatePath("/reservations");
 
-  return createActionState("success", "رزرو ناهار لغو شد.", {
+  return createActionState("success", "رزرو غذا لغو شد.", {
     reservationId: parsed.data.reservationId,
     type: "cancel",
   });

@@ -15,7 +15,12 @@ export type LunchLocationOption = {
 
 export type LunchAvailability = {
   cutoffLabel: string;
-  existingReservation: boolean;
+  existingReservation: {
+    id: string;
+    locationId: string;
+    breakfastReserved: boolean;
+    lunchReserved: boolean;
+  } | null;
   isOpen: boolean;
   unavailableReason: string | null;
 };
@@ -75,6 +80,9 @@ export type CreateReservationFormProps = {
   onReservationCreated?: (
     mutation: NonNullable<CreateReservationActionState["mutation"]>,
   ) => void;
+  onFoodReservationChanged?: (
+    mutation: NonNullable<LunchActionState["mutation"]>,
+  ) => void;
   weekDays: WeekDay[];
   weekLabel: string;
 };
@@ -117,7 +125,9 @@ export type ActionStateBase = {
 };
 
 export type LunchPrompt = {
+  canOfferBreakfast: boolean;
   dateLabel: string;
   dateParam: string;
   partySize: number;
+  sourceReservationId: string;
 };

@@ -574,14 +574,18 @@ export default async function ReservationsPage({
       select: {
         id: true,
         date: true,
+        locationId: true,
+        breakfastReserved: true,
+        lunchReserved: true,
       },
     }),
     Promise.all(weekDates.map((date) => getLunchDayState({ date, now }))),
   ]);
-  const lunchReservedDates = new Set(
-    lunchReservations.map((reservation) =>
+  const lunchReservationByDate = new Map(
+    lunchReservations.map((reservation) => [
       formatJalaliDateParam(reservation.date),
-    ),
+      reservation,
+    ]),
   );
   const activeLunchReservationByDate = Object.fromEntries(
     lunchReservations.map((reservation) => [
@@ -593,24 +597,32 @@ export default async function ReservationsPage({
     weekDates.map((date, index) => {
       const dateParamForLunch = formatJalaliDateParam(date);
       const dayState = lunchDayStates[index];
-      const existingReservation = lunchReservedDates.has(dateParamForLunch);
+      const existingReservation =
+        lunchReservationByDate.get(dateParamForLunch) ?? null;
       const unavailableReason = existingReservation
-        ? "برای این روز قبلا ناهار رزرو کرده‌اید."
+        ? null
         : lunchLocations.length === 0
-          ? "هنوز ساختمانی برای دریافت ناهار تعریف نشده است."
+          ? "هنوز ساختمانی برای دریافت غذا تعریف نشده است."
           : dayState.isOpen
             ? null
             : dayState.isServiceDay
-              ? `مهلت رزرو ناهار گذشته است. مهلت تا ${formatJalaliDate(dayState.cutoffAt)}، ${formatPersianLocalTime(dayState.cutoffAt)} بود.`
-              : "برای این تاریخ سرویس ناهار فعال نیست.";
+              ? `مهلت رزرو غذا گذشته است. مهلت تا ${formatJalaliDate(dayState.cutoffAt)}، ${formatPersianLocalTime(dayState.cutoffAt)} بود.`
+              : "برای این تاریخ سرویس غذا فعال نیست.";
 
       return [
         dateParamForLunch,
         {
-          cutoffLabel: `مهلت رزرو ناهار تا ${formatJalaliDate(dayState.cutoffAt)}، ${formatPersianLocalTime(dayState.cutoffAt)}`,
-          existingReservation,
+          cutoffLabel: `مهلت رزرو غذا تا ${formatJalaliDate(dayState.cutoffAt)}، ${formatPersianLocalTime(dayState.cutoffAt)}`,
+          existingReservation: existingReservation
+            ? {
+                id: existingReservation.id,
+                locationId: existingReservation.locationId,
+                breakfastReserved: existingReservation.breakfastReserved,
+                lunchReserved: existingReservation.lunchReserved,
+              }
+            : null,
           isOpen:
-            dayState.isOpen && !existingReservation && lunchLocations.length > 0,
+            dayState.isOpen && lunchLocations.length > 0,
           unavailableReason,
         },
       ];

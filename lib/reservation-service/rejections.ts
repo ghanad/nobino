@@ -3,6 +3,7 @@ import "server-only";
 import { ReservationStatus } from "@prisma/client";
 
 import { db } from "@/lib/db";
+import { cancelLinkedFoodReservationInTransaction } from "@/lib/lunch-service";
 
 import {
   assertManagerOrAdmin,
@@ -72,6 +73,12 @@ export async function rejectReservation(input: {
           rejectedReservation.rejectionReason ||
           "Your reservation request has been rejected.",
       },
+    });
+
+    await cancelLinkedFoodReservationInTransaction({
+      sourceReservationId: reservation.id,
+      actorUserId: input.managerId,
+      client: tx,
     });
 
     return rejectedReservation;
