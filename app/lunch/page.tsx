@@ -6,10 +6,11 @@ import { UrlToast } from "@/components/ui/url-toast";
 import { requireCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
-  formatJalaliDate,
   formatJalaliDateParam,
+  formatJalaliDateWithoutWeekday,
   formatJalaliDateWithoutYear,
   formatPersianLocalTime,
+  getJalaliDisplayParts,
 } from "@/lib/jalali-date";
 import {
   getLunchDayState,
@@ -112,6 +113,7 @@ export default async function LunchPage({ searchParams }: LunchPageProps) {
   );
   const rows = days.map((date, index) => {
     const dateParam = formatJalaliDateParam(date);
+    const dateParts = getJalaliDisplayParts(date);
     const reservation = reservationByDate.get(dateParam);
     const dayState = dayStates[index];
     const availabilityVariant = dayState.isOpen
@@ -128,10 +130,11 @@ export default async function LunchPage({ searchParams }: LunchPageProps) {
           : "بدون سرویس",
       availabilityVariant,
       cutoffLabel: `مهلت تغییر: ${formatJalaliDateWithoutYear(dayState.cutoffAt)}، ساعت ${formatPersianLocalTime(dayState.cutoffAt)}`,
-      dateLabel: formatJalaliDate(date),
+      dateLabel: formatJalaliDateWithoutWeekday(date),
       dateParam,
       isActionDisabled: !dayState.isOpen || locations.length === 0,
       isOpen: dayState.isOpen,
+      weekdayLabel: dateParts.weekdayLabel,
       reservation: reservation
         ? {
             id: reservation.id,

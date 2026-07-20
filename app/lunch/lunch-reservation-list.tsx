@@ -41,6 +41,7 @@ type LunchReservationRow = {
     breakfastReserved: boolean;
     lunchReserved: boolean;
   } | null;
+  weekdayLabel: string;
 };
 
 type ActionToast = {
@@ -458,11 +459,18 @@ export function LunchReservationList({
               key={row.dateParam}
             >
               <div className="grid gap-1.5 sm:gap-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-base font-semibold">{row.dateLabel}</h2>
+                <div className="grid gap-1 sm:flex sm:items-center sm:gap-2">
+                  <div className="min-w-0">
+                    <h2 className="text-base font-semibold leading-6">
+                      {row.weekdayLabel}
+                    </h2>
+                    <p className="text-sm font-normal leading-5 text-muted-foreground">
+                      {row.dateLabel}
+                    </p>
+                  </div>
                   <span
                     className={cn(
-                      "inline-flex h-7 items-center rounded-full px-2.5 text-xs font-medium ring-1",
+                      "inline-flex h-6 w-fit items-center rounded-full px-2 text-[11px] font-medium ring-1 sm:mr-auto",
                       getAvailabilityClasses(row.availabilityVariant),
                     )}
                   >
