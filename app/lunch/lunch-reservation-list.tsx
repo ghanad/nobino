@@ -2,7 +2,6 @@
 
 import { useActionState, useCallback, useEffect, useState } from "react";
 import {
-  Building2,
   Check,
   CheckCircle2,
   Pencil,
@@ -115,15 +114,15 @@ function MealChoices({
   showLunch?: boolean;
 }) {
   const choiceClassName =
-    "relative flex min-h-11 min-w-0 cursor-pointer items-center justify-between gap-2 rounded-md border border-border bg-background px-3 py-1 font-medium text-foreground/80 transition-[color,background-color,border-color,box-shadow,transform] hover:border-primary/30 hover:bg-primary/[0.03] active:scale-[0.99] active:border-primary/40 active:bg-primary/[0.06] has-[:checked]:border-primary/35 has-[:checked]:bg-primary/[0.06] has-[:checked]:text-primary has-[:checked]:hover:border-primary/45 has-[:checked]:hover:bg-primary/[0.09] has-[:checked]:active:bg-primary/[0.12] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-muted-foreground/40 has-[:focus-visible]:ring-offset-1 has-[:focus-visible]:ring-offset-background has-[:disabled]:cursor-not-allowed has-[:disabled]:border-border/70 has-[:disabled]:bg-muted has-[:disabled]:text-muted-foreground has-[:disabled]:hover:border-border/70 has-[:disabled]:hover:bg-muted has-[:disabled]:active:scale-100 has-[:disabled]:active:border-border/70 has-[:disabled]:active:bg-muted motion-reduce:transform-none sm:min-h-10 sm:hover:border-primary/40 sm:hover:bg-muted/50 sm:active:scale-[0.98] sm:active:bg-muted sm:has-[:checked]:border-primary sm:has-[:checked]:bg-primary/10 sm:has-[:checked]:hover:bg-primary/15 sm:has-[:checked]:active:bg-primary/20";
+    "relative flex min-h-11 min-w-0 cursor-pointer items-center justify-between gap-2 rounded-md border border-border bg-background px-3 py-1 font-medium text-foreground/80 transition-[color,background-color,border-color,box-shadow,transform] hover:border-primary/30 hover:bg-primary/[0.03] active:scale-[0.99] active:border-primary/40 active:bg-primary/[0.06] has-[:checked]:border-primary/35 has-[:checked]:bg-primary/[0.06] has-[:checked]:text-primary has-[:checked]:hover:border-primary/45 has-[:checked]:hover:bg-primary/[0.09] has-[:checked]:active:bg-primary/[0.12] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-muted-foreground/40 has-[:focus-visible]:ring-offset-1 has-[:focus-visible]:ring-offset-background has-[:disabled]:cursor-not-allowed has-[:disabled]:border-border/70 has-[:disabled]:bg-muted has-[:disabled]:text-muted-foreground has-[:disabled]:hover:border-border/70 has-[:disabled]:hover:bg-muted has-[:disabled]:active:scale-100 has-[:disabled]:active:border-border/70 has-[:disabled]:active:bg-muted motion-reduce:transform-none sm:min-h-10 sm:hover:border-primary/40 sm:hover:bg-muted/50 sm:active:scale-[0.98] sm:active:bg-muted sm:has-[:checked]:border-primary sm:has-[:checked]:bg-primary/10 sm:has-[:checked]:hover:bg-primary/15 sm:has-[:checked]:active:bg-primary/20 md:has-[:checked]:border-primary/35 md:has-[:checked]:hover:border-primary/45";
   const indicatorClassName =
-    "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-[1.5px] border-muted-foreground/60 bg-background text-transparent transition-colors peer-checked:border-primary/60 peer-checked:bg-primary peer-checked:text-primary-foreground peer-disabled:!border-muted-foreground/30 peer-disabled:!bg-muted-foreground/10 peer-disabled:!text-muted-foreground/50 sm:h-6 sm:w-6 sm:border-2 md:h-5 md:w-5 md:border md:border-muted-foreground/45";
+    "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-[1.5px] border-muted-foreground/60 bg-background text-transparent transition-colors peer-checked:border-primary/60 peer-checked:bg-primary peer-checked:text-primary-foreground peer-disabled:!border-muted-foreground/30 peer-disabled:!bg-muted-foreground/10 peer-disabled:!text-muted-foreground/50 sm:h-6 sm:w-6 sm:border-2 md:h-[18px] md:w-[18px] md:border md:border-muted-foreground/60";
   const availableMealCount = Number(showBreakfast) + Number(showLunch);
 
   return (
     <fieldset
       className={cn(
-        "grid min-w-0 gap-1 rounded-lg border border-border/70 bg-muted/50 p-1 text-sm sm:gap-2 sm:rounded-md sm:bg-transparent sm:p-2 md:w-72 md:shrink-0",
+        "grid min-w-0 gap-1 rounded-lg border border-border/70 bg-muted/50 p-1 text-sm sm:gap-2 sm:rounded-md sm:bg-transparent sm:p-2 md:w-72 md:shrink-0 md:border-transparent md:bg-muted/20",
         availableMealCount === 1 ? "grid-cols-1" : "grid-cols-2",
         className,
       )}
@@ -143,7 +142,7 @@ function MealChoices({
           <span className="min-w-0">صبحانه</span>
           <span aria-hidden="true" className={indicatorClassName}>
             <Check
-              className="h-3 w-3 sm:h-4 sm:w-4 md:h-3 md:w-3"
+              className="h-3 w-3 sm:h-4 sm:w-4 md:h-2.5 md:w-2.5"
               strokeWidth={2.5}
             />
           </span>
@@ -163,7 +162,7 @@ function MealChoices({
           <span className="min-w-0">ناهار</span>
           <span aria-hidden="true" className={indicatorClassName}>
             <Check
-              className="h-3 w-3 sm:h-4 sm:w-4 md:h-3 md:w-3"
+              className="h-3 w-3 sm:h-4 sm:w-4 md:h-2.5 md:w-2.5"
               strokeWidth={2.5}
             />
           </span>
@@ -282,7 +281,7 @@ function CreateLunchReservationForm({
   return (
     <form
       action={formAction}
-      className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2 md:grid md:grid-cols-[18rem_10rem_13rem]"
+      className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2 md:grid md:grid-cols-[18rem_10rem_11rem] md:gap-3"
     >
       <ActionResultBridge onComplete={onComplete} state={state} />
       <input name="date" type="hidden" value={row.dateParam} />
@@ -330,7 +329,7 @@ function UpdateLunchReservationForm({
   return (
     <form
       action={formAction}
-      className="contents sm:flex sm:items-center sm:gap-2 md:grid md:grid-cols-[18rem_10rem_5rem]"
+      className="contents sm:flex sm:items-center sm:gap-2 md:grid md:grid-cols-[18rem_10rem_82px] md:gap-3"
     >
       <ActionResultBridge onComplete={onComplete} state={state} />
       <input name="reservationId" type="hidden" value={row.reservation.id} />
@@ -375,11 +374,11 @@ function CancelLunchReservationForm({
   );
 
   return (
-    <form action={formAction} className="w-full sm:w-auto">
+    <form action={formAction} className="w-full sm:w-auto md:w-[82px]">
       <ActionResultBridge onComplete={onComplete} state={state} />
       <input name="reservationId" type="hidden" value={reservationId} />
       <SubmitButton
-        className="w-full sm:w-auto"
+        className="w-full sm:w-auto md:w-full"
         disabled={disabled}
         pendingLabel="در حال لغو"
         variant="outline"
@@ -468,13 +467,13 @@ export function LunchReservationList({
           return (
             <div
               className={cn(
-                "grid gap-3 rounded-xl border border-border/70 bg-card p-3 shadow-sm sm:gap-4 sm:p-4 md:grid-cols-[1fr_auto] md:items-center md:rounded-md md:bg-background md:shadow-none",
+                "grid gap-3 rounded-xl border border-border/70 bg-card p-3 shadow-sm sm:gap-4 sm:p-4 md:grid-cols-[minmax(0,1fr)_18rem_10rem_11rem] md:items-center md:gap-3 md:rounded-md md:bg-background md:px-4 md:py-[14px] md:shadow-none",
                 isExpired && "border-slate-200 bg-slate-50/70 shadow-none",
               )}
               key={row.dateParam}
             >
-              <div className="grid gap-1.5 sm:gap-2">
-                <div className="grid gap-1 sm:flex sm:items-center sm:gap-2">
+              <div className="grid gap-1.5 sm:gap-2 md:grid-cols-[minmax(0,1fr)_5rem] md:items-start">
+                <div className="grid gap-1 sm:flex sm:items-center sm:gap-2 md:contents">
                   <div className="min-w-0">
                     <h2 className="text-base font-semibold leading-6">
                       {row.weekdayLabel}
@@ -485,7 +484,7 @@ export function LunchReservationList({
                   </div>
                   <span
                     className={cn(
-                      "inline-flex h-6 w-fit items-center rounded-full px-2 text-[11px] font-medium ring-1 sm:mr-auto",
+                      "inline-flex h-6 w-fit items-center rounded-full px-2 text-[11px] font-medium ring-1 sm:mr-auto md:mr-0 md:self-start",
                       getAvailabilityClasses(row.availabilityVariant),
                     )}
                   >
@@ -494,7 +493,7 @@ export function LunchReservationList({
                 </div>
                 <p
                   className={cn(
-                    "text-sm text-muted-foreground",
+                    "text-sm text-muted-foreground md:col-span-2",
                     isExpired && "hidden md:block",
                   )}
                 >
@@ -506,17 +505,18 @@ export function LunchReservationList({
                   </p>
                 ) : null}
                 {reservation ? (
-                  <p className="flex items-center gap-2 text-sm text-emerald-800">
-                    <Building2 className="h-4 w-4" />
+                  <p className="text-sm text-emerald-800 md:col-span-2">
+                    رزرو شده: {" "}
                     {[
                       reservation.breakfastReserved ? "صبحانه" : null,
                       reservation.lunchReserved ? "ناهار" : null,
                     ]
                       .filter(Boolean)
-                      .join(" و ")}، دریافت از {reservation.locationName}
+                      .join(" و ")} <span className="text-emerald-700/70">·</span>{" "}
+                    تحویل از {reservation.locationName}
                   </p>
                 ) : (
-                  <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <p className="flex items-center gap-2 text-sm text-muted-foreground md:col-span-2">
                     {isExpired ? null : <Utensils className="h-4 w-4" />}
                     رزروی برای این روز ثبت نشده است.
                   </p>
@@ -525,11 +525,11 @@ export function LunchReservationList({
 
               <div
                 className={cn(
-                  "border-t border-border/60 pt-3 sm:pt-4 md:border-0 md:pt-0",
+                  "border-t border-border/60 pt-3 sm:pt-4 md:col-span-3 md:border-0 md:pt-0",
                   isExpired
                     ? "hidden md:block"
                     : reservation
-                      ? "grid grid-cols-2 gap-2 sm:flex sm:items-center"
+                      ? "grid grid-cols-2 gap-2 sm:flex sm:items-center md:gap-3"
                       : "flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2",
                 )}
               >
