@@ -5,7 +5,6 @@ import {
   Building2,
   Check,
   CheckCircle2,
-  CircleSlash,
   Pencil,
   Utensils,
   X,
@@ -213,13 +212,11 @@ function ActionResultBridge({
 
 function CreateLunchReservationForm({
   disabled,
-  isOpen,
   locations,
   onComplete,
   row,
 }: {
   disabled: boolean;
-  isOpen: boolean;
   locations: LunchLocation[];
   onComplete: (state: LunchActionState) => void;
   row: LunchReservationRow;
@@ -247,11 +244,6 @@ function CreateLunchReservationForm({
         disabled={disabled}
         pendingLabel="در حال ثبت"
       >
-        {isOpen ? (
-          <Utensils className="h-4 w-4" />
-        ) : (
-          <CircleSlash className="h-4 w-4" />
-        )}
         رزرو
       </SubmitButton>
     </form>
@@ -495,7 +487,6 @@ export function LunchReservationList({
                 ) : (
                   <CreateLunchReservationForm
                     disabled={isActionDisabled}
-                    isOpen={row.isOpen}
                     locations={locations}
                     onComplete={handleActionComplete}
                     row={row}
