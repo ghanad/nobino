@@ -118,7 +118,7 @@ function MealChoices({
       )}
     >
       <legend className="sr-only">انتخاب وعده‌ها</legend>
-      <label className="relative flex min-h-11 min-w-0 cursor-pointer items-center justify-between gap-2 rounded-md border border-border bg-background px-3 font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:bg-primary/5 has-[:checked]:border-primary has-[:checked]:bg-primary has-[:checked]:text-primary-foreground has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60 sm:min-h-10">
+      <label className="relative flex min-h-11 min-w-0 cursor-pointer items-center justify-between gap-2 rounded-md border border-border bg-background px-3 font-medium text-muted-foreground transition-[color,background-color,border-color,box-shadow,transform] hover:border-primary/40 hover:bg-muted/50 active:scale-[0.98] active:bg-muted has-[:checked]:border-primary has-[:checked]:bg-primary/10 has-[:checked]:text-primary has-[:checked]:hover:bg-primary/15 has-[:checked]:active:bg-primary/20 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-background has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50 motion-reduce:transform-none sm:min-h-10">
         <input
           className="peer sr-only"
           checked={breakfastChecked}
@@ -131,12 +131,12 @@ function MealChoices({
         <span>صبحانه</span>
         <span
           aria-hidden="true"
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-current/60 text-transparent transition-colors peer-checked:border-primary-foreground peer-checked:bg-primary-foreground peer-checked:text-primary peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-background peer-disabled:opacity-70"
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-border bg-background text-transparent transition-colors peer-checked:border-primary peer-checked:bg-primary peer-checked:text-primary-foreground"
         >
           <Check className="h-4 w-4" strokeWidth={3} />
         </span>
       </label>
-      <label className="relative flex min-h-11 min-w-0 cursor-pointer items-center justify-between gap-2 rounded-md border border-border bg-background px-3 font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:bg-primary/5 has-[:checked]:border-primary has-[:checked]:bg-primary has-[:checked]:text-primary-foreground has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60 sm:min-h-10">
+      <label className="relative flex min-h-11 min-w-0 cursor-pointer items-center justify-between gap-2 rounded-md border border-border bg-background px-3 font-medium text-muted-foreground transition-[color,background-color,border-color,box-shadow,transform] hover:border-primary/40 hover:bg-muted/50 active:scale-[0.98] active:bg-muted has-[:checked]:border-primary has-[:checked]:bg-primary/10 has-[:checked]:text-primary has-[:checked]:hover:bg-primary/15 has-[:checked]:active:bg-primary/20 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-background has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50 motion-reduce:transform-none sm:min-h-10">
         <input
           className="peer sr-only"
           checked={lunchChecked}
@@ -149,7 +149,7 @@ function MealChoices({
         <span>ناهار</span>
         <span
           aria-hidden="true"
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-current/60 text-transparent transition-colors peer-checked:border-primary-foreground peer-checked:bg-primary-foreground peer-checked:text-primary peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-background peer-disabled:opacity-70"
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-border bg-background text-transparent transition-colors peer-checked:border-primary peer-checked:bg-primary peer-checked:text-primary-foreground"
         >
           <Check className="h-4 w-4" strokeWidth={3} />
         </span>
