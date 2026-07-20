@@ -92,15 +92,22 @@ function LocationSelect({
 
 function MealChoices({
   breakfastReserved = false,
+  className,
   disabled,
   lunchReserved = true,
 }: {
   breakfastReserved?: boolean;
+  className?: string;
   disabled: boolean;
   lunchReserved?: boolean;
 }) {
   return (
-    <fieldset className="flex min-h-10 flex-wrap items-center gap-4 rounded-md border px-3 py-2 text-sm">
+    <fieldset
+      className={cn(
+        "flex min-h-10 flex-wrap items-center gap-4 rounded-md border px-3 py-2 text-sm",
+        className,
+      )}
+    >
       <legend className="sr-only">انتخاب وعده‌ها</legend>
       <label className="flex items-center gap-2">
         <input
@@ -264,6 +271,7 @@ function UpdateLunchReservationForm({
       <input name="date" type="hidden" value={row.dateParam} />
       <MealChoices
         breakfastReserved={row.reservation.breakfastReserved}
+        className="col-span-2"
         disabled={disabled}
         lunchReserved={row.reservation.lunchReserved}
       />
