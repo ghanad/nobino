@@ -110,15 +110,20 @@ function MealChoices({
   onBreakfastChange?: (checked: boolean) => void;
   onLunchChange?: (checked: boolean) => void;
 }) {
+  const choiceClassName =
+    "relative flex min-h-11 min-w-0 cursor-pointer items-center justify-between gap-2 rounded-md border border-border bg-background px-3 py-1 font-medium text-foreground/80 transition-[color,background-color,border-color,box-shadow,transform] hover:border-primary/30 hover:bg-primary/[0.03] active:scale-[0.99] active:border-primary/40 active:bg-primary/[0.06] has-[:checked]:border-primary/35 has-[:checked]:bg-primary/[0.06] has-[:checked]:text-primary has-[:checked]:hover:border-primary/45 has-[:checked]:hover:bg-primary/[0.09] has-[:checked]:active:bg-primary/[0.12] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-muted-foreground/40 has-[:focus-visible]:ring-offset-1 has-[:focus-visible]:ring-offset-background has-[:disabled]:cursor-not-allowed has-[:disabled]:border-border/70 has-[:disabled]:bg-muted has-[:disabled]:text-muted-foreground has-[:disabled]:hover:border-border/70 has-[:disabled]:hover:bg-muted has-[:disabled]:active:scale-100 has-[:disabled]:active:border-border/70 has-[:disabled]:active:bg-muted motion-reduce:transform-none sm:min-h-10 sm:hover:border-primary/40 sm:hover:bg-muted/50 sm:active:scale-[0.98] sm:active:bg-muted sm:has-[:checked]:border-primary sm:has-[:checked]:bg-primary/10 sm:has-[:checked]:hover:bg-primary/15 sm:has-[:checked]:active:bg-primary/20";
+  const indicatorClassName =
+    "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-[1.5px] border-muted-foreground/60 bg-background text-transparent transition-colors peer-checked:border-primary/60 peer-checked:bg-primary peer-checked:text-primary-foreground peer-disabled:!border-muted-foreground/30 peer-disabled:!bg-muted-foreground/10 peer-disabled:!text-muted-foreground/50 sm:h-6 sm:w-6 sm:border-2";
+
   return (
     <fieldset
       className={cn(
-        "grid grid-cols-2 gap-2 rounded-lg bg-muted/70 p-2 text-sm sm:rounded-md sm:border sm:bg-transparent",
+        "grid grid-cols-2 gap-1 rounded-lg border border-border/70 bg-muted/50 p-1 text-sm sm:gap-2 sm:rounded-md sm:bg-transparent sm:p-2",
         className,
       )}
     >
       <legend className="sr-only">انتخاب وعده‌ها</legend>
-      <label className="relative flex min-h-11 min-w-0 cursor-pointer items-center justify-between gap-2 rounded-md border border-border bg-background px-3 font-medium text-muted-foreground transition-[color,background-color,border-color,box-shadow,transform] hover:border-primary/40 hover:bg-muted/50 active:scale-[0.98] active:bg-muted has-[:checked]:border-primary has-[:checked]:bg-primary/10 has-[:checked]:text-primary has-[:checked]:hover:bg-primary/15 has-[:checked]:active:bg-primary/20 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-background has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50 motion-reduce:transform-none sm:min-h-10">
+      <label className={choiceClassName}>
         <input
           className="peer sr-only"
           checked={breakfastChecked}
@@ -131,12 +136,12 @@ function MealChoices({
         <span>صبحانه</span>
         <span
           aria-hidden="true"
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-border bg-background text-transparent transition-colors peer-checked:border-primary peer-checked:bg-primary peer-checked:text-primary-foreground"
+          className={indicatorClassName}
         >
-          <Check className="h-4 w-4" strokeWidth={3} />
+          <Check className="h-3 w-3 sm:h-4 sm:w-4" strokeWidth={2.5} />
         </span>
       </label>
-      <label className="relative flex min-h-11 min-w-0 cursor-pointer items-center justify-between gap-2 rounded-md border border-border bg-background px-3 font-medium text-muted-foreground transition-[color,background-color,border-color,box-shadow,transform] hover:border-primary/40 hover:bg-muted/50 active:scale-[0.98] active:bg-muted has-[:checked]:border-primary has-[:checked]:bg-primary/10 has-[:checked]:text-primary has-[:checked]:hover:bg-primary/15 has-[:checked]:active:bg-primary/20 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-background has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50 motion-reduce:transform-none sm:min-h-10">
+      <label className={choiceClassName}>
         <input
           className="peer sr-only"
           checked={lunchChecked}
@@ -149,9 +154,9 @@ function MealChoices({
         <span>ناهار</span>
         <span
           aria-hidden="true"
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-border bg-background text-transparent transition-colors peer-checked:border-primary peer-checked:bg-primary peer-checked:text-primary-foreground"
+          className={indicatorClassName}
         >
-          <Check className="h-4 w-4" strokeWidth={3} />
+          <Check className="h-3 w-3 sm:h-4 sm:w-4" strokeWidth={2.5} />
         </span>
       </label>
     </fieldset>
