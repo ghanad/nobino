@@ -117,7 +117,7 @@ function MealChoices({
   const choiceClassName =
     "relative flex min-h-11 min-w-0 cursor-pointer items-center justify-between gap-2 rounded-md border border-border bg-background px-3 py-1 font-medium text-foreground/80 transition-[color,background-color,border-color,box-shadow,transform] hover:border-primary/30 hover:bg-primary/[0.03] active:scale-[0.99] active:border-primary/40 active:bg-primary/[0.06] has-[:checked]:border-primary/35 has-[:checked]:bg-primary/[0.06] has-[:checked]:text-primary has-[:checked]:hover:border-primary/45 has-[:checked]:hover:bg-primary/[0.09] has-[:checked]:active:bg-primary/[0.12] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-muted-foreground/40 has-[:focus-visible]:ring-offset-1 has-[:focus-visible]:ring-offset-background has-[:disabled]:cursor-not-allowed has-[:disabled]:border-border/70 has-[:disabled]:bg-muted has-[:disabled]:text-muted-foreground has-[:disabled]:hover:border-border/70 has-[:disabled]:hover:bg-muted has-[:disabled]:active:scale-100 has-[:disabled]:active:border-border/70 has-[:disabled]:active:bg-muted motion-reduce:transform-none sm:min-h-10 sm:hover:border-primary/40 sm:hover:bg-muted/50 sm:active:scale-[0.98] sm:active:bg-muted sm:has-[:checked]:border-primary sm:has-[:checked]:bg-primary/10 sm:has-[:checked]:hover:bg-primary/15 sm:has-[:checked]:active:bg-primary/20";
   const indicatorClassName =
-    "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-[1.5px] border-muted-foreground/60 bg-background text-transparent transition-colors peer-checked:border-primary/60 peer-checked:bg-primary peer-checked:text-primary-foreground peer-disabled:!border-muted-foreground/30 peer-disabled:!bg-muted-foreground/10 peer-disabled:!text-muted-foreground/50 sm:h-6 sm:w-6 sm:border-2";
+    "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-[1.5px] border-muted-foreground/60 bg-background text-transparent transition-colors peer-checked:border-primary/60 peer-checked:bg-primary peer-checked:text-primary-foreground peer-disabled:!border-muted-foreground/30 peer-disabled:!bg-muted-foreground/10 peer-disabled:!text-muted-foreground/50 sm:h-6 sm:w-6 sm:border-2 md:h-5 md:w-5 md:border md:border-muted-foreground/45";
   const availableMealCount = Number(showBreakfast) + Number(showLunch);
 
   return (
@@ -142,7 +142,10 @@ function MealChoices({
           />
           <span className="min-w-0">صبحانه</span>
           <span aria-hidden="true" className={indicatorClassName}>
-            <Check className="h-3 w-3 sm:h-4 sm:w-4" strokeWidth={2.5} />
+            <Check
+              className="h-3 w-3 sm:h-4 sm:w-4 md:h-3 md:w-3"
+              strokeWidth={2.5}
+            />
           </span>
         </label>
       ) : null}
@@ -159,7 +162,10 @@ function MealChoices({
           />
           <span className="min-w-0">ناهار</span>
           <span aria-hidden="true" className={indicatorClassName}>
-            <Check className="h-3 w-3 sm:h-4 sm:w-4" strokeWidth={2.5} />
+            <Check
+              className="h-3 w-3 sm:h-4 sm:w-4 md:h-3 md:w-3"
+              strokeWidth={2.5}
+            />
           </span>
         </label>
       ) : null}
