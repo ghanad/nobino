@@ -3,6 +3,7 @@
 import { useActionState, useCallback, useEffect, useState } from "react";
 import {
   Building2,
+  Check,
   CheckCircle2,
   CircleSlash,
   Pencil,
@@ -104,28 +105,42 @@ function MealChoices({
   return (
     <fieldset
       className={cn(
-        "flex min-h-11 flex-wrap items-center gap-5 rounded-lg bg-muted/70 px-3 py-2.5 text-sm sm:min-h-10 sm:rounded-md sm:border sm:bg-transparent sm:py-2",
+        "grid grid-cols-2 gap-2 rounded-lg bg-muted/70 p-2 text-sm sm:rounded-md sm:border sm:bg-transparent",
         className,
       )}
     >
       <legend className="sr-only">انتخاب وعده‌ها</legend>
-      <label className="flex items-center gap-2">
+      <label className="relative flex min-h-11 min-w-0 cursor-pointer items-center justify-between gap-2 rounded-md border border-border bg-background px-3 font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:bg-primary/5 has-[:checked]:border-primary has-[:checked]:bg-primary has-[:checked]:text-primary-foreground has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60 sm:min-h-10">
         <input
+          className="peer sr-only"
           defaultChecked={breakfastReserved}
           disabled={disabled}
           name="breakfastReserved"
           type="checkbox"
         />
-        صبحانه
+        <span>صبحانه</span>
+        <span
+          aria-hidden="true"
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-current/60 text-transparent transition-colors peer-checked:border-primary-foreground peer-checked:bg-primary-foreground peer-checked:text-primary peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-background peer-disabled:opacity-70"
+        >
+          <Check className="h-4 w-4" strokeWidth={3} />
+        </span>
       </label>
-      <label className="flex items-center gap-2">
+      <label className="relative flex min-h-11 min-w-0 cursor-pointer items-center justify-between gap-2 rounded-md border border-border bg-background px-3 font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:bg-primary/5 has-[:checked]:border-primary has-[:checked]:bg-primary has-[:checked]:text-primary-foreground has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60 sm:min-h-10">
         <input
+          className="peer sr-only"
           defaultChecked={lunchReserved}
           disabled={disabled}
           name="lunchReserved"
           type="checkbox"
         />
-        ناهار
+        <span>ناهار</span>
+        <span
+          aria-hidden="true"
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-current/60 text-transparent transition-colors peer-checked:border-primary-foreground peer-checked:bg-primary-foreground peer-checked:text-primary peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-background peer-disabled:opacity-70"
+        >
+          <Check className="h-4 w-4" strokeWidth={3} />
+        </span>
       </label>
     </fieldset>
   );
