@@ -400,10 +400,10 @@ export function LunchReservationList({
 
           return (
             <div
-              className="grid gap-4 rounded-xl border border-border/70 bg-card p-4 shadow-sm md:grid-cols-[1fr_auto] md:items-center md:rounded-md md:bg-background md:shadow-none"
+              className="grid gap-3 rounded-xl border border-border/70 bg-card p-3 shadow-sm sm:gap-4 sm:p-4 md:grid-cols-[1fr_auto] md:items-center md:rounded-md md:bg-background md:shadow-none"
               key={row.dateParam}
             >
-              <div className="grid gap-2">
+              <div className="grid gap-1.5 sm:gap-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="text-base font-semibold">{row.dateLabel}</h2>
                   <span
@@ -431,14 +431,14 @@ export function LunchReservationList({
                 ) : (
                   <p className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Utensils className="h-4 w-4" />
-                    برای این روز رزرو غذا ندارید.
+                    رزروی ثبت نشده
                   </p>
                 )}
               </div>
 
               <div
                 className={cn(
-                  "border-t border-border/60 pt-4 md:border-0 md:pt-0",
+                  "border-t border-border/60 pt-3 sm:pt-4 md:border-0 md:pt-0",
                   reservation
                     ? "grid grid-cols-2 gap-2 sm:flex sm:items-center"
                     : "flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2",

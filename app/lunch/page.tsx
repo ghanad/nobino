@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import {
   formatJalaliDate,
   formatJalaliDateParam,
+  formatJalaliDateWithoutYear,
   formatPersianLocalTime,
 } from "@/lib/jalali-date";
 import {
@@ -126,7 +127,7 @@ export default async function LunchPage({ searchParams }: LunchPageProps) {
           ? "مهلت گذشته"
           : "بدون سرویس",
       availabilityVariant,
-      cutoffLabel: `مهلت رزرو، تغییر یا لغو تا ${formatJalaliDate(dayState.cutoffAt)}، ${formatPersianLocalTime(dayState.cutoffAt)}`,
+      cutoffLabel: `مهلت تغییر: ${formatJalaliDateWithoutYear(dayState.cutoffAt)}، ساعت ${formatPersianLocalTime(dayState.cutoffAt)}`,
       dateLabel: formatJalaliDate(date),
       dateParam,
       isActionDisabled: !dayState.isOpen || locations.length === 0,
