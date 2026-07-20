@@ -100,6 +100,8 @@ function MealChoices({
   lunchReserved = true,
   onBreakfastChange,
   onLunchChange,
+  showBreakfast = true,
+  showLunch = true,
 }: {
   breakfastChecked?: boolean;
   breakfastReserved?: boolean;
@@ -109,56 +111,58 @@ function MealChoices({
   lunchReserved?: boolean;
   onBreakfastChange?: (checked: boolean) => void;
   onLunchChange?: (checked: boolean) => void;
+  showBreakfast?: boolean;
+  showLunch?: boolean;
 }) {
   const choiceClassName =
     "relative flex min-h-11 min-w-0 cursor-pointer items-center justify-between gap-2 rounded-md border border-border bg-background px-3 py-1 font-medium text-foreground/80 transition-[color,background-color,border-color,box-shadow,transform] hover:border-primary/30 hover:bg-primary/[0.03] active:scale-[0.99] active:border-primary/40 active:bg-primary/[0.06] has-[:checked]:border-primary/35 has-[:checked]:bg-primary/[0.06] has-[:checked]:text-primary has-[:checked]:hover:border-primary/45 has-[:checked]:hover:bg-primary/[0.09] has-[:checked]:active:bg-primary/[0.12] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-muted-foreground/40 has-[:focus-visible]:ring-offset-1 has-[:focus-visible]:ring-offset-background has-[:disabled]:cursor-not-allowed has-[:disabled]:border-border/70 has-[:disabled]:bg-muted has-[:disabled]:text-muted-foreground has-[:disabled]:hover:border-border/70 has-[:disabled]:hover:bg-muted has-[:disabled]:active:scale-100 has-[:disabled]:active:border-border/70 has-[:disabled]:active:bg-muted motion-reduce:transform-none sm:min-h-10 sm:hover:border-primary/40 sm:hover:bg-muted/50 sm:active:scale-[0.98] sm:active:bg-muted sm:has-[:checked]:border-primary sm:has-[:checked]:bg-primary/10 sm:has-[:checked]:hover:bg-primary/15 sm:has-[:checked]:active:bg-primary/20";
   const indicatorClassName =
     "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-[1.5px] border-muted-foreground/60 bg-background text-transparent transition-colors peer-checked:border-primary/60 peer-checked:bg-primary peer-checked:text-primary-foreground peer-disabled:!border-muted-foreground/30 peer-disabled:!bg-muted-foreground/10 peer-disabled:!text-muted-foreground/50 sm:h-6 sm:w-6 sm:border-2";
+  const availableMealCount = Number(showBreakfast) + Number(showLunch);
 
   return (
     <fieldset
       className={cn(
-        "grid grid-cols-2 gap-1 rounded-lg border border-border/70 bg-muted/50 p-1 text-sm sm:gap-2 sm:rounded-md sm:bg-transparent sm:p-2",
+        "grid min-w-0 gap-1 rounded-lg border border-border/70 bg-muted/50 p-1 text-sm sm:gap-2 sm:rounded-md sm:bg-transparent sm:p-2 md:w-72 md:shrink-0",
+        availableMealCount === 1 ? "grid-cols-1" : "grid-cols-2",
         className,
       )}
     >
       <legend className="sr-only">انتخاب وعده‌ها</legend>
-      <label className={choiceClassName}>
-        <input
-          className="peer sr-only"
-          checked={breakfastChecked}
-          defaultChecked={breakfastChecked === undefined ? breakfastReserved : undefined}
-          disabled={disabled}
-          name="breakfastReserved"
-          onChange={(event) => onBreakfastChange?.(event.target.checked)}
-          type="checkbox"
-        />
-        <span>صبحانه</span>
-        <span
-          aria-hidden="true"
-          className={indicatorClassName}
-        >
-          <Check className="h-3 w-3 sm:h-4 sm:w-4" strokeWidth={2.5} />
-        </span>
-      </label>
-      <label className={choiceClassName}>
-        <input
-          className="peer sr-only"
-          checked={lunchChecked}
-          defaultChecked={lunchChecked === undefined ? lunchReserved : undefined}
-          disabled={disabled}
-          name="lunchReserved"
-          onChange={(event) => onLunchChange?.(event.target.checked)}
-          type="checkbox"
-        />
-        <span>ناهار</span>
-        <span
-          aria-hidden="true"
-          className={indicatorClassName}
-        >
-          <Check className="h-3 w-3 sm:h-4 sm:w-4" strokeWidth={2.5} />
-        </span>
-      </label>
+      {showBreakfast ? (
+        <label className={choiceClassName}>
+          <input
+            className="peer sr-only"
+            checked={breakfastChecked}
+            defaultChecked={breakfastChecked === undefined ? breakfastReserved : undefined}
+            disabled={disabled}
+            name="breakfastReserved"
+            onChange={(event) => onBreakfastChange?.(event.target.checked)}
+            type="checkbox"
+          />
+          <span className="min-w-0">صبحانه</span>
+          <span aria-hidden="true" className={indicatorClassName}>
+            <Check className="h-3 w-3 sm:h-4 sm:w-4" strokeWidth={2.5} />
+          </span>
+        </label>
+      ) : null}
+      {showLunch ? (
+        <label className={choiceClassName}>
+          <input
+            className="peer sr-only"
+            checked={lunchChecked}
+            defaultChecked={lunchChecked === undefined ? lunchReserved : undefined}
+            disabled={disabled}
+            name="lunchReserved"
+            onChange={(event) => onLunchChange?.(event.target.checked)}
+            type="checkbox"
+          />
+          <span className="min-w-0">ناهار</span>
+          <span aria-hidden="true" className={indicatorClassName}>
+            <Check className="h-3 w-3 sm:h-4 sm:w-4" strokeWidth={2.5} />
+          </span>
+        </label>
+      ) : null}
     </fieldset>
   );
 }
@@ -272,7 +276,7 @@ function CreateLunchReservationForm({
   return (
     <form
       action={formAction}
-      className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2"
+      className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2 md:grid md:grid-cols-[18rem_10rem_13rem]"
     >
       <ActionResultBridge onComplete={onComplete} state={state} />
       <input name="date" type="hidden" value={row.dateParam} />
@@ -284,12 +288,12 @@ function CreateLunchReservationForm({
         onLunchChange={setLunchReserved}
       />
       <LocationSelect
-        className="w-full sm:w-auto"
+        className="w-full sm:w-auto md:min-w-0 md:w-full"
         disabled={disabled}
         locations={locations}
       />
       <SubmitButton
-        className="w-full sm:w-auto"
+        className="w-full sm:w-auto md:min-w-0 md:w-full"
         disabled={disabled || !hasSelectedMeal}
         pendingLabel="در حال ثبت"
       >
@@ -320,25 +324,25 @@ function UpdateLunchReservationForm({
   return (
     <form
       action={formAction}
-      className="contents sm:flex sm:items-center sm:gap-2"
+      className="contents sm:flex sm:items-center sm:gap-2 md:grid md:grid-cols-[18rem_10rem_5rem]"
     >
       <ActionResultBridge onComplete={onComplete} state={state} />
       <input name="reservationId" type="hidden" value={row.reservation.id} />
       <input name="date" type="hidden" value={row.dateParam} />
       <MealChoices
         breakfastReserved={row.reservation.breakfastReserved}
-        className="col-span-2"
+        className="col-span-2 md:col-span-1"
         disabled={disabled}
         lunchReserved={row.reservation.lunchReserved}
       />
       <LocationSelect
-        className="col-span-2 w-full sm:w-auto"
+        className="col-span-2 w-full sm:w-auto md:col-span-1 md:min-w-0 md:w-full"
         currentLocationId={row.reservation.locationId}
         disabled={disabled}
         locations={locations}
       />
       <SubmitButton
-        className="w-full sm:w-auto"
+        className="w-full sm:w-auto md:min-w-0 md:w-full"
         disabled={disabled}
         pendingLabel="در حال تغییر"
         variant="outline"
