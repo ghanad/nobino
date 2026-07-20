@@ -395,12 +395,16 @@ export function LunchReservationList({
       <div className="grid gap-3">
         {currentRows.map((row) => {
           const reservation = row.reservation;
+          const isExpired = row.availabilityVariant === "closed";
           const isActionDisabled =
             row.isActionDisabled || locations.length === 0;
 
           return (
             <div
-              className="grid gap-3 rounded-xl border border-border/70 bg-card p-3 shadow-sm sm:gap-4 sm:p-4 md:grid-cols-[1fr_auto] md:items-center md:rounded-md md:bg-background md:shadow-none"
+              className={cn(
+                "grid gap-3 rounded-xl border border-border/70 bg-card p-3 shadow-sm sm:gap-4 sm:p-4 md:grid-cols-[1fr_auto] md:items-center md:rounded-md md:bg-background md:shadow-none",
+                isExpired && "border-slate-200 bg-slate-50/70 shadow-none",
+              )}
               key={row.dateParam}
             >
               <div className="grid gap-1.5 sm:gap-2">
@@ -415,9 +419,19 @@ export function LunchReservationList({
                     {row.availabilityLabel}
                   </span>
                 </div>
-                <p className="text-sm text-muted-foreground">
+                <p
+                  className={cn(
+                    "text-sm text-muted-foreground",
+                    isExpired && "hidden md:block",
+                  )}
+                >
                   {row.cutoffLabel}
                 </p>
+                {isExpired ? (
+                  <p className="text-sm leading-6 text-slate-700 md:hidden">
+                    مهلت ثبت یا تغییر رزرو برای این روز گذشته است.
+                  </p>
+                ) : null}
                 {reservation ? (
                   <p className="flex items-center gap-2 text-sm text-emerald-800">
                     <Building2 className="h-4 w-4" />
@@ -430,8 +444,8 @@ export function LunchReservationList({
                   </p>
                 ) : (
                   <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Utensils className="h-4 w-4" />
-                    رزروی ثبت نشده
+                    {isExpired ? null : <Utensils className="h-4 w-4" />}
+                    رزروی برای این روز ثبت نشده است.
                   </p>
                 )}
               </div>
@@ -439,9 +453,11 @@ export function LunchReservationList({
               <div
                 className={cn(
                   "border-t border-border/60 pt-3 sm:pt-4 md:border-0 md:pt-0",
-                  reservation
-                    ? "grid grid-cols-2 gap-2 sm:flex sm:items-center"
-                    : "flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2",
+                  isExpired
+                    ? "hidden md:block"
+                    : reservation
+                      ? "grid grid-cols-2 gap-2 sm:flex sm:items-center"
+                      : "flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2",
                 )}
               >
                 {reservation ? (
