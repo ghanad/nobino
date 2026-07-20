@@ -73,7 +73,7 @@ function LocationSelect({
   return (
     <select
       className={cn(
-        "h-10 min-w-40 rounded-md border border-input bg-background px-3 text-sm disabled:opacity-60",
+        "h-11 min-w-40 rounded-lg border-0 bg-muted/70 px-3 text-sm outline-none transition focus:ring-2 focus:ring-ring disabled:opacity-60 sm:h-10 sm:rounded-md sm:border sm:border-input sm:bg-background",
         className,
       )}
       defaultValue={currentLocationId ?? locations[0]?.id ?? ""}
@@ -104,7 +104,7 @@ function MealChoices({
   return (
     <fieldset
       className={cn(
-        "flex min-h-10 flex-wrap items-center gap-4 rounded-md border px-3 py-2 text-sm",
+        "flex min-h-11 flex-wrap items-center gap-5 rounded-lg bg-muted/70 px-3 py-2.5 text-sm sm:min-h-10 sm:rounded-md sm:border sm:bg-transparent sm:py-2",
         className,
       )}
     >
@@ -217,7 +217,7 @@ function CreateLunchReservationForm({
   return (
     <form
       action={formAction}
-      className="flex flex-col gap-2 sm:flex-row sm:items-center"
+      className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2"
     >
       <ActionResultBridge onComplete={onComplete} state={state} />
       <input name="date" type="hidden" value={row.dateParam} />
@@ -400,7 +400,7 @@ export function LunchReservationList({
 
           return (
             <div
-              className="grid gap-4 rounded-md border bg-background p-4 md:grid-cols-[1fr_auto] md:items-center"
+              className="grid gap-4 rounded-xl border border-border/70 bg-card p-4 shadow-sm md:grid-cols-[1fr_auto] md:items-center md:rounded-md md:bg-background md:shadow-none"
               key={row.dateParam}
             >
               <div className="grid gap-2">
@@ -438,9 +438,10 @@ export function LunchReservationList({
 
               <div
                 className={cn(
+                  "border-t border-border/60 pt-4 md:border-0 md:pt-0",
                   reservation
                     ? "grid grid-cols-2 gap-2 sm:flex sm:items-center"
-                    : "flex flex-col gap-2 sm:flex-row sm:items-center",
+                    : "flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2",
                 )}
               >
                 {reservation ? (

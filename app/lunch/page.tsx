@@ -152,7 +152,7 @@ export default async function LunchPage({ searchParams }: LunchPageProps) {
 
       {toast ? <UrlToast {...toast} /> : null}
 
-      <section className="grid gap-4 rounded-lg border bg-card p-5 text-card-foreground">
+      <section className="grid gap-4 text-card-foreground sm:rounded-lg sm:border sm:bg-card sm:p-5">
         {locations.length === 0 ? (
           <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
             هنوز ساختمان فعالی برای دریافت غذا تعریف نشده است.
