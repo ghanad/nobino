@@ -91,15 +91,23 @@ function LocationSelect({
 }
 
 function MealChoices({
+  breakfastChecked,
   breakfastReserved = false,
   className,
   disabled,
+  lunchChecked,
   lunchReserved = true,
+  onBreakfastChange,
+  onLunchChange,
 }: {
+  breakfastChecked?: boolean;
   breakfastReserved?: boolean;
   className?: string;
   disabled: boolean;
+  lunchChecked?: boolean;
   lunchReserved?: boolean;
+  onBreakfastChange?: (checked: boolean) => void;
+  onLunchChange?: (checked: boolean) => void;
 }) {
   return (
     <fieldset
@@ -112,9 +120,11 @@ function MealChoices({
       <label className="relative flex min-h-11 min-w-0 cursor-pointer items-center justify-between gap-2 rounded-md border border-border bg-background px-3 font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:bg-primary/5 has-[:checked]:border-primary has-[:checked]:bg-primary has-[:checked]:text-primary-foreground has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60 sm:min-h-10">
         <input
           className="peer sr-only"
-          defaultChecked={breakfastReserved}
+          checked={breakfastChecked}
+          defaultChecked={breakfastChecked === undefined ? breakfastReserved : undefined}
           disabled={disabled}
           name="breakfastReserved"
+          onChange={(event) => onBreakfastChange?.(event.target.checked)}
           type="checkbox"
         />
         <span>صبحانه</span>
@@ -128,9 +138,11 @@ function MealChoices({
       <label className="relative flex min-h-11 min-w-0 cursor-pointer items-center justify-between gap-2 rounded-md border border-border bg-background px-3 font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:bg-primary/5 has-[:checked]:border-primary has-[:checked]:bg-primary has-[:checked]:text-primary-foreground has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60 sm:min-h-10">
         <input
           className="peer sr-only"
-          defaultChecked={lunchReserved}
+          checked={lunchChecked}
+          defaultChecked={lunchChecked === undefined ? lunchReserved : undefined}
           disabled={disabled}
           name="lunchReserved"
+          onChange={(event) => onLunchChange?.(event.target.checked)}
           type="checkbox"
         />
         <span>ناهار</span>
@@ -143,6 +155,28 @@ function MealChoices({
       </label>
     </fieldset>
   );
+}
+
+function getCreateReservationLabel({
+  breakfastReserved,
+  lunchReserved,
+}: {
+  breakfastReserved: boolean;
+  lunchReserved: boolean;
+}) {
+  if (breakfastReserved && lunchReserved) {
+    return "ثبت رزرو صبحانه و ناهار";
+  }
+
+  if (breakfastReserved) {
+    return "رزرو صبحانه";
+  }
+
+  if (lunchReserved) {
+    return "رزرو ناهار";
+  }
+
+  return "ثبت رزرو";
 }
 
 function LunchActionToast({
@@ -225,6 +259,9 @@ function CreateLunchReservationForm({
     createLunchReservationAction,
     initialActionState,
   );
+  const [breakfastReserved, setBreakfastReserved] = useState(false);
+  const [lunchReserved, setLunchReserved] = useState(true);
+  const hasSelectedMeal = breakfastReserved || lunchReserved;
 
   return (
     <form
@@ -233,7 +270,13 @@ function CreateLunchReservationForm({
     >
       <ActionResultBridge onComplete={onComplete} state={state} />
       <input name="date" type="hidden" value={row.dateParam} />
-      <MealChoices disabled={disabled} />
+      <MealChoices
+        breakfastChecked={breakfastReserved}
+        disabled={disabled}
+        lunchChecked={lunchReserved}
+        onBreakfastChange={setBreakfastReserved}
+        onLunchChange={setLunchReserved}
+      />
       <LocationSelect
         className="w-full sm:w-auto"
         disabled={disabled}
@@ -241,10 +284,10 @@ function CreateLunchReservationForm({
       />
       <SubmitButton
         className="w-full sm:w-auto"
-        disabled={disabled}
+        disabled={disabled || !hasSelectedMeal}
         pendingLabel="در حال ثبت"
       >
-        رزرو
+        {getCreateReservationLabel({ breakfastReserved, lunchReserved })}
       </SubmitButton>
     </form>
   );
