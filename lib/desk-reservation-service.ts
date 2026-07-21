@@ -96,6 +96,7 @@ export async function createDeskReservation(input: {
     await validateDeskReservationTimeRange(input, tx);
     await assertWithinAdvanceWindow(input.startAt, tx);
     await assertOneReservationPerDay({ date: input.startAt, userId: input.userId }, tx);
+    await assertDeskAvailable(input, tx);
 
     const pending = await tx.deskReservation.create({
       data: {
@@ -248,9 +249,7 @@ export async function updateDeskReservation(input: {
     }, tx);
     await assertWithinAdvanceWindow(input.startAt, tx);
     await assertOneReservationPerDay({ date: input.startAt, excludeId: reservation.id, userId: reservation.userId }, tx);
-    if (reservation.status === ReservationStatus.APPROVED) {
-      await assertDeskAvailable({ ...input, excludeId: reservation.id }, tx);
-    }
+    await assertDeskAvailable({ ...input, excludeId: reservation.id }, tx);
 
     const updated = await tx.deskReservation.update({
       where: { id: reservation.id },

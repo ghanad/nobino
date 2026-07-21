@@ -29,6 +29,17 @@ test("pending desk requests do not block but approval re-checks conflicts", asyn
   );
 });
 
+test("approved desk reservations block new overlapping requests", async () => {
+  const startAt = nextWorkingDateAtHour(9);
+  const first = await createDeskReservation({ deskId, endAt: addHours(startAt, 2), startAt, userId });
+  await approveDeskReservation({ managerId, reservationId: first.id });
+
+  await assert.rejects(
+    createDeskReservation({ deskId, endAt: addHours(startAt, 3), startAt: addHours(startAt, 1), userId: secondUserId }),
+    ReservationTransitionError,
+  );
+});
+
 test("normal users cannot approve desk requests", async () => {
   const startAt = nextWorkingDateAtHour(9);
   const reservation = await createDeskReservation({ deskId, endAt: addHours(startAt, 1), startAt, userId });
