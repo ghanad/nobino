@@ -59,6 +59,7 @@ function getMobileNavSections(navItems: GlobalNavItem[]): MobileNavSection[] {
   const sections: MobileNavSection[] = [];
   const reservationsItem = navItems.find((item) => item.href === "/reservations");
   const meetingRoomsItem = navItems.find((item) => item.href === "/meeting-rooms");
+  const desksItem = navItems.find((item) => item.href === "/desks");
   const lunchItem = navItems.find((item) => item.href === "/lunch");
   const managerItem = navItems.find((item) => item.href === "/manager");
   const adminItem = navItems.find((item) => item.href === "/admin");
@@ -76,6 +77,10 @@ function getMobileNavSections(navItems: GlobalNavItem[]): MobileNavSection[] {
       entries: [{ item: meetingRoomsItem }],
       id: "meeting-rooms",
     });
+  }
+
+  if (desksItem) {
+    sections.push({ entries: [{ item: desksItem }], id: "desks" });
   }
 
   if (lunchItem?.children?.length) {

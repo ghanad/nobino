@@ -88,6 +88,7 @@ The seed script creates:
 - `manager@nobino.local` / `Manager123!`
 - `user@nobino.local` / `User123!`
 - Resource pool `Company Systems` with capacity `5`
+- Office `دفتر مرکزی` with ten named desks (`میز 1` through `میز 10`)
 - Weekly schedule using JavaScript `Date.getDay()` values: Sunday through Thursday and Saturday are `09:00-17:00`; Friday is disabled.
 
 ## Current Status
@@ -106,6 +107,12 @@ The first operational version is implemented. Seeded users can sign in, create h
   location for both meals.
 - `/lunch/report` shows breakfast and lunch counts and reservation details by
   delivery location.
+- `/desks` lets authenticated users reserve a named office desk hourly or for
+  the full working day, then edit or cancel it.
+- `/manager/desks` lets managers move, reschedule, or cancel active desk
+  reservations.
+- `/admin/desks` lets admins manage offices, named desks, schedules, Jalali
+  date exceptions, and the advance-booking limit.
 - `/notifications` allows authenticated users to review unread notification
   events and mark them as read.
 - `/settings/bale` allows authenticated users to securely link or unlink their

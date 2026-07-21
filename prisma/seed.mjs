@@ -146,6 +146,34 @@ async function main() {
     });
   }
 
+  await prisma.deskSettings.upsert({
+    where: { id: "default" },
+    update: { maxAdvanceDays: 14 },
+    create: { id: "default", maxAdvanceDays: 14 },
+  });
+
+  await prisma.office.upsert({
+    where: { id: "main-office" },
+    update: { active: true, name: "دفتر مرکزی", sortOrder: 1 },
+    create: { id: "main-office", active: true, name: "دفتر مرکزی", sortOrder: 1 },
+  });
+
+  for (const day of weeklySchedule) {
+    await prisma.officeWeeklySchedule.upsert({
+      where: { officeId_dayOfWeek: { officeId: "main-office", dayOfWeek: day.dayOfWeek } },
+      update: { endTime: day.endTime, isWorkingDay: day.isWorkingDay, startTime: day.startTime },
+      create: { officeId: "main-office", ...day },
+    });
+  }
+
+  for (const index of Array.from({ length: 10 }, (_, value) => value + 1)) {
+    await prisma.desk.upsert({
+      where: { officeId_name: { officeId: "main-office", name: `میز ${index}` } },
+      update: { active: true, sortOrder: index },
+      create: { active: true, name: `میز ${index}`, officeId: "main-office", sortOrder: index },
+    });
+  }
+
   await prisma.lunchSettings.upsert({
     where: { id: "default" },
     update: {

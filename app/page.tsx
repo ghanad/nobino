@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
+  Armchair,
   CalendarClock,
   DoorOpen,
   ExternalLink,
@@ -38,6 +39,12 @@ const serviceLinks: ServiceLink[] = [
     description: "ثبت یا مشاهده رزرو اتاق‌های جلسه",
     href: "/meeting-rooms",
     icon: DoorOpen,
+  },
+  {
+    title: "رزرو میز کار",
+    description: "انتخاب میز در دفتر برای ساعت‌های مورد نیاز",
+    href: "/desks",
+    icon: Armchair,
   },
 ];
 

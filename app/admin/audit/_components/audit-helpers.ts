@@ -32,6 +32,22 @@ export type AuditLogRow = {
 type AuditJsonRecord = Record<string, Prisma.JsonValue>;
 
 export const ACTION_LABELS: Record<string, string> = {
+  DESK_CREATED: "میز ساخته شد",
+  DESK_UPDATED: "میز ویرایش شد",
+  DESK_RESERVATION_CREATED: "درخواست رزرو میز ثبت شد",
+  DESK_RESERVATION_AUTO_APPROVED: "رزرو میز خودکار تأیید شد",
+  DESK_RESERVATION_APPROVED: "رزرو میز توسط مدیر تأیید شد",
+  DESK_RESERVATION_REJECTED: "درخواست رزرو میز رد شد",
+  DESK_RESERVATION_UPDATED: "رزرو میز ویرایش شد",
+  DESK_RESERVATION_CANCELLED_BY_MANAGER: "رزرو میز توسط مدیر لغو شد",
+  DESK_RESERVATION_CANCELLED_BY_USER: "رزرو میز توسط کاربر لغو شد",
+  DESK_SETTINGS_UPDATED: "سیاست رزرو میز تغییر کرد",
+  OFFICE_CREATED: "دفتر ساخته شد",
+  OFFICE_UPDATED: "دفتر ویرایش شد",
+  OFFICE_SCHEDULE_UPDATED: "برنامه هفتگی دفتر تغییر کرد",
+  OFFICE_EXCEPTION_CREATED: "استثنای دفتر اضافه شد",
+  OFFICE_EXCEPTION_UPDATED: "استثنای دفتر ویرایش شد",
+  OFFICE_EXCEPTION_DELETED: "استثنای دفتر حذف شد",
   ALTERNATIVE_ACCEPTED: "پیشنهاد جایگزین پذیرفته شد",
   ALTERNATIVE_PROPOSED: "زمان جایگزین پیشنهاد شد",
   ALTERNATIVE_REJECTED: "پیشنهاد جایگزین رد شد",
@@ -88,6 +104,12 @@ export const ACTION_LABELS: Record<string, string> = {
 };
 
 export const ENTITY_LABELS: Record<string, string> = {
+  Desk: "میز",
+  DeskReservation: "رزرو میز",
+  DeskSettings: "سیاست رزرو میز",
+  Office: "دفتر",
+  OfficeWeeklySchedule: "برنامه هفتگی دفتر",
+  OfficeScheduleException: "استثنای دفتر",
   BaleLunchReportRecipient: "گیرنده گزارش غذا",
   FoodReservation: "رزرو غذا",
   LunchReservation: "رزرو غذا",

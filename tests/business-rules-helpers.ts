@@ -11,6 +11,9 @@ export const passwordHash = "test-password-hash";
 export const poolId = "company-systems";
 export const meetingRoomId = "main-meeting-room";
 export const secondMeetingRoomId = "second-meeting-room";
+export const officeId = "main-office";
+export const deskId = "desk-one";
+export const secondDeskId = "desk-two";
 export const lunchLocationId = "building-a";
 export const secondLunchLocationId = "building-b";
 export const lunchReportRecipientId = "lunch-report-recipient-a";
@@ -166,6 +169,12 @@ export async function resetDatabase() {
   await db.meetingRoomScheduleException.deleteMany();
   await db.meetingRoomWeeklySchedule.deleteMany();
   await db.meetingRoom.deleteMany();
+  await db.deskReservation.deleteMany();
+  await db.officeScheduleException.deleteMany();
+  await db.officeWeeklySchedule.deleteMany();
+  await db.desk.deleteMany();
+  await db.office.deleteMany();
+  await db.deskSettings.deleteMany();
   await db.resourcePoolCapacityException.deleteMany();
   await db.scheduleException.deleteMany();
   await db.workingSchedule.deleteMany();
@@ -267,6 +276,18 @@ export async function resetDatabase() {
         endTime: "17:00",
       })),
     ),
+  });
+
+  await db.deskSettings.create({ data: { id: "default", maxAdvanceDays: 14 } });
+  await db.office.create({ data: { id: officeId, name: "Main Office", active: true } });
+  await db.desk.createMany({ data: [
+    { id: deskId, officeId, name: "Desk One", active: true, sortOrder: 1 },
+    { id: secondDeskId, officeId, name: "Desk Two", active: true, sortOrder: 2 },
+  ] });
+  await db.officeWeeklySchedule.createMany({
+    data: Array.from({ length: 7 }, (_, dayOfWeek) => ({
+      officeId, dayOfWeek, isWorkingDay: dayOfWeek !== 5, startTime: "09:00", endTime: "17:00",
+    })),
   });
 
   await db.lunchSettings.create({
