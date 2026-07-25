@@ -23,7 +23,7 @@ export default async function DesksPage({ searchParams }: Props) {
   const dateParam = formatJalaliDateParam(date);
   const offices = await db.office.findMany({
     where: { active: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    include: { desks: { where: { active: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }] } },
+    include: { desks: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] } },
   });
   const office = offices.find((item) => item.id === params?.officeId) ?? offices[0] ?? null;
   const window = office ? await getOfficeWorkingWindowForDate({ date, officeId: office.id }) : null;
@@ -64,7 +64,7 @@ export default async function DesksPage({ searchParams }: Props) {
         dateLabel={formatJalaliDate(date)}
         defaultEndHour={myReservation?.endAt.getHours() ?? hours.at(-1) ?? 17}
         defaultStartHour={myReservation?.startAt.getHours() ?? hours[0] ?? 9}
-        desks={office.desks.map((desk) => ({ id: desk.id, name: desk.name }))}
+        desks={office.desks.map((desk) => ({ active: desk.active, id: desk.id, name: desk.name }))}
         hours={hours}
         isFullDay={Boolean(myReservation && myReservation.startAt.getHours() === hours[0] && myReservation.endAt.getHours() === hours.at(-1))}
         isStarted={Boolean(myReservation && myReservation.startAt <= new Date())}
