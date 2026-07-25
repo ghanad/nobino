@@ -3,11 +3,16 @@
 import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, Trash2, X } from "lucide-react";
 
+import { AdminDeskForm } from "@/app/admin/desks/admin-desk-form";
+import type { AdminDeskActionState } from "@/app/admin/desks/actions";
 import { Button } from "@/components/ui/button";
 import { SubmitButton } from "@/components/ui/submit-button";
 
 type Props = {
-  action: (formData: FormData) => void | Promise<void>;
+  action: (
+    state: AdminDeskActionState,
+    formData: FormData,
+  ) => Promise<AdminDeskActionState>;
   officeId: string;
   officeName: string;
 };
@@ -75,7 +80,7 @@ export function DeleteOfficeButton({ action, officeId, officeName }: Props) {
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            <form action={action} className="mt-6 grid gap-4">
+            <AdminDeskForm action={action} className="mt-6 grid gap-4">
               <input name="officeId" type="hidden" value={officeId} />
               <label className="grid gap-2 text-sm font-medium text-slate-700">
                 برای تأیید، نام دفتر را وارد کنید: <strong>{officeName}</strong>
@@ -103,7 +108,7 @@ export function DeleteOfficeButton({ action, officeId, officeName }: Props) {
                   حذف دفتر
                 </SubmitButton>
               </div>
-            </form>
+            </AdminDeskForm>
           </div>
         </div>
       ) : null}

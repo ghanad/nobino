@@ -25,12 +25,12 @@ import {
   updateOfficeScheduleAction,
   upsertOfficeExceptionAction,
 } from "@/app/admin/desks/actions";
+import { AdminDeskForm } from "@/app/admin/desks/admin-desk-form";
 import { PageHeader } from "@/components/app/page-header";
 import { DeleteOfficeButton } from "@/app/admin/desks/delete-office-button";
 import { Button } from "@/components/ui/button";
 import { JalaliDatePicker } from "@/components/ui/jalali-date-picker";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { UrlToast } from "@/components/ui/url-toast";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatJalaliDate } from "@/lib/jalali-date";
@@ -254,41 +254,6 @@ export default async function AdminDesksPage({ searchParams }: Props) {
       (highest, desk) => Math.max(highest, desk.sortOrder),
       0,
     ) ?? 0) + 1;
-  const success =
-    (params?.officeCreated && "دفتر ایجاد شد.") ||
-    (params?.officeDeleted && "دفتر و رزروهای آینده آن حذف شدند.") ||
-    (params?.officeUpdated && "مشخصات دفتر ذخیره شد.") ||
-    (params?.deskCreated && "میز جدید اضافه شد.") ||
-    (params?.deskUpdated && "مشخصات میز ذخیره شد.") ||
-    (params?.settingsUpdated && "سیاست رزرو میز ذخیره شد.") ||
-    (params?.scheduleUpdated && "برنامه کاری ذخیره شد.") ||
-    (params?.exceptionSaved && "استثنای تقویم ذخیره شد.") ||
-    (params?.exceptionDeleted && "استثنا حذف شد.") ||
-    null;
-  const toast = params?.error
-    ? {
-        consumeKeys: ["error"],
-        message: params.error,
-        variant: "error" as const,
-      }
-    : success
-      ? {
-          consumeKeys: [
-            "officeCreated",
-            "officeDeleted",
-            "officeUpdated",
-            "deskCreated",
-            "deskUpdated",
-            "settingsUpdated",
-            "scheduleUpdated",
-            "exceptionSaved",
-            "exceptionDeleted",
-          ],
-          message: success,
-          variant: "success" as const,
-        }
-      : null;
-
   return (
     <div className="grid gap-6" dir="rtl">
       <PageHeader
@@ -307,8 +272,6 @@ export default async function AdminDesksPage({ searchParams }: Props) {
         subtitle="یک دفتر را انتخاب کنید و میزها، ساعات کاری یا استثناهای آن را مدیریت کنید."
         title="مدیریت دفترها و میزها"
       />
-
-      {toast ? <UrlToast {...toast} /> : null}
 
       <section className={cn(panelClass, "p-4")}>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
@@ -393,7 +356,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
               </div>
             </div>
           </div>
-          <form action={createOfficeAction} className="grid gap-6 p-5">
+          <AdminDeskForm action={createOfficeAction} className="grid gap-6 p-5">
             <div className="grid gap-4 md:grid-cols-2">
               <Field label="نام دفتر">
                 <input
@@ -424,7 +387,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                 ایجاد دفتر
               </SubmitButton>
             </div>
-          </form>
+          </AdminDeskForm>
         </section>
       ) : office ? (
         <main className="grid min-w-0 gap-6">
@@ -464,7 +427,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                     </div>
                   </div>
                 </div>
-                <form
+                <AdminDeskForm
                   action={updateOfficeAction}
                   className="grid gap-4 p-5 lg:grid-cols-[minmax(0,1fr)_180px_280px_auto] lg:items-end"
                 >
@@ -498,7 +461,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                     <Save className="h-4 w-4" />
                     ذخیره
                   </SubmitButton>
-                </form>
+                </AdminDeskForm>
               </section>
 
               <section className={panelClass}>
@@ -523,7 +486,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                 </div>
                 <div className="grid gap-4 p-5 lg:grid-cols-2">
                   {office.desks.map((desk) => (
-                    <form
+                    <AdminDeskForm
                       action={updateDeskAction}
                       className="grid gap-4 rounded-xl border bg-background p-4 transition hover:border-slate-300 hover:shadow-sm"
                       key={desk.id}
@@ -585,12 +548,13 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                           ذخیره تغییرات
                         </SubmitButton>
                       </div>
-                    </form>
+                    </AdminDeskForm>
                   ))}
 
-                  <form
+                  <AdminDeskForm
                     action={createDeskAction}
                     className="grid gap-4 rounded-xl border border-dashed border-blue-300 bg-blue-50/30 p-4"
+                    resetOnSuccess
                   >
                     <input name="officeId" type="hidden" value={office.id} />
                     <div className="flex items-center gap-2 text-primary">
@@ -626,7 +590,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                         افزودن میز
                       </SubmitButton>
                     </div>
-                  </form>
+                  </AdminDeskForm>
                 </div>
               </section>
             </>
@@ -654,7 +618,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                   const isWorkingDay = Boolean(schedule?.isWorkingDay);
 
                   return (
-                    <form
+                    <AdminDeskForm
                       action={updateOfficeScheduleAction}
                       className="grid gap-3 border-b bg-background px-4 py-3.5 last:border-b-0 hover:bg-slate-50/60 lg:grid-cols-[150px_170px_minmax(320px,1fr)_110px] lg:items-start lg:gap-5"
                       key={dayOfWeek}
@@ -722,7 +686,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                         <Save className="h-4 w-4" />
                         ذخیره
                       </SubmitButton>
-                    </form>
+                    </AdminDeskForm>
                   );
                 })}
               </div>
@@ -749,9 +713,10 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                 </StatusPill>
               </div>
               <div className="grid gap-6 p-5 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.8fr)]">
-                <form
+                <AdminDeskForm
                   action={upsertOfficeExceptionAction}
                   className="grid content-start gap-4 rounded-xl border bg-slate-50/60 p-4"
+                  resetOnSuccess
                 >
                   <input name="officeId" type="hidden" value={office.id} />
                   <h3 className="font-semibold">ثبت استثنای جدید</h3>
@@ -799,7 +764,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                     <CalendarDays className="h-4 w-4" />
                     ثبت استثنا
                   </SubmitButton>
-                </form>
+                </AdminDeskForm>
 
                 <div className="grid content-start gap-3">
                   <h3 className="font-semibold">استثناهای ثبت‌شده</h3>
@@ -822,7 +787,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                               : ""}
                           </span>
                         </div>
-                        <form action={deleteOfficeExceptionAction}>
+                        <AdminDeskForm action={deleteOfficeExceptionAction}>
                           <input
                             name="exceptionId"
                             type="hidden"
@@ -842,7 +807,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                             <Trash2 className="h-4 w-4" />
                             حذف
                           </SubmitButton>
-                        </form>
+                        </AdminDeskForm>
                       </div>
                     ))
                   ) : (
@@ -877,7 +842,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                   </div>
                 </div>
               </div>
-              <form action={updateDeskSettingsAction} className="grid gap-6 p-5">
+              <AdminDeskForm action={updateDeskSettingsAction} className="grid gap-6 p-5">
                 <input name="officeId" type="hidden" value={office.id} />
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field label="حداکثر رزرو از قبل">
@@ -928,7 +893,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                     ذخیره سیاست رزرو
                   </SubmitButton>
                 </div>
-              </form>
+              </AdminDeskForm>
             </section>
           ) : null}
 
