@@ -6,7 +6,11 @@ import {
 } from "lucide-react";
 
 import { updateWeeklyScheduleAction } from "@/app/admin/actions";
-import { SubmitButton } from "@/components/ui/submit-button";
+import {
+  ScheduleForm,
+  ScheduleFormStatus,
+  ScheduleSubmitButton,
+} from "@/app/admin/schedule/schedule-form";
 
 import { FieldLabel, TextInput } from "./admin-form-fields";
 import {
@@ -59,10 +63,14 @@ export function WeeklyScheduleSettings({
         </div>
       </div>
 
-      <form
+      <ScheduleForm
         action={updateWeeklyScheduleAction}
         className="overflow-hidden rounded-xl border bg-card shadow-sm"
       >
+        <div className="border-b bg-blue-50/50 px-4 py-3 text-xs leading-5 text-slate-600">
+          ساعت‌های روز تعطیل برای فعال‌سازی دوباره حفظ می‌شوند، اما در رزروها
+          اعمال نخواهند شد.
+        </div>
         <div className="grid">
           {sortedSchedules.map((schedule, index) => (
             <div
@@ -128,27 +136,21 @@ export function WeeklyScheduleSettings({
                   />
                 </label>
               </div>
-              <p className="mt-3 text-xs leading-5 text-muted-foreground">
-                برای روزهای تعطیل، ساعت‌ها در رزرو اعمال نمی‌شوند اما مقدارشان
-                برای فعال‌سازی دوباره نگه داشته می‌شود.
-              </p>
             </div>
           ))}
         </div>
         <div className="sticky bottom-0 z-10 flex flex-col gap-2 border-t bg-slate-50/95 px-4 py-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-muted-foreground">
-            همه تغییرات روزهای هفته با هم ذخیره می‌شوند.
-          </p>
-          <SubmitButton
+          <ScheduleFormStatus />
+          <ScheduleSubmitButton
             className="w-full sm:w-auto"
             pendingLabel="در حال ذخیره"
             size="sm"
           >
             <Save className="h-4 w-4" />
             ذخیره برنامه هفتگی
-          </SubmitButton>
+          </ScheduleSubmitButton>
         </div>
-      </form>
+      </ScheduleForm>
     </section>
   );
 }

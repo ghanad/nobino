@@ -15,9 +15,13 @@ import {
   importIranHolidaysAction,
   updateScheduleExceptionAction,
 } from "@/app/admin/actions";
+import {
+  ScheduleForm,
+  ScheduleFormStatus,
+  ScheduleSubmitButton,
+} from "@/app/admin/schedule/schedule-form";
 import { Button } from "@/components/ui/button";
 import { JalaliDatePicker } from "@/components/ui/jalali-date-picker";
-import { SubmitButton } from "@/components/ui/submit-button";
 import { formatJalaliDate } from "@/lib/jalali-date";
 
 import { FieldLabel, TextInput } from "./admin-form-fields";
@@ -158,7 +162,7 @@ export function ScheduleExceptions({
           هنوز استثنای تاریخ‌محور ثبت نشده است.
         </div>
       ) : (
-        <form
+        <ScheduleForm
           action={updateScheduleExceptionAction}
           className="overflow-hidden rounded-xl border bg-card shadow-sm"
         >
@@ -279,19 +283,17 @@ export function ScheduleExceptions({
             </div>
           ))}
           <div className="sticky bottom-0 z-10 flex flex-col gap-2 border-t bg-slate-50/95 px-4 py-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-muted-foreground">
-              همه تغییرات استثناهای موجود با هم ذخیره می‌شوند.
-            </p>
-            <SubmitButton
+            <ScheduleFormStatus />
+            <ScheduleSubmitButton
               className="w-full sm:w-auto"
               pendingLabel="در حال ذخیره"
               size="sm"
             >
               <Save className="h-4 w-4" />
               ذخیره تغییرات استثناها
-            </SubmitButton>
+            </ScheduleSubmitButton>
           </div>
-        </form>
+        </ScheduleForm>
       )}
     </section>
   );
