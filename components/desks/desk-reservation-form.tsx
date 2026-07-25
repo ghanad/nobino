@@ -245,24 +245,23 @@ export function DeskReservationForm({
 
         <div className={cn("grid items-stretch", selectedDesk ? "lg:grid-cols-[minmax(0,2fr)_minmax(19rem,1fr)]" : "lg:grid-cols-[minmax(0,3fr)_minmax(14rem,.7fr)]")}>
           <div className="overflow-x-auto bg-slate-50/50 p-3" aria-label="نقشه میزهای دفتر">
-            <div className="relative mx-auto min-h-[740px] min-w-[680px] max-w-4xl rounded-sm border-2 border-slate-700 bg-white shadow-inner" role="listbox" aria-label="انتخاب میز">
-              <div aria-hidden="true" className="absolute left-0 top-[25%] w-[48%] border-t-2 border-slate-700" />
-              <div aria-hidden="true" className="absolute left-0 top-[51%] h-[8%] w-[48%] border-b-2 border-r-2 border-t-2 border-slate-700" />
-              <div aria-hidden="true" className="absolute left-[-2px] top-[24%] flex h-[9%] w-9 -translate-x-1/2 items-center justify-center rounded-md border-2 border-amber-300 bg-amber-100 text-[10px] font-semibold text-amber-950 [writing-mode:vertical-rl]">درب</div>
-              <div aria-hidden="true" className="absolute bottom-[3%] left-[-2px] flex h-[8%] w-9 -translate-x-1/2 items-center justify-center rounded-md border-2 border-amber-300 bg-amber-100 text-[10px] font-semibold text-amber-950 [writing-mode:vertical-rl]">درب</div>
-              <div aria-hidden="true" className="absolute right-[2%] top-[53%] flex h-[12%] w-[8%] items-center justify-center rounded-lg border-2 border-emerald-300 bg-emerald-100 text-[11px] font-semibold text-emerald-900 [writing-mode:vertical-rl]">مبل</div>
+            <div className="relative mx-auto aspect-[17/28] min-w-[340px] max-w-md rounded-sm border-2 border-slate-700 bg-white shadow-inner" role="listbox" aria-label="انتخاب میز">
+              <div aria-hidden="true" className="absolute left-0 top-[18.5%] w-[48%] border-t-2 border-slate-700" />
+              <div aria-hidden="true" className="absolute right-0 top-[18.5%] w-[26%] border-t-2 border-slate-700" />
+              <div aria-hidden="true" className="absolute left-0 top-[42%] h-[16%] w-[48%] border-b-2 border-r-2 border-t-2 border-slate-700" />
+              <div aria-hidden="true" className="absolute left-[-2px] top-[19%] flex h-[8%] w-6 -translate-x-1/2 items-center justify-center rounded border-2 border-amber-300 bg-amber-100 text-[9px] font-semibold text-amber-950 [writing-mode:vertical-rl]">درب</div>
+              <div aria-hidden="true" className="absolute bottom-[3%] left-[-2px] flex h-[8%] w-6 -translate-x-1/2 items-center justify-center rounded border-2 border-amber-300 bg-amber-100 text-[9px] font-semibold text-amber-950 [writing-mode:vertical-rl]">درب</div>
+              <div aria-hidden="true" className="absolute right-[2%] top-[47%] flex h-[12%] w-[6%] items-center justify-center rounded-lg border-2 border-emerald-300 bg-emerald-100 text-[11px] font-semibold text-emerald-900 [writing-mode:vertical-rl]">مبل</div>
               {deskStates.map(({ desk, relevant, state }) => {
                 const isCurrentDesk = myReservation?.deskId === desk.id;
                 const isSelected = selectedDeskId === desk.id;
-                const isProposedMove = Boolean(isSelected && myReservation && !isCurrentDesk);
                 const placement = layout[desk.id];
                 return <div className={cn("absolute", placement?.deskClass)} key={desk.id}>
                   <button
                     aria-label={`${desk.name}، ${stateLabel(state)}${isSelected ? "، انتخاب‌شده" : ""}`}
                     aria-selected={isSelected}
                     className={cn(
-                      "relative flex h-full w-full flex-col rounded-lg border-2 bg-white p-2 text-right transition focus-visible:ring-2 focus-visible:ring-ring",
-                      placement?.orientation === "vertical" ? "items-center justify-center gap-1 p-1 text-center" : "items-start justify-between",
+                      "relative flex h-full w-full flex-col items-center justify-center gap-0.5 rounded-md border-2 bg-white p-0.5 text-center transition focus-visible:ring-2 focus-visible:ring-ring",
                       state === "reservedOther" && "border-red-200 bg-red-50/60",
                       state === "pendingOther" && "border-amber-200 bg-amber-50/60",
                       (state === "currentPending" || state === "currentApproved" || isCurrentDesk) && "border-blue-200 bg-blue-50/70",
@@ -274,9 +273,8 @@ export function DeskReservationForm({
                     title={relevant ? `${relevant.userName}، ${formatHour(relevant.startHour)} تا ${formatHour(relevant.endHour)}، ${statusLabel(relevant.status)}` : `${desk.name} برای این بازه آزاد است`}
                     type="button"
                   >
-                    <span className={cn("font-semibold", placement?.orientation === "vertical" ? "text-[10px] leading-4" : "text-xs")}><span>{desk.name}</span></span>
-                    {placement?.orientation === "vertical" ? <span aria-hidden="true" className={cn("h-1.5 w-1.5 rounded-full", state === "reservedOther" ? "bg-red-500" : state === "pendingOther" || state === "currentPending" ? "bg-amber-500" : state === "currentApproved" ? "bg-blue-500" : "bg-emerald-500")} /> : relevant ? <span className="grid gap-0.5 text-[10px] text-slate-700"><strong>{relevant.userId === currentUserId ? "رزرو شما" : relevant.userName}</strong><span>{formatHour(relevant.startHour)} تا {formatHour(relevant.endHour)}</span>{relevant.status === "PENDING" ? <span className="text-amber-700">در انتظار</span> : null}</span> : <span className="text-[10px] font-medium text-emerald-700">آزاد</span>}
-                    {isProposedMove ? <span className="absolute -bottom-2 right-2 rounded-full bg-slate-800 px-2 py-0.5 text-[10px] text-white">انتخاب برای انتقال</span> : isCurrentDesk ? <span className="absolute -bottom-2 right-2 rounded-full bg-blue-600 px-2 py-0.5 text-[10px] text-white">رزرو فعلی شما</span> : isSelected ? <span className="absolute -bottom-2 right-2 rounded-full bg-slate-800 px-2 py-0.5 text-[10px] text-white">انتخاب‌شده</span> : null}
+                    <span className="text-[9px] font-semibold leading-3">{desk.name}</span>
+                    <span aria-hidden="true" className={cn("h-1.5 w-1.5 rounded-full", state === "reservedOther" ? "bg-red-500" : state === "pendingOther" || state === "currentPending" ? "bg-amber-500" : state === "currentApproved" ? "bg-blue-500" : "bg-emerald-500")} />
                   </button>
                 </div>;
               })}
