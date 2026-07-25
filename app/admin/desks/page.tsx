@@ -19,9 +19,9 @@ import {
   createOfficeAction,
   deleteOfficeAction,
   deleteOfficeExceptionAction,
-  updateDeskAction,
   updateDeskSettingsAction,
   updateOfficeAction,
+  updateOfficeDesksAction,
   updateOfficeScheduleAction,
   upsertOfficeExceptionAction,
 } from "@/app/admin/desks/actions";
@@ -482,78 +482,100 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                       ) : null}
                     </div>
                     <p className="text-xs text-slate-600">
-                      هر کارت به‌صورت مستقل ذخیره می‌شود؛ عدد کمتر، میز را زودتر
-                      نمایش می‌دهد.
+                      تغییرات همه میزها با هم ذخیره می‌شوند؛ عدد کمتر، میز را
+                      زودتر نمایش می‌دهد.
                     </p>
                   </div>
                 </div>
-                <div className="grid gap-4 p-5 lg:grid-cols-2">
-                  {office.desks.map((desk) => (
-                    <AdminDeskForm
-                      action={updateDeskAction}
-                      className="grid gap-4 rounded-xl border bg-background p-4 transition hover:border-slate-300 hover:shadow-sm"
-                      key={desk.id}
-                    >
-                      <input name="deskId" type="hidden" value={desk.id} />
-                      <input name="officeId" type="hidden" value={office.id} />
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <span
-                            className={cn(
-                              "h-2.5 w-2.5 shrink-0 rounded-full",
-                              desk.active ? "bg-emerald-500" : "bg-slate-300",
-                            )}
-                          />
-                          <strong className="truncate text-sm">
-                            {desk.name}
-                          </strong>
+                <AdminDeskForm
+                  action={updateOfficeDesksAction}
+                  className="grid gap-4 p-5"
+                  trackChanges
+                >
+                  <input name="officeId" type="hidden" value={office.id} />
+                  <input
+                    name="deskCount"
+                    type="hidden"
+                    value={office.desks.length}
+                  />
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    {office.desks.map((desk, index) => (
+                      <div
+                        className="grid gap-4 rounded-xl border bg-background p-4 transition hover:border-slate-300 hover:shadow-sm"
+                        key={desk.id}
+                      >
+                        <input
+                          name={`desks.${index}.deskId`}
+                          type="hidden"
+                          value={desk.id}
+                        />
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span
+                              className={cn(
+                                "h-2.5 w-2.5 shrink-0 rounded-full",
+                                desk.active
+                                  ? "bg-emerald-500"
+                                  : "bg-slate-300",
+                              )}
+                            />
+                            <strong className="truncate text-sm">
+                              {desk.name}
+                            </strong>
+                          </div>
+                          <StatusPill tone={desk.active ? "good" : "muted"}>
+                            {desk.active ? "فعال" : "غیرفعال"}
+                          </StatusPill>
                         </div>
-                        <StatusPill tone={desk.active ? "good" : "muted"}>
-                          {desk.active ? "فعال" : "غیرفعال"}
-                        </StatusPill>
+                        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_120px]">
+                          <Field label="نام میز">
+                            <input
+                              className={inputClass}
+                              defaultValue={desk.name}
+                              name={`desks.${index}.name`}
+                              required
+                            />
+                          </Field>
+                          <Field label="ترتیب">
+                            <input
+                              className={inputClass}
+                              defaultValue={desk.sortOrder}
+                              min={0}
+                              name={`desks.${index}.sortOrder`}
+                              type="number"
+                            />
+                          </Field>
+                        </div>
+                        <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+                          <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-slate-700">
+                            <input
+                              className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                              defaultChecked={desk.active}
+                              name={`desks.${index}.active`}
+                              type="checkbox"
+                            />
+                            قابل رزرو باشد
+                          </label>
+                        </div>
                       </div>
-                      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_120px]">
-                        <Field label="نام میز">
-                          <input
-                            className={inputClass}
-                            defaultValue={desk.name}
-                            name="name"
-                            required
-                          />
-                        </Field>
-                        <Field label="ترتیب">
-                          <input
-                            className={inputClass}
-                            defaultValue={desk.sortOrder}
-                            min={0}
-                            name="sortOrder"
-                            type="number"
-                          />
-                        </Field>
-                      </div>
-                      <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
-                        <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-slate-700">
-                          <input
-                            className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
-                            defaultChecked={desk.active}
-                            name="active"
-                            type="checkbox"
-                          />
-                          قابل رزرو باشد
-                        </label>
-                        <SubmitButton
-                          className="w-full sm:w-auto"
-                          pendingLabel="در حال ذخیره"
-                          size="sm"
-                          variant="outline"
-                        >
-                          <Save className="h-4 w-4" />
-                          ذخیره تغییرات
-                        </SubmitButton>
-                      </div>
-                    </AdminDeskForm>
-                  ))}
+                    ))}
+                  </div>
+                  <div className="flex flex-col gap-2 border-t bg-slate-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-xs text-muted-foreground">
+                      همه تغییرات میزهای موجود با هم ذخیره می‌شوند.
+                    </p>
+                    <AdminDeskTrackedSubmitButton
+                      className="w-full sm:w-auto"
+                      pendingLabel="در حال ذخیره"
+                      size="sm"
+                    >
+                      <Save className="h-4 w-4" />
+                      ذخیره تغییرات میزها
+                    </AdminDeskTrackedSubmitButton>
+                  </div>
+                </AdminDeskForm>
 
+                <div className="grid gap-4 border-t p-5 lg:grid-cols-2">
                   <AdminDeskForm
                     action={createDeskAction}
                     className="grid gap-4 rounded-xl border border-dashed border-blue-300 bg-blue-50/30 p-4"

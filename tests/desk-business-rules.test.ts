@@ -9,6 +9,7 @@ import {
   deleteOffice,
   updateDesk,
   updateDeskSettings,
+  updateOfficeDesks,
   updateOfficeWeeklySchedule,
 } from "@/lib/desk-admin-service";
 import { approveDeskReservation, createDeskReservation, updateDeskReservation } from "@/lib/desk-reservation-service";
@@ -203,6 +204,67 @@ test("desk with a future approved reservation cannot be disabled", async () => {
     /ابتدا رزروهای فعال/,
   );
   assert.equal((await db.desk.findUniqueOrThrow({ where: { id: deskId } })).active, true);
+});
+
+test("existing office desks are saved together with per-desk audit logs", async () => {
+  await updateOfficeDesks({
+    adminId,
+    officeId,
+    desks: [
+      { active: true, deskId, name: "Renamed Desk", sortOrder: 1 },
+      { active: true, deskId: secondDeskId, name: "Desk Two", sortOrder: 3 },
+    ],
+  });
+
+  const desks = await db.desk.findMany({
+    where: { officeId },
+    orderBy: { id: "asc" },
+  });
+  assert.equal(desks.find((desk) => desk.id === deskId)?.name, "Renamed Desk");
+  assert.equal(desks.find((desk) => desk.id === secondDeskId)?.sortOrder, 3);
+  assert.equal(await db.auditLog.count({
+    where: { action: "DESK_UPDATED", entityType: "Desk" },
+  }), 2);
+});
+
+test("a blocked desk change prevents every desk edit from being saved", async () => {
+  const startAt = nextWorkingDateAtHour(9);
+  const reservation = await createDeskReservation({
+    deskId: secondDeskId,
+    endAt: addHours(startAt, 1),
+    startAt,
+    userId,
+  });
+  await approveDeskReservation({ managerId, reservationId: reservation.id });
+
+  await assert.rejects(
+    updateOfficeDesks({
+      adminId,
+      officeId,
+      desks: [
+        { active: true, deskId, name: "Must Not Save", sortOrder: 1 },
+        {
+          active: false,
+          deskId: secondDeskId,
+          name: "Desk Two",
+          sortOrder: 2,
+        },
+      ],
+    }),
+    /ابتدا رزروهای فعال میزهای غیرفعال‌شده/,
+  );
+
+  assert.equal(
+    (await db.desk.findUniqueOrThrow({ where: { id: deskId } })).name,
+    "Desk One",
+  );
+  assert.equal(
+    (await db.desk.findUniqueOrThrow({ where: { id: secondDeskId } })).active,
+    true,
+  );
+  assert.equal(await db.auditLog.count({
+    where: { action: "DESK_UPDATED" },
+  }), 0);
 });
 
 test("office weekly schedule is saved as one audited update", async () => {

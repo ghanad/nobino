@@ -6,7 +6,7 @@ import { z } from "zod";
 
 import { AdminSettingsError } from "@/lib/admin-settings-service/shared";
 import { requireRole } from "@/lib/auth";
-import { createDesk, createOffice, deleteOffice, deleteOfficeScheduleException, updateDesk, updateDeskSettings, updateOffice, updateOfficeWeeklySchedule, upsertOfficeScheduleException } from "@/lib/desk-admin-service";
+import { createDesk, createOffice, deleteOffice, deleteOfficeScheduleException, updateDesk, updateDeskSettings, updateOffice, updateOfficeDesks, updateOfficeWeeklySchedule, upsertOfficeScheduleException } from "@/lib/desk-admin-service";
 import { isValidJalaliDateParam, parseJalaliDateParam } from "@/lib/jalali-date";
 
 const nameSchema = z.string().trim().min(1).max(100);
@@ -78,6 +78,37 @@ export async function updateDeskAction(_state: AdminDeskActionState, formData: F
   catch (error) { return result(false, message(error)); }
   refreshDesks();
   return result(true, "مشخصات میز ذخیره شد.");
+}
+
+export async function updateOfficeDesksAction(_state: AdminDeskActionState, formData: FormData): Promise<AdminDeskActionState> {
+  const admin = await requireRole([UserRole.ADMIN]);
+  const count = z.coerce.number().int().min(0).max(500).safeParse(formData.get("deskCount"));
+  if (!count.success) return result(false, "فهرست میزها معتبر نیست.");
+  const parsed = z.object({
+    officeId: idSchema,
+    desks: z.array(z.object({
+      active: z.boolean(),
+      deskId: idSchema,
+      name: nameSchema,
+      sortOrder: sortSchema,
+    })).length(count.data).refine(
+      (desks) => new Set(desks.map((desk) => desk.deskId)).size === desks.length,
+      "شناسه میزها تکراری است.",
+    ),
+  }).safeParse({
+    officeId: formData.get("officeId"),
+    desks: Array.from({ length: count.data }, (_, index) => ({
+      active: checked(formData.get(`desks.${index}.active`)),
+      deskId: formData.get(`desks.${index}.deskId`),
+      name: formData.get(`desks.${index}.name`),
+      sortOrder: formData.get(`desks.${index}.sortOrder`),
+    })),
+  });
+  if (!parsed.success) return result(false, "مشخصات میزها معتبر نیست.");
+  try { await updateOfficeDesks({ adminId: admin.id, ...parsed.data }); }
+  catch (error) { return result(false, message(error)); }
+  refreshDesks();
+  return result(true, "تغییرات میزهای دفتر ذخیره شد.");
 }
 
 export async function updateDeskSettingsAction(_state: AdminDeskActionState, formData: FormData): Promise<AdminDeskActionState> {

@@ -167,6 +167,130 @@ export async function updateDesk(input: {
   });
 }
 
+type OfficeDeskInput = {
+  active: boolean;
+  deskId: string;
+  name: string;
+  sortOrder: number;
+};
+
+export async function updateOfficeDesks(input: {
+  adminId: string;
+  desks: OfficeDeskInput[];
+  officeId: string;
+}) {
+  const deskIds = new Set(input.desks.map((desk) => desk.deskId));
+  const deskNames = new Set(input.desks.map((desk) => desk.name.trim()));
+  if (
+    deskIds.size !== input.desks.length ||
+    deskNames.size !== input.desks.length ||
+    input.desks.some(
+      (desk) =>
+        !desk.name.trim() ||
+        desk.name.trim().length > 100 ||
+        !Number.isInteger(desk.sortOrder) ||
+        desk.sortOrder < 0 ||
+        desk.sortOrder > 1000,
+    )
+  ) {
+    throw new AdminSettingsError("فهرست میزها معتبر نیست.");
+  }
+
+  return db.$transaction(async (tx) => {
+    await assertAdmin(input.adminId, tx);
+    const office = await tx.office.findUnique({
+      where: { id: input.officeId },
+      select: { deletedAt: true, id: true },
+    });
+    if (!office || office.deletedAt) {
+      throw new AdminSettingsError("دفتر پیدا نشد.");
+    }
+
+    const currentDesks = await tx.desk.findMany({
+      where: { officeId: input.officeId },
+    });
+    if (
+      currentDesks.length !== input.desks.length ||
+      currentDesks.some((desk) => !deskIds.has(desk.id))
+    ) {
+      throw new AdminSettingsError(
+        "فهرست میزها تغییر کرده است؛ صفحه را تازه کنید.",
+      );
+    }
+
+    const currentById = new Map(currentDesks.map((desk) => [desk.id, desk]));
+    const desksBeingDisabled = input.desks
+      .filter((desk) => currentById.get(desk.deskId)?.active && !desk.active)
+      .map((desk) => desk.deskId);
+    if (desksBeingDisabled.length > 0) {
+      const futureReservation = await tx.deskReservation.findFirst({
+        where: {
+          deskId: { in: desksBeingDisabled },
+          endAt: { gt: new Date() },
+          status: ReservationStatus.APPROVED,
+        },
+        select: { id: true },
+      });
+      if (futureReservation) {
+        throw new AdminSettingsError(
+          "ابتدا رزروهای فعال میزهای غیرفعال‌شده را لغو یا منتقل کنید.",
+        );
+      }
+    }
+
+    const updatedDesks = [];
+    for (const desk of input.desks) {
+      const current = currentById.get(desk.deskId)!;
+      const updated = await tx.desk.update({
+        where: { id: desk.deskId },
+        data: {
+          active: desk.active,
+          name: desk.name.trim(),
+          sortOrder: desk.sortOrder,
+        },
+      });
+      updatedDesks.push(updated);
+
+      const changed =
+        current.active !== updated.active ||
+        current.name !== updated.name ||
+        current.sortOrder !== updated.sortOrder;
+      if (!changed) continue;
+
+      await tx.auditLog.create({
+        data: {
+          action: "DESK_UPDATED",
+          actorUserId: input.adminId,
+          entityId: updated.id,
+          entityType: "Desk",
+          oldValue: {
+            active: current.active,
+            name: current.name,
+            sortOrder: current.sortOrder,
+          },
+          newValue: {
+            active: updated.active,
+            name: updated.name,
+            sortOrder: updated.sortOrder,
+          },
+        },
+      });
+    }
+
+    return updatedDesks;
+  }).catch((error: unknown) => {
+    if (
+      error instanceof Error &&
+      error.message.includes("Unique constraint")
+    ) {
+      throw new AdminSettingsError(
+        "نام میزها در هر دفتر باید یکتا باشد.",
+      );
+    }
+    throw error;
+  });
+}
+
 export async function updateDeskSettings(input: {
   adminId: string;
   autoApprovalDelayHours: number;
