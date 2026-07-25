@@ -46,13 +46,13 @@ type Props = {
 type DeskView = "desks" | "exceptions" | "policy" | "schedule";
 
 const days = [
-  "یکشنبه",
-  "دوشنبه",
-  "سه‌شنبه",
-  "چهارشنبه",
-  "پنجشنبه",
-  "جمعه",
-  "شنبه",
+  { dayOfWeek: 6, label: "شنبه" },
+  { dayOfWeek: 0, label: "یکشنبه" },
+  { dayOfWeek: 1, label: "دوشنبه" },
+  { dayOfWeek: 2, label: "سه‌شنبه" },
+  { dayOfWeek: 3, label: "چهارشنبه" },
+  { dayOfWeek: 4, label: "پنجشنبه" },
+  { dayOfWeek: 5, label: "جمعه" },
 ];
 
 const inputClass =
@@ -641,7 +641,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                 trackChanges
               >
                 <input name="officeId" type="hidden" value={office.id} />
-                {days.map((label, dayOfWeek) => {
+                {days.map(({ dayOfWeek, label }) => {
                     const schedule = office.weeklySchedules.find(
                       (item) => item.dayOfWeek === dayOfWeek,
                     );
