@@ -10,6 +10,21 @@ const ACTIVE_STATUSES: ReservationStatus[] = [
   ReservationStatus.PENDING,
   ReservationStatus.APPROVED,
 ];
+const ONE_HOUR_MS = 60 * 60 * 1000;
+
+export function calculateDeskAutoApprovalAt(input: {
+  autoApprovalDelayHours: number;
+  autoApprovalEnabled: boolean;
+  createdAt: Date;
+  startAt: Date;
+}): Date | null {
+  if (!input.autoApprovalEnabled) return null;
+
+  const deadline = new Date(
+    input.createdAt.getTime() + input.autoApprovalDelayHours * ONE_HOUR_MS,
+  );
+  return deadline.getTime() < input.startAt.getTime() ? deadline : input.startAt;
+}
 
 async function assertWithinAdvanceWindow(startAt: Date, tx: DbClient) {
   const settings = await tx.deskSettings.upsert({
@@ -98,8 +113,22 @@ export async function createDeskReservation(input: {
     await assertOneReservationPerDay({ date: input.startAt, userId: input.userId }, tx);
     await assertDeskAvailable(input, tx);
 
+    const settings = await tx.deskSettings.upsert({
+      where: { id: "default" },
+      update: {},
+      create: { id: "default", maxAdvanceDays: 14 },
+    });
+    const createdAt = new Date();
+    const autoApprovalAt = calculateDeskAutoApprovalAt({
+      autoApprovalDelayHours: settings.autoApprovalDelayHours,
+      autoApprovalEnabled: settings.autoApprovalEnabled,
+      createdAt,
+      startAt: input.startAt,
+    });
     const pending = await tx.deskReservation.create({
       data: {
+        autoApprovalAt,
+        createdAt,
         deskId: input.deskId,
         endAt: input.endAt,
         startAt: input.startAt,
@@ -115,6 +144,7 @@ export async function createDeskReservation(input: {
         entityType: "DeskReservation",
         newValue: {
           deskId: pending.deskId,
+          autoApprovalAt: pending.autoApprovalAt?.toISOString() ?? null,
           endAt: pending.endAt.toISOString(),
           startAt: pending.startAt.toISOString(),
           status: pending.status,
@@ -134,6 +164,30 @@ export async function approveDeskReservation(input: {
 }) {
   return db.$transaction(async (tx) => {
     await assertManagerOrAdmin(input.managerId, tx);
+    return approveDeskReservationInTransaction(tx, {
+      actorUserId: input.managerId,
+      approvedAt: new Date(),
+      auditAction: "DESK_RESERVATION_APPROVED",
+      notificationBody: "درخواست رزرو میز شما توسط مدیر تأیید شد.",
+      notificationTitle: "تأیید رزرو میز",
+      notificationType: "DESK_RESERVATION_APPROVED",
+      reservationId: input.reservationId,
+    });
+  });
+}
+
+export async function approveDeskReservationInTransaction(
+  tx: DbClient,
+  input: {
+    actorUserId: string | null;
+    approvedAt: Date;
+    auditAction: string;
+    notificationBody: string;
+    notificationTitle: string;
+    notificationType: string;
+    reservationId: string;
+  },
+) {
     const reservation = await tx.deskReservation.findUnique({
       where: { id: input.reservationId },
       select: { deskId: true, endAt: true, id: true, startAt: true, status: true, userId: true },
@@ -147,31 +201,33 @@ export async function approveDeskReservation(input: {
     await assertOneReservationPerDay({ date: reservation.startAt, excludeId: reservation.id, userId: reservation.userId }, tx);
     await assertDeskAvailable({ ...reservation, excludeId: reservation.id }, tx);
 
-    const approvedAt = new Date();
     const approved = await tx.deskReservation.update({
       where: { id: reservation.id },
-      data: { approvedAt, status: ReservationStatus.APPROVED },
+      data: {
+        approvedAt: input.approvedAt,
+        autoApprovalAt: null,
+        status: ReservationStatus.APPROVED,
+      },
     });
     await tx.auditLog.create({
       data: {
-        action: "DESK_RESERVATION_APPROVED",
-        actorUserId: input.managerId,
+        action: input.auditAction,
+        actorUserId: input.actorUserId,
         entityId: approved.id,
         entityType: "DeskReservation",
-        newValue: { approvedAt: approvedAt.toISOString(), status: approved.status },
+        newValue: { approvedAt: input.approvedAt.toISOString(), status: approved.status },
       },
     });
     await tx.notification.create({
       data: {
-        body: "درخواست رزرو میز شما توسط مدیر تأیید شد.",
+        body: input.notificationBody,
         deskReservationId: approved.id,
-        title: "تأیید رزرو میز",
-        type: "DESK_RESERVATION_APPROVED",
+        title: input.notificationTitle,
+        type: input.notificationType,
         userId: approved.userId,
       },
     });
     return approved;
-  });
 }
 
 export async function rejectDeskReservation(input: {
@@ -188,7 +244,8 @@ export async function rejectDeskReservation(input: {
       throw new ReservationTransitionError("فقط درخواست در انتظار بررسی قابل رد است.");
     }
     const rejected = await tx.deskReservation.update({
-      where: { id: reservation.id }, data: { status: ReservationStatus.REJECTED },
+      where: { id: reservation.id },
+      data: { autoApprovalAt: null, status: ReservationStatus.REJECTED },
     });
     await tx.auditLog.create({
       data: {
@@ -251,9 +308,31 @@ export async function updateDeskReservation(input: {
     await assertOneReservationPerDay({ date: input.startAt, excludeId: reservation.id, userId: reservation.userId }, tx);
     await assertDeskAvailable({ ...input, excludeId: reservation.id }, tx);
 
+    const settings = reservation.status === ReservationStatus.PENDING
+      ? await tx.deskSettings.upsert({
+          where: { id: "default" },
+          update: {},
+          create: { id: "default", maxAdvanceDays: 14 },
+        })
+      : null;
+    const autoApprovalAt = settings
+      ? calculateDeskAutoApprovalAt({
+          autoApprovalDelayHours: settings.autoApprovalDelayHours,
+          autoApprovalEnabled: settings.autoApprovalEnabled,
+          createdAt: new Date(),
+          startAt: input.startAt,
+        })
+      : null;
     const updated = await tx.deskReservation.update({
       where: { id: reservation.id },
-      data: { deskId: input.deskId, endAt: input.endAt, startAt: input.startAt },
+      data: {
+        autoApprovalAt: reservation.status === ReservationStatus.PENDING
+          ? autoApprovalAt
+          : null,
+        deskId: input.deskId,
+        endAt: input.endAt,
+        startAt: input.startAt,
+      },
     });
     await tx.auditLog.create({
       data: {
@@ -262,7 +341,7 @@ export async function updateDeskReservation(input: {
         entityId: updated.id,
         entityType: "DeskReservation",
         oldValue: { deskId: reservation.deskId, endAt: reservation.endAt.toISOString(), startAt: reservation.startAt.toISOString() },
-        newValue: { deskId: updated.deskId, endAt: updated.endAt.toISOString(), startAt: updated.startAt.toISOString() },
+        newValue: { autoApprovalAt: updated.autoApprovalAt?.toISOString() ?? null, deskId: updated.deskId, endAt: updated.endAt.toISOString(), startAt: updated.startAt.toISOString() },
       },
     });
     if (isManager && input.actorUserId !== reservation.userId) {
@@ -301,6 +380,7 @@ async function cancelDeskReservation(input: {
     const updated = await tx.deskReservation.update({
       where: { id: reservation.id },
       data: {
+        autoApprovalAt: null,
         cancelledAt,
         cancelledById: input.actorUserId,
         status: input.manager ? ReservationStatus.CANCELLED_BY_ADMIN : ReservationStatus.CANCELLED_BY_USER,

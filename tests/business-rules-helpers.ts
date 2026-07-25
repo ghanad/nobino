@@ -278,7 +278,14 @@ export async function resetDatabase() {
     ),
   });
 
-  await db.deskSettings.create({ data: { id: "default", maxAdvanceDays: 14 } });
+  await db.deskSettings.create({
+    data: {
+      autoApprovalDelayHours: 4,
+      autoApprovalEnabled: false,
+      id: "default",
+      maxAdvanceDays: 14,
+    },
+  });
   await db.office.create({ data: { id: officeId, name: "Main Office", active: true } });
   await db.desk.createMany({ data: [
     { id: deskId, officeId, name: "Desk One", active: true, sortOrder: 1 },

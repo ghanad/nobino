@@ -29,7 +29,14 @@ export default async function AdminDesksPage({ searchParams }: Props) {
     <PageHeader title="دفترها و میزها" subtitle="تعریف دفتر، نام میزها، زمان‌بندی و بازه مجاز رزرو" />
     {toast ? <UrlToast {...toast} /> : null}
     <section className="grid gap-4 rounded-lg border bg-card p-5 md:grid-cols-2">
-      <form action={updateDeskSettingsAction} className="grid gap-3"><h2 className="font-semibold">سیاست رزرو میز</h2><label className="grid gap-1 text-sm">حداکثر رزرو از قبل (روز)<input className={input} defaultValue={settings.maxAdvanceDays} max={365} min={1} name="maxAdvanceDays" type="number" /></label><SubmitButton pendingLabel="در حال ذخیره">ذخیره</SubmitButton></form>
+      <form action={updateDeskSettingsAction} className="grid gap-3">
+        <h2 className="font-semibold">سیاست رزرو میز</h2>
+        <label className="grid gap-1 text-sm">حداکثر رزرو از قبل (روز)<input className={input} defaultValue={settings.maxAdvanceDays} max={365} min={1} name="maxAdvanceDays" type="number" /></label>
+        <label className="flex items-center gap-2 text-sm"><input defaultChecked={settings.autoApprovalEnabled} name="autoApprovalEnabled" type="checkbox" /> تأیید خودکار رزرو میز</label>
+        <label className="grid gap-1 text-sm">مهلت تأیید خودکار (ساعت)<input className={input} defaultValue={settings.autoApprovalDelayHours} max={24} min={1} name="autoApprovalDelayHours" type="number" /></label>
+        <p className="text-xs text-muted-foreground">درخواست جدید پس از این مهلت، یا در زمان شروع رزرو اگر زودتر باشد، با همان cron تأیید خودکار سیستم و اتاق جلسه بررسی می‌شود.</p>
+        <SubmitButton pendingLabel="در حال ذخیره">ذخیره</SubmitButton>
+      </form>
       <form action={createOfficeAction} className="grid gap-3"><h2 className="font-semibold">دفتر جدید</h2><input className={input} name="name" placeholder="نام دفتر" required /><input className={input} defaultValue={offices.length + 1} min={0} name="sortOrder" type="number" /><SubmitButton pendingLabel="در حال ایجاد">ایجاد دفتر</SubmitButton></form>
     </section>
     <nav className="flex flex-wrap gap-2">{offices.map((item) => <Link className={`rounded-md border px-4 py-2 text-sm ${item.id === office?.id ? "bg-primary text-primary-foreground" : "bg-card"}`} href={`/admin/desks?officeId=${item.id}`} key={item.id}>{item.name}</Link>)}</nav>

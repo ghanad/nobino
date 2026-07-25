@@ -242,10 +242,11 @@ flock -n /tmp/nobino-auto-accept.lock curl --fail --silent --show-error -X POST 
   "${APP_BASE_URL}/api/internal/reservations/auto-accept"
 ```
 
-The auto-accept route is independent from the Bale sync route and runs two
+The auto-accept route is independent from the Bale sync route and runs three
 independent batches: reservation auto accept uses `/admin/reservation-policy`;
-meeting-room auto accept uses per-room settings from `/admin/meeting-rooms`.
-Both batches only process eligible pending requests whose configured
+meeting-room auto accept uses per-room settings from `/admin/meeting-rooms`;
+desk auto approval uses `/admin/desks`. All three batches use the single curl
+command above and only process eligible pending requests whose configured
 auto-approval deadline has arrived. Existing pending reservations are not
 backfilled when the feature is enabled; only new requests and subsequently
 rescheduled pending reservation requests receive deadlines.

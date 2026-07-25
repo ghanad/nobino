@@ -125,17 +125,58 @@ export async function updateDesk(input: {
   });
 }
 
-export async function updateDeskSettings(input: { adminId: string; maxAdvanceDays: number }) {
+export async function updateDeskSettings(input: {
+  adminId: string;
+  autoApprovalDelayHours: number;
+  autoApprovalEnabled: boolean;
+  maxAdvanceDays: number;
+}) {
+  if (
+    !Number.isInteger(input.autoApprovalDelayHours) ||
+    input.autoApprovalDelayHours < 1 ||
+    input.autoApprovalDelayHours > 24
+  ) {
+    throw new AdminSettingsError("مهلت تأیید خودکار باید بین ۱ تا ۲۴ ساعت باشد.");
+  }
+
   return db.$transaction(async (tx) => {
     await assertAdmin(input.adminId, tx);
     const old = await tx.deskSettings.findUnique({ where: { id: "default" } });
+    if (!input.autoApprovalEnabled) {
+      await tx.deskReservation.updateMany({
+        where: {
+          autoApprovalAt: { not: null },
+          status: ReservationStatus.PENDING,
+        },
+        data: { autoApprovalAt: null },
+      });
+    }
     const updated = await tx.deskSettings.upsert({
-      where: { id: "default" }, update: { maxAdvanceDays: input.maxAdvanceDays }, create: { id: "default", maxAdvanceDays: input.maxAdvanceDays },
+      where: { id: "default" },
+      update: {
+        autoApprovalDelayHours: input.autoApprovalDelayHours,
+        autoApprovalEnabled: input.autoApprovalEnabled,
+        maxAdvanceDays: input.maxAdvanceDays,
+      },
+      create: {
+        autoApprovalDelayHours: input.autoApprovalDelayHours,
+        autoApprovalEnabled: input.autoApprovalEnabled,
+        id: "default",
+        maxAdvanceDays: input.maxAdvanceDays,
+      },
     });
     await tx.auditLog.create({ data: {
       action: "DESK_SETTINGS_UPDATED", actorUserId: input.adminId, entityId: updated.id, entityType: "DeskSettings",
-      oldValue: old ? { maxAdvanceDays: old.maxAdvanceDays } : undefined,
-      newValue: { maxAdvanceDays: updated.maxAdvanceDays },
+      oldValue: old ? {
+        autoApprovalDelayHours: old.autoApprovalDelayHours,
+        autoApprovalEnabled: old.autoApprovalEnabled,
+        maxAdvanceDays: old.maxAdvanceDays,
+      } : undefined,
+      newValue: {
+        autoApprovalDelayHours: updated.autoApprovalDelayHours,
+        autoApprovalEnabled: updated.autoApprovalEnabled,
+        maxAdvanceDays: updated.maxAdvanceDays,
+      },
     } });
     return updated;
   });

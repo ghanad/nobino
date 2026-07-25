@@ -58,9 +58,18 @@ export async function updateDeskAction(formData: FormData) {
 
 export async function updateDeskSettingsAction(formData: FormData) {
   const admin = await requireRole([UserRole.ADMIN]);
-  const parsed = z.coerce.number().int().min(1).max(365).safeParse(formData.get("maxAdvanceDays"));
-  if (!parsed.success) go({ error: "تعداد روز مجاز باید بین ۱ تا ۳۶۵ باشد." });
-  try { await updateDeskSettings({ adminId: admin.id, maxAdvanceDays: parsed.data }); }
+  const parsed = z.object({
+    autoApprovalDelayHours: z.coerce.number().int().min(1).max(24),
+    maxAdvanceDays: z.coerce.number().int().min(1).max(365),
+  }).safeParse(Object.fromEntries(formData));
+  if (!parsed.success) go({ error: "تعداد روز یا مهلت تأیید خودکار معتبر نیست." });
+  try {
+    await updateDeskSettings({
+      adminId: admin.id,
+      autoApprovalEnabled: checked(formData.get("autoApprovalEnabled")),
+      ...parsed.data,
+    });
+  }
   catch (error) { go({ error: message(error) }); }
   go({ settingsUpdated: "1" });
 }
