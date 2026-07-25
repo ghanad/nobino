@@ -7,8 +7,8 @@ import {
   createScheduleException,
   deleteScheduleException,
   importIranHolidayScheduleExceptions,
-  updateScheduleException,
-  updateWeeklySchedule,
+  updateScheduleExceptions,
+  updateWeeklySchedules,
 } from "@/lib/admin-settings-service";
 import { requireRole } from "@/lib/auth";
 import {
@@ -25,7 +25,7 @@ import {
 
 const timeSchema = z.string().regex(/^([01]\d|2[0-3]):00$/);
 
-const weeklyScheduleSchema = z.object({
+const weeklyScheduleRowSchema = z.object({
   scheduleId: z.string().min(1),
   isWorkingDay: z.coerce.boolean(),
   startTime: timeSchema.optional(),
@@ -40,9 +40,11 @@ const createExceptionSchema = z.object({
   reason: z.string().trim().max(200).optional(),
 });
 
-const updateExceptionSchema = createExceptionSchema.omit({ date: true }).extend({
-  exceptionId: z.string().min(1),
-});
+const updateExceptionRowSchema = createExceptionSchema
+  .omit({ date: true })
+  .extend({
+    exceptionId: z.string().min(1),
+  });
 
 const deleteExceptionSchema = z.object({
   exceptionId: z.string().min(1),
@@ -56,30 +58,45 @@ export async function updateWeeklyScheduleAction(
   formData: FormData,
 ): Promise<void> {
   const admin = await requireRole([UserRole.ADMIN]);
-  const parsed = weeklyScheduleSchema.safeParse({
-    scheduleId: formData.get("scheduleId"),
-    isWorkingDay: checkboxToBoolean(formData.get("isWorkingDay")),
-    startTime: emptyToUndefined(formData.get("startTime")),
-    endTime: emptyToUndefined(formData.get("endTime")),
-  });
+  const parsed = z.array(weeklyScheduleRowSchema).length(7).safeParse(
+    Array.from({ length: 7 }, (_, index) => ({
+      scheduleId: formData.get(`schedules.${index}.scheduleId`),
+      isWorkingDay: checkboxToBoolean(
+        formData.get(`schedules.${index}.isWorkingDay`),
+      ),
+      startTime: emptyToUndefined(
+        formData.get(`schedules.${index}.startTime`),
+      ),
+      endTime: emptyToUndefined(formData.get(`schedules.${index}.endTime`)),
+    })),
+  );
 
   if (!parsed.success) {
     redirectToAdmin({
-      error: "Enter exact-hour schedule times like 09:00.",
+      error: "ساعت‌های برنامه را دقیقاً روی ابتدای ساعت وارد کنید.",
       tab: "schedule",
+      view: "weekly",
     });
   }
 
   try {
-    await updateWeeklySchedule({
+    await updateWeeklySchedules({
       adminId: admin.id,
-      ...parsed.data,
+      schedules: parsed.data,
     });
   } catch (error) {
-    redirectToAdmin({ error: getActionErrorMessage(error), tab: "schedule" });
+    redirectToAdmin({
+      error: getActionErrorMessage(error),
+      tab: "schedule",
+      view: "weekly",
+    });
   }
 
-  redirectToAdmin({ scheduleUpdated: "1", tab: "schedule" });
+  redirectToAdmin({
+    scheduleUpdated: "1",
+    tab: "schedule",
+    view: "weekly",
+  });
 }
 
 export async function createScheduleExceptionAction(
@@ -96,8 +113,9 @@ export async function createScheduleExceptionAction(
 
   if (!parsed.success) {
     redirectToAdmin({
-      error: "Enter a valid Jalali exception date and hours.",
+      error: "تاریخ جلالی و ساعت‌های استثنا را معتبر وارد کنید.",
       tab: "schedule",
+      view: "exceptions",
     });
   }
 
@@ -105,8 +123,9 @@ export async function createScheduleExceptionAction(
 
   if (!date) {
     redirectToAdmin({
-      error: "Enter a valid Jalali exception date.",
+      error: "تاریخ جلالی معتبری وارد کنید.",
       tab: "schedule",
+      view: "exceptions",
     });
   }
 
@@ -120,55 +139,96 @@ export async function createScheduleExceptionAction(
       reason: parsed.data.reason,
     });
   } catch (error) {
-    redirectToAdmin({ error: getActionErrorMessage(error), tab: "schedule" });
+    redirectToAdmin({
+      error: getActionErrorMessage(error),
+      tab: "schedule",
+      view: "exceptions",
+    });
   }
 
-  redirectToAdmin({ exceptionCreated: "1", tab: "schedule" });
+  redirectToAdmin({
+    exceptionCreated: "1",
+    tab: "schedule",
+    view: "exceptions",
+  });
 }
 
 export async function updateScheduleExceptionAction(
   formData: FormData,
 ): Promise<void> {
   const admin = await requireRole([UserRole.ADMIN]);
-  const parsed = updateExceptionSchema.safeParse({
-    exceptionId: formData.get("exceptionId"),
-    isWorkingDay: checkboxToBoolean(formData.get("isWorkingDay")),
-    startTime: emptyToUndefined(formData.get("startTime")),
-    endTime: emptyToUndefined(formData.get("endTime")),
-    reason: emptyToUndefined(formData.get("reason")),
-  });
+  const count = z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(500)
+    .safeParse(formData.get("exceptionCount"));
+
+  if (!count.success) {
+    redirectToAdmin({
+      error: "فهرست استثناها معتبر نیست.",
+      tab: "schedule",
+      view: "exceptions",
+    });
+  }
+
+  const parsed = z.array(updateExceptionRowSchema).length(count.data).safeParse(
+    Array.from({ length: count.data }, (_, index) => ({
+      exceptionId: formData.get(`exceptions.${index}.exceptionId`),
+      isWorkingDay: checkboxToBoolean(
+        formData.get(`exceptions.${index}.isWorkingDay`),
+      ),
+      startTime: emptyToUndefined(
+        formData.get(`exceptions.${index}.startTime`),
+      ),
+      endTime: emptyToUndefined(formData.get(`exceptions.${index}.endTime`)),
+      reason: emptyToUndefined(formData.get(`exceptions.${index}.reason`)),
+    })),
+  );
 
   if (!parsed.success) {
     redirectToAdmin({
-      error: "Enter valid exact-hour exception settings.",
+      error: "اطلاعات و ساعت‌های استثناها معتبر نیست.",
       tab: "schedule",
+      view: "exceptions",
     });
   }
 
   try {
-    await updateScheduleException({
+    await updateScheduleExceptions({
       adminId: admin.id,
-      ...parsed.data,
+      exceptions: parsed.data,
     });
   } catch (error) {
-    redirectToAdmin({ error: getActionErrorMessage(error), tab: "schedule" });
+    redirectToAdmin({
+      error: getActionErrorMessage(error),
+      tab: "schedule",
+      view: "exceptions",
+    });
   }
 
-  redirectToAdmin({ exceptionUpdated: "1", tab: "schedule" });
+  redirectToAdmin({
+    exceptionUpdated: "1",
+    tab: "schedule",
+    view: "exceptions",
+  });
 }
 
 export async function deleteScheduleExceptionAction(
+  exceptionId: string,
   formData: FormData,
 ): Promise<void> {
+  void formData;
   const admin = await requireRole([UserRole.ADMIN]);
   const parsed = deleteExceptionSchema.safeParse({
-    exceptionId: formData.get("exceptionId"),
+    exceptionId,
   });
 
   if (!parsed.success) {
     redirectToAdmin({
-      error: "Choose a valid schedule exception to delete.",
+      error: "یک استثنای معتبر برای حذف انتخاب کنید.",
       tab: "schedule",
+      view: "exceptions",
     });
   }
 
@@ -178,10 +238,18 @@ export async function deleteScheduleExceptionAction(
       exceptionId: parsed.data.exceptionId,
     });
   } catch (error) {
-    redirectToAdmin({ error: getActionErrorMessage(error), tab: "schedule" });
+    redirectToAdmin({
+      error: getActionErrorMessage(error),
+      tab: "schedule",
+      view: "exceptions",
+    });
   }
 
-  redirectToAdmin({ exceptionDeleted: "1", tab: "schedule" });
+  redirectToAdmin({
+    exceptionDeleted: "1",
+    tab: "schedule",
+    view: "exceptions",
+  });
 }
 
 export async function importIranHolidaysAction(
@@ -194,8 +262,9 @@ export async function importIranHolidaysAction(
 
   if (!parsed.success) {
     redirectToAdmin({
-      error: "Enter a valid Jalali year.",
+      error: "سال جلالی معتبری وارد کنید.",
       tab: "schedule",
+      view: "exceptions",
     });
   }
 
@@ -209,11 +278,16 @@ export async function importIranHolidaysAction(
 
     createdCount = result.createdCount;
   } catch (error) {
-    redirectToAdmin({ error: getActionErrorMessage(error), tab: "schedule" });
+    redirectToAdmin({
+      error: getActionErrorMessage(error),
+      tab: "schedule",
+      view: "exceptions",
+    });
   }
 
   redirectToAdmin({
     holidayImported: String(createdCount),
     tab: "schedule",
+    view: "exceptions",
   });
 }

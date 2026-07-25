@@ -17,6 +17,7 @@ import {
 } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
 import { JalaliDatePicker } from "@/components/ui/jalali-date-picker";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { formatJalaliDate } from "@/lib/jalali-date";
 
 import { FieldLabel, TextInput } from "./admin-form-fields";
@@ -157,9 +158,17 @@ export function ScheduleExceptions({
           هنوز استثنای تاریخ‌محور ثبت نشده است.
         </div>
       ) : (
-        <div className="grid gap-3">
+        <form
+          action={updateScheduleExceptionAction}
+          className="overflow-hidden rounded-xl border bg-card shadow-sm"
+        >
+          <input
+            name="exceptionCount"
+            type="hidden"
+            value={exceptions.length}
+          />
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-lg border bg-card p-4">
+            <div className="border-b border-l bg-emerald-50/30 p-4">
               <div className="flex items-center justify-between gap-3">
                 <p className="text-xs font-medium text-muted-foreground">
                   روز کاری ویژه
@@ -170,7 +179,7 @@ export function ScheduleExceptions({
                 {formatPersianNumber(workingExceptions)}
               </p>
             </div>
-            <div className="rounded-lg border bg-card p-4">
+            <div className="border-b bg-slate-50 p-4">
               <div className="flex items-center justify-between gap-3">
                 <p className="text-xs font-medium text-muted-foreground">
                   تعطیلی ویژه
@@ -182,14 +191,17 @@ export function ScheduleExceptions({
               </p>
             </div>
           </div>
-          {exceptions.map((exception) => (
-            <form
-              action={updateScheduleExceptionAction}
-              className="rounded-lg border bg-card p-4 shadow-sm"
+          {exceptions.map((exception, index) => (
+            <div
+              className="border-b p-4 transition-colors hover:bg-slate-50/60"
               key={exception.id}
             >
-              <input name="exceptionId" type="hidden" value={exception.id} />
-              <div className="grid gap-4 lg:grid-cols-[minmax(210px,0.9fr)_120px_120px_1fr_160px_auto_auto] lg:items-end">
+              <input
+                name={`exceptions.${index}.exceptionId`}
+                type="hidden"
+                value={exception.id}
+              />
+              <div className="grid gap-4 lg:grid-cols-[minmax(210px,0.9fr)_120px_120px_1fr_160px_auto] lg:items-end">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <span
@@ -213,7 +225,7 @@ export function ScheduleExceptions({
                   <TextInput
                     defaultValue={exception.startTime ?? ""}
                     id={`exception-start-${exception.id}`}
-                    name="startTime"
+                    name={`exceptions.${index}.startTime`}
                     pattern="([01]\d|2[0-3]):00"
                     placeholder="09:00"
                   />
@@ -225,7 +237,7 @@ export function ScheduleExceptions({
                   <TextInput
                     defaultValue={exception.endTime ?? ""}
                     id={`exception-end-${exception.id}`}
-                    name="endTime"
+                    name={`exceptions.${index}.endTime`}
                     pattern="([01]\d|2[0-3]):00"
                     placeholder="17:00"
                   />
@@ -238,7 +250,7 @@ export function ScheduleExceptions({
                     defaultValue={exception.reason ?? ""}
                     id={`exception-reason-${exception.id}`}
                     maxLength={200}
-                    name="reason"
+                    name={`exceptions.${index}.reason`}
                     placeholder="بدون توضیح"
                   />
                 </div>
@@ -247,17 +259,16 @@ export function ScheduleExceptions({
                   <input
                     className="h-4 w-4 rounded border-input"
                     defaultChecked={exception.isWorkingDay}
-                    name="isWorkingDay"
+                    name={`exceptions.${index}.isWorkingDay`}
                     type="checkbox"
                   />
                 </label>
-                <Button className="w-full lg:w-auto" type="submit">
-                  <Save className="h-4 w-4" />
-                  ذخیره
-                </Button>
                 <Button
                   className="w-full lg:w-auto"
-                  formAction={deleteScheduleExceptionAction}
+                  formAction={deleteScheduleExceptionAction.bind(
+                    null,
+                    exception.id,
+                  )}
                   type="submit"
                   variant="outline"
                 >
@@ -265,9 +276,22 @@ export function ScheduleExceptions({
                   حذف
                 </Button>
               </div>
-            </form>
+            </div>
           ))}
-        </div>
+          <div className="sticky bottom-0 z-10 flex flex-col gap-2 border-t bg-slate-50/95 px-4 py-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-muted-foreground">
+              همه تغییرات استثناهای موجود با هم ذخیره می‌شوند.
+            </p>
+            <SubmitButton
+              className="w-full sm:w-auto"
+              pendingLabel="در حال ذخیره"
+              size="sm"
+            >
+              <Save className="h-4 w-4" />
+              ذخیره تغییرات استثناها
+            </SubmitButton>
+          </div>
+        </form>
       )}
     </section>
   );

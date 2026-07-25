@@ -12,8 +12,8 @@ export {
   createScheduleException,
   deleteScheduleException,
   importIranHolidayScheduleExceptions,
-  updateScheduleException,
-  updateWeeklySchedule,
+  updateScheduleExceptions,
+  updateWeeklySchedules,
 } from "@/lib/admin-settings-service/schedule-settings";
 export {
   createBaleLunchReportRecipient,

@@ -51,12 +51,12 @@ export function getAdminToast(params: Awaited<AdminPageProps["searchParams"]>) {
     (params?.capacityExceptionCreated && "Daily capacity exception created.") ||
     (params?.capacityExceptionUpdated && "Daily capacity exception updated.") ||
     (params?.capacityExceptionDeleted && "Daily capacity exception deleted.") ||
-    (params?.scheduleUpdated && "Weekly schedule updated.") ||
-    (params?.exceptionCreated && "Schedule exception created.") ||
-    (params?.exceptionUpdated && "Schedule exception updated.") ||
-    (params?.exceptionDeleted && "Schedule exception deleted.") ||
+    (params?.scheduleUpdated && "برنامه هفتگی ذخیره شد.") ||
+    (params?.exceptionCreated && "استثنای تقویم ثبت شد.") ||
+    (params?.exceptionUpdated && "تغییرات استثناها ذخیره شد.") ||
+    (params?.exceptionDeleted && "استثنای تقویم حذف شد.") ||
     (params?.holidayImported &&
-      `${params.holidayImported} Iran holiday schedule exceptions imported.`) ||
+      `${params.holidayImported} تعطیلی رسمی وارد شد.`) ||
     (params?.memberAdded && "کاربر به تیم اضافه شد.") ||
     (params?.userCreated && "User created.") ||
     (params?.userDeleted && "User deleted.") ||

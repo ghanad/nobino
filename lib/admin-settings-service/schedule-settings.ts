@@ -6,60 +6,86 @@ import { getIranHolidaysForJalaliYear } from "@/lib/iran-holidays";
 import { assertWorkingHours, startOfLocalDay } from "./date-time";
 import { AdminSettingsError, assertAdmin } from "./shared";
 
-export async function updateWeeklySchedule(input: {
-  adminId: string;
+type WeeklyScheduleUpdate = {
   scheduleId: string;
   isWorkingDay: boolean;
   startTime?: string | null;
   endTime?: string | null;
+};
+
+export async function updateWeeklySchedules(input: {
+  adminId: string;
+  schedules: WeeklyScheduleUpdate[];
 }) {
-  const workingHours = assertWorkingHours(
-    input,
-    (message) => new AdminSettingsError(message),
-  );
+  const scheduleIds = input.schedules.map((schedule) => schedule.scheduleId);
+  const uniqueScheduleIds = new Set(scheduleIds);
+  const updates = input.schedules.map((schedule) => ({
+    ...schedule,
+    workingHours: assertWorkingHours(
+      schedule,
+      (message) => new AdminSettingsError(message),
+    ),
+  }));
+
+  if (
+    input.schedules.length !== 7 ||
+    uniqueScheduleIds.size !== input.schedules.length
+  ) {
+    throw new AdminSettingsError("Weekly schedule settings are incomplete.");
+  }
 
   return db.$transaction(async (tx) => {
     await assertAdmin(input.adminId, tx);
 
-    const current = await tx.workingSchedule.findUnique({
-      where: { id: input.scheduleId },
+    const currentSchedules = await tx.workingSchedule.findMany({
+      where: { id: { in: scheduleIds } },
     });
 
-    if (!current) {
-      throw new AdminSettingsError("Weekly schedule row was not found.");
+    if (currentSchedules.length !== input.schedules.length) {
+      throw new AdminSettingsError("A weekly schedule row was not found.");
     }
 
-    const updated = await tx.workingSchedule.update({
-      where: { id: current.id },
-      data: {
-        isWorkingDay: input.isWorkingDay,
-        startTime: workingHours.startTime ?? current.startTime,
-        endTime: workingHours.endTime ?? current.endTime,
-      },
-    });
+    const currentById = new Map(
+      currentSchedules.map((schedule) => [schedule.id, schedule]),
+    );
+    const updatedSchedules = [];
 
-    await tx.auditLog.create({
-      data: {
-        actorUserId: input.adminId,
-        entityType: "WorkingSchedule",
-        entityId: updated.id,
-        action: "WORKING_SCHEDULE_CHANGED",
-        oldValue: {
-          dayOfWeek: current.dayOfWeek,
-          isWorkingDay: current.isWorkingDay,
-          startTime: current.startTime,
-          endTime: current.endTime,
+    for (const update of updates) {
+      const current = currentById.get(update.scheduleId)!;
+      const updated = await tx.workingSchedule.update({
+        where: { id: current.id },
+        data: {
+          isWorkingDay: update.isWorkingDay,
+          startTime: update.workingHours.startTime ?? current.startTime,
+          endTime: update.workingHours.endTime ?? current.endTime,
         },
-        newValue: {
-          dayOfWeek: updated.dayOfWeek,
-          isWorkingDay: updated.isWorkingDay,
-          startTime: updated.startTime,
-          endTime: updated.endTime,
-        },
-      },
-    });
+      });
 
-    return updated;
+      await tx.auditLog.create({
+        data: {
+          actorUserId: input.adminId,
+          entityType: "WorkingSchedule",
+          entityId: updated.id,
+          action: "WORKING_SCHEDULE_CHANGED",
+          oldValue: {
+            dayOfWeek: current.dayOfWeek,
+            isWorkingDay: current.isWorkingDay,
+            startTime: current.startTime,
+            endTime: current.endTime,
+          },
+          newValue: {
+            dayOfWeek: updated.dayOfWeek,
+            isWorkingDay: updated.isWorkingDay,
+            startTime: updated.startTime,
+            endTime: updated.endTime,
+          },
+        },
+      });
+
+      updatedSchedules.push(updated);
+    }
+
+    return updatedSchedules;
   });
 }
 
@@ -121,64 +147,89 @@ export async function createScheduleException(input: {
   });
 }
 
-export async function updateScheduleException(input: {
-  adminId: string;
+type ScheduleExceptionUpdate = {
   exceptionId: string;
   isWorkingDay: boolean;
   startTime?: string | null;
   endTime?: string | null;
   reason?: string | null;
+};
+
+export async function updateScheduleExceptions(input: {
+  adminId: string;
+  exceptions: ScheduleExceptionUpdate[];
 }) {
-  const workingHours = assertWorkingHours(
-    input,
-    (message) => new AdminSettingsError(message),
+  const exceptionIds = input.exceptions.map(
+    (exception) => exception.exceptionId,
   );
+  const uniqueExceptionIds = new Set(exceptionIds);
+  const updates = input.exceptions.map((exception) => ({
+    ...exception,
+    workingHours: assertWorkingHours(
+      exception,
+      (message) => new AdminSettingsError(message),
+    ),
+  }));
+
+  if (uniqueExceptionIds.size !== input.exceptions.length) {
+    throw new AdminSettingsError("Schedule exception settings are invalid.");
+  }
 
   return db.$transaction(async (tx) => {
     await assertAdmin(input.adminId, tx);
 
-    const current = await tx.scheduleException.findUnique({
-      where: { id: input.exceptionId },
+    const currentExceptions = await tx.scheduleException.findMany({
+      where: { id: { in: exceptionIds } },
     });
 
-    if (!current) {
-      throw new AdminSettingsError("Schedule exception was not found.");
+    if (currentExceptions.length !== input.exceptions.length) {
+      throw new AdminSettingsError("A schedule exception was not found.");
     }
 
-    const updated = await tx.scheduleException.update({
-      where: { id: current.id },
-      data: {
-        isWorkingDay: input.isWorkingDay,
-        startTime: workingHours.startTime,
-        endTime: workingHours.endTime,
-        reason: input.reason?.trim() || null,
-      },
-    });
+    const currentById = new Map(
+      currentExceptions.map((exception) => [exception.id, exception]),
+    );
+    const updatedExceptions = [];
 
-    await tx.auditLog.create({
-      data: {
-        actorUserId: input.adminId,
-        entityType: "ScheduleException",
-        entityId: updated.id,
-        action: "SCHEDULE_EXCEPTION_UPDATED",
-        oldValue: {
-          date: current.date.toISOString(),
-          isWorkingDay: current.isWorkingDay,
-          startTime: current.startTime,
-          endTime: current.endTime,
-          reason: current.reason,
+    for (const update of updates) {
+      const current = currentById.get(update.exceptionId)!;
+      const updated = await tx.scheduleException.update({
+        where: { id: current.id },
+        data: {
+          isWorkingDay: update.isWorkingDay,
+          startTime: update.workingHours.startTime,
+          endTime: update.workingHours.endTime,
+          reason: update.reason?.trim() || null,
         },
-        newValue: {
-          date: updated.date.toISOString(),
-          isWorkingDay: updated.isWorkingDay,
-          startTime: updated.startTime,
-          endTime: updated.endTime,
-          reason: updated.reason,
-        },
-      },
-    });
+      });
 
-    return updated;
+      await tx.auditLog.create({
+        data: {
+          actorUserId: input.adminId,
+          entityType: "ScheduleException",
+          entityId: updated.id,
+          action: "SCHEDULE_EXCEPTION_UPDATED",
+          oldValue: {
+            date: current.date.toISOString(),
+            isWorkingDay: current.isWorkingDay,
+            startTime: current.startTime,
+            endTime: current.endTime,
+            reason: current.reason,
+          },
+          newValue: {
+            date: updated.date.toISOString(),
+            isWorkingDay: updated.isWorkingDay,
+            startTime: updated.startTime,
+            endTime: updated.endTime,
+            reason: updated.reason,
+          },
+        },
+      });
+
+      updatedExceptions.push(updated);
+    }
+
+    return updatedExceptions;
   });
 }
 

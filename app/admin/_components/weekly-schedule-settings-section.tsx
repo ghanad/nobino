@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 
 import { updateWeeklyScheduleAction } from "@/app/admin/actions";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 import { FieldLabel, TextInput } from "./admin-form-fields";
 import {
@@ -59,77 +59,96 @@ export function WeeklyScheduleSettings({
         </div>
       </div>
 
-      <div className="grid gap-3">
-        {sortedSchedules.map((schedule) => (
-          <form
-            action={updateWeeklyScheduleAction}
-            className="rounded-lg border bg-card p-4 shadow-sm"
-            key={schedule.id}
-          >
-            <input name="scheduleId" type="hidden" value={schedule.id} />
-            <div className="grid gap-4 lg:grid-cols-[minmax(160px,0.8fr)_140px_140px_160px_auto] lg:items-end">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`h-2.5 w-2.5 rounded-full ${
-                      schedule.isWorkingDay ? "bg-emerald-500" : "bg-slate-300"
-                    }`}
-                  />
-                  <p className="font-medium text-slate-950">
-                    {DAY_LABELS[schedule.dayOfWeek] ??
-                      `روز ${formatPersianNumber(schedule.dayOfWeek)}`}
+      <form
+        action={updateWeeklyScheduleAction}
+        className="overflow-hidden rounded-xl border bg-card shadow-sm"
+      >
+        <div className="grid">
+          {sortedSchedules.map((schedule, index) => (
+            <div
+              className="border-b p-4 transition-colors hover:bg-slate-50/60"
+              key={schedule.id}
+            >
+              <input
+                name={`schedules.${index}.scheduleId`}
+                type="hidden"
+                value={schedule.id}
+              />
+              <div className="grid gap-4 lg:grid-cols-[minmax(160px,0.8fr)_140px_140px_160px] lg:items-end">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`h-2.5 w-2.5 rounded-full ${
+                        schedule.isWorkingDay
+                          ? "bg-emerald-500"
+                          : "bg-slate-300"
+                      }`}
+                    />
+                    <p className="font-medium text-slate-950">
+                      {DAY_LABELS[schedule.dayOfWeek] ??
+                        `روز ${formatPersianNumber(schedule.dayOfWeek)}`}
+                    </p>
+                  </div>
+                  <p className="mt-1 flex items-center gap-1.5 text-xs leading-5 text-muted-foreground">
+                    <Clock3 className="h-3.5 w-3.5" />
+                    {formatWorkingWindow(schedule)}
                   </p>
                 </div>
-                <p className="mt-1 flex items-center gap-1.5 text-xs leading-5 text-muted-foreground">
-                  <Clock3 className="h-3.5 w-3.5" />
-                  {formatWorkingWindow(schedule)}
-                </p>
+                <div className="grid gap-2">
+                  <FieldLabel htmlFor={`weekly-start-${schedule.id}`}>
+                    شروع
+                  </FieldLabel>
+                  <TextInput
+                    defaultValue={schedule.startTime}
+                    id={`weekly-start-${schedule.id}`}
+                    name={`schedules.${index}.startTime`}
+                    pattern="([01]\d|2[0-3]):00"
+                    placeholder="09:00"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <FieldLabel htmlFor={`weekly-end-${schedule.id}`}>
+                    پایان
+                  </FieldLabel>
+                  <TextInput
+                    defaultValue={schedule.endTime}
+                    id={`weekly-end-${schedule.id}`}
+                    name={`schedules.${index}.endTime`}
+                    pattern="([01]\d|2[0-3]):00"
+                    placeholder="17:00"
+                  />
+                </div>
+                <label className="flex min-h-10 items-center gap-2 text-sm lg:justify-center">
+                  <span>روز کاری باشد</span>
+                  <input
+                    className="h-4 w-4 rounded border-input"
+                    defaultChecked={schedule.isWorkingDay}
+                    name={`schedules.${index}.isWorkingDay`}
+                    type="checkbox"
+                  />
+                </label>
               </div>
-              <div className="grid gap-2">
-                <FieldLabel htmlFor={`weekly-start-${schedule.id}`}>
-                  شروع
-                </FieldLabel>
-                <TextInput
-                  defaultValue={schedule.startTime}
-                  id={`weekly-start-${schedule.id}`}
-                  name="startTime"
-                  pattern="([01]\d|2[0-3]):00"
-                  placeholder="09:00"
-                />
-              </div>
-              <div className="grid gap-2">
-                <FieldLabel htmlFor={`weekly-end-${schedule.id}`}>
-                  پایان
-                </FieldLabel>
-                <TextInput
-                  defaultValue={schedule.endTime}
-                  id={`weekly-end-${schedule.id}`}
-                  name="endTime"
-                  pattern="([01]\d|2[0-3]):00"
-                  placeholder="17:00"
-                />
-              </div>
-              <label className="flex min-h-10 items-center gap-2 text-sm lg:justify-center">
-                <span>روز کاری باشد</span>
-                <input
-                  className="h-4 w-4 rounded border-input"
-                  defaultChecked={schedule.isWorkingDay}
-                  name="isWorkingDay"
-                  type="checkbox"
-                />
-              </label>
-              <Button className="w-full lg:w-auto" type="submit">
-                <Save className="h-4 w-4" />
-                ذخیره
-              </Button>
+              <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                برای روزهای تعطیل، ساعت‌ها در رزرو اعمال نمی‌شوند اما مقدارشان
+                برای فعال‌سازی دوباره نگه داشته می‌شود.
+              </p>
             </div>
-            <p className="mt-3 text-xs leading-5 text-muted-foreground">
-              برای روزهای تعطیل، ساعت‌ها در رزرو اعمال نمی‌شوند اما مقدارشان
-              برای فعال‌سازی دوباره نگه داشته می‌شود.
-            </p>
-          </form>
-        ))}
-      </div>
+          ))}
+        </div>
+        <div className="sticky bottom-0 z-10 flex flex-col gap-2 border-t bg-slate-50/95 px-4 py-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-muted-foreground">
+            همه تغییرات روزهای هفته با هم ذخیره می‌شوند.
+          </p>
+          <SubmitButton
+            className="w-full sm:w-auto"
+            pendingLabel="در حال ذخیره"
+            size="sm"
+          >
+            <Save className="h-4 w-4" />
+            ذخیره برنامه هفتگی
+          </SubmitButton>
+        </div>
+      </form>
     </section>
   );
 }
