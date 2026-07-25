@@ -17,6 +17,7 @@ import type { ReactNode } from "react";
 import {
   createDeskAction,
   createOfficeAction,
+  deleteOfficeAction,
   deleteOfficeExceptionAction,
   updateDeskAction,
   updateDeskSettingsAction,
@@ -25,6 +26,7 @@ import {
   upsertOfficeExceptionAction,
 } from "@/app/admin/desks/actions";
 import { PageHeader } from "@/components/app/page-header";
+import { DeleteOfficeButton } from "@/app/admin/desks/delete-office-button";
 import { Button } from "@/components/ui/button";
 import { JalaliDatePicker } from "@/components/ui/jalali-date-picker";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -220,6 +222,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
   const params = await searchParams;
   const [offices, settings] = await Promise.all([
     db.office.findMany({
+      where: { deletedAt: null },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       include: {
         desks: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] },
@@ -253,6 +256,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
     ) ?? 0) + 1;
   const success =
     (params?.officeCreated && "دفتر ایجاد شد.") ||
+    (params?.officeDeleted && "دفتر و رزروهای آینده آن حذف شدند.") ||
     (params?.officeUpdated && "مشخصات دفتر ذخیره شد.") ||
     (params?.deskCreated && "میز جدید اضافه شد.") ||
     (params?.deskUpdated && "مشخصات میز ذخیره شد.") ||
@@ -271,6 +275,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
       ? {
           consumeKeys: [
             "officeCreated",
+            "officeDeleted",
             "officeUpdated",
             "deskCreated",
             "deskUpdated",
@@ -926,6 +931,25 @@ export default async function AdminDesksPage({ searchParams }: Props) {
               </form>
             </section>
           ) : null}
+
+          <section className="mt-6 border-t border-red-100 pt-6">
+            <div className="flex flex-col gap-4 rounded-lg border border-red-200 bg-red-50/50 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-800">
+                  حذف دفتر
+                </h3>
+                <p className="mt-1 text-xs leading-5 text-slate-600">
+                  دفتر از دسترس خارج و رزروهای آینده میزهای آن حذف می‌شوند.
+                  سابقه رزروهای گذشته حفظ می‌شود.
+                </p>
+              </div>
+              <DeleteOfficeButton
+                action={deleteOfficeAction}
+                officeId={office.id}
+                officeName={office.name}
+              />
+            </div>
+          </section>
         </main>
       ) : null}
     </div>

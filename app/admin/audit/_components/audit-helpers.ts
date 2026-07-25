@@ -43,6 +43,7 @@ export const ACTION_LABELS: Record<string, string> = {
   DESK_RESERVATION_CANCELLED_BY_USER: "رزرو میز توسط کاربر لغو شد",
   DESK_SETTINGS_UPDATED: "سیاست رزرو میز تغییر کرد",
   OFFICE_CREATED: "دفتر ساخته شد",
+  OFFICE_DELETED: "دفتر حذف شد",
   OFFICE_UPDATED: "دفتر ویرایش شد",
   OFFICE_SCHEDULE_UPDATED: "برنامه هفتگی دفتر تغییر کرد",
   OFFICE_EXCEPTION_CREATED: "استثنای دفتر اضافه شد",

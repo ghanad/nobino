@@ -52,7 +52,7 @@ export async function updateOffice(input: {
   return db.$transaction(async (tx) => {
     await assertAdmin(input.adminId, tx);
     const old = await tx.office.findUnique({ where: { id: input.officeId } });
-    if (!old) throw new AdminSettingsError("دفتر پیدا نشد.");
+    if (!old || old.deletedAt) throw new AdminSettingsError("دفتر پیدا نشد.");
     if (!input.active && old.active) {
       const future = await tx.deskReservation.findFirst({
         where: {
@@ -79,11 +79,52 @@ export async function updateOffice(input: {
   });
 }
 
+export async function deleteOffice(input: { adminId: string; officeId: string }) {
+  return db.$transaction(async (tx) => {
+    await assertAdmin(input.adminId, tx);
+    const current = await tx.office.findUnique({
+      where: { id: input.officeId },
+      select: { deletedAt: true, id: true, name: true },
+    });
+    if (!current || current.deletedAt) {
+      throw new AdminSettingsError("دفتر پیدا نشد.");
+    }
+
+    const deletedAt = new Date();
+    const deletedFutureReservations = await tx.deskReservation.deleteMany({
+      where: {
+        desk: { officeId: current.id },
+        startAt: { gte: deletedAt },
+      },
+    });
+    await tx.office.update({
+      where: { id: current.id },
+      data: { active: false, deletedAt },
+    });
+    await tx.auditLog.create({
+      data: {
+        action: "OFFICE_DELETED",
+        actorUserId: input.adminId,
+        entityId: current.id,
+        entityType: "Office",
+        oldValue: { name: current.name },
+        newValue: {
+          deletedAt: deletedAt.toISOString(),
+          deletedFutureReservations: deletedFutureReservations.count,
+          name: current.name,
+        },
+      },
+    });
+
+    return { deletedFutureReservations: deletedFutureReservations.count };
+  });
+}
+
 export async function createDesk(input: { adminId: string; name: string; officeId: string; sortOrder: number }) {
   return db.$transaction(async (tx) => {
     await assertAdmin(input.adminId, tx);
-    const office = await tx.office.findUnique({ where: { id: input.officeId }, select: { id: true } });
-    if (!office) throw new AdminSettingsError("دفتر پیدا نشد.");
+    const office = await tx.office.findUnique({ where: { id: input.officeId }, select: { deletedAt: true, id: true } });
+    if (!office || office.deletedAt) throw new AdminSettingsError("دفتر پیدا نشد.");
     const desk = await tx.desk.create({ data: { active: true, name: input.name.trim(), officeId: input.officeId, sortOrder: input.sortOrder } });
     await tx.auditLog.create({
       data: { action: "DESK_CREATED", actorUserId: input.adminId, entityId: desk.id, entityType: "Desk", newValue: { active: desk.active, name: desk.name, officeId: desk.officeId, sortOrder: desk.sortOrder } },

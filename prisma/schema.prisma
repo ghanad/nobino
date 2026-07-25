@@ -193,17 +193,19 @@ model MeetingRoomScheduleException {
 }
 
 model Office {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  active    Boolean  @default(true)
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        String    @id @default(cuid())
+  name      String    @unique
+  active    Boolean   @default(true)
+  sortOrder Int       @default(0)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   desks           Desk[]
   weeklySchedules OfficeWeeklySchedule[]
   exceptions      OfficeScheduleException[]
 
+  @@index([deletedAt])
   @@index([active, sortOrder, name])
 }
 

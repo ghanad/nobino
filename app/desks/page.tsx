@@ -22,7 +22,7 @@ export default async function DesksPage({ searchParams }: Props) {
   const date = parseJalaliDateParam(params?.date) ?? startOfLocalDay(new Date());
   const dateParam = formatJalaliDateParam(date);
   const offices = await db.office.findMany({
-    where: { active: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    where: { active: true, deletedAt: null }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     include: { desks: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] } },
   });
   const office = offices.find((item) => item.id === params?.officeId) ?? offices[0] ?? null;

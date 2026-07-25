@@ -5,7 +5,7 @@ import { ReservationStatus } from "@prisma/client";
 
 import { runAutoAcceptBatch } from "@/lib/auto-accept-service";
 import { runDeskAutoAcceptBatch } from "@/lib/desk-auto-accept-service";
-import { updateDesk, updateDeskSettings } from "@/lib/desk-admin-service";
+import { deleteOffice, updateDesk, updateDeskSettings } from "@/lib/desk-admin-service";
 import { approveDeskReservation, createDeskReservation, updateDeskReservation } from "@/lib/desk-reservation-service";
 import { ReservationTransitionError } from "@/lib/reservation-service";
 
@@ -198,4 +198,43 @@ test("desk with a future approved reservation cannot be disabled", async () => {
     /ابتدا رزروهای فعال/,
   );
   assert.equal((await db.desk.findUniqueOrThrow({ where: { id: deskId } })).active, true);
+});
+
+test("deleting an office preserves history and removes future desk reservations", async () => {
+  const futureStart = nextWorkingDateAtHour(9);
+  const pastStart = addHours(new Date(), -48);
+  const futureReservation = await db.deskReservation.create({
+    data: {
+      deskId,
+      endAt: addHours(futureStart, 1),
+      startAt: futureStart,
+      status: ReservationStatus.APPROVED,
+      userId,
+    },
+  });
+  const historicalReservation = await db.deskReservation.create({
+    data: {
+      deskId,
+      endAt: addHours(pastStart, 1),
+      startAt: pastStart,
+      status: ReservationStatus.APPROVED,
+      userId: secondUserId,
+    },
+  });
+
+  await deleteOffice({ adminId, officeId: (await db.desk.findUniqueOrThrow({
+    where: { id: deskId },
+    select: { officeId: true },
+  })).officeId });
+
+  const office = await db.office.findUniqueOrThrow({
+    where: { id: (await db.desk.findUniqueOrThrow({ where: { id: deskId } })).officeId },
+  });
+  assert.equal(office.active, false);
+  assert.ok(office.deletedAt);
+  assert.equal(await db.deskReservation.findUnique({ where: { id: futureReservation.id } }), null);
+  assert.ok(await db.deskReservation.findUnique({ where: { id: historicalReservation.id } }));
+  assert.equal(await db.auditLog.count({
+    where: { action: "OFFICE_DELETED", entityId: office.id },
+  }), 1);
 });

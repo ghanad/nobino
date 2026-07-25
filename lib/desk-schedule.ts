@@ -98,9 +98,12 @@ export async function validateDeskReservationTimeRange(
 
   const desk = await client.desk.findUnique({
     where: { id: input.deskId },
-    select: { active: true, office: { select: { active: true, id: true } } },
+    select: {
+      active: true,
+      office: { select: { active: true, deletedAt: true, id: true } },
+    },
   });
-  if (!desk?.active || !desk.office.active) {
+  if (!desk?.active || !desk.office.active || desk.office.deletedAt) {
     throw new ReservationTimeRangeError("این میز در دسترس نیست.");
   }
 

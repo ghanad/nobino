@@ -6,7 +6,7 @@ import { z } from "zod";
 
 import { AdminSettingsError } from "@/lib/admin-settings-service/shared";
 import { requireRole } from "@/lib/auth";
-import { createDesk, createOffice, deleteOfficeScheduleException, updateDesk, updateDeskSettings, updateOffice, updateOfficeWeeklySchedule, upsertOfficeScheduleException } from "@/lib/desk-admin-service";
+import { createDesk, createOffice, deleteOffice, deleteOfficeScheduleException, updateDesk, updateDeskSettings, updateOffice, updateOfficeWeeklySchedule, upsertOfficeScheduleException } from "@/lib/desk-admin-service";
 import { isValidJalaliDateParam, parseJalaliDateParam } from "@/lib/jalali-date";
 
 const nameSchema = z.string().trim().min(1).max(100);
@@ -36,6 +36,15 @@ export async function updateOfficeAction(formData: FormData) {
   try { await updateOffice({ active: checked(formData.get("active")), adminId: admin.id, ...parsed.data }); }
   catch (error) { go({ error: message(error), officeId: parsed.data.officeId }); }
   go({ officeId: parsed.data.officeId, officeUpdated: "1" });
+}
+
+export async function deleteOfficeAction(formData: FormData) {
+  const admin = await requireRole([UserRole.ADMIN]);
+  const parsed = z.object({ officeId: idSchema }).safeParse(Object.fromEntries(formData));
+  if (!parsed.success) go({ error: "دفتر معتبر نیست." });
+  try { await deleteOffice({ adminId: admin.id, officeId: parsed.data.officeId }); }
+  catch (error) { go({ error: message(error), officeId: parsed.data.officeId }); }
+  go({ officeDeleted: "1" });
 }
 
 export async function createDeskAction(formData: FormData) {
