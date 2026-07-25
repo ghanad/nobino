@@ -5,11 +5,16 @@ import { ReservationStatus } from "@prisma/client";
 
 import { runAutoAcceptBatch } from "@/lib/auto-accept-service";
 import { runDeskAutoAcceptBatch } from "@/lib/desk-auto-accept-service";
-import { deleteOffice, updateDesk, updateDeskSettings } from "@/lib/desk-admin-service";
+import {
+  deleteOffice,
+  updateDesk,
+  updateDeskSettings,
+  updateOfficeWeeklySchedule,
+} from "@/lib/desk-admin-service";
 import { approveDeskReservation, createDeskReservation, updateDeskReservation } from "@/lib/desk-reservation-service";
 import { ReservationTransitionError } from "@/lib/reservation-service";
 
-import { addHours, adminId, db, deskId, managerId, nextWorkingDateAtHour, registerBusinessRuleTestHooks, secondDeskId, secondUserId, userId } from "./business-rules-helpers";
+import { addHours, adminId, db, deskId, managerId, nextWorkingDateAtHour, officeId, registerBusinessRuleTestHooks, secondDeskId, secondUserId, userId } from "./business-rules-helpers";
 
 registerBusinessRuleTestHooks();
 
@@ -198,6 +203,53 @@ test("desk with a future approved reservation cannot be disabled", async () => {
     /ابتدا رزروهای فعال/,
   );
   assert.equal((await db.desk.findUniqueOrThrow({ where: { id: deskId } })).active, true);
+});
+
+test("office weekly schedule is saved as one audited update", async () => {
+  const schedules = Array.from({ length: 7 }, (_, dayOfWeek) => ({
+    dayOfWeek,
+    endTime: dayOfWeek === 0 ? "21:00" : "17:00",
+    isWorkingDay: dayOfWeek !== 4 && dayOfWeek !== 5,
+    startTime: "09:00",
+  }));
+
+  await updateOfficeWeeklySchedule({ adminId, officeId, schedules });
+
+  const stored = await db.officeWeeklySchedule.findMany({
+    where: { officeId },
+    orderBy: { dayOfWeek: "asc" },
+  });
+  assert.equal(stored.length, 7);
+  assert.equal(stored[0].endTime, "21:00");
+  assert.equal(stored[4].isWorkingDay, false);
+  assert.equal(await db.auditLog.count({
+    where: {
+      action: "OFFICE_SCHEDULE_UPDATED",
+      entityType: "OfficeWeeklySchedule",
+    },
+  }), 2);
+});
+
+test("invalid office weekly schedule does not partially update any day", async () => {
+  const schedules = Array.from({ length: 7 }, (_, dayOfWeek) => ({
+    dayOfWeek,
+    endTime: dayOfWeek === 3 ? "08:00" : "18:00",
+    isWorkingDay: dayOfWeek !== 5,
+    startTime: "09:00",
+  }));
+
+  await assert.rejects(
+    updateOfficeWeeklySchedule({ adminId, officeId, schedules }),
+    /ساعت پایان هر روز کاری/,
+  );
+
+  const stored = await db.officeWeeklySchedule.findMany({
+    where: { officeId },
+  });
+  assert.ok(stored.every((schedule) => schedule.endTime === "17:00"));
+  assert.equal(await db.auditLog.count({
+    where: { action: "OFFICE_SCHEDULE_UPDATED" },
+  }), 0);
 });
 
 test("deleting an office preserves history and removes future desk reservations", async () => {

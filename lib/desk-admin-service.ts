@@ -12,6 +12,7 @@ const DEFAULT_DAYS = Array.from({ length: 7 }, (_, dayOfWeek) => ({
   isWorkingDay: dayOfWeek !== 5,
   startTime: "09:00",
 }));
+const EXACT_HOUR_PATTERN = /^([01]\d|2[0-3]):00$/;
 
 export async function createOffice(input: { adminId: string; name: string; sortOrder: number }) {
   return db.$transaction(async (tx) => {
@@ -223,27 +224,118 @@ export async function updateDeskSettings(input: {
   });
 }
 
-export async function updateOfficeWeeklySchedule(input: {
-  adminId: string;
+type OfficeWeeklyScheduleInput = {
+  dayOfWeek: number;
   endTime: string;
   isWorkingDay: boolean;
-  officeId: string;
   startTime: string;
-  dayOfWeek: number;
+};
+
+export async function updateOfficeWeeklySchedule(input: {
+  adminId: string;
+  officeId: string;
+  schedules: OfficeWeeklyScheduleInput[];
 }) {
-  if (input.isWorkingDay && input.endTime <= input.startTime) throw new AdminSettingsError("ساعت پایان باید بعد از ساعت شروع باشد.");
+  const dayNumbers = new Set(input.schedules.map((schedule) => schedule.dayOfWeek));
+  if (
+    input.schedules.length !== 7 ||
+    dayNumbers.size !== 7 ||
+    input.schedules.some(
+      (schedule) =>
+        schedule.dayOfWeek < 0 ||
+        schedule.dayOfWeek > 6 ||
+        !EXACT_HOUR_PATTERN.test(schedule.startTime) ||
+        !EXACT_HOUR_PATTERN.test(schedule.endTime),
+    )
+  ) {
+    throw new AdminSettingsError(
+      "برنامه هر هفت روز هفته را با ساعت‌های دقیق وارد کنید.",
+    );
+  }
+  if (
+    input.schedules.some(
+      (schedule) =>
+        schedule.isWorkingDay && schedule.endTime <= schedule.startTime,
+    )
+  ) {
+    throw new AdminSettingsError(
+      "ساعت پایان هر روز کاری باید بعد از ساعت شروع باشد.",
+    );
+  }
+
   return db.$transaction(async (tx) => {
     await assertAdmin(input.adminId, tx);
-    const updated = await tx.officeWeeklySchedule.upsert({
-      where: { officeId_dayOfWeek: { officeId: input.officeId, dayOfWeek: input.dayOfWeek } },
-      update: { endTime: input.endTime, isWorkingDay: input.isWorkingDay, startTime: input.startTime },
-      create: { dayOfWeek: input.dayOfWeek, endTime: input.endTime, isWorkingDay: input.isWorkingDay, officeId: input.officeId, startTime: input.startTime },
+    const office = await tx.office.findUnique({
+      where: { id: input.officeId },
+      select: { deletedAt: true, id: true },
     });
-    await tx.auditLog.create({ data: {
-      action: "OFFICE_SCHEDULE_UPDATED", actorUserId: input.adminId, entityId: updated.id, entityType: "OfficeWeeklySchedule",
-      newValue: { dayOfWeek: updated.dayOfWeek, endTime: updated.endTime, isWorkingDay: updated.isWorkingDay, officeId: updated.officeId, startTime: updated.startTime },
-    } });
-    return updated;
+    if (!office || office.deletedAt) {
+      throw new AdminSettingsError("دفتر پیدا نشد.");
+    }
+
+    const currentSchedules = await tx.officeWeeklySchedule.findMany({
+      where: { officeId: input.officeId },
+    });
+    const currentByDay = new Map(
+      currentSchedules.map((schedule) => [schedule.dayOfWeek, schedule]),
+    );
+    const updatedSchedules = [];
+
+    for (const schedule of input.schedules) {
+      const current = currentByDay.get(schedule.dayOfWeek);
+      const updated = await tx.officeWeeklySchedule.upsert({
+        where: {
+          officeId_dayOfWeek: {
+            officeId: input.officeId,
+            dayOfWeek: schedule.dayOfWeek,
+          },
+        },
+        update: {
+          endTime: schedule.endTime,
+          isWorkingDay: schedule.isWorkingDay,
+          startTime: schedule.startTime,
+        },
+        create: {
+          ...schedule,
+          officeId: input.officeId,
+        },
+      });
+      updatedSchedules.push(updated);
+
+      const changed =
+        !current ||
+        current.endTime !== updated.endTime ||
+        current.isWorkingDay !== updated.isWorkingDay ||
+        current.startTime !== updated.startTime;
+      if (!changed) continue;
+
+      await tx.auditLog.create({
+        data: {
+          action: "OFFICE_SCHEDULE_UPDATED",
+          actorUserId: input.adminId,
+          entityId: updated.id,
+          entityType: "OfficeWeeklySchedule",
+          oldValue: current
+            ? {
+                dayOfWeek: current.dayOfWeek,
+                endTime: current.endTime,
+                isWorkingDay: current.isWorkingDay,
+                officeId: current.officeId,
+                startTime: current.startTime,
+              }
+            : undefined,
+          newValue: {
+            dayOfWeek: updated.dayOfWeek,
+            endTime: updated.endTime,
+            isWorkingDay: updated.isWorkingDay,
+            officeId: updated.officeId,
+            startTime: updated.startTime,
+          },
+        },
+      });
+    }
+
+    return updatedSchedules;
   });
 }
 

@@ -101,12 +101,31 @@ export async function updateDeskSettingsAction(_state: AdminDeskActionState, for
 
 export async function updateOfficeScheduleAction(_state: AdminDeskActionState, formData: FormData): Promise<AdminDeskActionState> {
   const admin = await requireRole([UserRole.ADMIN]);
-  const parsed = z.object({ dayOfWeek: z.coerce.number().int().min(0).max(6), endTime: timeSchema, officeId: idSchema, startTime: timeSchema }).safeParse(Object.fromEntries(formData));
+  const parsed = z.object({
+    officeId: idSchema,
+    schedules: z.array(z.object({
+      dayOfWeek: z.coerce.number().int().min(0).max(6),
+      endTime: timeSchema,
+      isWorkingDay: z.boolean(),
+      startTime: timeSchema,
+    })).length(7).refine(
+      (schedules) => new Set(schedules.map((schedule) => schedule.dayOfWeek)).size === 7,
+      "روزهای برنامه هفتگی تکراری هستند.",
+    ),
+  }).safeParse({
+    officeId: formData.get("officeId"),
+    schedules: Array.from({ length: 7 }, (_, index) => ({
+      dayOfWeek: formData.get(`schedules.${index}.dayOfWeek`),
+      endTime: formData.get(`schedules.${index}.endTime`),
+      isWorkingDay: checked(formData.get(`schedules.${index}.isWorkingDay`)),
+      startTime: formData.get(`schedules.${index}.startTime`),
+    })),
+  });
   if (!parsed.success) return result(false, "برنامه کاری معتبر نیست.");
-  try { await updateOfficeWeeklySchedule({ adminId: admin.id, isWorkingDay: checked(formData.get("isWorkingDay")), ...parsed.data }); }
+  try { await updateOfficeWeeklySchedule({ adminId: admin.id, ...parsed.data }); }
   catch (error) { return result(false, message(error)); }
   refreshDesks();
-  return result(true, "برنامه کاری ذخیره شد.");
+  return result(true, "برنامه هفتگی ذخیره شد.");
 }
 
 export async function upsertOfficeExceptionAction(_state: AdminDeskActionState, formData: FormData): Promise<AdminDeskActionState> {

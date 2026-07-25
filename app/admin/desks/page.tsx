@@ -25,7 +25,10 @@ import {
   updateOfficeScheduleAction,
   upsertOfficeExceptionAction,
 } from "@/app/admin/desks/actions";
-import { AdminDeskForm } from "@/app/admin/desks/admin-desk-form";
+import {
+  AdminDeskForm,
+  AdminDeskTrackedSubmitButton,
+} from "@/app/admin/desks/admin-desk-form";
 import { PageHeader } from "@/components/app/page-header";
 import { DeleteOfficeButton } from "@/app/admin/desks/delete-office-button";
 import { Button } from "@/components/ui/button";
@@ -604,28 +607,31 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                   <div className="grid gap-1">
                     <h2 className="text-base font-semibold">برنامه هفتگی</h2>
                     <p className="text-xs text-slate-600">
-                      ساعت‌ها باید روی ابتدای ساعت تنظیم شوند. هر روز مستقل
-                      ذخیره می‌شود.
+                      ساعت‌ها باید روی ابتدای ساعت تنظیم شوند. پس از اعمال
+                      تغییرات، برنامه هفتگی را ذخیره کنید.
                     </p>
                   </div>
                 </div>
               </div>
-              <div className="m-5 overflow-hidden rounded-xl border">
+              <AdminDeskForm
+                action={updateOfficeScheduleAction}
+                className="m-5 overflow-hidden rounded-xl border"
+                trackChanges
+              >
+                <input name="officeId" type="hidden" value={office.id} />
                 {days.map((label, dayOfWeek) => {
-                  const schedule = office.weeklySchedules.find(
-                    (item) => item.dayOfWeek === dayOfWeek,
-                  );
-                  const isWorkingDay = Boolean(schedule?.isWorkingDay);
+                    const schedule = office.weeklySchedules.find(
+                      (item) => item.dayOfWeek === dayOfWeek,
+                    );
+                    const isWorkingDay = Boolean(schedule?.isWorkingDay);
 
-                  return (
-                    <AdminDeskForm
-                      action={updateOfficeScheduleAction}
-                      className="grid gap-3 border-b bg-background px-4 py-3.5 last:border-b-0 hover:bg-slate-50/60 lg:grid-cols-[150px_170px_minmax(320px,1fr)_110px] lg:items-start lg:gap-5"
-                      key={dayOfWeek}
-                    >
-                      <input name="officeId" type="hidden" value={office.id} />
+                    return (
+                      <div
+                        className="grid gap-3 border-b bg-background px-4 py-3.5 hover:bg-slate-50/60 lg:grid-cols-[150px_170px_minmax(320px,1fr)] lg:items-start lg:gap-5"
+                        key={dayOfWeek}
+                      >
                       <input
-                        name="dayOfWeek"
+                        name={`schedules.${dayOfWeek}.dayOfWeek`}
                         type="hidden"
                         value={dayOfWeek}
                       />
@@ -649,7 +655,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                           <input
                             className="peer sr-only"
                             defaultChecked={isWorkingDay}
-                            name="isWorkingDay"
+                            name={`schedules.${dayOfWeek}.isWorkingDay`}
                             role="switch"
                             type="checkbox"
                           />
@@ -662,7 +668,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                           <input
                             className={cn(inputClass, "h-10 text-left")}
                             defaultValue={schedule?.startTime ?? "09:00"}
-                            name="startTime"
+                            name={`schedules.${dayOfWeek}.startTime`}
                             step={3600}
                             type="time"
                           />
@@ -671,25 +677,29 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                           <input
                             className={cn(inputClass, "h-10 text-left")}
                             defaultValue={schedule?.endTime ?? "17:00"}
-                            name="endTime"
+                            name={`schedules.${dayOfWeek}.endTime`}
                             step={3600}
                             type="time"
                           />
                         </Field>
                       </div>
-                      <SubmitButton
-                        className="w-full lg:mt-[26px] lg:h-10 lg:w-auto"
-                        pendingLabel="در حال ذخیره"
-                        size="sm"
-                        variant="outline"
-                      >
-                        <Save className="h-4 w-4" />
-                        ذخیره
-                      </SubmitButton>
-                    </AdminDeskForm>
-                  );
-                })}
-              </div>
+                    </div>
+                    );
+                  })}
+                <div className="flex flex-col gap-2 bg-slate-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-xs text-muted-foreground">
+                    همه تغییرات روزهای هفته با هم ذخیره می‌شوند.
+                  </p>
+                  <AdminDeskTrackedSubmitButton
+                    className="w-full sm:w-auto"
+                    pendingLabel="در حال ذخیره"
+                    size="sm"
+                  >
+                    <Save className="h-4 w-4" />
+                    ذخیره برنامه هفتگی
+                  </AdminDeskTrackedSubmitButton>
+                </div>
+              </AdminDeskForm>
             </section>
           ) : null}
 
