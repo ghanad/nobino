@@ -249,62 +249,93 @@ export async function deleteMeetingRoom(input: {
   });
 }
 
-export async function updateMeetingRoomWeeklySchedule(input: {
+export async function updateMeetingRoomWeeklySchedules(input: {
   adminId: string;
-  scheduleId: string;
-  isWorkingDay: boolean;
-  startTime?: string | null;
-  endTime?: string | null;
+  roomId: string;
+  schedules: Array<{
+    scheduleId: string;
+    isWorkingDay: boolean;
+    startTime?: string | null;
+    endTime?: string | null;
+  }>;
 }) {
-  const workingHours = assertWorkingHours(
-    input,
-    (message) => new AdminSettingsError(message),
-  );
+  const scheduleIds = input.schedules.map((schedule) => schedule.scheduleId);
+
+  if (
+    input.schedules.length !== 7 ||
+    new Set(scheduleIds).size !== input.schedules.length
+  ) {
+    throw new AdminSettingsError(
+      "Meeting room weekly schedule settings are incomplete.",
+    );
+  }
+
+  const updates = input.schedules.map((schedule) => ({
+    ...schedule,
+    workingHours: assertWorkingHours(
+      schedule,
+      (message) => new AdminSettingsError(message),
+    ),
+  }));
 
   return db.$transaction(async (tx) => {
     await assertAdmin(input.adminId, tx);
 
-    const current = await tx.meetingRoomWeeklySchedule.findUnique({
-      where: { id: input.scheduleId },
+    const currentSchedules = await tx.meetingRoomWeeklySchedule.findMany({
+      where: {
+        id: { in: scheduleIds },
+        roomId: input.roomId,
+      },
     });
 
-    if (!current) {
-      throw new AdminSettingsError("Meeting room weekly schedule was not found.");
+    if (currentSchedules.length !== input.schedules.length) {
+      throw new AdminSettingsError(
+        "A meeting room weekly schedule row was not found.",
+      );
     }
 
-    const updated = await tx.meetingRoomWeeklySchedule.update({
-      where: { id: current.id },
-      data: {
-        endTime: workingHours.endTime ?? current.endTime,
-        isWorkingDay: input.isWorkingDay,
-        startTime: workingHours.startTime ?? current.startTime,
-      },
-    });
+    const currentById = new Map(
+      currentSchedules.map((schedule) => [schedule.id, schedule]),
+    );
+    const updatedSchedules = [];
 
-    await tx.auditLog.create({
-      data: {
-        actorUserId: input.adminId,
-        entityType: "MeetingRoomWeeklySchedule",
-        entityId: updated.id,
-        action: "MEETING_ROOM_SCHEDULE_CHANGED",
-        oldValue: {
-          dayOfWeek: current.dayOfWeek,
-          endTime: current.endTime,
-          isWorkingDay: current.isWorkingDay,
-          roomId: current.roomId,
-          startTime: current.startTime,
+    for (const update of updates) {
+      const current = currentById.get(update.scheduleId)!;
+      const updated = await tx.meetingRoomWeeklySchedule.update({
+        where: { id: current.id },
+        data: {
+          endTime: update.workingHours.endTime ?? current.endTime,
+          isWorkingDay: update.isWorkingDay,
+          startTime: update.workingHours.startTime ?? current.startTime,
         },
-        newValue: {
-          dayOfWeek: updated.dayOfWeek,
-          endTime: updated.endTime,
-          isWorkingDay: updated.isWorkingDay,
-          roomId: updated.roomId,
-          startTime: updated.startTime,
-        },
-      },
-    });
+      });
+      updatedSchedules.push(updated);
 
-    return updated;
+      await tx.auditLog.create({
+        data: {
+          actorUserId: input.adminId,
+          entityType: "MeetingRoomWeeklySchedule",
+          entityId: updated.id,
+          action: "MEETING_ROOM_SCHEDULE_CHANGED",
+          oldValue: {
+            dayOfWeek: current.dayOfWeek,
+            endTime: current.endTime,
+            isWorkingDay: current.isWorkingDay,
+            roomId: current.roomId,
+            startTime: current.startTime,
+          },
+          newValue: {
+            dayOfWeek: updated.dayOfWeek,
+            endTime: updated.endTime,
+            isWorkingDay: updated.isWorkingDay,
+            roomId: updated.roomId,
+            startTime: updated.startTime,
+          },
+        },
+      });
+    }
+
+    return updatedSchedules;
   });
 }
 

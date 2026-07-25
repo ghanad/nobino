@@ -398,6 +398,12 @@ export default async function AdminMeetingRoomsPage({
   const isCreatingRoom = params?.view === "new" || rooms.length === 0;
   const defaultSortOrder =
     rooms.reduce((highest, room) => Math.max(highest, room.sortOrder), 0) + 1;
+  const weeklySchedules = selectedRoom
+    ? [...selectedRoom.weeklySchedules].sort(
+        (first, second) =>
+          ((first.dayOfWeek + 1) % 7) - ((second.dayOfWeek + 1) % 7),
+      )
+    : [];
 
   return (
     <div className="grid gap-6" dir="rtl">
@@ -594,78 +600,106 @@ export default async function AdminMeetingRoomsPage({
                       برنامه هفتگی
                     </h2>
                     <p className="text-xs text-muted-foreground">
-                      ساعت‌ها باید کامل و با قالب 09:00 باشند؛ تغییر هر روز را
-                      از همان ردیف ذخیره کنید.
+                      ساعت‌ها باید کامل و با قالب 09:00 باشند؛ تغییرات همه
+                      روزها با هم ذخیره می‌شوند.
                     </p>
                   </div>
                 </div>
                 <StatusPill tone="muted">
                   {
-                    selectedRoom.weeklySchedules.filter(
+                    weeklySchedules.filter(
                       (schedule) => schedule.isWorkingDay,
                     ).length
                   }{" "}
                   روز قابل رزرو
                 </StatusPill>
               </div>
-              <div className="grid gap-2 p-3">
-                <div className="hidden grid-cols-[140px_120px_1fr_140px] gap-3 px-3 pb-1 text-xs font-medium text-muted-foreground lg:grid">
-                  <span>روز</span>
-                  <span>وضعیت</span>
-                  <span>بازه قابل رزرو</span>
-                  <span>عملیات</span>
-                </div>
-                {selectedRoom.weeklySchedules.map((schedule) => (
-                  <form
-                    action={updateMeetingRoomWeeklyScheduleAction}
-                    className="grid gap-3 rounded-md border bg-background p-3 lg:grid-cols-[140px_120px_1fr_140px]"
+              <form
+                action={updateMeetingRoomWeeklyScheduleAction}
+                className="m-5 overflow-hidden rounded-xl border"
+              >
+                <input name="roomId" type="hidden" value={selectedRoom.id} />
+                {weeklySchedules.map((schedule, index) => (
+                  <div
+                    className="grid gap-3 border-b bg-background px-4 py-3.5 transition-colors hover:bg-slate-50/60 lg:grid-cols-[150px_170px_minmax(320px,1fr)] lg:items-start lg:gap-5"
                     key={schedule.id}
                   >
-                    <input name="scheduleId" type="hidden" value={schedule.id} />
-                    <input name="roomId" type="hidden" value={selectedRoom.id} />
-                    <div className="flex items-center gap-2 font-medium">
-                      <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                      {DAY_LABELS[schedule.dayOfWeek] ?? schedule.dayOfWeek}
-                    </div>
-                    <label className="flex items-center gap-2 text-sm">
-                      <input
-                        defaultChecked={schedule.isWorkingDay}
-                        name="isWorkingDay"
-                        type="checkbox"
+                    <input
+                      name={`schedules.${index}.scheduleId`}
+                      type="hidden"
+                      value={schedule.id}
+                    />
+                    <div className="flex items-center gap-3 lg:mt-[26px]">
+                      <span
+                        className={cn(
+                          "h-2.5 w-2.5 shrink-0 rounded-full",
+                          schedule.isWorkingDay
+                            ? "bg-emerald-500"
+                            : "bg-slate-300",
+                        )}
                       />
-                      این روز قابل رزرو است
+                      <span className="grid gap-0.5">
+                        <strong className="text-sm">
+                          {DAY_LABELS[schedule.dayOfWeek] ??
+                            schedule.dayOfWeek}
+                        </strong>
+                        <span className="text-xs text-muted-foreground">
+                          {schedule.isWorkingDay ? "روز کاری" : "تعطیل"}
+                        </span>
+                      </span>
+                    </div>
+                    <label className="flex min-h-10 cursor-pointer items-center justify-between gap-3 rounded-lg border bg-slate-50 px-3 text-sm font-medium text-slate-700 lg:mt-[26px]">
+                      <span>امکان رزرو</span>
+                      <span className="relative inline-flex shrink-0">
+                        <input
+                          className="peer sr-only"
+                          defaultChecked={schedule.isWorkingDay}
+                          name={`schedules.${index}.isWorkingDay`}
+                          role="switch"
+                          type="checkbox"
+                        />
+                        <span className="h-5 w-9 rounded-full bg-slate-300 transition-colors peer-checked:bg-primary peer-focus-visible:ring-2 peer-focus-visible:ring-primary peer-focus-visible:ring-offset-2" />
+                        <span className="pointer-events-none absolute right-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform peer-checked:-translate-x-4" />
+                      </span>
                     </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <label className="grid gap-1 text-xs text-muted-foreground">
-                        <span className="lg:hidden">شروع</span>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field label="شروع">
                         <input
                           aria-label="ساعت شروع"
-                          className={mutedInputClass}
+                          className={cn(inputClass, "h-10 text-left")}
                           defaultValue={schedule.startTime}
-                          dir="ltr"
-                          name="startTime"
-                          type="text"
+                          name={`schedules.${index}.startTime`}
+                          step={3600}
+                          type="time"
                         />
-                      </label>
-                      <label className="grid gap-1 text-xs text-muted-foreground">
-                        <span className="lg:hidden">پایان</span>
+                      </Field>
+                      <Field label="پایان">
                         <input
                           aria-label="ساعت پایان"
-                          className={mutedInputClass}
+                          className={cn(inputClass, "h-10 text-left")}
                           defaultValue={schedule.endTime}
-                          dir="ltr"
-                          name="endTime"
-                          type="text"
+                          name={`schedules.${index}.endTime`}
+                          step={3600}
+                          type="time"
                         />
-                      </label>
+                      </Field>
                     </div>
-                    <SubmitButton pendingLabel="در حال ذخیره" size="sm">
-                      <Save className="h-4 w-4" />
-                      ذخیره
-                    </SubmitButton>
-                  </form>
+                  </div>
                 ))}
-              </div>
+                <div className="flex flex-col gap-2 bg-slate-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-xs text-muted-foreground">
+                    همه تغییرات روزهای هفته با هم ذخیره می‌شوند.
+                  </p>
+                  <SubmitButton
+                    className="w-full sm:w-auto"
+                    pendingLabel="در حال ذخیره"
+                    size="sm"
+                  >
+                    <Save className="h-4 w-4" />
+                    ذخیره برنامه هفتگی
+                  </SubmitButton>
+                </div>
+              </form>
             </section>
 
           ) : null}

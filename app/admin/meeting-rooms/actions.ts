@@ -13,7 +13,7 @@ import {
   setMeetingRoomActiveStatus,
   updateMeetingRoom,
   updateMeetingRoomScheduleException,
-  updateMeetingRoomWeeklySchedule,
+  updateMeetingRoomWeeklySchedules,
 } from "@/lib/meeting-room-admin-service";
 import {
   isValidJalaliDateParam,
@@ -35,11 +35,21 @@ const roomSchema = z.object({
 });
 
 const weeklyScheduleSchema = z.object({
-  scheduleId: z.string().min(1),
-  roomId: z.string().optional(),
-  isWorkingDay: z.coerce.boolean(),
-  startTime: timeSchema.optional(),
-  endTime: timeSchema.optional(),
+  roomId: z.string().min(1),
+  schedules: z
+    .array(
+      z.object({
+        scheduleId: z.string().min(1),
+        isWorkingDay: z.boolean(),
+        startTime: timeSchema.optional(),
+        endTime: timeSchema.optional(),
+      }),
+    )
+    .length(7)
+    .refine(
+      (schedules) =>
+        new Set(schedules.map((schedule) => schedule.scheduleId)).size === 7,
+    ),
 });
 
 const exceptionCreateSchema = z.object({
@@ -233,11 +243,17 @@ export async function updateMeetingRoomWeeklyScheduleAction(
 ): Promise<void> {
   const admin = await requireRole([UserRole.ADMIN]);
   const parsed = weeklyScheduleSchema.safeParse({
-    scheduleId: formData.get("scheduleId"),
-    roomId: formData.get("roomId") || undefined,
-    isWorkingDay: checkboxToBoolean(formData.get("isWorkingDay")),
-    startTime: emptyToUndefined(formData.get("startTime")),
-    endTime: emptyToUndefined(formData.get("endTime")),
+    roomId: formData.get("roomId"),
+    schedules: Array.from({ length: 7 }, (_, index) => ({
+      scheduleId: formData.get(`schedules.${index}.scheduleId`),
+      isWorkingDay: checkboxToBoolean(
+        formData.get(`schedules.${index}.isWorkingDay`),
+      ),
+      startTime: emptyToUndefined(
+        formData.get(`schedules.${index}.startTime`),
+      ),
+      endTime: emptyToUndefined(formData.get(`schedules.${index}.endTime`)),
+    })),
   });
 
   if (!parsed.success) {
@@ -249,12 +265,10 @@ export async function updateMeetingRoomWeeklyScheduleAction(
   }
 
   try {
-    await updateMeetingRoomWeeklySchedule({
+    await updateMeetingRoomWeeklySchedules({
       adminId: admin.id,
-      scheduleId: parsed.data.scheduleId,
-      isWorkingDay: parsed.data.isWorkingDay,
-      startTime: parsed.data.startTime,
-      endTime: parsed.data.endTime,
+      roomId: parsed.data.roomId,
+      schedules: parsed.data.schedules,
     });
   } catch (error) {
     redirectToAdminMeetingRooms({

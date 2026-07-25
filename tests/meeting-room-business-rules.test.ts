@@ -13,6 +13,7 @@ import { runMeetingRoomAutoAcceptBatch } from "@/lib/meeting-room-auto-accept-se
 import {
   deleteMeetingRoom,
   updateMeetingRoom,
+  updateMeetingRoomWeeklySchedules,
 } from "@/lib/meeting-room-admin-service";
 import {
   approveMeetingRoomReservation,
@@ -295,6 +296,43 @@ test("meeting room schedule validation is room specific", async () => {
       startAt,
       endAt,
     }),
+  );
+});
+
+test("meeting room weekly schedule is saved as one complete update", async () => {
+  const schedules = await db.meetingRoomWeeklySchedule.findMany({
+    where: { roomId: meetingRoomId },
+    orderBy: { dayOfWeek: "asc" },
+  });
+
+  await updateMeetingRoomWeeklySchedules({
+    adminId,
+    roomId: meetingRoomId,
+    schedules: schedules.map((schedule) => ({
+      scheduleId: schedule.id,
+      isWorkingDay: schedule.dayOfWeek !== 5,
+      startTime: "10:00",
+      endTime: "18:00",
+    })),
+  });
+
+  const stored = await db.meetingRoomWeeklySchedule.findMany({
+    where: { roomId: meetingRoomId },
+    orderBy: { dayOfWeek: "asc" },
+  });
+
+  assert.equal(stored.length, 7);
+  assert.ok(
+    stored
+      .filter((schedule) => schedule.isWorkingDay)
+      .every(
+        (schedule) =>
+          schedule.startTime === "10:00" && schedule.endTime === "18:00",
+      ),
+  );
+  assert.equal(
+    stored.find((schedule) => schedule.dayOfWeek === 5)?.isWorkingDay,
+    false,
   );
 });
 
