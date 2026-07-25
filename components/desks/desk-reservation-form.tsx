@@ -250,7 +250,7 @@ export function DeskReservationForm({
               <div aria-hidden="true" className="absolute left-0 top-[51%] h-[8%] w-[48%] border-b-2 border-r-2 border-t-2 border-slate-700" />
               <div aria-hidden="true" className="absolute left-[-2px] top-[24%] flex h-[9%] w-9 -translate-x-1/2 items-center justify-center rounded-md border-2 border-amber-300 bg-amber-100 text-[10px] font-semibold text-amber-950 [writing-mode:vertical-rl]">درب</div>
               <div aria-hidden="true" className="absolute bottom-[3%] left-[-2px] flex h-[8%] w-9 -translate-x-1/2 items-center justify-center rounded-md border-2 border-amber-300 bg-amber-100 text-[10px] font-semibold text-amber-950 [writing-mode:vertical-rl]">درب</div>
-              <div aria-hidden="true" className="absolute left-[86%] top-[53%] flex h-[12%] w-[8%] items-center justify-center rounded-lg border-2 border-emerald-300 bg-emerald-100 text-[11px] font-semibold text-emerald-900 [writing-mode:vertical-rl]">مبل</div>
+              <div aria-hidden="true" className="absolute right-[2%] top-[53%] flex h-[12%] w-[8%] items-center justify-center rounded-lg border-2 border-emerald-300 bg-emerald-100 text-[11px] font-semibold text-emerald-900 [writing-mode:vertical-rl]">مبل</div>
               {deskStates.map(({ desk, relevant, state }) => {
                 const isCurrentDesk = myReservation?.deskId === desk.id;
                 const isSelected = selectedDeskId === desk.id;
