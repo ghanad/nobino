@@ -246,9 +246,11 @@ export function DeskReservationForm({
         <div className={cn("grid items-stretch", selectedDesk ? "lg:grid-cols-[minmax(0,2fr)_minmax(19rem,1fr)]" : "lg:grid-cols-[minmax(0,3fr)_minmax(14rem,.7fr)]")}>
           <div className="overflow-x-auto bg-slate-50/50 p-3" aria-label="نقشه میزهای دفتر">
             <div className="relative mx-auto aspect-[17/28] min-w-[340px] max-w-md rounded-sm border-2 border-slate-700 bg-white shadow-inner" role="listbox" aria-label="انتخاب میز">
+              <div aria-label="پنل کولر گازی روی دیوار بالایی" className="absolute left-[47%] top-0 z-10 h-[2%] w-[18%] -translate-y-1/2 rounded-sm border-2 border-purple-500 bg-purple-200 shadow-sm" role="img" />
               <div aria-hidden="true" className="absolute left-0 top-[18.5%] w-[48%] border-t-2 border-slate-700" />
               <div aria-hidden="true" className="absolute right-0 top-[18.5%] w-[26%] border-t-2 border-slate-700" />
               <div aria-hidden="true" className="absolute left-0 top-[42%] h-[16%] w-[48%] border-b-2 border-r-2 border-t-2 border-slate-700" />
+              <div aria-label="پنل کولر گازی روی دیوار داخلی" className="absolute left-[48%] top-[45%] z-10 h-[10%] w-[2%] -translate-x-1/2 rounded-sm border-2 border-purple-500 bg-purple-200 shadow-sm" role="img" />
               <div aria-hidden="true" className="absolute left-[-2px] top-[19%] flex h-[8%] w-6 -translate-x-1/2 items-center justify-center rounded border-2 border-amber-300 bg-amber-100 text-[9px] font-semibold text-amber-950 [writing-mode:vertical-rl]">درب</div>
               <div aria-hidden="true" className="absolute bottom-[3%] left-[-2px] flex h-[8%] w-6 -translate-x-1/2 items-center justify-center rounded border-2 border-amber-300 bg-amber-100 text-[9px] font-semibold text-amber-950 [writing-mode:vertical-rl]">درب</div>
               <div aria-hidden="true" className="absolute right-[2%] top-[47%] flex h-[12%] w-[6%] items-center justify-center rounded-lg border-2 border-emerald-300 bg-emerald-100 text-[11px] font-semibold text-emerald-900 [writing-mode:vertical-rl]">مبل</div>
