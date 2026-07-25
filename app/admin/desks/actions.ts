@@ -58,11 +58,12 @@ export async function updateDeskAction(formData: FormData) {
 
 export async function updateDeskSettingsAction(formData: FormData) {
   const admin = await requireRole([UserRole.ADMIN]);
+  const officeId = String(formData.get("officeId") || "") || undefined;
   const parsed = z.object({
     autoApprovalDelayHours: z.coerce.number().int().min(1).max(24),
     maxAdvanceDays: z.coerce.number().int().min(1).max(365),
   }).safeParse(Object.fromEntries(formData));
-  if (!parsed.success) go({ error: "تعداد روز یا مهلت تأیید خودکار معتبر نیست." });
+  if (!parsed.success) go({ error: "تعداد روز یا مهلت تأیید خودکار معتبر نیست.", officeId, view: "policy" });
   try {
     await updateDeskSettings({
       adminId: admin.id,
@@ -70,37 +71,37 @@ export async function updateDeskSettingsAction(formData: FormData) {
       ...parsed.data,
     });
   }
-  catch (error) { go({ error: message(error) }); }
-  go({ settingsUpdated: "1" });
+  catch (error) { go({ error: message(error), officeId, view: "policy" }); }
+  go({ officeId, settingsUpdated: "1", view: "policy" });
 }
 
 export async function updateOfficeScheduleAction(formData: FormData) {
   const admin = await requireRole([UserRole.ADMIN]);
   const parsed = z.object({ dayOfWeek: z.coerce.number().int().min(0).max(6), endTime: timeSchema, officeId: idSchema, startTime: timeSchema }).safeParse(Object.fromEntries(formData));
-  if (!parsed.success) go({ error: "برنامه کاری معتبر نیست.", officeId: String(formData.get("officeId") || "") });
+  if (!parsed.success) go({ error: "برنامه کاری معتبر نیست.", officeId: String(formData.get("officeId") || ""), view: "schedule" });
   try { await updateOfficeWeeklySchedule({ adminId: admin.id, isWorkingDay: checked(formData.get("isWorkingDay")), ...parsed.data }); }
-  catch (error) { go({ error: message(error), officeId: parsed.data.officeId }); }
-  go({ officeId: parsed.data.officeId, scheduleUpdated: "1" });
+  catch (error) { go({ error: message(error), officeId: parsed.data.officeId, view: "schedule" }); }
+  go({ officeId: parsed.data.officeId, scheduleUpdated: "1", view: "schedule" });
 }
 
 export async function upsertOfficeExceptionAction(formData: FormData) {
   const admin = await requireRole([UserRole.ADMIN]);
   const parsed = z.object({ date: z.string().refine(isValidJalaliDateParam), officeId: idSchema, reason: z.string().trim().max(200).optional() }).safeParse(Object.fromEntries(formData));
   const officeId = String(formData.get("officeId") || "");
-  if (!parsed.success) go({ error: "تاریخ و اطلاعات استثنا معتبر نیست.", officeId });
+  if (!parsed.success) go({ error: "تاریخ و اطلاعات استثنا معتبر نیست.", officeId, view: "exceptions" });
   const isWorkingDay = checked(formData.get("isWorkingDay"));
   const startTime = String(formData.get("startTime") || "") || undefined;
   const endTime = String(formData.get("endTime") || "") || undefined;
   try { await upsertOfficeScheduleException({ adminId: admin.id, date: parseJalaliDateParam(parsed.data.date)!, endTime, isWorkingDay, officeId: parsed.data.officeId, reason: parsed.data.reason, startTime }); }
-  catch (error) { go({ error: message(error), officeId }); }
-  go({ exceptionSaved: "1", officeId });
+  catch (error) { go({ error: message(error), officeId, view: "exceptions" }); }
+  go({ exceptionSaved: "1", officeId, view: "exceptions" });
 }
 
 export async function deleteOfficeExceptionAction(formData: FormData) {
   const admin = await requireRole([UserRole.ADMIN]);
   const exceptionId = String(formData.get("exceptionId") || ""); const officeId = String(formData.get("officeId") || "");
-  if (!exceptionId) go({ error: "استثنا معتبر نیست.", officeId });
+  if (!exceptionId) go({ error: "استثنا معتبر نیست.", officeId, view: "exceptions" });
   try { await deleteOfficeScheduleException({ adminId: admin.id, exceptionId }); }
-  catch (error) { go({ error: message(error), officeId }); }
-  go({ exceptionDeleted: "1", officeId });
+  catch (error) { go({ error: message(error), officeId, view: "exceptions" }); }
+  go({ exceptionDeleted: "1", officeId, view: "exceptions" });
 }
