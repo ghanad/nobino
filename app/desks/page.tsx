@@ -53,7 +53,7 @@ export default async function DesksPage({ searchParams }: Props) {
     params?.updated ? { consumeKeys: ["updated"], message: "رزرو میز ویرایش شد.", variant: "success" as const } :
     params?.cancelled ? { consumeKeys: ["cancelled"], message: "رزرو میز لغو شد.", variant: "success" as const } : null;
 
-  return <div className="grid gap-4" dir="rtl">
+  return <div className="grid gap-3" dir="rtl">
     <PageHeader title="رزرو میز" subtitle="دفتر، تاریخ و زمان حضور خود را انتخاب کنید و میز مناسب را از روی نقشه رزرو کنید." />
     {toast ? <UrlToast {...toast} /> : null}
     {!office ? <p className="rounded-lg border bg-card p-5 text-sm text-muted-foreground">هنوز دفتر فعالی تعریف نشده است.</p> : !window?.isWorkingDay ?

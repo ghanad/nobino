@@ -1,30 +1,35 @@
 export type DeskLayoutEntry = {
-  columnClass: string;
-  neighbourIds: string[];
+  deskClass: string;
+  orientation: "horizontal" | "vertical";
   slot: number;
 };
 
 const OFFICE_LAYOUT_SLOTS = [
-  "",
-  "",
-  "col-start-4",
-  "",
-  "col-start-1",
-  "",
-  "col-start-4",
-  "",
-  "col-start-1",
-  "",
+  { deskClass: "left-[11%] top-[5%] h-[7%] w-[18%]", orientation: "horizontal" },
+  { deskClass: "left-[32%] top-[5%] h-[7%] w-[18%]", orientation: "horizontal" },
+  { deskClass: "left-[53%] top-[5%] h-[7%] w-[18%]", orientation: "horizontal" },
+  { deskClass: "left-[74%] top-[5%] h-[7%] w-[18%]", orientation: "horizontal" },
+  { deskClass: "left-[75%] top-[17%] h-[7%] w-[17%]", orientation: "horizontal" },
+  { deskClass: "left-[86%] top-[27%] h-[11%] w-[8%]", orientation: "vertical" },
+  { deskClass: "left-[86%] top-[40%] h-[11%] w-[8%]", orientation: "vertical" },
+  { deskClass: "left-[86%] top-[67%] h-[10%] w-[8%]", orientation: "vertical" },
+  { deskClass: "left-[86%] top-[78%] h-[10%] w-[8%]", orientation: "vertical" },
+  { deskClass: "left-[86%] top-[89%] h-[10%] w-[8%]", orientation: "vertical" },
+  { deskClass: "left-[5%] top-[77%] h-[11%] w-[8%]", orientation: "vertical" },
+  { deskClass: "left-[5%] top-[62%] h-[12%] w-[8%]", orientation: "vertical" },
+  { deskClass: "left-[9%] top-[17%] h-[7%] w-[18%]", orientation: "horizontal" },
+  { deskClass: "left-[29%] top-[17%] h-[7%] w-[18%]", orientation: "horizontal" },
+  { deskClass: "left-[8%] top-[43%] h-[7%] w-[18%]", orientation: "horizontal" },
+  { deskClass: "left-[28%] top-[43%] h-[7%] w-[18%]", orientation: "horizontal" },
 ] as const;
 
-/** Keeps physical placement separate from desk records while preserving stable ID lookups. */
+/** Maps ordered desk records to their fixed positions in the office floor plan. */
 export function buildDeskLayout(deskIds: string[]): Record<string, DeskLayoutEntry> {
   return Object.fromEntries(deskIds.map((deskId, slot) => {
-    const pairedSlot = slot % 2 === 0 ? slot + 1 : slot - 1;
-    const neighbourId = deskIds[pairedSlot];
+    const placement = OFFICE_LAYOUT_SLOTS[slot];
     return [deskId, {
-      columnClass: OFFICE_LAYOUT_SLOTS[slot] ?? "",
-      neighbourIds: neighbourId ? [neighbourId] : [],
+      deskClass: placement?.deskClass ?? "left-1/2 top-1/2 h-[7%] w-[18%]",
+      orientation: placement?.orientation ?? "horizontal",
       slot,
     }];
   }));

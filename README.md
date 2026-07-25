@@ -88,7 +88,7 @@ The seed script creates:
 - `manager@nobino.local` / `Manager123!`
 - `user@nobino.local` / `User123!`
 - Resource pool `Company Systems` with capacity `5`
-- Office `دفتر مرکزی` with ten named desks (`میز 1` through `میز 10`)
+- Office `دفتر مرکزی` with sixteen named desks (`میز 1` through `میز 16`)
 - Weekly schedule using JavaScript `Date.getDay()` values: Sunday through Thursday and Saturday are `09:00-17:00`; Friday is disabled.
 
 ## Current Status

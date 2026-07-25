@@ -2,15 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Armchair,
-  CalendarDays,
-  Check,
-  Clock3,
-  DoorOpen,
-  MapPin,
-  Pencil,
-} from "lucide-react";
+import { CalendarDays, Check, Clock3, MapPin, Pencil } from "lucide-react";
 
 import {
   cancelOwnDeskReservationAction,
@@ -200,8 +192,8 @@ export function DeskReservationForm({
       {myReservation ? <input name="reservationId" type="hidden" value={myReservation.id} /> : null}
       {fullDay ? <input name="fullDay" type="hidden" value="on" /> : null}
 
-      <section className="rounded-xl border bg-card px-4 py-3 shadow-sm">
-        <div className="grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1.15fr_1.25fr_.8fr_.8fr]">
+      <section className="rounded-xl border bg-card px-4 py-2.5 shadow-sm">
+        <div className="grid items-end gap-2.5 sm:grid-cols-2 lg:grid-cols-[1fr_1.15fr_1.25fr_.8fr_.8fr]">
           <label className="grid gap-1 text-xs font-medium text-slate-600">دفتر
             <select className={inputClass} disabled={isNavigating} onChange={(event) => navigate(event.target.value, date)} value={officeId}>
               {offices.map((office) => <option key={office.id} value={office.id}>{office.name}</option>)}
@@ -235,7 +227,7 @@ export function DeskReservationForm({
             <div className="flex h-10 items-center gap-2 rounded-md bg-blue-50 px-3 text-xs text-blue-900 sm:col-span-2"><Clock3 className="h-4 w-4" />{formatHour(firstHour)} تا {formatHour(lastHour)}</div>
           </>}
         </div>
-        <div className="mt-2 flex flex-col gap-2 border-t pt-2 text-xs sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-1.5 flex flex-col gap-1.5 border-t pt-1.5 text-xs sm:flex-row sm:items-center sm:justify-between">
           <span className="text-slate-500">بازه انتخابی: <strong className="text-slate-800">{formatHour(displayedStart)} تا {formatHour(displayedEnd)}</strong></span>
           {myReservation ? <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-slate-600">
             <span><strong className="text-blue-900">رزرو شما:</strong> {desks.find((desk) => desk.id === myReservation.deskId)?.name}، {formatHour(myReservation.startHour)} تا {formatHour(myReservation.endHour)} · {statusLabel(myReservation.status)}</span>
@@ -246,27 +238,31 @@ export function DeskReservationForm({
       </section>
 
       <section className="overflow-hidden rounded-xl border bg-card shadow-sm" aria-label="فضای رزرو میز">
-        <header className="flex flex-col gap-2 border-b px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+        <header className="grid gap-1.5 border-b px-4 py-2.5 sm:px-5">
           <div><h2 className="font-semibold text-slate-950">نقشه میزها</h2><p className="mt-0.5 text-xs text-muted-foreground"><strong className="text-emerald-700">{availableCount.toLocaleString("fa-IR")} میز</strong> برای بازه {formatHour(displayedStart)} تا {formatHour(displayedEnd)} در دسترس است.</p></div>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-600" aria-label="راهنمای وضعیت میزها"><span className="text-emerald-700">● آزاد</span><span className="text-red-700">● رزرو شده</span><span className="text-amber-700">◌ در انتظار تأیید</span><span className="text-blue-700">◆ رزرو شما</span></div>
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-slate-600" aria-label="راهنمای وضعیت میزها"><span className="text-emerald-700">● آزاد</span><span aria-hidden="true" className="text-slate-300">·</span><span className="text-red-700">● رزرو شده</span><span aria-hidden="true" className="text-slate-300">·</span><span className="text-amber-700">◌ در انتظار تأیید</span><span aria-hidden="true" className="text-slate-300">·</span><span className="text-blue-700">◆ رزرو شما</span></div>
         </header>
 
-        <div className="grid items-stretch lg:grid-cols-[minmax(0,2fr)_minmax(19rem,1fr)]">
-          <div className="overflow-x-auto bg-slate-50/50 p-3 sm:p-4" aria-label="نقشه میزهای دفتر">
-            <div className="mx-auto grid min-w-[620px] max-w-4xl grid-cols-[1fr_1fr_3rem_1fr_1fr] gap-2.5" role="listbox" aria-label="انتخاب میز">
-              <div className="col-span-2 flex h-8 items-center justify-center gap-2 rounded border border-dashed bg-white text-[11px] text-slate-500"><span className="h-1.5 w-14 rounded-full bg-sky-200" />پنجره</div>
-              <div />
-              <div className="col-span-2 flex h-8 items-center justify-center rounded border border-dashed bg-white text-[11px] text-slate-500">اتاق جلسه</div>
+        <div className={cn("grid items-stretch", selectedDesk ? "lg:grid-cols-[minmax(0,2fr)_minmax(19rem,1fr)]" : "lg:grid-cols-[minmax(0,3fr)_minmax(14rem,.7fr)]")}>
+          <div className="overflow-x-auto bg-slate-50/50 p-3" aria-label="نقشه میزهای دفتر">
+            <div className="relative mx-auto min-h-[740px] min-w-[680px] max-w-4xl rounded-sm border-2 border-slate-700 bg-white shadow-inner" role="listbox" aria-label="انتخاب میز">
+              <div aria-hidden="true" className="absolute left-0 top-[25%] w-[48%] border-t-2 border-slate-700" />
+              <div aria-hidden="true" className="absolute left-0 top-[51%] h-[8%] w-[48%] border-b-2 border-r-2 border-t-2 border-slate-700" />
+              <div aria-hidden="true" className="absolute left-[-2px] top-[24%] flex h-[9%] w-9 -translate-x-1/2 items-center justify-center rounded-md border-2 border-amber-300 bg-amber-100 text-[10px] font-semibold text-amber-950 [writing-mode:vertical-rl]">درب</div>
+              <div aria-hidden="true" className="absolute bottom-[3%] left-[-2px] flex h-[8%] w-9 -translate-x-1/2 items-center justify-center rounded-md border-2 border-amber-300 bg-amber-100 text-[10px] font-semibold text-amber-950 [writing-mode:vertical-rl]">درب</div>
+              <div aria-hidden="true" className="absolute left-[86%] top-[53%] flex h-[12%] w-[8%] items-center justify-center rounded-lg border-2 border-emerald-300 bg-emerald-100 text-[11px] font-semibold text-emerald-900 [writing-mode:vertical-rl]">مبل</div>
               {deskStates.map(({ desk, relevant, state }) => {
                 const isCurrentDesk = myReservation?.deskId === desk.id;
                 const isSelected = selectedDeskId === desk.id;
                 const isProposedMove = Boolean(isSelected && myReservation && !isCurrentDesk);
-                return <div className={layout[desk.id]?.columnClass} key={desk.id}>
+                const placement = layout[desk.id];
+                return <div className={cn("absolute", placement?.deskClass)} key={desk.id}>
                   <button
                     aria-label={`${desk.name}، ${stateLabel(state)}${isSelected ? "، انتخاب‌شده" : ""}`}
                     aria-selected={isSelected}
                     className={cn(
-                      "relative flex min-h-24 w-full flex-col items-start justify-between rounded-lg border-2 bg-white p-3 text-right transition focus-visible:ring-2 focus-visible:ring-ring",
+                      "relative flex h-full w-full flex-col rounded-lg border-2 bg-white p-2 text-right transition focus-visible:ring-2 focus-visible:ring-ring",
+                      placement?.orientation === "vertical" ? "items-center justify-center gap-1 p-1 text-center" : "items-start justify-between",
                       state === "reservedOther" && "border-red-200 bg-red-50/60",
                       state === "pendingOther" && "border-amber-200 bg-amber-50/60",
                       (state === "currentPending" || state === "currentApproved" || isCurrentDesk) && "border-blue-200 bg-blue-50/70",
@@ -278,19 +274,17 @@ export function DeskReservationForm({
                     title={relevant ? `${relevant.userName}، ${formatHour(relevant.startHour)} تا ${formatHour(relevant.endHour)}، ${statusLabel(relevant.status)}` : `${desk.name} برای این بازه آزاد است`}
                     type="button"
                   >
-                    <span className="flex w-full items-center justify-between gap-2 font-semibold"><span>{desk.name}</span><Armchair className="h-4 w-4 text-slate-400" /></span>
-                    {relevant ? <span className="grid gap-0.5 text-xs text-slate-700"><strong>{relevant.userId === currentUserId ? "رزرو شما" : relevant.userName}</strong><span>{formatHour(relevant.startHour)} تا {formatHour(relevant.endHour)}</span>{relevant.status === "PENDING" ? <span className="text-amber-700">در انتظار تأیید</span> : null}</span> : <span className="text-xs font-medium text-emerald-700">آزاد در بازه شما</span>}
+                    <span className={cn("font-semibold", placement?.orientation === "vertical" ? "text-[10px] leading-4" : "text-xs")}><span>{desk.name}</span></span>
+                    {placement?.orientation === "vertical" ? <span aria-hidden="true" className={cn("h-1.5 w-1.5 rounded-full", state === "reservedOther" ? "bg-red-500" : state === "pendingOther" || state === "currentPending" ? "bg-amber-500" : state === "currentApproved" ? "bg-blue-500" : "bg-emerald-500")} /> : relevant ? <span className="grid gap-0.5 text-[10px] text-slate-700"><strong>{relevant.userId === currentUserId ? "رزرو شما" : relevant.userName}</strong><span>{formatHour(relevant.startHour)} تا {formatHour(relevant.endHour)}</span>{relevant.status === "PENDING" ? <span className="text-amber-700">در انتظار</span> : null}</span> : <span className="text-[10px] font-medium text-emerald-700">آزاد</span>}
                     {isProposedMove ? <span className="absolute -bottom-2 right-2 rounded-full bg-slate-800 px-2 py-0.5 text-[10px] text-white">انتخاب برای انتقال</span> : isCurrentDesk ? <span className="absolute -bottom-2 right-2 rounded-full bg-blue-600 px-2 py-0.5 text-[10px] text-white">رزرو فعلی شما</span> : isSelected ? <span className="absolute -bottom-2 right-2 rounded-full bg-slate-800 px-2 py-0.5 text-[10px] text-white">انتخاب‌شده</span> : null}
                   </button>
                 </div>;
               })}
-              <div className="col-start-3 row-span-2 row-start-2 flex items-center justify-center"><span className="[writing-mode:vertical-rl] text-[10px] text-slate-400">مسیر عبور</span></div>
-              <div className="col-span-2 col-start-4 flex h-8 items-center justify-center gap-2 rounded border border-dashed bg-white text-[11px] text-slate-500"><DoorOpen className="h-3.5 w-3.5" />ورودی</div>
             </div>
           </div>
 
           <aside className="border-t bg-white lg:border-r lg:border-t-0">
-            {!selectedDesk || !selectedDeskState ? <div className="flex min-h-40 items-center gap-3 p-5 text-sm text-muted-foreground"><MapPin className="h-5 w-5 shrink-0 text-primary" />برای مشاهده برنامه روزانه، یک میز را از روی نقشه انتخاب کنید.</div> : <div className="grid gap-4 p-4 sm:p-5">
+            {!selectedDesk || !selectedDeskState ? <div className="flex min-h-24 items-center gap-2.5 p-4 text-xs leading-5 text-muted-foreground"><MapPin className="h-4 w-4 shrink-0 text-primary" />برای مشاهده برنامه روز، یک میز را انتخاب کنید.</div> : <div className="grid gap-4 p-4 sm:p-5">
               <div className="flex items-start justify-between gap-3"><div><h3 className="font-semibold">{selectedDesk.name}</h3><p className="mt-0.5 text-xs text-muted-foreground">{officeName} · {dateLabel}</p></div><span className={cn("rounded-full px-2.5 py-1 text-[11px] font-medium", selectedDeskState.state === "reservedOther" ? "bg-red-50 text-red-700" : selectedDeskState.state === "pendingOther" || selectedDeskState.state === "currentPending" ? "bg-amber-50 text-amber-800" : selectedDeskState.state === "currentApproved" ? "bg-blue-50 text-blue-800" : "bg-emerald-50 text-emerald-700")}>{stateLabel(selectedDeskState.state)}</span></div>
 
               <section className="grid gap-2.5" aria-label={`برنامه روزانه ${selectedDesk.name}`}>

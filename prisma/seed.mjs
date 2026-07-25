@@ -166,7 +166,7 @@ async function main() {
     });
   }
 
-  for (const index of Array.from({ length: 10 }, (_, value) => value + 1)) {
+  for (const index of Array.from({ length: 16 }, (_, value) => value + 1)) {
     await prisma.desk.upsert({
       where: { officeId_name: { officeId: "main-office", name: `میز ${index}` } },
       update: { active: true, sortOrder: index },
