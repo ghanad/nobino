@@ -90,12 +90,14 @@ export function SlotDetailsPopover({
   cell,
   children,
   className,
+  disabled = false,
   isDragging,
   style,
 }: {
   cell: CellState;
   children: ReactNode;
   className?: string;
+  disabled?: boolean;
   isDragging: boolean;
   style?: CSSProperties;
 }) {
@@ -107,6 +109,7 @@ export function SlotDetailsPopover({
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const contentId = useId();
   const peopleCount = cell.approvedReservations.length + cell.pendingReservations.length;
+  const isInteractionDisabled = disabled || isDragging;
 
   function updatePosition() {
     const trigger = triggerRef.current;
@@ -135,7 +138,7 @@ export function SlotDetailsPopover({
   }
 
   function openPopover({ pinned = false }: { pinned?: boolean } = {}) {
-    if (isDragging || !cell.isWorkingHour || peopleCount === 0) {
+    if (isInteractionDisabled || !cell.isWorkingHour || peopleCount === 0) {
       return;
     }
 
@@ -177,7 +180,7 @@ export function SlotDetailsPopover({
   }
 
   function scheduleHoverOpen() {
-    if (isDragging || !cell.isWorkingHour || peopleCount === 0) {
+    if (isInteractionDisabled || !cell.isWorkingHour || peopleCount === 0) {
       return;
     }
 
@@ -224,6 +227,12 @@ export function SlotDetailsPopover({
       window.removeEventListener("scroll", updatePosition, true);
     };
   }, [isOpen]);
+
+  useEffect(() => {
+    if (isInteractionDisabled) {
+      closePopover();
+    }
+  }, [isInteractionDisabled]);
 
   useEffect(() => {
     return () => {

@@ -185,6 +185,7 @@ export function MobileDayView({
                   return (
                     <SlotDetailsPopover
                       cell={cell}
+                      disabled={isSelected}
                       isDragging={Boolean(mobileDraggingHandle)}
                       key={`${selectedMobileDay.dateParam}-${hour}`}
                     >
