@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { requireCurrentUser } from "@/lib/auth";
@@ -16,57 +15,92 @@ const updateSchema = z.object({
   startHour: z.coerce.number().int().min(0).max(23),
 });
 
-function go(params: Record<string, string>): never {
-  const query = new URLSearchParams(params);
-  redirect(`/manager/desks?${query.toString()}`);
+export type ManagerDeskActionState = {
+  id?: string;
+  message?: string;
+  mutation?: {
+    deskId?: string;
+    endAt?: string;
+    reservationId: string;
+    startAt?: string;
+    type: "approve" | "remove" | "update";
+  };
+  ok?: boolean;
+};
+
+function result(
+  ok: boolean,
+  message: string,
+  mutation?: ManagerDeskActionState["mutation"],
+): ManagerDeskActionState {
+  return { id: crypto.randomUUID(), message, mutation, ok };
 }
 function message(error: unknown) {
   if (error instanceof ReservationTransitionError || error instanceof ReservationTimeRangeError) return error.message;
   throw error;
 }
 
-export async function updateDeskReservationByManagerAction(formData: FormData) {
+export async function updateDeskReservationByManagerAction(
+  _state: ManagerDeskActionState,
+  formData: FormData,
+): Promise<ManagerDeskActionState> {
   const manager = await requireCurrentUser();
   const parsed = updateSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) go({ error: "میز، تاریخ و ساعت را معتبر وارد کنید." });
+  if (!parsed.success) return result(false, "میز، تاریخ و ساعت را معتبر وارد کنید.");
+  let updated;
   try {
-    await updateDeskReservation({
+    updated = await updateDeskReservation({
       actorUserId: manager.id, deskId: parsed.data.deskId,
       endAt: buildLocalDateAtHourFromJalali(parsed.data.date, parsed.data.endHour),
       reservationId: parsed.data.reservationId,
       startAt: buildLocalDateAtHourFromJalali(parsed.data.date, parsed.data.startHour),
     });
-  } catch (error) { go({ error: message(error) }); }
+  } catch (error) { return result(false, message(error)); }
   revalidatePath("/desks");
-  go({ updated: "1" });
+  return result(true, "رزرو میز تغییر کرد.", {
+    deskId: updated.deskId,
+    endAt: updated.endAt.toISOString(),
+    reservationId: updated.id,
+    startAt: updated.startAt.toISOString(),
+    type: "update",
+  });
 }
 
-export async function cancelDeskReservationByManagerAction(formData: FormData) {
+export async function cancelDeskReservationByManagerAction(
+  _state: ManagerDeskActionState,
+  formData: FormData,
+): Promise<ManagerDeskActionState> {
   const manager = await requireCurrentUser();
   const reservationId = String(formData.get("reservationId") || "");
-  if (!reservationId) go({ error: "رزرو میز معتبر نیست." });
+  if (!reservationId) return result(false, "رزرو میز معتبر نیست.");
   try { await cancelDeskReservationByManager({ managerId: manager.id, reservationId }); }
-  catch (error) { go({ error: message(error) }); }
+  catch (error) { return result(false, message(error)); }
   revalidatePath("/desks");
-  go({ cancelled: "1" });
+  return result(true, "رزرو میز لغو شد.", { reservationId, type: "remove" });
 }
 
-export async function approveDeskReservationAction(formData: FormData) {
+export async function approveDeskReservationAction(
+  _state: ManagerDeskActionState,
+  formData: FormData,
+): Promise<ManagerDeskActionState> {
   const manager = await requireCurrentUser();
   const reservationId = String(formData.get("reservationId") || "");
-  if (!reservationId) go({ error: "درخواست رزرو میز معتبر نیست." });
+  if (!reservationId) return result(false, "درخواست رزرو میز معتبر نیست.");
   try { await approveDeskReservation({ managerId: manager.id, reservationId }); }
-  catch (error) { go({ error: message(error) }); }
+  catch (error) { return result(false, message(error)); }
   revalidatePath("/desks");
-  go({ approved: "1" });
+  return result(true, "درخواست رزرو میز تأیید شد.", { reservationId, type: "approve" });
 }
 
-export async function rejectDeskReservationAction(formData: FormData) {
+export async function rejectDeskReservationAction(
+  _state: ManagerDeskActionState,
+  formData: FormData,
+): Promise<ManagerDeskActionState> {
   const manager = await requireCurrentUser();
   const reservationId = String(formData.get("reservationId") || "");
-  if (!reservationId) go({ error: "درخواست رزرو میز معتبر نیست." });
+  if (!reservationId) return result(false, "درخواست رزرو میز معتبر نیست.");
   try { await rejectDeskReservation({ managerId: manager.id, reservationId }); }
-  catch (error) { go({ error: message(error) }); }
+  catch (error) { return result(false, message(error)); }
   revalidatePath("/desks");
-  go({ rejected: "1" });
+  return result(true, "درخواست رزرو میز رد شد.", { reservationId, type: "remove" });
 }
