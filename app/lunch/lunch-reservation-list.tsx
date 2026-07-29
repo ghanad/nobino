@@ -426,7 +426,7 @@ function CancelLunchReservationForm({
   return (
     <form
       action={formAction}
-      className="w-full md:w-auto"
+      className="w-auto"
       onSubmit={(event) => {
         if (
           !window.confirm(
@@ -440,12 +440,12 @@ function CancelLunchReservationForm({
       <ActionResultBridge onComplete={onComplete} state={state} />
       <input name="reservationId" type="hidden" value={reservationId} />
       <SubmitButton
-        className="h-9 w-full rounded-xl px-3 text-muted-foreground hover:bg-destructive/[0.06] hover:text-destructive md:w-auto"
+        className="h-11 rounded-md bg-transparent px-3 font-semibold text-muted-foreground transition-[color,background-color,transform] hover:bg-destructive/[0.07] hover:text-destructive active:scale-[0.97] active:bg-destructive/[0.12] motion-reduce:transform-none"
         disabled={disabled}
         pendingLabel="در حال لغو"
         variant="ghost"
       >
-        <X aria-hidden="true" className="h-4 w-4" />
+        <X aria-hidden="true" className="h-3.5 w-3.5" />
         لغو رزرو
       </SubmitButton>
     </form>
@@ -534,28 +534,9 @@ export function LunchReservationList({
     },
     [],
   );
-  const nextReservationRow = currentRows.find((row) => row.reservation);
-
   return (
     <>
       <LunchActionToast onDismiss={dismissToast} toast={toast} />
-      {nextReservationRow?.reservation ? (
-        <div className="flex flex-col gap-1 rounded-xl bg-primary/[0.05] px-4 py-3 text-sm sm:flex-row sm:items-center sm:gap-2">
-          <span className="font-semibold text-primary">رزرو بعدی شما:</span>
-          <span className="text-foreground">
-            {nextReservationRow.weekdayLabel} {nextReservationRow.dateLabel}
-            <span className="mx-1.5 text-muted-foreground">·</span>
-            {getReservationMealLabel(nextReservationRow.reservation)}
-            <span className="mx-1.5 text-muted-foreground">·</span>
-            تحویل از {nextReservationRow.reservation.locationName}
-          </span>
-        </div>
-      ) : (
-        <div className="flex items-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-          <Utensils aria-hidden="true" className="h-4 w-4 shrink-0" />
-          <span>هنوز رزروی برای روزهای آینده ندارید.</span>
-        </div>
-      )}
       <div className="overflow-hidden rounded-2xl border border-border/80 bg-background">
         {currentRows.map((row) => {
           const reservation = row.reservation;
@@ -650,8 +631,8 @@ export function LunchReservationList({
                       }}
                     />
                   ) : (
-                    <div className="flex w-full min-w-0 flex-col gap-2 md:flex-row md:items-center md:gap-3">
-                      <p className="flex min-w-0 items-center gap-2 text-sm font-medium leading-6 text-foreground">
+                    <div className="flex w-full min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+                      <p className="flex min-w-0 flex-1 items-center gap-2 text-sm font-medium leading-6 text-foreground">
                         <CheckCircle2
                           aria-hidden="true"
                           className="h-4 w-4 shrink-0 text-primary"
@@ -662,19 +643,25 @@ export function LunchReservationList({
                           تحویل از {reservation.locationName}
                         </span>
                       </p>
-                      <div className="flex w-full items-center gap-1 md:mr-auto md:w-auto">
+                      <div className="mr-auto flex shrink-0 items-center text-sm">
                         <Button
-                          className="h-9 flex-1 rounded-xl px-3 md:w-auto md:flex-none"
+                          className="h-11 rounded-md bg-transparent px-3 font-semibold text-primary transition-[color,background-color,transform] hover:bg-primary/[0.07] hover:text-primary active:scale-[0.97] active:bg-primary/[0.12] motion-reduce:transform-none"
                           disabled={isActionDisabled}
                           onClick={() =>
                             setEditingReservationId(reservation.id)
                           }
                           type="button"
-                          variant="outline"
+                          variant="ghost"
                         >
-                          <Pencil aria-hidden="true" className="h-4 w-4" />
-                          تغییر
+                          <Pencil aria-hidden="true" className="h-3.5 w-3.5" />
+                          ویرایش
                         </Button>
+                        <span
+                          aria-hidden="true"
+                          className="text-muted-foreground/60"
+                        >
+                          ·
+                        </span>
                         <CancelLunchReservationForm
                           dateLabel={row.dateLabel}
                           disabled={isActionDisabled}

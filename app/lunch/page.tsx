@@ -156,9 +156,6 @@ export default async function LunchPage({ searchParams }: LunchPageProps) {
             <h1 className="text-2xl font-bold leading-tight text-foreground">
               رزرو غذای روزهای آینده
             </h1>
-            <p className="mt-1.5 max-w-2xl text-sm leading-6 text-muted-foreground">
-              وعده و محل تحویل روزهای آینده را انتخاب کنید.
-            </p>
             <p className="mt-1 flex items-center gap-1.5 text-xs leading-5 text-muted-foreground">
               <Clock3 aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
               مهلت رزرو هر روز تا ساعت {cutoffTimeLabel} روز قبل است.
