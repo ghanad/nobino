@@ -146,7 +146,7 @@ function MealChoices({
   return (
     <fieldset
       className={cn(
-        "min-w-0 text-sm lg:flex lg:w-auto lg:items-center lg:gap-2",
+        "min-w-0 text-sm lg:flex lg:w-auto lg:items-center lg:justify-between lg:gap-2",
         className,
       )}
     >
@@ -304,25 +304,26 @@ function CreateLunchReservationForm({
   return (
     <form
       action={formAction}
-      className="grid gap-3 lg:w-full lg:grid-cols-[auto_15rem_minmax(11rem,1fr)] lg:items-end"
+      className="grid gap-3 lg:flex lg:w-full lg:items-end lg:gap-3"
     >
       <ActionResultBridge onComplete={onComplete} state={state} />
       <input name="date" type="hidden" value={row.dateParam} />
       <MealChoices
         breakfastChecked={breakfastReserved}
+        className="lg:flex-1"
         disabled={disabled}
         lunchChecked={lunchReserved}
         onBreakfastChange={setBreakfastReserved}
         onLunchChange={setLunchReserved}
       />
       <LocationSelect
-        className="w-full"
+        className="w-full lg:w-60 lg:shrink-0"
         dateLabel={`${row.weekdayLabel} ${row.dateLabel}`}
         disabled={disabled}
         locations={locations}
       />
       <SubmitButton
-        className="h-11 w-full rounded-xl lg:w-44 lg:justify-self-end"
+        className="h-11 w-full rounded-xl lg:w-44 lg:shrink-0"
         disabled={disabled || !hasSelectedMeal}
         pendingLabel="در حال ثبت"
       >
@@ -362,26 +363,27 @@ function UpdateLunchReservationForm({
   return (
     <form
       action={formAction}
-      className="grid gap-3 lg:w-full lg:grid-cols-[auto_15rem_minmax(18rem,1fr)] lg:items-end"
+      className="grid gap-3 lg:flex lg:w-full lg:items-end lg:gap-3"
     >
       <ActionResultBridge onComplete={onComplete} state={state} />
       <input name="reservationId" type="hidden" value={row.reservation.id} />
       <input name="date" type="hidden" value={row.dateParam} />
       <MealChoices
         breakfastChecked={breakfastReserved}
+        className="lg:flex-1"
         disabled={disabled}
         lunchChecked={lunchReserved}
         onBreakfastChange={setBreakfastReserved}
         onLunchChange={setLunchReserved}
       />
       <LocationSelect
-        className="w-full"
+        className="w-full lg:w-60 lg:shrink-0"
         currentLocationId={row.reservation.locationId}
         dateLabel={`${row.weekdayLabel} ${row.dateLabel}`}
         disabled={disabled}
         locations={locations}
       />
-      <div className="grid grid-cols-2 gap-2 lg:w-72 lg:justify-self-end">
+      <div className="grid grid-cols-2 gap-2 lg:w-72 lg:shrink-0">
         <SubmitButton
           className="h-11 w-full rounded-xl px-3"
           disabled={disabled || !hasSelectedMeal}
