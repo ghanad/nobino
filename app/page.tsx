@@ -1,3 +1,10 @@
+/*
+THESIS: Nobino’s home is a compact service directory, not a dashboard.
+OWN-WORLD: White and cool-slate fields, one restrained action blue, IRANSansX, thin rules, and compact bordered controls.
+STORY: An employee scans the available reservation services and opens the one they need.
+FIRST VIEWPORT: A concise RTL heading sits above a responsive 2×2 service grid; each destination pairs an icon, title, description, and leftward cue.
+FORM: Equal-weight service wayfinding that can grow without implying a fixed count or sequence.
+*/
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
@@ -5,19 +12,16 @@ import {
   Armchair,
   CalendarClock,
   DoorOpen,
-  ExternalLink,
   Utensils,
 } from "lucide-react";
 
 import { AppShell } from "@/components/app/app-shell";
-import { PageHeader } from "@/components/app/page-header";
 import { getCurrentUser, type CurrentUser } from "@/lib/auth";
 
 type ServiceLink = {
   description: string;
   href: string;
   icon: typeof CalendarClock;
-  isExternal?: boolean;
   title: string;
 };
 
@@ -48,44 +52,33 @@ const serviceLinks: ServiceLink[] = [
   },
 ];
 
-function ServiceCard({ service }: { service: ServiceLink }) {
+function ServiceRoute({ service }: { service: ServiceLink }) {
   const Icon = service.icon;
-  const LinkIcon = service.isExternal ? ExternalLink : ArrowLeft;
-  const linkProps = service.isExternal
-    ? {
-        rel: "noreferrer",
-        target: "_blank",
-      }
-    : {};
 
   return (
     <Link
-      className="group grid min-h-36 gap-4 rounded-lg border bg-card p-5 text-right text-card-foreground transition-colors hover:border-slate-300 hover:bg-slate-50"
+      className="group grid min-h-32 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-lg border bg-card p-4 text-right text-card-foreground outline-none transition-[background-color,border-color] duration-200 hover:border-blue-200 hover:bg-blue-50/40 active:border-blue-300 active:bg-blue-50/70 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:gap-4 sm:p-5"
       href={service.href}
-      {...linkProps}
     >
-      <div className="flex items-start justify-between gap-4">
-        <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-background text-slate-700">
-          <Icon className="h-5 w-5" />
-        </span>
-        {service.isExternal ? (
-          <span className="rounded-full border border-slate-200 px-2 py-1 text-xs font-medium text-muted-foreground">
-            سامانه دیگر
-          </span>
-        ) : null}
-      </div>
-      <div className="grid gap-2">
-        <h2 className="text-base font-semibold tracking-normal text-slate-950">
+      <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-background text-slate-600 transition-colors duration-200 group-hover:border-blue-200 group-hover:text-primary group-focus-visible:border-blue-200 group-focus-visible:text-primary">
+        <Icon className="h-5 w-5" strokeWidth={1.75} />
+      </span>
+
+      <span className="grid min-w-0 gap-1">
+        <span className="text-base font-semibold leading-7 text-slate-950 sm:text-lg">
           {service.title}
-        </h2>
-        <p className="text-sm leading-6 text-muted-foreground">
+        </span>
+        <span className="text-sm leading-6 text-slate-600">
           {service.description}
-        </p>
-      </div>
-      <div className="mt-auto flex items-center gap-1.5 text-sm font-medium text-primary">
-        ورود
-        <LinkIcon className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-      </div>
+        </span>
+      </span>
+
+      <span
+        aria-hidden="true"
+        className="inline-flex h-9 w-9 items-center justify-center text-primary"
+      >
+        <ArrowLeft className="h-5 w-5 transition-transform duration-200 ease-out group-hover:-translate-x-1 group-focus-visible:-translate-x-1" />
+      </span>
     </Link>
   );
 }
@@ -93,20 +86,30 @@ function ServiceCard({ service }: { service: ServiceLink }) {
 function ServicesGateway({ user }: { user: CurrentUser }) {
   return (
     <AppShell user={user}>
-      <div className="grid gap-6 text-right" dir="rtl">
-        <PageHeader
-          subtitle="سرویس مورد نیازتان را انتخاب کنید."
-          title="خدمات"
-        />
-
+      <div className="grid gap-5 text-right sm:gap-6" dir="rtl">
         <section
-          aria-label="فهرست خدمات"
-          className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          aria-labelledby="services-title"
+          className="grid gap-1.5"
+        >
+          <h1
+            className="text-2xl font-semibold leading-9 text-slate-950"
+            id="services-title"
+          >
+            خدمات
+          </h1>
+          <p className="text-sm leading-6 text-slate-600">
+            سرویس مورد نیازتان را انتخاب کنید.
+          </p>
+        </section>
+
+        <nav
+          aria-label="فهرست خدمات قابل رزرو"
+          className="grid gap-4 md:grid-cols-2"
         >
           {serviceLinks.map((service) => (
-            <ServiceCard key={service.href} service={service} />
+            <ServiceRoute key={service.href} service={service} />
           ))}
-        </section>
+        </nav>
       </div>
     </AppShell>
   );

@@ -1,0 +1,195 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-28T19:24:18Z",
+  "title": "Design System: Nobino",
+  "extensions": {
+    "colorMeta": {
+      "action-blue": {
+        "role": "primary",
+        "displayName": "Action Blue",
+        "canonical": "hsl(221.2 83.2% 53.3%)",
+        "tonalRamp": [
+          "hsl(221.2 63% 15%)",
+          "hsl(221.2 68% 26%)",
+          "hsl(221.2 74% 38%)",
+          "hsl(221.2 83.2% 53.3%)",
+          "hsl(221.2 82% 66%)",
+          "hsl(221.2 80% 77%)",
+          "hsl(221.2 78% 88%)",
+          "hsl(221.2 76% 95%)"
+        ]
+      },
+      "canvas-white": {
+        "role": "neutral",
+        "displayName": "Canvas White",
+        "canonical": "hsl(0 0% 100%)",
+        "tonalRamp": [
+          "hsl(215 18% 15%)",
+          "hsl(215 15% 28%)",
+          "hsl(215 12% 42%)",
+          "hsl(215 10% 58%)",
+          "hsl(215 12% 72%)",
+          "hsl(215 18% 84%)",
+          "hsl(215 25% 93%)",
+          "hsl(0 0% 100%)"
+        ]
+      },
+      "ink-navy": {
+        "role": "neutral",
+        "displayName": "Ink Navy",
+        "canonical": "hsl(222.2 84% 4.9%)",
+        "tonalRamp": [
+          "hsl(222.2 84% 4.9%)",
+          "hsl(222.2 62% 15%)",
+          "hsl(222.2 48% 27%)",
+          "hsl(222.2 35% 40%)",
+          "hsl(222.2 28% 55%)",
+          "hsl(222.2 25% 70%)",
+          "hsl(222.2 28% 85%)",
+          "hsl(222.2 35% 95%)"
+        ]
+      },
+      "quiet-surface": {
+        "role": "neutral",
+        "displayName": "Quiet Surface",
+        "canonical": "hsl(210 40% 96.1%)",
+        "tonalRamp": [
+          "hsl(210 28% 15%)",
+          "hsl(210 30% 27%)",
+          "hsl(210 32% 40%)",
+          "hsl(210 34% 55%)",
+          "hsl(210 36% 69%)",
+          "hsl(210 38% 82%)",
+          "hsl(210 40% 91%)",
+          "hsl(210 40% 96.1%)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Page Headline",
+        "purpose": "Primary page titles."
+      },
+      "title": {
+        "displayName": "Service Title",
+        "purpose": "Service and section names."
+      },
+      "body": {
+        "displayName": "Operational Body",
+        "purpose": "Descriptions, instructions, and status details."
+      },
+      "label": {
+        "displayName": "Control Label",
+        "purpose": "Navigation and interactive controls."
+      }
+    },
+    "shadows": [
+      {
+        "name": "overlay",
+        "value": "0 10px 24px rgb(15 23 42 / 0.12)",
+        "purpose": "Menus, dialogs, and floating notifications only."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state-change",
+        "value": "150ms ease-out",
+        "purpose": "Color, border, opacity, and small directional transitions."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single strongest action in a task region.",
+      "html": "<button class=\"ds-btn-primary\">ثبت درخواست</button>",
+      "css": ".ds-btn-primary{height:40px;padding:8px 16px;border:0;border-radius:6px;background:hsl(221.2 83.2% 53.3%);color:hsl(210 40% 98%);font:500 14px/1.5 IRANSansX,sans-serif;transition:background-color 150ms ease-out}.ds-btn-primary:hover{background:hsl(221.2 83.2% 47%)}.ds-btn-primary:focus-visible{outline:2px solid hsl(221.2 83.2% 53.3%);outline-offset:2px}"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "A secondary action that remains visible without competing.",
+      "html": "<button class=\"ds-btn-outline\">بازگشت</button>",
+      "css": ".ds-btn-outline{height:40px;padding:8px 16px;border:1px solid hsl(214.3 31.8% 91.4%);border-radius:6px;background:#fff;color:hsl(222.2 84% 4.9%);font:500 14px/1.5 IRANSansX,sans-serif;transition:background-color 150ms ease-out,border-color 150ms ease-out}.ds-btn-outline:hover{background:hsl(210 40% 96.1%)}.ds-btn-outline:focus-visible{outline:2px solid hsl(221.2 83.2% 53.3%);outline-offset:2px}"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Compact operational text entry with an explicit focus state.",
+      "html": "<input class=\"ds-input\" dir=\"rtl\" placeholder=\"عنوان\" />",
+      "css": ".ds-input{height:40px;padding:8px 12px;border:1px solid hsl(214.3 31.8% 91.4%);border-radius:6px;background:#fff;color:hsl(222.2 84% 4.9%);font:400 14px/1.75 IRANSansX,sans-serif}.ds-input:focus-visible{outline:2px solid hsl(221.2 83.2% 53.3%);outline-offset:1px}"
+    },
+    {
+      "name": "Navigation Item",
+      "kind": "nav",
+      "description": "A quiet text-led route with a tonal active state.",
+      "html": "<a class=\"ds-nav\" href=\"#\">رزروها</a>",
+      "css": ".ds-nav{display:inline-flex;min-height:40px;align-items:center;padding:0 12px;border:1px solid transparent;border-radius:8px;color:hsl(215 25% 27%);font:500 14px/1.5 IRANSansX,sans-serif;text-decoration:none;transition:background-color 150ms ease-out,color 150ms ease-out}.ds-nav:hover,.ds-nav[aria-current=page]{background:hsl(210 40% 96.1%);color:hsl(222.2 84% 4.9%)}.ds-nav:focus-visible{outline:2px solid hsl(221.2 83.2% 53.3%);outline-offset:2px}"
+    },
+    {
+      "name": "Service Route",
+      "kind": "card",
+      "description": "A full-surface route combining icon, service name, job description, and direction.",
+      "html": "<a class=\"ds-service\" href=\"#\"><span class=\"ds-service-icon\" aria-hidden=\"true\">◫</span><span><strong>رزرو میز کار</strong><small>انتخاب میز در دفتر</small></span><b aria-hidden=\"true\">←</b></a>",
+      "css": ".ds-service{display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:16px;padding:16px 20px;border:1px solid hsl(214.3 31.8% 91.4%);border-radius:8px;background:#fff;color:hsl(222.2 84% 4.9%);font-family:IRANSansX,sans-serif;text-decoration:none;transition:background-color 150ms ease-out,border-color 150ms ease-out}.ds-service:hover{border-color:hsl(215 20% 75%);background:hsl(210 40% 98%)}.ds-service:focus-visible{outline:2px solid hsl(221.2 83.2% 53.3%);outline-offset:2px}.ds-service-icon{display:grid;width:44px;height:44px;place-items:center;border:1px solid hsl(214.3 31.8% 91.4%);border-radius:6px}.ds-service strong,.ds-service small{display:block}.ds-service strong{font-size:16px}.ds-service small{margin-top:4px;color:hsl(215.4 16.3% 46.9%);font-size:13px;font-weight:400}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Quiet Service Desk",
+    "overview": "Nobino behaves like a well-run internal service counter: composed, predictable, and quick to scan. The interface is deliberately operational rather than promotional. Hierarchy comes from spacing, weight, alignment, and restrained blue emphasis instead of decorative surfaces.",
+    "keyCharacteristics": [
+      "Persian-first, right-to-left composition",
+      "Restrained blue action color over white and cool neutral surfaces",
+      "Compact, readable information density",
+      "Borders and tonal shifts before shadows",
+      "Familiar controls with explicit focus and state feedback"
+    ],
+    "rules": [
+      {
+        "name": "The One Action Color Rule",
+        "body": "Blue communicates action or active state; it is not scattered as decoration.",
+        "section": "colors"
+      },
+      {
+        "name": "The Natural Persian Rule",
+        "body": "Do not add Latin-style tracking, uppercase conventions, or ornamental italics to Persian interface text.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-at-Rest Rule",
+        "body": "Ordinary cards and controls do not need a shadow to exist.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Prioritize service recognition and current task state over decorative content.",
+      "Use spacing, borders, and weight to establish hierarchy.",
+      "Keep Persian labels concise and dates naturally ordered in Jalali form.",
+      "Preserve familiar links, buttons, inputs, and keyboard behavior."
+    ],
+    "donts": [
+      "Turn every grouping into a floating card.",
+      "Introduce gradients, glass effects, ornamental serif typography, or generic marketing copy.",
+      "Use muted text where the contrast becomes ambiguous.",
+      "Replace explicit status language with color or icons alone."
+    ]
+  }
+}
