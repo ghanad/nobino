@@ -1,5 +1,5 @@
 import { LunchReservationStatus } from "@prisma/client";
-import { UtensilsCrossed } from "lucide-react";
+import { Clock3, UtensilsCrossed } from "lucide-react";
 
 import { LunchReservationList } from "@/app/lunch/lunch-reservation-list";
 import { UrlToast } from "@/components/ui/url-toast";
@@ -110,6 +110,7 @@ export default async function LunchPage({ searchParams }: LunchPageProps) {
       reservation,
     ]),
   );
+  const cutoffTimeLabel = formatPersianLocalTime(dayStates[0].cutoffAt);
   const rows = days.map((date, index) => {
     const dateParam = formatJalaliDateParam(date);
     const dateParts = getJalaliDisplayParts(date);
@@ -128,7 +129,6 @@ export default async function LunchPage({ searchParams }: LunchPageProps) {
           ? "مهلت گذشته"
           : "بدون سرویس",
       availabilityVariant,
-      cutoffLabel: `مهلت رزرو: ${getJalaliDisplayParts(dayState.cutoffAt).weekdayLabel}، ${formatPersianLocalTime(dayState.cutoffAt)}`,
       dateLabel: formatJalaliDateWithoutWeekday(date),
       dateParam,
       isActionDisabled: !dayState.isOpen || locations.length === 0,
@@ -158,6 +158,10 @@ export default async function LunchPage({ searchParams }: LunchPageProps) {
             </h1>
             <p className="mt-1.5 max-w-2xl text-sm leading-6 text-muted-foreground">
               وعده و محل تحویل روزهای آینده را انتخاب کنید.
+            </p>
+            <p className="mt-1 flex items-center gap-1.5 text-xs leading-5 text-muted-foreground">
+              <Clock3 aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+              مهلت رزرو هر روز تا ساعت {cutoffTimeLabel} روز قبل است.
             </p>
           </div>
         </div>

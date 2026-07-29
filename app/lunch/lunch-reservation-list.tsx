@@ -13,9 +13,9 @@ import {
   Building2,
   ChevronDown,
   CheckCircle2,
-  Clock3,
   Coffee,
   Pencil,
+  Save,
   Utensils,
   X,
   XCircle,
@@ -27,6 +27,7 @@ import {
   type LunchActionState,
   updateLunchReservationAction,
 } from "@/app/lunch/actions";
+import { Button } from "@/components/ui/button";
 import { SwipeDismissToast } from "@/components/ui/swipe-dismiss-toast";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { cn } from "@/lib/utils";
@@ -39,7 +40,6 @@ type LunchLocation = {
 type LunchReservationRow = {
   availabilityLabel: string;
   availabilityVariant: "closed" | "no-service" | "open";
-  cutoffLabel: string;
   dateLabel: string;
   dateParam: string;
   isActionDisabled: boolean;
@@ -84,8 +84,10 @@ function LocationSelect({
   locations: LunchLocation[];
 }) {
   return (
-    <label className={cn("grid min-w-0 gap-2 text-sm", className)}>
-      <span className="text-xs font-semibold text-foreground">محل تحویل</span>
+    <label className={cn("grid min-w-0 gap-1 text-sm", className)}>
+      <span className="text-xs font-normal text-muted-foreground">
+        محل تحویل
+      </span>
       <span className="relative block">
         <Building2
           aria-hidden="true"
@@ -93,7 +95,7 @@ function LocationSelect({
         />
         <select
           aria-label={`محل تحویل ${dateLabel}`}
-          className="h-12 w-full appearance-none rounded-xl border border-input bg-background px-9 text-sm font-medium outline-none transition-[border-color,box-shadow,background-color] hover:border-primary/40 focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60 sm:h-11"
+          className="h-11 w-full appearance-none rounded-xl border border-input bg-background px-9 text-sm font-medium outline-none transition-[border-color,box-shadow,background-color] hover:border-primary/40 focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60"
           defaultValue={currentLocationId ?? locations[0]?.id ?? ""}
           disabled={disabled || locations.length === 0}
           name="locationId"
@@ -138,23 +140,23 @@ function MealChoices({
   showLunch?: boolean;
 }) {
   const choiceClassName =
-    "relative flex min-h-11 min-w-0 cursor-pointer items-center justify-center gap-2 rounded-xl border border-border bg-background px-3 py-1 font-semibold text-muted-foreground transition-[color,background-color,border-color,transform] hover:border-primary/40 hover:text-foreground active:translate-y-px has-[:checked]:border-primary/45 has-[:checked]:bg-primary/[0.06] has-[:checked]:text-primary has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/35 has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-background has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50 motion-reduce:transform-none";
+    "relative flex h-11 min-w-0 cursor-pointer items-center justify-center gap-2 rounded-xl border border-border bg-background px-3 py-1 font-semibold text-muted-foreground transition-[color,background-color,border-color,transform] hover:border-primary/40 hover:text-foreground active:translate-y-px has-[:checked]:border-primary/45 has-[:checked]:bg-primary/[0.06] has-[:checked]:text-primary has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/35 has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-background has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50 motion-reduce:transform-none";
   const availableMealCount = Number(showBreakfast) + Number(showLunch);
 
   return (
     <fieldset
       className={cn(
-        "min-w-0 text-sm md:w-72 md:shrink-0",
+        "min-w-0 text-sm lg:flex lg:w-auto lg:items-center lg:gap-2",
         className,
       )}
     >
       <legend className="sr-only">انتخاب وعده‌ها</legend>
-      <div className="mb-2 text-xs font-semibold text-foreground">
+      <div className="mb-1 text-xs font-normal text-muted-foreground lg:mb-0 lg:shrink-0">
         انتخاب وعده‌ها
       </div>
       <div
         className={cn(
-          "grid gap-2",
+          "grid gap-2 lg:w-72 lg:shrink-0",
           availableMealCount === 1 ? "grid-cols-1" : "grid-cols-2",
         )}
       >
@@ -302,7 +304,7 @@ function CreateLunchReservationForm({
   return (
     <form
       action={formAction}
-      className="grid gap-3 md:w-fit md:grid-cols-[18rem_15rem_11rem] md:items-end"
+      className="grid gap-3 lg:w-full lg:grid-cols-[auto_15rem_minmax(11rem,1fr)] lg:items-end"
     >
       <ActionResultBridge onComplete={onComplete} state={state} />
       <input name="date" type="hidden" value={row.dateParam} />
@@ -320,7 +322,7 @@ function CreateLunchReservationForm({
         locations={locations}
       />
       <SubmitButton
-        className="h-12 w-full rounded-xl sm:h-11 md:min-w-0"
+        className="h-11 w-full rounded-xl lg:w-44 lg:justify-self-end"
         disabled={disabled || !hasSelectedMeal}
         pendingLabel="در حال ثبت"
       >
@@ -333,11 +335,13 @@ function CreateLunchReservationForm({
 function UpdateLunchReservationForm({
   disabled,
   locations,
+  onCancelEdit,
   onComplete,
   row,
 }: {
   disabled: boolean;
   locations: LunchLocation[];
+  onCancelEdit: () => void;
   onComplete: (state: LunchActionState) => void;
   row: LunchReservationRow & {
     reservation: NonNullable<LunchReservationRow["reservation"]>;
@@ -347,19 +351,28 @@ function UpdateLunchReservationForm({
     updateLunchReservationAction,
     initialActionState,
   );
+  const [breakfastReserved, setBreakfastReserved] = useState(
+    row.reservation.breakfastReserved,
+  );
+  const [lunchReserved, setLunchReserved] = useState(
+    row.reservation.lunchReserved,
+  );
+  const hasSelectedMeal = breakfastReserved || lunchReserved;
 
   return (
     <form
       action={formAction}
-      className="grid gap-3 md:w-fit md:grid-cols-[18rem_15rem_7rem] md:items-end"
+      className="grid gap-3 lg:w-full lg:grid-cols-[auto_15rem_minmax(18rem,1fr)] lg:items-end"
     >
       <ActionResultBridge onComplete={onComplete} state={state} />
       <input name="reservationId" type="hidden" value={row.reservation.id} />
       <input name="date" type="hidden" value={row.dateParam} />
       <MealChoices
-        breakfastReserved={row.reservation.breakfastReserved}
+        breakfastChecked={breakfastReserved}
         disabled={disabled}
-        lunchReserved={row.reservation.lunchReserved}
+        lunchChecked={lunchReserved}
+        onBreakfastChange={setBreakfastReserved}
+        onLunchChange={setLunchReserved}
       />
       <LocationSelect
         className="w-full"
@@ -368,15 +381,24 @@ function UpdateLunchReservationForm({
         disabled={disabled}
         locations={locations}
       />
-      <SubmitButton
-        className="h-12 w-full rounded-xl sm:h-11 md:min-w-0"
-        disabled={disabled}
-        pendingLabel="در حال تغییر"
-        variant="outline"
-      >
-        <Pencil className="h-4 w-4" />
-        تغییر
-      </SubmitButton>
+      <div className="grid grid-cols-2 gap-2 lg:w-72 lg:justify-self-end">
+        <SubmitButton
+          className="h-11 w-full rounded-xl px-3"
+          disabled={disabled || !hasSelectedMeal}
+          pendingLabel="در حال تغییر"
+        >
+          <Save aria-hidden="true" className="h-4 w-4" />
+          ذخیره
+        </SubmitButton>
+        <Button
+          className="h-11 w-full rounded-xl px-3"
+          onClick={onCancelEdit}
+          type="button"
+          variant="outline"
+        >
+          لغو ویرایش
+        </Button>
+      </div>
     </form>
   );
 }
@@ -402,7 +424,7 @@ function CancelLunchReservationForm({
   return (
     <form
       action={formAction}
-      className="w-full md:w-24"
+      className="w-full md:w-auto"
       onSubmit={(event) => {
         if (
           !window.confirm(
@@ -416,30 +438,34 @@ function CancelLunchReservationForm({
       <ActionResultBridge onComplete={onComplete} state={state} />
       <input name="reservationId" type="hidden" value={reservationId} />
       <SubmitButton
-        className="h-11 w-full rounded-xl text-muted-foreground hover:text-destructive"
+        className="h-9 w-full rounded-xl px-3 text-muted-foreground hover:bg-destructive/[0.06] hover:text-destructive md:w-auto"
         disabled={disabled}
         pendingLabel="در حال لغو"
-        variant="outline"
+        variant="ghost"
       >
-        <X className="h-4 w-4" />
-        لغو
+        <X aria-hidden="true" className="h-4 w-4" />
+        لغو رزرو
       </SubmitButton>
     </form>
   );
 }
 
 function getAvailabilityClasses(
-  variant: LunchReservationRow["availabilityVariant"],
+  variant: LunchReservationRow["availabilityVariant"] | "reserved",
 ) {
+  if (variant === "reserved") {
+    return "border border-primary/15 bg-primary/[0.07] text-primary";
+  }
+
   if (variant === "open") {
-    return "bg-emerald-50 text-emerald-800";
+    return "border border-emerald-200/70 bg-emerald-50 text-emerald-800";
   }
 
   if (variant === "closed") {
-    return "bg-slate-100 text-slate-600";
+    return "border border-slate-200 bg-slate-100 text-slate-600";
   }
 
-  return "bg-rose-50 text-rose-800";
+  return "border border-rose-200/70 bg-rose-50 text-rose-800";
 }
 
 function applyActionMutation(
@@ -477,6 +503,9 @@ export function LunchReservationList({
   rows,
 }: LunchReservationListProps) {
   const [currentRows, setCurrentRows] = useState(rows);
+  const [editingReservationId, setEditingReservationId] = useState<
+    string | null
+  >(null);
   const [toast, setToast] = useState<ActionToast | null>(null);
   const dismissToast = useCallback(() => setToast(null), []);
 
@@ -498,6 +527,7 @@ export function LunchReservationList({
         setCurrentRows((previousRows) =>
           applyActionMutation(previousRows, mutation),
         );
+        setEditingReservationId(null);
       }
     },
     [],
@@ -518,97 +548,132 @@ export function LunchReservationList({
             تحویل از {nextReservationRow.reservation.locationName}
           </span>
         </div>
-      ) : null}
+      ) : (
+        <div className="flex items-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+          <Utensils aria-hidden="true" className="h-4 w-4 shrink-0" />
+          <span>هنوز رزروی برای روزهای آینده ندارید.</span>
+        </div>
+      )}
       <div className="overflow-hidden rounded-2xl border border-border/80 bg-background">
         {currentRows.map((row) => {
           const reservation = row.reservation;
-          const isUnavailable = !row.isOpen;
+          const isEditing = reservation?.id === editingReservationId;
+          const isUnavailable = !row.isOpen && !reservation;
+          const isCompact = isUnavailable || Boolean(reservation && !isEditing);
           const isActionDisabled =
             row.isActionDisabled || locations.length === 0;
+          const displayedStatus = reservation
+            ? {
+                label: "رزرو شده",
+                variant: "reserved" as const,
+              }
+            : {
+                label: row.availabilityLabel,
+                variant: row.availabilityVariant,
+              };
 
           return (
             <article
               className={cn(
                 "group grid grid-cols-[5.5rem_minmax(0,1fr)] border-b border-border/70 last:border-b-0 sm:grid-cols-[11rem_minmax(0,1fr)]",
                 isUnavailable && "bg-slate-50/70",
+                reservation && "bg-primary/[0.018]",
               )}
               key={row.dateParam}
             >
               <div
                 className={cn(
                   "relative border-l border-border/80 px-3 sm:px-5",
-                  isUnavailable ? "py-3" : "py-5",
+                  isCompact ? "py-2" : "py-3",
                 )}
               >
                 <span
                   aria-hidden="true"
                   className={cn(
                     "absolute -left-[7px] h-[13px] w-[13px] rounded-full border-[3px] border-background",
-                    isUnavailable ? "top-5" : "top-7",
-                    row.isOpen
-                      ? reservation
-                        ? "bg-primary"
-                        : "bg-emerald-500"
-                      : row.availabilityVariant === "no-service"
-                        ? "bg-rose-300"
-                        : "bg-slate-300",
+                    isCompact ? "top-4" : "top-5",
+                    reservation
+                      ? "bg-primary ring-2 ring-primary/10"
+                      : row.isOpen
+                        ? "bg-emerald-500"
+                        : row.availabilityVariant === "no-service"
+                          ? "bg-rose-300"
+                          : "bg-slate-300",
                   )}
                 />
-                <h3 className="text-sm font-bold leading-6 text-foreground sm:text-base">
+                <h3
+                  className={cn(
+                    "font-bold text-foreground",
+                    isCompact
+                      ? "text-sm leading-5"
+                      : "text-sm leading-6 sm:text-base",
+                  )}
+                >
                   {row.weekdayLabel}
                 </h3>
-                <p className="mt-0.5 text-xs leading-5 text-muted-foreground sm:text-sm">
+                <p
+                  className={cn(
+                    "mt-0.5 text-xs text-muted-foreground",
+                    isCompact ? "leading-4" : "leading-5 sm:text-sm",
+                  )}
+                >
                   {row.dateLabel}
                 </p>
                 <span
                   className={cn(
-                    "inline-flex min-h-6 w-fit items-center rounded-md px-1.5 text-xs font-semibold",
-                    isUnavailable ? "mt-1" : "mt-2",
-                    getAvailabilityClasses(row.availabilityVariant),
+                    "inline-flex w-fit items-center rounded-md px-1.5 text-xs font-semibold",
+                    isCompact ? "mt-1 min-h-5" : "mt-2 min-h-6",
+                    getAvailabilityClasses(displayedStatus.variant),
                   )}
                 >
-                  {row.availabilityLabel}
+                  {displayedStatus.label}
                 </span>
               </div>
 
-              {row.isOpen ? (
-                <div className="min-w-0 px-3 py-5 sm:px-6">
-                  <div className="mb-3 flex flex-col gap-2 border-b border-border/60 pb-3 sm:flex-row sm:items-center sm:justify-between">
-                    {reservation ? (
-                      <p className="flex items-start gap-2 text-sm font-medium leading-6 text-emerald-800">
+              {reservation ? (
+                <div
+                  className={cn(
+                    "min-w-0 px-3 sm:px-6",
+                    isEditing ? "py-5" : "py-2",
+                  )}
+                >
+                  {isEditing ? (
+                    <UpdateLunchReservationForm
+                      disabled={isActionDisabled}
+                      locations={locations}
+                      onCancelEdit={() => setEditingReservationId(null)}
+                      onComplete={handleActionComplete}
+                      row={{
+                        ...row,
+                        reservation,
+                      }}
+                    />
+                  ) : (
+                    <div className="flex min-w-0 flex-col gap-2 md:flex-row md:items-center md:gap-3">
+                      <p className="flex min-w-0 items-start gap-2 text-sm font-medium leading-6 text-foreground">
                         <CheckCircle2
                           aria-hidden="true"
-                          className="mt-1 h-4 w-4 shrink-0"
+                          className="mt-1 h-4 w-4 shrink-0 text-primary"
                         />
-                        <span>
+                        <span className="min-w-0">
                           {getReservationMealLabel(reservation)}
-                          <span className="mx-1.5 text-emerald-600/60">·</span>
+                          <span className="mx-1.5 text-muted-foreground">·</span>
                           تحویل از {reservation.locationName}
                         </span>
                       </p>
-                    ) : (
-                      <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Utensils aria-hidden="true" className="h-4 w-4" />
-                        هنوز رزرو نشده
-                      </p>
-                    )}
-                    <p className="flex items-center gap-1.5 text-xs leading-5 text-muted-foreground">
-                      <Clock3 aria-hidden="true" className="h-3.5 w-3.5" />
-                      {row.cutoffLabel}
-                    </p>
-                  </div>
-
-                  {reservation ? (
-                    <div className="grid gap-3 md:w-fit md:grid-cols-[auto_6rem] md:items-end">
-                        <UpdateLunchReservationForm
+                      <div className="flex w-full items-center gap-1 md:mr-auto md:w-auto">
+                        <Button
+                          className="h-9 flex-1 rounded-xl px-3 md:w-auto md:flex-none"
                           disabled={isActionDisabled}
-                          locations={locations}
-                          onComplete={handleActionComplete}
-                          row={{
-                            ...row,
-                            reservation,
-                          }}
-                        />
+                          onClick={() =>
+                            setEditingReservationId(reservation.id)
+                          }
+                          type="button"
+                          variant="outline"
+                        >
+                          <Pencil aria-hidden="true" className="h-4 w-4" />
+                          تغییر
+                        </Button>
                         <CancelLunchReservationForm
                           dateLabel={row.dateLabel}
                           disabled={isActionDisabled}
@@ -616,18 +681,21 @@ export function LunchReservationList({
                           reservationId={reservation.id}
                           weekdayLabel={row.weekdayLabel}
                         />
+                      </div>
                     </div>
-                  ) : (
-                    <CreateLunchReservationForm
-                      disabled={isActionDisabled}
-                      locations={locations}
-                      onComplete={handleActionComplete}
-                      row={row}
-                    />
                   )}
                 </div>
+              ) : row.isOpen ? (
+                <div className="min-w-0 px-3 py-3 sm:px-6">
+                  <CreateLunchReservationForm
+                    disabled={isActionDisabled}
+                    locations={locations}
+                    onComplete={handleActionComplete}
+                    row={row}
+                  />
+                </div>
               ) : (
-                <div className="flex min-w-0 items-center px-3 py-3 sm:px-6">
+                <div className="flex min-w-0 items-center px-3 py-2 sm:px-6">
                   <p className="text-sm leading-6 text-muted-foreground">
                     {row.availabilityVariant === "closed"
                       ? "مهلت رزرو این روز گذشته است."
