@@ -1,14 +1,13 @@
 import { LunchReservationStatus } from "@prisma/client";
+import { UtensilsCrossed } from "lucide-react";
 
 import { LunchReservationList } from "@/app/lunch/lunch-reservation-list";
-import { PageHeader } from "@/components/app/page-header";
 import { UrlToast } from "@/components/ui/url-toast";
 import { requireCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
   formatJalaliDateParam,
   formatJalaliDateWithoutWeekday,
-  formatJalaliDateWithoutYear,
   formatPersianLocalTime,
   getJalaliDisplayParts,
 } from "@/lib/jalali-date";
@@ -129,7 +128,7 @@ export default async function LunchPage({ searchParams }: LunchPageProps) {
           ? "مهلت گذشته"
           : "بدون سرویس",
       availabilityVariant,
-      cutoffLabel: `مهلت تغییر: ${formatJalaliDateWithoutYear(dayState.cutoffAt)}، ساعت ${formatPersianLocalTime(dayState.cutoffAt)}`,
+      cutoffLabel: `مهلت رزرو: ${getJalaliDisplayParts(dayState.cutoffAt).weekdayLabel}، ${formatPersianLocalTime(dayState.cutoffAt)}`,
       dateLabel: formatJalaliDateWithoutWeekday(date),
       dateParam,
       isActionDisabled: !dayState.isOpen || locations.length === 0,
@@ -146,17 +145,34 @@ export default async function LunchPage({ searchParams }: LunchPageProps) {
         : null,
     };
   });
-
   return (
-    <div className="grid gap-6 text-right" dir="rtl">
-      <PageHeader
-        subtitle="رزرو روزانه صبحانه و ناهار با یک محل تحویل مشترک"
-        title="رزرو غذا"
-      />
+    <div className="grid gap-5 text-right sm:gap-6" dir="rtl">
+      <header className="border-b border-border/80 pb-5 sm:pb-6">
+        <div className="flex items-start gap-3 sm:gap-4">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground sm:h-12 sm:w-12">
+            <UtensilsCrossed aria-hidden="true" className="h-5 w-5" />
+          </span>
+          <div>
+            <h1 className="text-2xl font-bold leading-tight text-foreground">
+              رزرو غذای روزهای آینده
+            </h1>
+            <p className="mt-1.5 max-w-2xl text-sm leading-6 text-muted-foreground">
+              وعده و محل تحویل روزهای آینده را انتخاب کنید.
+            </p>
+          </div>
+        </div>
+      </header>
 
       {toast ? <UrlToast {...toast} /> : null}
 
-      <section className="grid gap-4 text-card-foreground sm:rounded-lg sm:border sm:bg-card sm:p-5">
+      <section
+        aria-labelledby="lunch-week-heading"
+        className="grid gap-3 text-card-foreground"
+      >
+        <h2 className="sr-only" id="lunch-week-heading">
+          روزهای آینده
+        </h2>
+
         {locations.length === 0 ? (
           <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
             هنوز ساختمان فعالی برای دریافت غذا تعریف نشده است.

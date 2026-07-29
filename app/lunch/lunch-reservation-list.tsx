@@ -1,9 +1,20 @@
 "use client";
 
+/*
+ * THESIS: A Jalali workweek becomes one service line, not a stack of SaaS cards.
+ * OWN-WORLD: Crisp route geometry, ink-and-blue controls, and semantic station dots.
+ * STORY: Scan day status, choose meals and pickup inline, then submit once.
+ * FIRST VIEWPORT: Week summary above a connected vertical line; nearest open day leads.
+ * FORM: Office wayfinding map, fourth grounded direction, seed 080204f5.
+ */
+
 import { useActionState, useCallback, useEffect, useState } from "react";
 import {
-  Check,
+  Building2,
+  ChevronDown,
   CheckCircle2,
+  Clock3,
+  Coffee,
   Pencil,
   Utensils,
   X,
@@ -62,31 +73,44 @@ const initialActionState: LunchActionState = {
 function LocationSelect({
   className,
   currentLocationId,
+  dateLabel,
   disabled,
   locations,
 }: {
   className?: string;
   currentLocationId?: string;
+  dateLabel: string;
   disabled: boolean;
   locations: LunchLocation[];
 }) {
   return (
-    <select
-      className={cn(
-        "h-11 min-w-40 rounded-lg border-0 bg-muted/70 px-3 text-sm outline-none transition focus:ring-2 focus:ring-ring disabled:opacity-60 sm:h-10 sm:rounded-md sm:border sm:border-input sm:bg-background",
-        className,
-      )}
-      defaultValue={currentLocationId ?? locations[0]?.id ?? ""}
-      disabled={disabled || locations.length === 0}
-      name="locationId"
-      required
-    >
-      {locations.map((location) => (
-        <option key={location.id} value={location.id}>
-          {location.name}
-        </option>
-      ))}
-    </select>
+    <label className={cn("grid min-w-0 gap-2 text-sm", className)}>
+      <span className="text-xs font-semibold text-foreground">محل تحویل</span>
+      <span className="relative block">
+        <Building2
+          aria-hidden="true"
+          className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+        />
+        <select
+          aria-label={`محل تحویل ${dateLabel}`}
+          className="h-12 w-full appearance-none rounded-xl border border-input bg-background px-9 text-sm font-medium outline-none transition-[border-color,box-shadow,background-color] hover:border-primary/40 focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60 sm:h-11"
+          defaultValue={currentLocationId ?? locations[0]?.id ?? ""}
+          disabled={disabled || locations.length === 0}
+          name="locationId"
+          required
+        >
+          {locations.map((location) => (
+            <option key={location.id} value={location.id}>
+              {location.name}
+            </option>
+          ))}
+        </select>
+        <ChevronDown
+          aria-hidden="true"
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+        />
+      </span>
+    </label>
   );
 }
 
@@ -114,60 +138,57 @@ function MealChoices({
   showLunch?: boolean;
 }) {
   const choiceClassName =
-    "relative flex min-h-11 min-w-0 cursor-pointer items-center justify-between gap-2 rounded-md border border-border bg-background px-3 py-1 font-medium text-foreground/80 transition-[color,background-color,border-color,box-shadow,transform] hover:border-primary/30 hover:bg-primary/[0.03] active:scale-[0.99] active:border-primary/40 active:bg-primary/[0.06] has-[:checked]:border-primary/35 has-[:checked]:bg-primary/[0.06] has-[:checked]:text-primary has-[:checked]:hover:border-primary/45 has-[:checked]:hover:bg-primary/[0.09] has-[:checked]:active:bg-primary/[0.12] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-muted-foreground/40 has-[:focus-visible]:ring-offset-1 has-[:focus-visible]:ring-offset-background has-[:disabled]:cursor-not-allowed has-[:disabled]:border-border/70 has-[:disabled]:bg-muted has-[:disabled]:text-muted-foreground has-[:disabled]:hover:border-border/70 has-[:disabled]:hover:bg-muted has-[:disabled]:active:scale-100 has-[:disabled]:active:border-border/70 has-[:disabled]:active:bg-muted motion-reduce:transform-none sm:min-h-10 sm:hover:border-primary/40 sm:hover:bg-muted/50 sm:active:scale-[0.98] sm:active:bg-muted sm:has-[:checked]:border-primary sm:has-[:checked]:bg-primary/10 sm:has-[:checked]:hover:bg-primary/15 sm:has-[:checked]:active:bg-primary/20 md:has-[:checked]:border-primary/35 md:has-[:checked]:hover:border-primary/45";
-  const indicatorClassName =
-    "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-[1.5px] border-muted-foreground/60 bg-background text-transparent transition-colors peer-checked:border-primary/60 peer-checked:bg-primary peer-checked:text-primary-foreground peer-disabled:!border-muted-foreground/30 peer-disabled:!bg-muted-foreground/10 peer-disabled:!text-muted-foreground/50 sm:h-6 sm:w-6 sm:border-2 md:h-[18px] md:w-[18px] md:border md:border-muted-foreground/60";
+    "relative flex min-h-11 min-w-0 cursor-pointer items-center justify-center gap-2 rounded-xl border border-border bg-background px-3 py-1 font-semibold text-muted-foreground transition-[color,background-color,border-color,transform] hover:border-primary/40 hover:text-foreground active:translate-y-px has-[:checked]:border-primary/45 has-[:checked]:bg-primary/[0.06] has-[:checked]:text-primary has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/35 has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-background has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50 motion-reduce:transform-none";
   const availableMealCount = Number(showBreakfast) + Number(showLunch);
 
   return (
     <fieldset
       className={cn(
-        "grid min-w-0 gap-1 rounded-lg border border-border/70 bg-muted/50 p-1 text-sm sm:gap-2 sm:rounded-md sm:bg-transparent sm:p-2 md:w-72 md:shrink-0 md:border-transparent md:bg-muted/20",
-        availableMealCount === 1 ? "grid-cols-1" : "grid-cols-2",
+        "min-w-0 text-sm md:w-72 md:shrink-0",
         className,
       )}
     >
       <legend className="sr-only">انتخاب وعده‌ها</legend>
-      {showBreakfast ? (
-        <label className={choiceClassName}>
-          <input
-            className="peer sr-only"
-            checked={breakfastChecked}
-            defaultChecked={breakfastChecked === undefined ? breakfastReserved : undefined}
-            disabled={disabled}
-            name="breakfastReserved"
-            onChange={(event) => onBreakfastChange?.(event.target.checked)}
-            type="checkbox"
-          />
-          <span className="min-w-0">صبحانه</span>
-          <span aria-hidden="true" className={indicatorClassName}>
-            <Check
-              className="h-3 w-3 sm:h-4 sm:w-4 md:h-2.5 md:w-2.5"
-              strokeWidth={2.5}
+      <div className="mb-2 text-xs font-semibold text-foreground">
+        انتخاب وعده‌ها
+      </div>
+      <div
+        className={cn(
+          "grid gap-2",
+          availableMealCount === 1 ? "grid-cols-1" : "grid-cols-2",
+        )}
+      >
+        {showBreakfast ? (
+          <label className={choiceClassName}>
+            <input
+              className="sr-only"
+              checked={breakfastChecked}
+              defaultChecked={breakfastChecked === undefined ? breakfastReserved : undefined}
+              disabled={disabled}
+              name="breakfastReserved"
+              onChange={(event) => onBreakfastChange?.(event.target.checked)}
+              type="checkbox"
             />
-          </span>
-        </label>
-      ) : null}
-      {showLunch ? (
-        <label className={choiceClassName}>
-          <input
-            className="peer sr-only"
-            checked={lunchChecked}
-            defaultChecked={lunchChecked === undefined ? lunchReserved : undefined}
-            disabled={disabled}
-            name="lunchReserved"
-            onChange={(event) => onLunchChange?.(event.target.checked)}
-            type="checkbox"
-          />
-          <span className="min-w-0">ناهار</span>
-          <span aria-hidden="true" className={indicatorClassName}>
-            <Check
-              className="h-3 w-3 sm:h-4 sm:w-4 md:h-2.5 md:w-2.5"
-              strokeWidth={2.5}
+            <Coffee aria-hidden="true" className="h-4 w-4 shrink-0" />
+            <span className="min-w-0">صبحانه</span>
+          </label>
+        ) : null}
+        {showLunch ? (
+          <label className={choiceClassName}>
+            <input
+              className="sr-only"
+              checked={lunchChecked}
+              defaultChecked={lunchChecked === undefined ? lunchReserved : undefined}
+              disabled={disabled}
+              name="lunchReserved"
+              onChange={(event) => onLunchChange?.(event.target.checked)}
+              type="checkbox"
             />
-          </span>
-        </label>
-      ) : null}
+            <Utensils aria-hidden="true" className="h-4 w-4 shrink-0" />
+            <span className="min-w-0">ناهار</span>
+          </label>
+        ) : null}
+      </div>
     </fieldset>
   );
 }
@@ -225,7 +246,7 @@ function LunchActionToast({
           : "border-emerald-200 text-emerald-900"
       }`}
       onDismiss={onDismiss}
-      role="status"
+      role={toast.variant === "error" ? "alert" : "status"}
     >
       <Icon className="mt-0.5 h-4 w-4 shrink-0" />
       <p className="min-w-0 flex-1 pl-8 leading-6">{toast.message}</p>
@@ -281,7 +302,7 @@ function CreateLunchReservationForm({
   return (
     <form
       action={formAction}
-      className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2 md:grid md:grid-cols-[18rem_10rem_11rem] md:gap-3"
+      className="grid gap-3 md:w-fit md:grid-cols-[18rem_15rem_11rem] md:items-end"
     >
       <ActionResultBridge onComplete={onComplete} state={state} />
       <input name="date" type="hidden" value={row.dateParam} />
@@ -293,12 +314,13 @@ function CreateLunchReservationForm({
         onLunchChange={setLunchReserved}
       />
       <LocationSelect
-        className="w-full sm:w-auto md:min-w-0 md:w-full"
+        className="w-full"
+        dateLabel={`${row.weekdayLabel} ${row.dateLabel}`}
         disabled={disabled}
         locations={locations}
       />
       <SubmitButton
-        className="w-full sm:w-auto md:min-w-0 md:w-full"
+        className="h-12 w-full rounded-xl sm:h-11 md:min-w-0"
         disabled={disabled || !hasSelectedMeal}
         pendingLabel="در حال ثبت"
       >
@@ -329,25 +351,25 @@ function UpdateLunchReservationForm({
   return (
     <form
       action={formAction}
-      className="contents sm:flex sm:items-center sm:gap-2 md:grid md:grid-cols-[18rem_10rem_82px] md:gap-3"
+      className="grid gap-3 md:w-fit md:grid-cols-[18rem_15rem_7rem] md:items-end"
     >
       <ActionResultBridge onComplete={onComplete} state={state} />
       <input name="reservationId" type="hidden" value={row.reservation.id} />
       <input name="date" type="hidden" value={row.dateParam} />
       <MealChoices
         breakfastReserved={row.reservation.breakfastReserved}
-        className="col-span-2 md:col-span-1"
         disabled={disabled}
         lunchReserved={row.reservation.lunchReserved}
       />
       <LocationSelect
-        className="col-span-2 w-full sm:w-auto md:col-span-1 md:min-w-0 md:w-full"
+        className="w-full"
         currentLocationId={row.reservation.locationId}
+        dateLabel={`${row.weekdayLabel} ${row.dateLabel}`}
         disabled={disabled}
         locations={locations}
       />
       <SubmitButton
-        className="w-full sm:w-auto md:min-w-0 md:w-full"
+        className="h-12 w-full rounded-xl sm:h-11 md:min-w-0"
         disabled={disabled}
         pendingLabel="در حال تغییر"
         variant="outline"
@@ -361,12 +383,16 @@ function UpdateLunchReservationForm({
 
 function CancelLunchReservationForm({
   disabled,
+  dateLabel,
   onComplete,
   reservationId,
+  weekdayLabel,
 }: {
   disabled: boolean;
+  dateLabel: string;
   onComplete: (state: LunchActionState) => void;
   reservationId: string;
+  weekdayLabel: string;
 }) {
   const [state, formAction] = useActionState(
     cancelLunchReservationAction,
@@ -374,11 +400,23 @@ function CancelLunchReservationForm({
   );
 
   return (
-    <form action={formAction} className="w-full sm:w-auto md:w-[82px]">
+    <form
+      action={formAction}
+      className="w-full md:w-24"
+      onSubmit={(event) => {
+        if (
+          !window.confirm(
+            `رزرو غذای ${weekdayLabel} ${dateLabel} لغو شود؟`,
+          )
+        ) {
+          event.preventDefault();
+        }
+      }}
+    >
       <ActionResultBridge onComplete={onComplete} state={state} />
       <input name="reservationId" type="hidden" value={reservationId} />
       <SubmitButton
-        className="w-full sm:w-auto md:w-full"
+        className="h-11 w-full rounded-xl text-muted-foreground hover:text-destructive"
         disabled={disabled}
         pendingLabel="در حال لغو"
         variant="outline"
@@ -394,14 +432,14 @@ function getAvailabilityClasses(
   variant: LunchReservationRow["availabilityVariant"],
 ) {
   if (variant === "open") {
-    return "bg-emerald-50 text-emerald-800 ring-emerald-200";
+    return "bg-emerald-50 text-emerald-800";
   }
 
   if (variant === "closed") {
-    return "bg-slate-50 text-slate-700 ring-slate-200";
+    return "bg-slate-100 text-slate-600";
   }
 
-  return "bg-rose-50 text-rose-800 ring-rose-200";
+  return "bg-rose-50 text-rose-800";
 }
 
 function applyActionMutation(
@@ -421,6 +459,17 @@ function applyActionMutation(
       ? { ...row, reservation: mutation.reservation }
       : row,
   );
+}
+
+function getReservationMealLabel(
+  reservation: NonNullable<LunchReservationRow["reservation"]>,
+) {
+  return [
+    reservation.breakfastReserved ? "صبحانه" : null,
+    reservation.lunchReserved ? "ناهار" : null,
+  ]
+    .filter(Boolean)
+    .join(" و ");
 }
 
 export function LunchReservationList({
@@ -453,113 +502,140 @@ export function LunchReservationList({
     },
     [],
   );
+  const nextReservationRow = currentRows.find((row) => row.reservation);
 
   return (
     <>
       <LunchActionToast onDismiss={dismissToast} toast={toast} />
-      <div className="grid gap-3">
+      {nextReservationRow?.reservation ? (
+        <div className="flex flex-col gap-1 rounded-xl bg-primary/[0.05] px-4 py-3 text-sm sm:flex-row sm:items-center sm:gap-2">
+          <span className="font-semibold text-primary">رزرو بعدی شما:</span>
+          <span className="text-foreground">
+            {nextReservationRow.weekdayLabel} {nextReservationRow.dateLabel}
+            <span className="mx-1.5 text-muted-foreground">·</span>
+            {getReservationMealLabel(nextReservationRow.reservation)}
+            <span className="mx-1.5 text-muted-foreground">·</span>
+            تحویل از {nextReservationRow.reservation.locationName}
+          </span>
+        </div>
+      ) : null}
+      <div className="overflow-hidden rounded-2xl border border-border/80 bg-background">
         {currentRows.map((row) => {
           const reservation = row.reservation;
-          const isExpired = row.availabilityVariant === "closed";
+          const isUnavailable = !row.isOpen;
           const isActionDisabled =
             row.isActionDisabled || locations.length === 0;
 
           return (
-            <div
+            <article
               className={cn(
-                "grid gap-3 rounded-xl border border-border/70 bg-card p-3 shadow-sm sm:gap-4 sm:p-4 md:grid-cols-[minmax(0,1fr)_18rem_10rem_11rem] md:items-center md:gap-3 md:rounded-md md:bg-background md:px-4 md:py-[14px] md:shadow-none",
-                isExpired && "border-slate-200 bg-slate-50/70 shadow-none",
+                "group grid grid-cols-[5.5rem_minmax(0,1fr)] border-b border-border/70 last:border-b-0 sm:grid-cols-[11rem_minmax(0,1fr)]",
+                isUnavailable && "bg-slate-50/70",
               )}
               key={row.dateParam}
             >
-              <div className="grid gap-1.5 sm:gap-2 md:grid-cols-[minmax(0,1fr)_5rem] md:items-start">
-                <div className="grid gap-1 sm:flex sm:items-center sm:gap-2 md:contents">
-                  <div className="min-w-0">
-                    <h2 className="text-base font-semibold leading-6">
-                      {row.weekdayLabel}
-                    </h2>
-                    <p className="text-sm font-normal leading-5 text-muted-foreground">
-                      {row.dateLabel}
-                    </p>
-                  </div>
-                  <span
-                    className={cn(
-                      "inline-flex h-6 w-fit items-center rounded-full px-2 text-[11px] font-medium ring-1 sm:mr-auto md:mr-0 md:self-start",
-                      getAvailabilityClasses(row.availabilityVariant),
-                    )}
-                  >
-                    {row.availabilityLabel}
-                  </span>
-                </div>
-                <p
-                  className={cn(
-                    "text-sm text-muted-foreground md:col-span-2",
-                    isExpired && "hidden md:block",
-                  )}
-                >
-                  {row.cutoffLabel}
-                </p>
-                {isExpired ? (
-                  <p className="text-sm leading-6 text-slate-700 md:hidden">
-                    مهلت ثبت یا تغییر رزرو برای این روز گذشته است.
-                  </p>
-                ) : null}
-                {reservation ? (
-                  <p className="text-sm text-emerald-800 md:col-span-2">
-                    رزرو شده: {" "}
-                    {[
-                      reservation.breakfastReserved ? "صبحانه" : null,
-                      reservation.lunchReserved ? "ناهار" : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" و ")} <span className="text-emerald-700/70">·</span>{" "}
-                    تحویل از {reservation.locationName}
-                  </p>
-                ) : (
-                  <p className="flex items-center gap-2 text-sm text-muted-foreground md:col-span-2">
-                    {isExpired ? null : <Utensils className="h-4 w-4" />}
-                    رزروی برای این روز ثبت نشده است.
-                  </p>
-                )}
-              </div>
-
               <div
                 className={cn(
-                  "border-t border-border/60 pt-3 sm:pt-4 md:col-span-3 md:border-0 md:pt-0",
-                  isExpired
-                    ? "hidden md:block"
-                    : reservation
-                      ? "grid grid-cols-2 gap-2 sm:flex sm:items-center md:gap-3"
-                      : "flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2",
+                  "relative border-l border-border/80 px-3 sm:px-5",
+                  isUnavailable ? "py-3" : "py-5",
                 )}
               >
-                {reservation ? (
-                  <>
-                    <UpdateLunchReservationForm
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "absolute -left-[7px] h-[13px] w-[13px] rounded-full border-[3px] border-background",
+                    isUnavailable ? "top-5" : "top-7",
+                    row.isOpen
+                      ? reservation
+                        ? "bg-primary"
+                        : "bg-emerald-500"
+                      : row.availabilityVariant === "no-service"
+                        ? "bg-rose-300"
+                        : "bg-slate-300",
+                  )}
+                />
+                <h3 className="text-sm font-bold leading-6 text-foreground sm:text-base">
+                  {row.weekdayLabel}
+                </h3>
+                <p className="mt-0.5 text-xs leading-5 text-muted-foreground sm:text-sm">
+                  {row.dateLabel}
+                </p>
+                <span
+                  className={cn(
+                    "inline-flex min-h-6 w-fit items-center rounded-md px-1.5 text-xs font-semibold",
+                    isUnavailable ? "mt-1" : "mt-2",
+                    getAvailabilityClasses(row.availabilityVariant),
+                  )}
+                >
+                  {row.availabilityLabel}
+                </span>
+              </div>
+
+              {row.isOpen ? (
+                <div className="min-w-0 px-3 py-5 sm:px-6">
+                  <div className="mb-3 flex flex-col gap-2 border-b border-border/60 pb-3 sm:flex-row sm:items-center sm:justify-between">
+                    {reservation ? (
+                      <p className="flex items-start gap-2 text-sm font-medium leading-6 text-emerald-800">
+                        <CheckCircle2
+                          aria-hidden="true"
+                          className="mt-1 h-4 w-4 shrink-0"
+                        />
+                        <span>
+                          {getReservationMealLabel(reservation)}
+                          <span className="mx-1.5 text-emerald-600/60">·</span>
+                          تحویل از {reservation.locationName}
+                        </span>
+                      </p>
+                    ) : (
+                      <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Utensils aria-hidden="true" className="h-4 w-4" />
+                        هنوز رزرو نشده
+                      </p>
+                    )}
+                    <p className="flex items-center gap-1.5 text-xs leading-5 text-muted-foreground">
+                      <Clock3 aria-hidden="true" className="h-3.5 w-3.5" />
+                      {row.cutoffLabel}
+                    </p>
+                  </div>
+
+                  {reservation ? (
+                    <div className="grid gap-3 md:w-fit md:grid-cols-[auto_6rem] md:items-end">
+                        <UpdateLunchReservationForm
+                          disabled={isActionDisabled}
+                          locations={locations}
+                          onComplete={handleActionComplete}
+                          row={{
+                            ...row,
+                            reservation,
+                          }}
+                        />
+                        <CancelLunchReservationForm
+                          dateLabel={row.dateLabel}
+                          disabled={isActionDisabled}
+                          onComplete={handleActionComplete}
+                          reservationId={reservation.id}
+                          weekdayLabel={row.weekdayLabel}
+                        />
+                    </div>
+                  ) : (
+                    <CreateLunchReservationForm
                       disabled={isActionDisabled}
                       locations={locations}
                       onComplete={handleActionComplete}
-                      row={{
-                        ...row,
-                        reservation,
-                      }}
+                      row={row}
                     />
-                    <CancelLunchReservationForm
-                      disabled={isActionDisabled}
-                      onComplete={handleActionComplete}
-                      reservationId={reservation.id}
-                    />
-                  </>
-                ) : (
-                  <CreateLunchReservationForm
-                    disabled={isActionDisabled}
-                    locations={locations}
-                    onComplete={handleActionComplete}
-                    row={row}
-                  />
-                )}
-              </div>
-            </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex min-w-0 items-center px-3 py-3 sm:px-6">
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    {row.availabilityVariant === "closed"
+                      ? "مهلت رزرو این روز گذشته است."
+                      : "در این روز سرویس غذا ارائه نمی‌شود."}
+                  </p>
+                </div>
+              )}
+            </article>
           );
         })}
       </div>
