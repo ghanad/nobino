@@ -203,7 +203,7 @@ function getCreateReservationLabel({
   lunchReserved: boolean;
 }) {
   if (breakfastReserved && lunchReserved) {
-    return "ثبت رزرو صبحانه و ناهار";
+    return "رزرو صبحانه و ناهار";
   }
 
   if (breakfastReserved) {
@@ -585,15 +585,14 @@ export function LunchReservationList({
             >
               <div
                 className={cn(
-                  "relative border-l border-border/80 px-3 sm:px-5",
+                  "relative flex flex-col justify-center border-l border-border/80 px-3 sm:px-5",
                   isCompact ? "py-2" : "py-3",
                 )}
               >
                 <span
                   aria-hidden="true"
                   className={cn(
-                    "absolute -left-[7px] h-[13px] w-[13px] rounded-full border-[3px] border-background",
-                    isCompact ? "top-4" : "top-5",
+                    "absolute -left-[7px] top-1/2 h-[13px] w-[13px] -translate-y-1/2 rounded-full border-[3px] border-background",
                     reservation
                       ? "bg-primary ring-2 ring-primary/10"
                       : row.isOpen
@@ -636,7 +635,7 @@ export function LunchReservationList({
                 <div
                   className={cn(
                     "min-w-0 px-3 sm:px-6",
-                    isEditing ? "py-5" : "py-2",
+                    isEditing ? "py-5" : "flex items-center py-2",
                   )}
                 >
                   {isEditing ? (
@@ -651,11 +650,11 @@ export function LunchReservationList({
                       }}
                     />
                   ) : (
-                    <div className="flex min-w-0 flex-col gap-2 md:flex-row md:items-center md:gap-3">
-                      <p className="flex min-w-0 items-start gap-2 text-sm font-medium leading-6 text-foreground">
+                    <div className="flex w-full min-w-0 flex-col gap-2 md:flex-row md:items-center md:gap-3">
+                      <p className="flex min-w-0 items-center gap-2 text-sm font-medium leading-6 text-foreground">
                         <CheckCircle2
                           aria-hidden="true"
-                          className="mt-1 h-4 w-4 shrink-0 text-primary"
+                          className="h-4 w-4 shrink-0 text-primary"
                         />
                         <span className="min-w-0">
                           {getReservationMealLabel(reservation)}
