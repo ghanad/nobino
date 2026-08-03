@@ -1,7 +1,12 @@
 import "server-only";
 
-import { type Prisma } from "@prisma/client";
+import {
+  CalendarDayOverrideMode,
+  CalendarDayTargetType,
+  type Prisma,
+} from "@prisma/client";
 
+import { getCalendarDayOverride } from "@/lib/calendar-day-override-service";
 import { db } from "@/lib/db";
 import { getIranHolidayForDate } from "@/lib/iran-holidays";
 import {
@@ -123,7 +128,37 @@ export async function getMeetingRoomWorkingWindowForDate(
     };
   }
 
-  const officialHoliday = await getIranHolidayForDate(input.date);
+  const calendarOverride = await getCalendarDayOverride(
+    {
+      date: input.date,
+      targetKey: input.roomId,
+      type: CalendarDayTargetType.MEETING_ROOM,
+    },
+    client,
+  );
+
+  if (calendarOverride?.mode === CalendarDayOverrideMode.CLOSED) {
+    return {
+      isWorkingDay: false,
+      reason: calendarOverride.reason,
+      startTime: null,
+      endTime: null,
+    };
+  }
+
+  if (calendarOverride?.mode === CalendarDayOverrideMode.CUSTOM) {
+    return {
+      isWorkingDay: true,
+      reason: calendarOverride.reason,
+      startTime: calendarOverride.startTime,
+      endTime: calendarOverride.endTime,
+    };
+  }
+
+  const officialHoliday =
+    calendarOverride?.mode === CalendarDayOverrideMode.NORMAL
+      ? null
+      : await getIranHolidayForDate(input.date);
 
   if (officialHoliday) {
     return {

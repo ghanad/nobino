@@ -93,7 +93,7 @@ The seed script creates:
 
 ## Current Status
 
-The first operational version is implemented. Seeded users can sign in, create hourly reservation requests, see their own reservations grouped by status, cancel pending requests, and accept or reject manager-proposed alternatives. Managers can approve, reject, propose alternatives, and review auto-approval deadlines from `/manager`. Admins can manage resource pool capacity and active state, Jalali date-specific capacity exceptions, weekly working schedule rows, Jalali date-specific schedule exceptions, reservation policy settings, users from `/admin`, and audit history from `/admin/audit`. Users and managers can review unread in-app notifications from `/notifications` and mark notifications as read. Capacity reductions are blocked when future approved reservations would exceed the new effective capacity. Core service rules are covered by automated tests.
+The first operational version is implemented. Seeded users can sign in, create hourly reservation requests, see their own reservations grouped by status, cancel pending requests, and accept or reject manager-proposed alternatives. Managers can approve, reject, propose alternatives, and review auto-approval deadlines from `/manager`. Admins can manage resource pool capacity and active state, Jalali date-specific capacity exceptions, weekly working schedule rows, centralized operational-calendar corrections, service-specific schedule exceptions, reservation policy settings, users from `/admin`, and audit history from `/admin/audit`. Users and managers can review unread in-app notifications from `/notifications` and mark notifications as read. Capacity reductions are blocked when future approved reservations would exceed the new effective capacity. Core service rules are covered by automated tests.
 
 ## Auth Routes
 
@@ -113,6 +113,8 @@ The first operational version is implemented. Seeded users can sign in, create h
   reservations.
 - `/admin/desks` lets admins manage offices, named desks, schedules, Jalali
   date exceptions, and the advance-booking limit.
+- `/admin/calendar` lets admins override imported Iran holidays or weekly
+  schedules once for selected systems, lunch, offices, and meeting rooms.
 - `/notifications` allows authenticated users to review unread notification
   events and mark them as read.
 - `/settings/bale` allows authenticated users to securely link or unlink their
@@ -140,6 +142,14 @@ Gregorian date pickers or Gregorian-formatted dates in product UI.
 - `validateReservationTimeRange({ startAt, endAt })` for exact hourly bounds,
   same-day reservations, minimum 1 hour, maximum one configured working day,
   enabled working days, and working-hour containment.
+
+Operational-calendar corrections use this precedence: a service-specific
+exception, a centralized date correction, an official Iran holiday, then the
+weekly schedule. A `NORMAL` correction bypasses an incorrect official holiday
+and resumes each selected service's own weekly schedule; `CLOSED` disables the
+selected targets; `CUSTOM` applies shared exact-hour bounds to timed services
+and enables lunch. Re-importing official holidays does not overwrite these
+central corrections.
 
 ## Reservation Requests
 

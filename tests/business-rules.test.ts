@@ -1,4 +1,5 @@
 import "./capacity-business-rules.test";
+import "./calendar-day-override-business-rules.test";
 import "./bale-notification-business-rules.test";
 import "./lunch-business-rules.test";
 import "./meeting-room-business-rules.test";

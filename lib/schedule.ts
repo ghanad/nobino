@@ -1,3 +1,12 @@
+import {
+  CalendarDayOverrideMode,
+  CalendarDayTargetType,
+} from "@prisma/client";
+
+import {
+  getCalendarDayOverride,
+  GLOBAL_CALENDAR_TARGET_KEY,
+} from "@/lib/calendar-day-override-service";
 import { db } from "@/lib/db";
 import { getIranHolidayForDate } from "@/lib/iran-holidays";
 
@@ -124,7 +133,34 @@ export async function getWorkingWindowForDate(
     };
   }
 
-  const officialHoliday = await getIranHolidayForDate(date);
+  const calendarOverride = await getCalendarDayOverride({
+    date,
+    targetKey: GLOBAL_CALENDAR_TARGET_KEY,
+    type: CalendarDayTargetType.SYSTEMS,
+  });
+
+  if (calendarOverride?.mode === CalendarDayOverrideMode.CLOSED) {
+    return {
+      isWorkingDay: false,
+      reason: calendarOverride.reason,
+      startTime: null,
+      endTime: null,
+    };
+  }
+
+  if (calendarOverride?.mode === CalendarDayOverrideMode.CUSTOM) {
+    return {
+      isWorkingDay: true,
+      reason: calendarOverride.reason,
+      startTime: calendarOverride.startTime,
+      endTime: calendarOverride.endTime,
+    };
+  }
+
+  const officialHoliday =
+    calendarOverride?.mode === CalendarDayOverrideMode.NORMAL
+      ? null
+      : await getIranHolidayForDate(date);
 
   if (officialHoliday) {
     return {

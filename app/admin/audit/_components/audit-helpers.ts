@@ -32,6 +32,9 @@ export type AuditLogRow = {
 type AuditJsonRecord = Record<string, Prisma.JsonValue>;
 
 export const ACTION_LABELS: Record<string, string> = {
+  CALENDAR_DAY_OVERRIDE_CREATED: "اصلاح تقویم عملیاتی ثبت شد",
+  CALENDAR_DAY_OVERRIDE_DELETED: "اصلاح تقویم عملیاتی حذف شد",
+  CALENDAR_DAY_OVERRIDE_UPDATED: "اصلاح تقویم عملیاتی ویرایش شد",
   DESK_CREATED: "میز ساخته شد",
   DESK_UPDATED: "میز ویرایش شد",
   DESK_RESERVATION_CREATED: "درخواست رزرو میز ثبت شد",
@@ -105,6 +108,7 @@ export const ACTION_LABELS: Record<string, string> = {
 };
 
 export const ENTITY_LABELS: Record<string, string> = {
+  CalendarDayOverride: "اصلاح تقویم عملیاتی",
   Desk: "میز",
   DeskReservation: "رزرو میز",
   DeskSettings: "سیاست رزرو میز",
@@ -142,12 +146,14 @@ const FIELD_LABELS: Record<string, string> = {
   endAt: "پایان",
   endTime: "پایان کار",
   isWorkingDay: "روز کاری",
+  mode: "رفتار تاریخ",
   name: "نام",
   oneReservationPerDayEnabled: "محدودیت یک رزرو در روز",
   partySize: "تعداد نفرات",
   proposedEndAt: "پایان پیشنهادی",
   proposedStartAt: "شروع پیشنهادی",
   reason: "دلیل",
+  targets: "سرویس‌های تحت تأثیر",
   rejectionReason: "دلیل رد",
   role: "نقش",
   startAt: "شروع",

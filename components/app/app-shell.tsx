@@ -78,6 +78,11 @@ function getNavItems(user: CurrentUser): GlobalNavItem[] {
             label: "سیاست رزرو",
             match: "prefix",
           },
+          {
+            href: "/admin/calendar",
+            label: "تقویم عملیاتی",
+            match: "prefix",
+          },
           { href: "/admin/schedule", label: "زمان‌بندی", match: "prefix" },
           {
             href: "/admin/meeting-rooms",

@@ -1,5 +1,14 @@
 import "server-only";
 
+import {
+  CalendarDayOverrideMode,
+  CalendarDayTargetType,
+} from "@prisma/client";
+
+import {
+  getCalendarDayOverride,
+  GLOBAL_CALENDAR_TARGET_KEY,
+} from "@/lib/calendar-day-override-service";
 import { db } from "@/lib/db";
 import { getIranHolidayForDate } from "@/lib/iran-holidays";
 
@@ -21,7 +30,27 @@ export async function isLunchServiceDay(
     return exception.isServiceDay;
   }
 
-  if (await getIranHolidayForDate(day)) {
+  const calendarOverride = await getCalendarDayOverride(
+    {
+      date: day,
+      targetKey: GLOBAL_CALENDAR_TARGET_KEY,
+      type: CalendarDayTargetType.LUNCH,
+    },
+    client,
+  );
+
+  if (calendarOverride?.mode === CalendarDayOverrideMode.CLOSED) {
+    return false;
+  }
+
+  if (calendarOverride?.mode === CalendarDayOverrideMode.CUSTOM) {
+    return true;
+  }
+
+  if (
+    calendarOverride?.mode !== CalendarDayOverrideMode.NORMAL &&
+    (await getIranHolidayForDate(day))
+  ) {
     return false;
   }
 

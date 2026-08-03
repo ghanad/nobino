@@ -158,6 +158,8 @@ export async function resetDatabase() {
   await db.baleConnection.deleteMany();
   await db.baleBotState.deleteMany();
   await db.auditLog.deleteMany();
+  await db.calendarDayOverrideTarget.deleteMany();
+  await db.calendarDayOverride.deleteMany();
   await db.lunchReservation.deleteMany();
   await db.lunchLocation.deleteMany();
   await db.lunchException.deleteMany();
@@ -295,6 +297,16 @@ export async function resetDatabase() {
     data: Array.from({ length: 7 }, (_, dayOfWeek) => ({
       officeId, dayOfWeek, isWorkingDay: dayOfWeek !== 5, startTime: "09:00", endTime: "17:00",
     })),
+  });
+  await db.officeScheduleException.create({
+    data: {
+      date: startOfLocalDay(nextWorkingDateAtHour(9)),
+      endTime: "17:00",
+      isWorkingDay: true,
+      officeId,
+      reason: "Test working day",
+      startTime: "09:00",
+    },
   });
 
   await db.lunchSettings.create({

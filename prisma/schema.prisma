@@ -54,6 +54,19 @@ enum BaleDeliveryStatus {
   SKIPPED
 }
 
+enum CalendarDayOverrideMode {
+  CLOSED
+  NORMAL
+  CUSTOM
+}
+
+enum CalendarDayTargetType {
+  SYSTEMS
+  LUNCH
+  OFFICE
+  MEETING_ROOM
+}
+
 model User {
   id                 String    @id @default(cuid())
   name               String
@@ -85,6 +98,7 @@ model User {
   baleConnection                   BaleConnection?
   baleLinkTokens                   BaleLinkToken[]
   baleLunchReportRecipient         BaleLunchReportRecipient?
+  createdCalendarDayOverrides      CalendarDayOverride[]           @relation("CalendarDayOverrideCreator")
 }
 
 model ResourcePool {
@@ -136,6 +150,36 @@ model ScheduleException {
   reason       String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+model CalendarDayOverride {
+  id          String                  @id @default(cuid())
+  date        DateTime                @unique
+  mode        CalendarDayOverrideMode
+  startTime   String?
+  endTime     String?
+  reason      String?
+  createdById String
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+
+  createdBy User                        @relation("CalendarDayOverrideCreator", fields: [createdById], references: [id])
+  targets   CalendarDayOverrideTarget[]
+
+  @@index([date])
+}
+
+model CalendarDayOverrideTarget {
+  id         String                @id @default(cuid())
+  overrideId String
+  type       CalendarDayTargetType
+  targetKey  String
+  createdAt  DateTime              @default(now())
+
+  override CalendarDayOverride @relation(fields: [overrideId], references: [id], onDelete: Cascade)
+
+  @@unique([overrideId, type, targetKey])
+  @@index([type, targetKey])
 }
 
 model MeetingRoom {
