@@ -56,9 +56,9 @@ export default async function DesksPage({ searchParams }: Props) {
   return <div className="grid gap-3" dir="rtl">
     <PageHeader title="رزرو میز" subtitle="دفتر، تاریخ و زمان حضور خود را انتخاب کنید و میز مناسب را از روی نقشه رزرو کنید." />
     {toast ? <UrlToast {...toast} /> : null}
-    {!office ? <p className="rounded-lg border bg-card p-5 text-sm text-muted-foreground">هنوز دفتر فعالی تعریف نشده است.</p> : !window?.isWorkingDay ?
-      <p className="rounded-lg border bg-card p-5 text-sm">{window?.reason ? `دفتر در ${formatJalaliDate(date)} تعطیل است: ${window.reason}` : "دفتر در این روز فعال نیست."}</p> :
+    {!office ? <p className="rounded-lg border bg-card p-5 text-sm text-muted-foreground">هنوز دفتر فعالی تعریف نشده است.</p> :
       <DeskReservationForm
+        closedReason={window?.reason ?? undefined}
         currentUserId={user.id}
         date={dateParam}
         dateLabel={formatJalaliDate(date)}
@@ -67,6 +67,7 @@ export default async function DesksPage({ searchParams }: Props) {
         desks={office.desks.map((desk) => ({ active: desk.active, id: desk.id, name: desk.name }))}
         hours={hours}
         isFullDay={Boolean(myReservation && myReservation.startAt.getHours() === hours[0] && myReservation.endAt.getHours() === hours.at(-1))}
+        isWorkingDay={Boolean(window?.isWorkingDay)}
         isStarted={Boolean(myReservation && myReservation.startAt <= new Date())}
         myReservation={serializedMine}
         officeId={office.id}

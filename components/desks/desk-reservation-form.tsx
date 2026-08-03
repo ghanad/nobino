@@ -35,6 +35,7 @@ type IntervalState =
   | "reservedOther";
 
 type DeskReservationFormProps = {
+  closedReason?: string;
   currentUserId: string;
   date: string;
   dateLabel: string;
@@ -43,6 +44,7 @@ type DeskReservationFormProps = {
   desks: DeskOption[];
   hours: number[];
   isFullDay: boolean;
+  isWorkingDay: boolean;
   isStarted: boolean;
   myReservation?: DeskReservation;
   officeId: string;
@@ -89,6 +91,7 @@ function stateLabel(state: IntervalState) {
 }
 
 export function DeskReservationForm({
+  closedReason,
   currentUserId,
   date,
   dateLabel,
@@ -97,6 +100,7 @@ export function DeskReservationForm({
   desks,
   hours,
   isFullDay,
+  isWorkingDay,
   isStarted,
   myReservation,
   officeId,
@@ -156,6 +160,31 @@ export function DeskReservationForm({
     startNavigation(() => router.replace(`/desks?${query.toString()}`));
   }
 
+  const navigationControls = <>
+    <label className="grid gap-1 text-xs font-medium text-slate-600">دفتر
+      <select className={inputClass} disabled={isNavigating} onChange={(event) => navigate(event.target.value, date)} value={officeId}>
+        {offices.map((office) => <option key={office.id} value={office.id}>{office.name}</option>)}
+      </select>
+    </label>
+    <label className="grid gap-1 text-xs font-medium text-slate-600">تاریخ
+      <JalaliDatePicker disabled={isNavigating} name="filterDate" onValueChange={(value) => value && navigate(officeId, value)} required value={date} />
+    </label>
+  </>;
+
+  if (!isWorkingDay) {
+    return <div className="grid gap-3">
+      <section className="rounded-xl border bg-card px-4 py-3 shadow-sm" aria-label="انتخاب دفتر و تاریخ رزرو">
+        <div className="grid items-end gap-2.5 sm:grid-cols-2">
+          {navigationControls}
+        </div>
+      </section>
+      <div className="rounded-lg border bg-card p-5 text-sm" role="status">
+        <p>{closedReason ? `دفتر در ${dateLabel} تعطیل است: ${closedReason}` : `دفتر در ${dateLabel} فعال نیست.`}</p>
+        <p className="mt-1 text-muted-foreground">برای رزرو میز، تاریخ دیگری را از بالا انتخاب کنید.</p>
+      </div>
+    </div>;
+  }
+
   function chooseAvailableSegment(segmentStart: number, segmentEnd: number) {
     if (isStarted) return;
     setEditingTime(true);
@@ -200,14 +229,7 @@ export function DeskReservationForm({
 
       <section className="rounded-xl border bg-card px-4 py-2.5 shadow-sm">
         <div className="grid items-end gap-2.5 sm:grid-cols-2 lg:grid-cols-[1fr_1.15fr_1.25fr_.8fr_.8fr]">
-          <label className="grid gap-1 text-xs font-medium text-slate-600">دفتر
-            <select className={inputClass} disabled={isNavigating} onChange={(event) => navigate(event.target.value, date)} value={officeId}>
-              {offices.map((office) => <option key={office.id} value={office.id}>{office.name}</option>)}
-            </select>
-          </label>
-          <label className="grid gap-1 text-xs font-medium text-slate-600">تاریخ
-            <JalaliDatePicker disabled={isNavigating} name="filterDate" onValueChange={(value) => value && navigate(officeId, value)} required value={date} />
-          </label>
+          {navigationControls}
           <fieldset className="grid gap-1 sm:col-span-2 lg:col-span-1">
             <legend className="text-xs font-medium text-slate-600">مدت حضور</legend>
             <div className="grid grid-cols-2 rounded-md bg-slate-100 p-0.5 text-xs">
