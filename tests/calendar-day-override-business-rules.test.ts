@@ -10,10 +10,12 @@ import {
   createCalendarDayOverride,
   GLOBAL_CALENDAR_TARGET_KEY,
 } from "@/lib/calendar-day-override-service";
+import { importIranHolidayScheduleExceptions } from "@/lib/admin-settings-service";
 import { getOfficeWorkingWindowForDate } from "@/lib/desk-schedule";
 import { isLunchServiceDay } from "@/lib/lunch-service/service-days";
 import { getMeetingRoomWorkingWindowForDate } from "@/lib/meeting-room-schedule";
 import { getWorkingWindowForDate } from "@/lib/schedule";
+import { formatJalaliDateParam } from "@/lib/jalali-date";
 
 import {
   adminId,
@@ -68,6 +70,31 @@ test("normal calendar correction bypasses an incorrect Iran holiday for every se
   assert.equal(systems.startTime, "09:00");
   assert.equal(office.startTime, "09:00");
   assert.equal(room.startTime, "09:00");
+});
+
+test("normal calendar correction overrides a holiday row created by Iran calendar import", async () => {
+  const date = await nextMidweekIranHolidayDateAtHour(10);
+  const jalaliYear = Number(formatJalaliDateParam(date).slice(0, 4));
+
+  await importIranHolidayScheduleExceptions({ adminId, year: jalaliYear });
+  const importedException = await db.scheduleException.findUnique({
+    where: { date: startOfLocalDay(date) },
+  });
+  assert.equal(importedException?.source, "IRAN_HOLIDAY");
+
+  await createCalendarDayOverride({
+    adminId,
+    date,
+    mode: CalendarDayOverrideMode.NORMAL,
+    reason: "Imported calendar is incorrect",
+    targets: allTargets,
+  });
+
+  const systems = await getWorkingWindowForDate(date);
+
+  assert.equal(systems.isWorkingDay, true);
+  assert.equal(systems.startTime, "09:00");
+  assert.equal(systems.endTime, "17:00");
 });
 
 test("closed calendar correction disables every selected service on a working date", async () => {

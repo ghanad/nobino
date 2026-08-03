@@ -1,6 +1,7 @@
 import {
   CalendarDayOverrideMode,
   CalendarDayTargetType,
+  ScheduleExceptionSource,
 } from "@prisma/client";
 
 import {
@@ -119,12 +120,37 @@ export async function getWorkingWindowForDate(
     select: {
       isWorkingDay: true,
       reason: true,
+      source: true,
       startTime: true,
       endTime: true,
     },
   });
 
-  if (exception) {
+  const calendarOverride = await getCalendarDayOverride({
+    date,
+    targetKey: GLOBAL_CALENDAR_TARGET_KEY,
+    type: CalendarDayTargetType.SYSTEMS,
+  });
+
+  let isImportedHolidayException =
+    exception?.source === ScheduleExceptionSource.IRAN_HOLIDAY;
+
+  // Older imported rows predate the source column. Their audit-backed migration
+  // normally marks them, while this exact match keeps existing databases safe.
+  if (
+    exception &&
+    calendarOverride &&
+    !isImportedHolidayException &&
+    !exception.isWorkingDay &&
+    !exception.startTime &&
+    !exception.endTime
+  ) {
+    const recognizedHoliday = await getIranHolidayForDate(date);
+    isImportedHolidayException =
+      Boolean(recognizedHoliday) && exception.reason === recognizedHoliday?.title;
+  }
+
+  if (exception && (!calendarOverride || !isImportedHolidayException)) {
     return {
       isWorkingDay: exception.isWorkingDay,
       reason: exception.reason,
@@ -132,12 +158,6 @@ export async function getWorkingWindowForDate(
       endTime: exception.endTime,
     };
   }
-
-  const calendarOverride = await getCalendarDayOverride({
-    date,
-    targetKey: GLOBAL_CALENDAR_TARGET_KEY,
-    type: CalendarDayTargetType.SYSTEMS,
-  });
 
   if (calendarOverride?.mode === CalendarDayOverrideMode.CLOSED) {
     return {

@@ -1,5 +1,7 @@
 import "server-only";
 
+import { ScheduleExceptionSource } from "@prisma/client";
+
 import { db } from "@/lib/db";
 import { getIranHolidaysForJalaliYear } from "@/lib/iran-holidays";
 
@@ -310,6 +312,7 @@ export async function importIranHolidayScheduleExceptions(input: {
           startTime: null,
           endTime: null,
           reason: holiday.title,
+          source: ScheduleExceptionSource.IRAN_HOLIDAY,
         },
       });
 

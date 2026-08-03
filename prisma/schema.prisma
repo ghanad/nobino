@@ -67,6 +67,11 @@ enum CalendarDayTargetType {
   MEETING_ROOM
 }
 
+enum ScheduleExceptionSource {
+  MANUAL
+  IRAN_HOLIDAY
+}
+
 model User {
   id                 String    @id @default(cuid())
   name               String
@@ -142,14 +147,15 @@ model WorkingSchedule {
 }
 
 model ScheduleException {
-  id           String   @id @default(cuid())
-  date         DateTime @unique
+  id           String                  @id @default(cuid())
+  date         DateTime                @unique
   isWorkingDay Boolean
   startTime    String?
   endTime      String?
   reason       String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  source       ScheduleExceptionSource @default(MANUAL)
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
 }
 
 model CalendarDayOverride {
@@ -447,18 +453,18 @@ model MeetingRoomReservation {
 }
 
 model DeskReservation {
-  id            String            @id @default(cuid())
-  deskId        String
-  userId        String
-  startAt       DateTime
-  endAt         DateTime
-  status        ReservationStatus @default(PENDING)
+  id             String            @id @default(cuid())
+  deskId         String
+  userId         String
+  startAt        DateTime
+  endAt          DateTime
+  status         ReservationStatus @default(PENDING)
   autoApprovalAt DateTime?
-  approvedAt    DateTime?
-  cancelledById String?
-  cancelledAt   DateTime?
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
+  approvedAt     DateTime?
+  cancelledById  String?
+  cancelledAt    DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 
   desk          Desk           @relation(fields: [deskId], references: [id])
   user          User           @relation("DeskReservationUser", fields: [userId], references: [id])
