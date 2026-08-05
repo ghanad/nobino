@@ -58,6 +58,7 @@ export const ACTION_LABELS: Record<string, string> = {
   BALE_LUNCH_REPORT_RECIPIENT_CREATED: "گیرنده گزارش غذا اضافه شد",
   BALE_LUNCH_REPORT_RECIPIENT_DELETED: "گیرنده گزارش غذا حذف شد",
   BALE_LUNCH_REPORT_RECIPIENT_UPDATED: "گیرنده گزارش غذا ویرایش شد",
+  BALE_LUNCH_REPORT_SETTINGS_CHANGED: "تنظیمات محتوای گزارش غذا تغییر کرد",
   FOOD_RESERVATION_CANCELLED_BY_MANAGER: "رزرو غذا توسط مدیر لغو شد",
   FOOD_RESERVATION_CANCELLED_BY_USER: "رزرو غذا توسط کاربر لغو شد",
   FOOD_RESERVATION_CANCELLED_WITH_SYSTEM_RESERVATION:

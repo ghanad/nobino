@@ -328,12 +328,14 @@ model ReservationPolicy {
 }
 
 model LunchSettings {
-  id             String   @id @default("default")
-  maxAdvanceDays Int      @default(7)
-  cutoffTime     String   @default("23:59")
-  enabled        Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                            String   @id @default("default")
+  maxAdvanceDays                Int      @default(7)
+  cutoffTime                    String   @default("23:59")
+  enabled                       Boolean  @default(true)
+  includeBreakfastNamesInReport Boolean  @default(false)
+  includeLunchNamesInReport     Boolean  @default(true)
+  createdAt                     DateTime @default(now())
+  updatedAt                     DateTime @updatedAt
 }
 
 model LunchLocation {

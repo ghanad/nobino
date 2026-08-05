@@ -737,16 +737,70 @@ test("lunch report sends one minute after cutoff with Jalali date and Persian di
   assert.match(text, new RegExp(`تاریخ: ${formatJalaliDate(targetDate)}`));
   assert.match(text, /جمع صبحانه: ۱/);
   assert.match(text, /جمع ناهار: ۲/);
-  assert.match(text, /Building A:\nصبحانه: ۱\nناهار: ۱/);
+  assert.match(
+    text,
+    /Building A:\nصبحانه: ۱\nناهار: ۱\nاسامی ناهار:\n• Normal User/,
+  );
   assert.match(text, /Building B:\nصبحانه: ۰\nناهار: ۰/);
-  assert.match(text, /Building C:\nصبحانه: ۰\nناهار: ۱/);
-  assert.doesNotMatch(text, /Normal User|Second User|@example\.test/);
+  assert.match(
+    text,
+    /Building C:\nصبحانه: ۰\nناهار: ۱\nاسامی ناهار:\n• Second User/,
+  );
+  assert.doesNotMatch(text, /اسامی صبحانه|@example\.test/);
 
   const delivery = await db.baleLunchReportDelivery.findFirstOrThrow({
     where: { reportDate: startOfLocalDay(targetDate), recipientId: lunchReportRecipientId },
   });
   assert.equal(delivery.totalCount, 3);
   assert.equal(delivery.status, BaleDeliveryStatus.SENT);
+});
+
+test("lunch report name lists can be configured separately for each meal", async () => {
+  const targetDate = nextWorkingDateAtHour(12);
+  await createDefaultLunchReportRecipient();
+  await db.lunchSettings.update({
+    where: { id: "default" },
+    data: {
+      includeBreakfastNamesInReport: true,
+      includeLunchNamesInReport: false,
+    },
+  });
+  await db.lunchReservation.create({
+    data: {
+      userId,
+      locationId: lunchLocationId,
+      date: startOfLocalDay(targetDate),
+      breakfastReserved: true,
+      lunchReserved: true,
+      status: LunchReservationStatus.ACTIVE,
+    },
+  });
+
+  const sentBodies: string[] = [];
+  await withBaleMock(
+    {
+      fetchImpl: async (_input, init) => {
+        sentBodies.push(String(init?.body));
+        return new Response(JSON.stringify({ ok: true }), {
+          headers: { "Content-Type": "application/json" },
+          status: 200,
+        });
+      },
+    },
+    async () => {
+      const result = await syncBaleLunchReports({
+        now: getLunchEligibleAt(targetDate),
+      });
+      assert.equal(result.sent, 1);
+    },
+  );
+
+  const text = new URLSearchParams(sentBodies[0]).get("text") ?? "";
+  assert.match(
+    text,
+    /صبحانه: ۱\nاسامی صبحانه:\n• Normal User\nناهار: ۱/,
+  );
+  assert.doesNotMatch(text, /اسامی ناهار/);
 });
 
 test("lunch report sends zero totals for a service day without reservations", async () => {

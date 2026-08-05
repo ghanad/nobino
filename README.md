@@ -271,7 +271,9 @@ reservations are disabled in admin settings, no food report is sent. Report
 recipients are managed by admins from `/admin/lunch-notifications`, and every
 active recipient can target either a Bale chat ID or a Nobino user with an
 active Bale connection. Every active recipient receives its own delivery
-snapshot. User destinations resolve their current Bale connection again on each
+snapshot. The same page controls whether each location's breakfast names,
+lunch names, both, or neither are included; lunch names are enabled by default
+and breakfast names are disabled by default. User destinations resolve their current Bale connection again on each
 retry. Run only one sync invocation at a time to
 avoid overlapping external requests.
 

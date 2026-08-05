@@ -142,6 +142,9 @@ recipient configured in `/admin/lunch-notifications`:
 - A recipient can be a direct chat/group ID or a Nobino user with an active
   Bale connection.
 - User recipients use their current active connection at send and retry time.
+- Admins can independently include breakfast and lunch reservation names in
+  the location-grouped report. Lunch names are on by default; breakfast names
+  are off by default.
 
 ```bash
 curl --fail --silent --show-error -X POST \

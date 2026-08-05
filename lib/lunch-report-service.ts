@@ -50,7 +50,9 @@ export type LunchReportSummaryLocation = {
   id: string;
   name: string;
   breakfastCount: number;
+  breakfastUserNames: string[];
   lunchCount: number;
+  lunchUserNames: string[];
 };
 
 export type LunchReportSummary = {
@@ -177,7 +179,20 @@ function getSummaryLocations(input: {
       ...location,
       breakfastCount:
         countByLocationId.get(location.id)?.breakfastCount ?? 0,
+      breakfastUserNames: input.reservations
+        .filter(
+          (reservation) =>
+            reservation.locationId === location.id &&
+            reservation.breakfastReserved,
+        )
+        .map((reservation) => reservation.user.name),
       lunchCount: countByLocationId.get(location.id)?.lunchCount ?? 0,
+      lunchUserNames: input.reservations
+        .filter(
+          (reservation) =>
+            reservation.locationId === location.id && reservation.lunchReserved,
+        )
+        .map((reservation) => reservation.user.name),
     }));
 }
 
@@ -270,7 +285,21 @@ export async function getLunchReportSummary(date: Date): Promise<LunchReportSumm
   };
 }
 
-export function formatLunchReportMessage(summary: LunchReportSummary): string {
+function formatNameLines(label: string, names: string[]): string[] {
+  if (names.length === 0) {
+    return [];
+  }
+
+  return [`اسامی ${label}:`, ...names.map((name) => `• ${name}`)];
+}
+
+export function formatLunchReportMessage(
+  summary: LunchReportSummary,
+  options?: {
+    includeBreakfastNames?: boolean;
+    includeLunchNames?: boolean;
+  },
+): string {
   const lines = [
     "گزارش غذا",
     `تاریخ: ${summary.dateLabel}`,
@@ -281,7 +310,13 @@ export function formatLunchReportMessage(summary: LunchReportSummary): string {
       ...(index > 0 ? [""] : []),
       `${location.name}:`,
       `صبحانه: ${PERSIAN_NUMBER_FORMATTER.format(location.breakfastCount)}`,
+      ...(options?.includeBreakfastNames
+        ? formatNameLines("صبحانه", location.breakfastUserNames)
+        : []),
       `ناهار: ${PERSIAN_NUMBER_FORMATTER.format(location.lunchCount)}`,
+      ...(options?.includeLunchNames
+        ? formatNameLines("ناهار", location.lunchUserNames)
+        : []),
     ]),
   ];
 

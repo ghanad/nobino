@@ -6,6 +6,7 @@ import {
   deleteBaleLunchReportRecipientAction,
   sendBaleLunchReportNowAction,
   updateBaleLunchReportRecipientAction,
+  updateLunchReportSettingsAction,
 } from "@/app/admin/lunch-notifications/actions";
 import { BaleLunchReportRecipientFields } from "@/app/admin/bale/recipient-form-fields";
 import { PageHeader } from "@/components/app/page-header";
@@ -15,7 +16,7 @@ import { getBaleBotUsername } from "@/lib/bale-client";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatJalaliDate, formatJalaliDateTime } from "@/lib/jalali-date";
-import { addDays, startOfLocalDay } from "@/lib/lunch-service";
+import { addDays, getLunchSettings, startOfLocalDay } from "@/lib/lunch-service";
 
 const PERSIAN_NUMBER_FORMATTER = new Intl.NumberFormat("fa-IR");
 
@@ -55,6 +56,7 @@ function getToast(params: {
   recipientCreated?: string;
   recipientDeleted?: string;
   recipientUpdated?: string;
+  reportSettingsUpdated?: string;
 }) {
   if (params.error) {
     return {
@@ -96,6 +98,14 @@ function getToast(params: {
     };
   }
 
+  if (params.reportSettingsUpdated) {
+    return {
+      consumeKeys: ["reportSettingsUpdated"],
+      message: "تنظیمات محتوای گزارش غذا ذخیره شد.",
+      variant: "success" as const,
+    };
+  }
+
   return null;
 }
 
@@ -107,6 +117,7 @@ export default async function AdminLunchNotificationsPage(props: {
     recipientCreated?: string;
     recipientDeleted?: string;
     recipientUpdated?: string;
+    reportSettingsUpdated?: string;
   }>;
 }) {
   await requireRole([UserRole.ADMIN]);
@@ -114,7 +125,7 @@ export default async function AdminLunchNotificationsPage(props: {
   const toast = getToast(params);
   const baleBotUsername = getBaleBotUsername();
 
-  const [users, botState, latestLunchReport, lunchReportRecipients] =
+  const [users, botState, latestLunchReport, lunchReportRecipients, lunchSettings] =
     await Promise.all([
       db.user.findMany({
         where: { active: true, deletedAt: null },
@@ -151,6 +162,7 @@ export default async function AdminLunchNotificationsPage(props: {
           _count: { select: { deliveries: true } },
         },
       }),
+      getLunchSettings(),
     ]);
 
   const connectedUsers = users
@@ -258,6 +270,55 @@ export default async function AdminLunchNotificationsPage(props: {
             <p className="mt-1 break-words text-xs leading-5">{latestLunchReport.lastError}</p>
           </div>
         ) : null}
+      </section>
+
+      <section className="grid gap-4 rounded-lg border bg-card p-5 text-card-foreground">
+        <div>
+          <h2 className="font-semibold text-slate-950">محتوای گزارش</h2>
+          <p className="mt-1 text-sm leading-6 text-muted-foreground">
+            تعداد صبحانه و ناهار همیشه ارسال می‌شود. برای هر وعده می‌توانید نمایش
+            اسامی رزروکنندگان را جداگانه فعال کنید.
+          </p>
+        </div>
+
+        <form action={updateLunchReportSettingsAction} className="grid gap-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="flex min-h-14 items-start gap-3 rounded-md border bg-background p-4 text-sm">
+              <input
+                className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+                defaultChecked={lunchSettings.includeLunchNamesInReport}
+                name="includeLunchNamesInReport"
+                type="checkbox"
+              />
+              <span className="min-w-0">
+                <span className="block font-medium text-slate-950">اسامی ناهار ارسال شود</span>
+                <span className="mt-1 block leading-5 text-muted-foreground">
+                  نام افراد زیر تعداد ناهار هر ساختمان درج می‌شود.
+                </span>
+              </span>
+            </label>
+            <label className="flex min-h-14 items-start gap-3 rounded-md border bg-background p-4 text-sm">
+              <input
+                className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+                defaultChecked={lunchSettings.includeBreakfastNamesInReport}
+                name="includeBreakfastNamesInReport"
+                type="checkbox"
+              />
+              <span className="min-w-0">
+                <span className="block font-medium text-slate-950">اسامی صبحانه ارسال شود</span>
+                <span className="mt-1 block leading-5 text-muted-foreground">
+                  نام افراد زیر تعداد صبحانه هر ساختمان درج می‌شود.
+                </span>
+              </span>
+            </label>
+          </div>
+          <div className="flex justify-end">
+            <SubmitButton pendingLabel="در حال ذخیره">
+              <Save className="h-4 w-4" />
+              ذخیره تنظیمات گزارش
+            </SubmitButton>
+          </div>
+        </form>
       </section>
 
       <section className="grid gap-4 rounded-lg border bg-card p-5 text-card-foreground">

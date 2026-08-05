@@ -21,7 +21,61 @@ export async function getLunchSettings(client: DbClient = db) {
     enabled: settings?.enabled ?? true,
     maxAdvanceDays: settings?.maxAdvanceDays ?? DEFAULT_MAX_ADVANCE_DAYS,
     cutoffTime: settings?.cutoffTime ?? DEFAULT_CUTOFF_TIME,
+    includeBreakfastNamesInReport:
+      settings?.includeBreakfastNamesInReport ?? false,
+    includeLunchNamesInReport: settings?.includeLunchNamesInReport ?? true,
   };
+}
+
+export async function updateLunchReportSettings(input: {
+  adminId: string;
+  includeBreakfastNamesInReport: boolean;
+  includeLunchNamesInReport: boolean;
+}) {
+  return db.$transaction(async (tx) => {
+    await assertAdmin(input.adminId, tx);
+
+    const current = await tx.lunchSettings.upsert({
+      where: { id: "default" },
+      update: {},
+      create: {
+        id: "default",
+        enabled: true,
+        maxAdvanceDays: DEFAULT_MAX_ADVANCE_DAYS,
+        cutoffTime: DEFAULT_CUTOFF_TIME,
+        includeBreakfastNamesInReport: false,
+        includeLunchNamesInReport: true,
+      },
+    });
+    const updated = await tx.lunchSettings.update({
+      where: { id: current.id },
+      data: {
+        includeBreakfastNamesInReport: input.includeBreakfastNamesInReport,
+        includeLunchNamesInReport: input.includeLunchNamesInReport,
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorUserId: input.adminId,
+        entityType: "LunchSettings",
+        entityId: updated.id,
+        action: "BALE_LUNCH_REPORT_SETTINGS_CHANGED",
+        oldValue: {
+          includeBreakfastNamesInReport:
+            current.includeBreakfastNamesInReport,
+          includeLunchNamesInReport: current.includeLunchNamesInReport,
+        },
+        newValue: {
+          includeBreakfastNamesInReport:
+            updated.includeBreakfastNamesInReport,
+          includeLunchNamesInReport: updated.includeLunchNamesInReport,
+        },
+      },
+    });
+
+    return updated;
+  });
 }
 
 export async function updateLunchSettings(input: {

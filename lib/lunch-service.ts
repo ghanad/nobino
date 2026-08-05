@@ -25,5 +25,9 @@ export {
   isLunchServiceDay,
 } from "./lunch-service/service-days";
 export { updateLunchWeeklySchedule } from "./lunch-service/schedules";
-export { getLunchSettings, updateLunchSettings } from "./lunch-service/settings";
+export {
+  getLunchSettings,
+  updateLunchReportSettings,
+  updateLunchSettings,
+} from "./lunch-service/settings";
 export { LunchReservationError } from "./lunch-service/shared";

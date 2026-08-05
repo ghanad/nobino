@@ -359,7 +359,10 @@ export async function syncBaleLunchReports(input?: {
     }
 
     const summary = await getLunchReportSummary(dueDate.reportDate);
-    const message = formatLunchReportMessage(summary);
+    const message = formatLunchReportMessage(summary, {
+      includeBreakfastNames: settings.includeBreakfastNamesInReport,
+      includeLunchNames: settings.includeLunchNamesInReport,
+    });
     for (const recipient of recipients) {
       const delivery = await createFreshDelivery({
         cutoffAt: dueDate.cutoffAt,
@@ -425,7 +428,10 @@ export async function sendBaleLunchReportNow(input?: {
 
   const settings = await getLunchSettings();
   const summary = await getLunchReportSummary(reportDate);
-  const message = formatLunchReportMessage(summary);
+  const message = formatLunchReportMessage(summary, {
+    includeBreakfastNames: settings.includeBreakfastNamesInReport,
+    includeLunchNames: settings.includeLunchNamesInReport,
+  });
   const manualRunId = randomUUID();
 
   for (const recipient of recipients) {

@@ -17,6 +17,7 @@ import {
   updateBaleLunchReportRecipient,
 } from "@/lib/admin-settings-service";
 import { sendBaleLunchReportNow } from "@/lib/bale-lunch-report-service";
+import { updateLunchReportSettings } from "@/lib/lunch-service";
 
 const createRecipientSchema = z
   .object({
@@ -36,6 +37,11 @@ const updateRecipientSchema = z.intersection(
 
 const deleteRecipientSchema = z.object({
   recipientId: z.string().min(1),
+});
+
+const reportSettingsSchema = z.object({
+  includeBreakfastNamesInReport: z.boolean(),
+  includeLunchNamesInReport: z.boolean(),
 });
 
 function redirectToLunchNotifications(
@@ -180,4 +186,30 @@ export async function sendBaleLunchReportNowAction(): Promise<void> {
   }
 
   redirectToLunchNotifications({ manualSent: String(result.sent) });
+}
+
+export async function updateLunchReportSettingsAction(
+  formData: FormData,
+): Promise<void> {
+  const admin = await requireRole([UserRole.ADMIN]);
+  const parsed = reportSettingsSchema.safeParse({
+    includeBreakfastNamesInReport: checkboxToBoolean(
+      formData.get("includeBreakfastNamesInReport"),
+    ),
+    includeLunchNamesInReport: checkboxToBoolean(
+      formData.get("includeLunchNamesInReport"),
+    ),
+  });
+
+  if (!parsed.success) {
+    redirectToLunchNotifications({ error: "تنظیمات محتوای گزارش معتبر نیست." });
+  }
+
+  try {
+    await updateLunchReportSettings({ adminId: admin.id, ...parsed.data });
+  } catch (error) {
+    redirectToLunchNotifications({ error: getActionErrorMessage(error) });
+  }
+
+  redirectToLunchNotifications({ reportSettingsUpdated: "1" });
 }
