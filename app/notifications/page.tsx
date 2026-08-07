@@ -603,7 +603,10 @@ export default async function NotificationsPage({
   );
   const notifications = await db.notification.findMany({
     where,
-    orderBy: [{ readAt: "asc" }, { createdAt: "desc" }],
+    orderBy:
+      unreadCount === 0
+        ? [{ createdAt: "desc" }]
+        : [{ readAt: "asc" }, { createdAt: "desc" }],
     skip: (currentPage - 1) * NOTIFICATIONS_PAGE_SIZE,
     take: NOTIFICATIONS_PAGE_SIZE,
     select: {
