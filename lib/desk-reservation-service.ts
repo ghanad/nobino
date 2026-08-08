@@ -82,7 +82,10 @@ async function notifyManagersOfPendingReservation(
   const [reservation, managers] = await Promise.all([
     tx.deskReservation.findUnique({
       where: { id: reservationId },
-      select: { desk: { select: { name: true, office: { select: { name: true } } } } },
+      select: {
+        desk: { select: { name: true, office: { select: { name: true } } } },
+        user: { select: { name: true } },
+      },
     }),
     tx.user.findMany({
       where: { active: true, role: { in: [UserRole.MANAGER, UserRole.ADMIN] } },
@@ -92,7 +95,7 @@ async function notifyManagersOfPendingReservation(
   if (!reservation || managers.length === 0) return;
   await tx.notification.createMany({
     data: managers.map((manager) => ({
-      body: `درخواست رزرو ${reservation.desk.name} در ${reservation.desk.office.name} در انتظار بررسی است.`,
+      body: `درخواست رزرو ${reservation.desk.name} در ${reservation.desk.office.name} توسط ${reservation.user.name} در انتظار بررسی است.`,
       deskReservationId: reservationId,
       title: "درخواست رزرو میز",
       type: "NEW_PENDING_DESK_RESERVATION",

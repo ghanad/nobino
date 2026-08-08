@@ -66,9 +66,20 @@ type Props = {
   offices: Office[];
 };
 
+function sortReservations(reservations: Reservation[]) {
+  return [...reservations].sort((first, second) => {
+    const statusDifference =
+      Number(first.status !== ReservationStatus.PENDING) -
+      Number(second.status !== ReservationStatus.PENDING);
+
+    return statusDifference || first.startAt.getTime() - second.startAt.getTime();
+  });
+}
+
 export function ManagerDeskReservations({ actions, initialReservations, offices }: Props) {
   const [reservations, setReservations] = useState(initialReservations);
   const [feedback, setFeedback] = useState<ManagerDeskActionState | null>(null);
+  const sortedReservations = sortReservations(reservations);
 
   const handleComplete = useCallback((state: ManagerDeskActionState) => {
     setFeedback(state);
@@ -124,7 +135,7 @@ export function ManagerDeskReservations({ actions, initialReservations, offices 
           <p className="rounded-lg border bg-card p-5 text-sm text-muted-foreground">
             رزرو فعال یا آینده‌ای وجود ندارد.
           </p>
-        ) : reservations.map((reservation) => {
+        ) : sortedReservations.map((reservation) => {
           const hasStarted = reservation.startAt <= new Date();
           return (
             <article className="grid gap-4 rounded-lg border bg-card p-5" key={reservation.id}>

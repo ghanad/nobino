@@ -25,6 +25,13 @@ test("desk reservation starts pending and notifies managers", async () => {
   assert.equal(reservation.status, ReservationStatus.PENDING);
   assert.equal(reservation.autoApprovalAt, null);
   assert.equal(await db.notification.count({ where: { deskReservationId: reservation.id, type: "NEW_PENDING_DESK_RESERVATION" } }), 2);
+  const notification = await db.notification.findFirstOrThrow({
+    where: { deskReservationId: reservation.id, type: "NEW_PENDING_DESK_RESERVATION" },
+  });
+  assert.equal(
+    notification.body,
+    "درخواست رزرو Desk One در Main Office توسط Normal User در انتظار بررسی است.",
+  );
 });
 
 test("desk auto approval uses the existing shared cron batch", async () => {

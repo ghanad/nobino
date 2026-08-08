@@ -15,7 +15,7 @@ export default async function ManagerDesksPage({ searchParams }: Props) {
   const [reservations, offices] = await Promise.all([
     db.deskReservation.findMany({
       where: { endAt: { gt: new Date() }, status: { in: [ReservationStatus.PENDING, ReservationStatus.APPROVED] } },
-      orderBy: { startAt: "asc" }, include: { desk: { include: { office: true } }, user: { select: { email: true, name: true } } },
+      orderBy: [{ status: "desc" }, { startAt: "asc" }], include: { desk: { include: { office: true } }, user: { select: { email: true, name: true } } },
     }),
     db.office.findMany({ where: { active: true, deletedAt: null }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }], include: { desks: { where: { active: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }] } } }),
   ]);
