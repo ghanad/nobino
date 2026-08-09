@@ -8,14 +8,14 @@ import {
 
 const MAX_IMPORT_BYTES = 10 * 1024 * 1024;
 
-function redirectToTransfer(request: NextRequest, params: Record<string, string>) {
-  const url = new URL("/wiki/transfer", request.url);
+function redirectToTransfer(params: Record<string, string>) {
+  const searchParams = new URLSearchParams(params);
+  const location = `/wiki/transfer?${searchParams.toString()}`;
 
-  for (const [key, value] of Object.entries(params)) {
-    url.searchParams.set(key, value);
-  }
-
-  return NextResponse.redirect(url, 303);
+  return new NextResponse(null, {
+    headers: { Location: location },
+    status: 303,
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -34,13 +34,13 @@ export async function POST(request: NextRequest) {
     const file = formData.get("wikiFile");
 
     if (!(file instanceof File) || file.size === 0) {
-      return redirectToTransfer(request, {
+      return redirectToTransfer({
         error: "لطفاً فایل خروجی دانشنامه را انتخاب کنید.",
       });
     }
 
     if (file.size > MAX_IMPORT_BYTES) {
-      return redirectToTransfer(request, {
+      return redirectToTransfer({
         error: "حجم فایل نباید بیشتر از ۱۰ مگابایت باشد.",
       });
     }
@@ -50,14 +50,14 @@ export async function POST(request: NextRequest) {
     try {
       rawData = JSON.parse(await file.text());
     } catch {
-      return redirectToTransfer(request, {
+      return redirectToTransfer({
         error: "فایل انتخاب‌شده JSON معتبر نیست.",
       });
     }
 
     const result = await importWiki(parseWikiImportFile(rawData), user);
 
-    return redirectToTransfer(request, {
+    return redirectToTransfer({
       created: String(result.created),
       imported: "1",
       unchanged: String(result.unchanged),
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       error instanceof Error &&
       (error.name === "WikiPermissionError" || error.name === "WikiValidationError")
     ) {
-      return redirectToTransfer(request, { error: error.message });
+      return redirectToTransfer({ error: error.message });
     }
 
     throw error;

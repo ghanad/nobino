@@ -23,7 +23,6 @@ export function WikiImportForm() {
         <input
           accept="application/json,.json"
           className="min-h-11 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm file:ml-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-800 hover:file:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          disabled={isSubmitting}
           id="wiki-file"
           name="wikiFile"
           required
