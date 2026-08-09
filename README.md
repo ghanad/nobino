@@ -29,6 +29,7 @@ Out-of-scope for this project unless explicitly requested: check-in, check-out, 
 - SQLite for local and operational data
 - Zod for validation in later phases
 - Signed HTTP-only cookie sessions for authentication
+- Tiptap for the structured, RTL knowledge-base editor
 
 ## Setup
 
@@ -125,6 +126,42 @@ The first operational version is implemented. Seeded users can sign in, create h
   delivery health.
 - `/manager` is available to managers and admins.
 - `/admin` is available to admins only.
+- `/wiki` is the internal knowledge base for every authenticated user. It opens
+  the first page visible to the current role, or an empty state when no visible
+  page exists.
+- `/wiki/[slug]` renders a published knowledge-base page. `USER` and `MANAGER`
+  users receive a 404 for a hidden page or any page below a hidden parent, even
+  when they know the direct URL.
+- `/wiki/new`, `/wiki/[slug]/edit`, `/wiki/[slug]/history`, and
+  `/wiki/transfer` are admin-only.
+  Admins can create root pages or children, choose a parent, reorder siblings,
+  set hidden state, soft-delete leaf pages, review immutable revisions, and
+  transfer the knowledge base between environments with a versioned JSON file.
+
+## Knowledge Base
+
+Wiki pages form one tree: each page can contain rich text and can also have
+children, so a page with no text can act as a category. The editor stores
+validated Tiptap JSON and the backend deterministically derives `contentText`
+for future search, chunking, and RAG work. Raw HTML is neither accepted nor
+stored.
+
+Only `ADMIN` users can create, edit, move, show, hide, or soft-delete pages;
+these rules are enforced by server-side services and actions. A hidden parent
+hides its complete subtree from non-admin users. Content saves that change a
+title or document create an immutable `WikiPageRevision`; changing visibility
+or tree placement is audited but does not create a content revision. Deleted
+pages and their revisions remain in the database, and deleting a page with
+active children is blocked.
+
+Admins can use `/wiki/transfer` to download all active pages as a versioned
+JSON file and import that file in another Nobino environment. Import matches
+pages by their stable slug, creates missing pages, and updates matching pages
+including content, hidden state, ordering, and parent relationships. It never
+deletes destination-only pages. Existing revision history is preserved, while
+created or changed imported pages receive new revisions and audit entries. The
+transfer file does not include soft-deleted pages or historical revisions and
+is limited to 2,000 pages and 10 MB on import.
 
 ## Schedule Rules
 

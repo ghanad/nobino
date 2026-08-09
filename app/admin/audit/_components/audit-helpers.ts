@@ -106,6 +106,15 @@ export const ACTION_LABELS: Record<string, string> = {
   USER_ROLE_CHANGED: "نقش کاربر تغییر کرد",
   USER_UPDATED: "کاربر ویرایش شد",
   WORKING_SCHEDULE_CHANGED: "برنامه هفتگی تغییر کرد",
+  WIKI_PAGE_CREATED: "صفحه دانشنامه ساخته شد",
+  WIKI_PAGE_DELETED: "صفحه دانشنامه حذف نرم شد",
+  WIKI_PAGE_HIDDEN: "صفحه دانشنامه مخفی شد",
+  WIKI_PAGE_IMPORTED_CREATED: "صفحه دانشنامه از فایل ایجاد شد",
+  WIKI_PAGE_IMPORTED_UPDATED: "صفحه دانشنامه از فایل به‌روزرسانی شد",
+  WIKI_PAGE_MOVED: "صفحه دانشنامه جابه‌جا شد",
+  WIKI_PAGE_REORDERED: "ترتیب صفحه دانشنامه تغییر کرد",
+  WIKI_PAGE_SHOWN: "صفحه دانشنامه نمایش داده شد",
+  WIKI_PAGE_UPDATED: "صفحه دانشنامه ویرایش شد",
 };
 
 export const ENTITY_LABELS: Record<string, string> = {
@@ -130,6 +139,7 @@ export const ENTITY_LABELS: Record<string, string> = {
   ScheduleException: "استثنای برنامه کاری",
   User: "کاربر",
   WorkingSchedule: "برنامه هفتگی",
+  WikiPage: "صفحه دانشنامه",
 };
 
 const FIELD_LABELS: Record<string, string> = {
@@ -160,6 +170,10 @@ const FIELD_LABELS: Record<string, string> = {
   startAt: "شروع",
   startTime: "شروع کار",
   status: "وضعیت",
+  parentSlug: "صفحه والد",
+  slug: "شناسه مسیر",
+  sortOrder: "ترتیب نمایش",
+  title: "عنوان",
 };
 
 const DAY_LABELS: Record<number, string> = {

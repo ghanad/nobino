@@ -99,6 +99,9 @@ model User {
   notifications                    Notification[]                  @relation("NotificationUser")
   createdAnnouncements             Announcement[]                  @relation("AnnouncementCreator")
   announcementReceipts             AnnouncementReceipt[]           @relation("AnnouncementReceiptUser")
+  createdWikiPages                 WikiPage[]                      @relation("WikiPageCreator")
+  updatedWikiPages                 WikiPage[]                      @relation("WikiPageEditor")
+  editedWikiPageRevisions          WikiPageRevision[]              @relation("WikiPageRevisionEditor")
   teamMemberships                  TeamMembership[]
   baleConnection                   BaleConnection?
   baleLinkTokens                   BaleLinkToken[]
@@ -494,6 +497,48 @@ model ReservationAlternative {
 
   @@index([reservationId])
   @@index([status])
+}
+
+model WikiPage {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  title       String
+  contentJson Json
+  contentText String
+  parentId    String?
+  sortOrder   Int       @default(0)
+  isHidden    Boolean   @default(false)
+  deletedAt   DateTime?
+  createdById String
+  updatedById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  parent    WikiPage?         @relation("WikiPageHierarchy", fields: [parentId], references: [id])
+  children  WikiPage[]        @relation("WikiPageHierarchy")
+  createdBy User              @relation("WikiPageCreator", fields: [createdById], references: [id])
+  updatedBy User              @relation("WikiPageEditor", fields: [updatedById], references: [id])
+  revisions WikiPageRevision[]
+
+  @@index([parentId, sortOrder, title])
+  @@index([deletedAt])
+  @@index([isHidden, deletedAt])
+}
+
+model WikiPageRevision {
+  id          String   @id @default(cuid())
+  wikiPageId  String
+  title       String
+  contentJson Json
+  contentText String
+  editorId    String
+  createdAt   DateTime @default(now())
+
+  wikiPage WikiPage @relation(fields: [wikiPageId], references: [id])
+  editor   User     @relation("WikiPageRevisionEditor", fields: [editorId], references: [id])
+
+  @@index([wikiPageId, createdAt])
+  @@index([editorId, createdAt])
 }
 
 model AuditLog {

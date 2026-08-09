@@ -6,6 +6,7 @@ const PROTECTED_PREFIXES = [
   "/reservations",
   "/notifications",
   "/settings",
+  "/wiki",
   "/manager",
   "/admin",
 ];
@@ -33,6 +34,7 @@ export const config = {
     "/reservations/:path*",
     "/notifications/:path*",
     "/settings/:path*",
+    "/wiki/:path*",
     "/manager/:path*",
     "/admin/:path*",
   ],

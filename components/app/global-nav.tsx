@@ -61,6 +61,7 @@ function getMobileNavSections(navItems: GlobalNavItem[]): MobileNavSection[] {
   const meetingRoomsItem = navItems.find((item) => item.href === "/meeting-rooms");
   const desksItem = navItems.find((item) => item.href === "/desks");
   const lunchItem = navItems.find((item) => item.href === "/lunch");
+  const wikiItem = navItems.find((item) => item.href === "/wiki");
   const managerItem = navItems.find((item) => item.href === "/manager");
   const adminItem = navItems.find((item) => item.href === "/admin");
   const auditItem = navItems.find((item) => item.href === "/admin/audit");
@@ -93,6 +94,14 @@ function getMobileNavSections(navItems: GlobalNavItem[]): MobileNavSection[] {
     sections.push({
       entries: [{ item: lunchItem, label: "رزرو غذا" }],
       id: "lunch",
+    });
+  }
+
+  if (wikiItem) {
+    sections.push({
+      entries: [{ item: wikiItem }],
+      id: "wiki",
+      label: "دانشنامه",
     });
   }
 
@@ -630,7 +639,7 @@ function MobileDrawer({
   return (
     <div
       aria-hidden={!isOpen}
-      className={cn("fixed inset-0 z-50 md:hidden", isOpen ? "" : "pointer-events-none")}
+      className={cn("fixed inset-0 z-50 xl:hidden", isOpen ? "" : "pointer-events-none")}
       inert={!isOpen}
     >
       <button
@@ -741,7 +750,7 @@ export function GlobalNav({
   return (
     <div className="mx-auto flex h-16 w-full max-w-7xl flex-col justify-center px-4 md:h-[72px] md:px-6">
       <div className="flex items-center justify-between gap-3">
-        <div className="flex shrink-0 items-center gap-3 md:border-l md:border-slate-200 md:pl-5">
+        <div className="flex shrink-0 items-center gap-3 xl:border-l xl:border-slate-200 xl:pl-5">
           <Link
             className="text-base font-bold tracking-normal text-slate-950 outline-none focus-visible:ring-2 focus-visible:ring-ring"
             href="/"
@@ -752,7 +761,7 @@ export function GlobalNav({
             aria-controls="mobile-navigation-drawer"
             aria-expanded={isMobileDrawerOpen}
             aria-label="باز کردن منوی ناوبری"
-            className="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-md border border-transparent text-slate-700 transition-colors hover:border-slate-200 hover:bg-slate-50 hover:text-slate-950 md:hidden"
+            className="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-md border border-transparent text-slate-700 transition-colors hover:border-slate-200 hover:bg-slate-50 hover:text-slate-950 xl:hidden"
             onClick={() => setIsMobileDrawerOpen(true)}
             ref={menuButtonRef}
             type="button"
@@ -763,7 +772,7 @@ export function GlobalNav({
 
         <nav
           aria-label="ناوبری اصلی"
-          className="hidden min-w-0 flex-1 items-center justify-start gap-2 md:flex"
+          className="hidden min-w-0 flex-1 items-center justify-start gap-2 xl:flex"
         >
           {navItems.map((item) => (
             <NavLink
@@ -774,7 +783,7 @@ export function GlobalNav({
           ))}
         </nav>
 
-        <div className="hidden shrink-0 items-center gap-1.5 md:flex">
+        <div className="hidden shrink-0 items-center gap-1.5 xl:flex">
           <NotificationLink
             enablePopover
             pathname={pathname}
@@ -784,7 +793,7 @@ export function GlobalNav({
           <UserMenu userName={userName} />
         </div>
 
-        <div className="flex items-center gap-2 md:hidden">
+        <div className="flex items-center gap-2 xl:hidden">
           <NotificationLink
             enablePopover={false}
             pathname={pathname}
