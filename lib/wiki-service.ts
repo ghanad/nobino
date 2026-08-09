@@ -870,6 +870,11 @@ export async function updateWikiPage(
       await ensureWikiParentIsValid(page.id, parentId, tx);
     }
 
+    const sortOrder =
+      parentId === page.parentId
+        ? page.sortOrder
+        : await getNextWikiSortOrder(parentId, tx);
+
     const titleChanged = page.title !== title;
     const contentChanged =
       JSON.stringify(page.contentJson) !== JSON.stringify(contentJson) ||
@@ -882,6 +887,7 @@ export async function updateWikiPage(
         contentText,
         isHidden: input.isHidden,
         parentId,
+        sortOrder,
         title,
         updatedById: actor.id,
       },

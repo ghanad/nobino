@@ -368,6 +368,53 @@ test("wiki cycle prevention rejects descendant reparenting", async () => {
   );
 });
 
+test("wiki reparenting appends the page after its new siblings", async () => {
+  const sourceRoot = await createWikiPage(
+    {
+      contentJson: createEmptyWikiContent(),
+      title: "مبدأ",
+    },
+    adminActor,
+  );
+  const destinationRoot = await createWikiPage(
+    {
+      contentJson: createEmptyWikiContent(),
+      title: "مقصد",
+    },
+    adminActor,
+  );
+  const firstChild = await createWikiPage(
+    {
+      contentJson: createEmptyWikiContent(),
+      parentId: destinationRoot.id,
+      title: "فرزند اول",
+    },
+    adminActor,
+  );
+  const movedPage = await createWikiPage(
+    {
+      contentJson: createEmptyWikiContent(),
+      parentId: sourceRoot.id,
+      title: "صفحه انتقالی",
+    },
+    adminActor,
+  );
+
+  const updated = await updateWikiPage(
+    {
+      contentJson: movedPage.contentJson,
+      isHidden: false,
+      pageId: movedPage.id,
+      parentId: destinationRoot.id,
+      title: movedPage.title,
+    },
+    adminActor,
+  );
+
+  assert.equal(updated.parentId, destinationRoot.id);
+  assert.equal(updated.sortOrder, firstChild.sortOrder + 1);
+});
+
 test("wiki revisions are created and soft delete preserves them", async () => {
   const page = await createWikiPage(
     {

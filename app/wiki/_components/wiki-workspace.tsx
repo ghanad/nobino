@@ -32,16 +32,18 @@ function WikiTreeBranch({
   onNavigate?: () => void;
 }) {
   const isActive = activeSlug === node.slug;
+  const hasChildren = node.children.length > 0;
 
   return (
     <div className="min-w-0 grid gap-0.5">
       <Link
         aria-current={isActive ? "page" : undefined}
         className={cn(
-          "group relative flex min-h-11 min-w-0 items-center justify-between gap-3 rounded-md border border-transparent px-2.5 text-right text-sm font-medium transition-colors before:absolute before:inset-y-2 before:right-0 before:w-px before:rounded-full before:bg-transparent before:content-[''] xl:min-h-10",
+          "group flex min-h-11 min-w-0 items-center justify-between gap-3 rounded-md border border-transparent px-2.5 text-right text-sm font-medium transition-colors xl:min-h-10",
           isActive
-            ? "border-slate-200 bg-slate-100 text-slate-950 before:bg-primary"
+            ? "border-slate-200 bg-slate-100 text-slate-950"
             : "text-slate-700 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-950",
+          hasChildren && !isActive ? "font-semibold text-slate-800" : "",
           node.isHidden && isAdmin ? "opacity-70" : "",
         )}
         href={getWikiPagePath(node.slug)}
@@ -49,13 +51,23 @@ function WikiTreeBranch({
         title={node.title}
       >
         <span className="flex min-w-0 flex-1 items-center gap-2.5">
-          <FileText
-            aria-hidden="true"
-            className={cn(
-              "h-3.5 w-3.5 shrink-0 text-slate-400 transition-colors",
-              isActive && "text-primary",
-            )}
-          />
+          {hasChildren ? (
+            <BookOpen
+              aria-hidden="true"
+              className={cn(
+                "h-3.5 w-3.5 shrink-0 text-slate-400 transition-colors",
+                isActive && "text-primary",
+              )}
+            />
+          ) : (
+            <FileText
+              aria-hidden="true"
+              className={cn(
+                "h-3.5 w-3.5 shrink-0 text-slate-400 transition-colors",
+                isActive && "text-primary",
+              )}
+            />
+          )}
           <span className="min-w-0 truncate">{node.title}</span>
         </span>
         {node.isHidden && isAdmin ? (
@@ -65,8 +77,8 @@ function WikiTreeBranch({
         ) : null}
       </Link>
 
-      {node.children.length > 0 ? (
-        <div className="mr-[1.125rem] min-w-0 grid gap-0.5 border-r border-slate-200 pr-2.5">
+      {hasChildren ? (
+        <div className="mr-5 min-w-0 grid gap-0.5">
           {node.children.map((child) => (
             <WikiTreeBranch
               activeSlug={activeSlug}
@@ -222,7 +234,7 @@ export function WikiWorkspace({
                   </div>
                 </div>
                 {isAdmin ? (
-                  <Button asChild className="h-9 w-9 shrink-0" size="icon" variant="ghost">
+                  <Button asChild className="h-9 w-9 shrink-0" size="icon" variant="outline">
                     <Link
                       href="/wiki/transfer"
                       aria-label="خروجی و ورود دانشنامه"
