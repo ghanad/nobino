@@ -36,9 +36,10 @@ function getNavItems(user: CurrentUser): GlobalNavItem[] {
         ? [
             { href: "/lunch", label: "رزرو غذا", match: "exact" },
             { href: "/lunch/report", label: "گزارش غذا", match: "prefix" },
-          ]
+        ]
         : undefined,
     },
+    { href: "/wiki", label: "دانشنامه", match: "prefix" },
   ];
 
   if (canAccessManagerArea(user.role)) {

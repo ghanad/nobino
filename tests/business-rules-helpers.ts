@@ -160,6 +160,8 @@ export async function resetDatabase() {
   await db.auditLog.deleteMany();
   await db.calendarDayOverrideTarget.deleteMany();
   await db.calendarDayOverride.deleteMany();
+  await db.wikiPageRevision.deleteMany();
+  await db.wikiPage.deleteMany();
   await db.lunchReservation.deleteMany();
   await db.lunchLocation.deleteMany();
   await db.lunchException.deleteMany();

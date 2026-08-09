@@ -2,7 +2,7 @@
 THESIS: Nobino’s home is a compact service directory, not a dashboard.
 OWN-WORLD: White and cool-slate fields, one restrained action blue, IRANSansX, thin rules, and compact bordered controls.
 STORY: An employee scans the available reservation services and opens the one they need.
-FIRST VIEWPORT: A concise RTL heading sits above a responsive 2×2 service grid; each destination pairs an icon, title, description, and leftward cue.
+FIRST VIEWPORT: A concise RTL heading sits above a responsive service grid; each destination pairs an icon, title, description, and leftward cue.
 FORM: Equal-weight service wayfinding that can grow without implying a fixed count or sequence.
 */
 import { redirect } from "next/navigation";
@@ -10,6 +10,7 @@ import Link from "next/link";
 import {
   ArrowLeft,
   Armchair,
+  BookOpen,
   CalendarClock,
   DoorOpen,
   Utensils,
@@ -26,6 +27,12 @@ type ServiceLink = {
 };
 
 const serviceLinks: ServiceLink[] = [
+  {
+    title: "دانشنامه",
+    description: "راهنماها، فرایندها و اطلاعات داخلی شرکت",
+    href: "/wiki",
+    icon: BookOpen,
+  },
   {
     title: "رزرو غذا",
     description: "ثبت یا مشاهده رزرو غذای روزانه",

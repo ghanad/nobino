@@ -18,6 +18,10 @@ export function canAccessAdminArea(role: UserRole): boolean {
   return isAdmin(role);
 }
 
+export function canManageWiki(role: UserRole): boolean {
+  return isAdmin(role);
+}
+
 export function canAccessLunchReport(
   user: Pick<CurrentUser, "role" | "canViewLunchReport">,
 ): boolean {
