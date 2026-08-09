@@ -1,30 +1,23 @@
 import Link from "next/link";
-import { CheckCircle2, ExternalLink, MessageCircle, Unplug } from "lucide-react";
+import { CheckCircle2, ExternalLink, MessageCircle } from "lucide-react";
 
 import {
   checkBaleConnectionAction,
   disconnectBaleAccountAction,
 } from "@/app/settings/bale/actions";
+import { BaleConnectionActionForm } from "@/app/settings/bale/bale-connection-action-form";
 import { BaleLinkForm } from "@/app/settings/bale/bale-link-form";
 import { AppShell } from "@/components/app/app-shell";
 import { PageHeader } from "@/components/app/page-header";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { UrlToast } from "@/components/ui/url-toast";
+import { buttonVariants } from "@/components/ui/button";
 import { requireCurrentUser } from "@/lib/auth";
 import { getBaleBotUsername } from "@/lib/bale-client";
 import { db } from "@/lib/db";
 import { formatJalaliDateTime } from "@/lib/jalali-date";
 import { cn } from "@/lib/utils";
 
-type BaleSettingsPageProps = {
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
-};
-
-export default async function BaleSettingsPage({
-  searchParams,
-}: BaleSettingsPageProps) {
+export default async function BaleSettingsPage() {
   const user = await requireCurrentUser();
-  const params = await searchParams;
   const [connection, botUsername] = await Promise.all([
     db.baleConnection.findUnique({
       where: { userId: user.id },
@@ -35,32 +28,6 @@ export default async function BaleSettingsPage({
 
   return (
     <AppShell user={user}>
-      {params?.connected ? (
-        <UrlToast
-          consumeKeys={["connected"]}
-          message="حساب بله با موفقیت متصل شد."
-          variant="success"
-        />
-      ) : null}
-      {params?.disconnected ? (
-        <UrlToast
-          consumeKeys={["disconnected"]}
-          message="اتصال حساب بله قطع شد."
-          variant="success"
-        />
-      ) : null}
-      {params?.error ? (
-        <UrlToast
-          consumeKeys={["error"]}
-          message={
-            params.error === "not-connected"
-              ? "هنوز پیام اتصال از بات دریافت نشده است. ابتدا دستور را برای بات ارسال کنید."
-              : "ارتباط با بات بله برقرار نشد. تنظیمات سرور را بررسی کنید."
-          }
-          variant="error"
-        />
-      ) : null}
-
       <div className="grid gap-6 text-right" dir="rtl">
         <PageHeader
           subtitle="اعلان‌های رزرو Nobino را در گفت‌وگوی خصوصی بله دریافت کنید."
@@ -79,12 +46,10 @@ export default async function BaleSettingsPage({
                   </p>
                 </div>
               </div>
-              <form action={disconnectBaleAccountAction}>
-                <Button type="submit" variant="outline">
-                  <Unplug className="h-4 w-4" />
-                  قطع اتصال
-                </Button>
-              </form>
+              <BaleConnectionActionForm
+                action={disconnectBaleAccountAction}
+                kind="disconnect"
+              />
             </>
           ) : (
             <>
@@ -118,11 +83,10 @@ export default async function BaleSettingsPage({
 
               <BaleLinkForm />
 
-              <form action={checkBaleConnectionAction}>
-                <Button type="submit" variant="secondary">
-                  بررسی اتصال
-                </Button>
-              </form>
+              <BaleConnectionActionForm
+                action={checkBaleConnectionAction}
+                kind="check"
+              />
             </>
           )}
         </section>

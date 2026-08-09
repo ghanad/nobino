@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { requireCurrentUser } from "@/lib/auth";
@@ -16,17 +15,15 @@ const cancelLunchReservationSchema = z.object({
   reservationId: z.string().min(1),
 });
 
-function redirectToLunchReport(
-  date: string,
-  params: Record<string, string>,
-): never {
-  const searchParams = new URLSearchParams({ date, ...params });
-  redirect(`/lunch/report?${searchParams.toString()}`);
-}
+export type CancelLunchReservationActionState = {
+  message: string;
+  status: "error" | "idle" | "success";
+};
 
 export async function cancelLunchReservationByManagerAction(
+  _previousState: CancelLunchReservationActionState,
   formData: FormData,
-): Promise<void> {
+): Promise<CancelLunchReservationActionState> {
   const user = await requireCurrentUser();
   const parsed = cancelLunchReservationSchema.safeParse({
     date: formData.get("date"),
@@ -34,7 +31,7 @@ export async function cancelLunchReservationByManagerAction(
   });
 
   if (!parsed.success) {
-    redirect("/lunch/report?error=رزرو غذا معتبر نیست.");
+    return { message: "رزرو غذا معتبر نیست.", status: "error" };
   }
 
   try {
@@ -44,7 +41,7 @@ export async function cancelLunchReservationByManagerAction(
     });
   } catch (error) {
     if (error instanceof LunchReservationError) {
-      redirectToLunchReport(parsed.data.date, { error: error.message });
+      return { message: error.message, status: "error" };
     }
 
     throw error;
@@ -53,5 +50,5 @@ export async function cancelLunchReservationByManagerAction(
   revalidatePath("/lunch/report");
   revalidatePath("/lunch");
   revalidatePath("/reservations");
-  redirectToLunchReport(parsed.data.date, { cancelled: "1" });
+  return { message: "رزرو غذا لغو شد.", status: "success" };
 }

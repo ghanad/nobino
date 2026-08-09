@@ -1,10 +1,13 @@
 "use client";
 
-import { FormEvent, MouseEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, MouseEvent, useActionState, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 
-import { cancelLunchReservationByManagerAction } from "@/app/lunch/report/actions";
+import {
+  cancelLunchReservationByManagerAction,
+  type CancelLunchReservationActionState,
+} from "@/app/lunch/report/actions";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { Button } from "@/components/ui/button";
 import { JalaliDatePicker } from "@/components/ui/jalali-date-picker";
@@ -14,6 +17,11 @@ import { cn } from "@/lib/utils";
 type LunchReportViewProps = {
   canCancelReservations: boolean;
   initialReport: LunchReportData;
+};
+
+const initialCancelState: CancelLunchReservationActionState = {
+  message: "",
+  status: "idle",
 };
 
 function buildReportHref(dateParam: string): string {
@@ -32,6 +40,10 @@ export function LunchReportView({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [report, setReport] = useState(initialReport);
+  const [cancelState, cancelAction] = useActionState(
+    cancelLunchReservationByManagerAction,
+    initialCancelState,
+  );
   const abortControllerRef = useRef<AbortController | null>(null);
 
   async function loadReport(dateParam: string, options?: { pushUrl?: boolean }) {
@@ -106,6 +118,16 @@ export function LunchReportView({
       abortControllerRef.current?.abort();
     };
   }, [initialReport.dateParam]);
+
+  useEffect(() => {
+    if (cancelState.status === "success") {
+      void loadReport(report.dateParam);
+    }
+
+    if (cancelState.status === "error") {
+      setError(cancelState.message);
+    }
+  }, [cancelState, report.dateParam]);
 
   return (
     <section className="grid gap-4 rounded-lg border bg-card p-5">
@@ -268,7 +290,7 @@ export function LunchReportView({
                       </span>
                       {canCancelReservations ? (
                         <form
-                          action={cancelLunchReservationByManagerAction}
+                          action={cancelAction}
                           onSubmit={(event) => {
                             if (
                               !confirm(

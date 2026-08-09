@@ -18,6 +18,17 @@ const rangeSchema = z.object({
   startHour: z.coerce.number().int().min(0).max(23),
 });
 
+export type CreateDeskReservationActionState = {
+  message: string;
+  mutation?: {
+    endAt: string;
+    reservationId: string;
+    startAt: string;
+    type: "create";
+  };
+  status: "error" | "idle" | "success";
+};
+
 function redirectToDesks(params: Record<string, string | undefined>): never {
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) if (value) query.set(key, value);
@@ -73,6 +84,36 @@ export async function createDeskReservationAction(formData: FormData) {
     redirectToDesks({ date, error: getError(error), officeId });
   }
   redirectToDesks({ created: "1", date, officeId });
+}
+
+export async function createDeskReservationInlineAction(
+  _previousState: CreateDeskReservationActionState,
+  formData: FormData,
+): Promise<CreateDeskReservationActionState> {
+  const user = await requireCurrentUser();
+
+  try {
+    const range = await parseRange(formData);
+    const reservation = await createDeskReservation({
+      deskId: range.deskId,
+      endAt: range.endAt,
+      startAt: range.startAt,
+      userId: user.id,
+    });
+
+    return {
+      message: "درخواست رزرو میز ثبت شد و در انتظار تأیید مدیر است.",
+      mutation: {
+        endAt: reservation.endAt.toISOString(),
+        reservationId: reservation.id,
+        startAt: reservation.startAt.toISOString(),
+        type: "create",
+      },
+      status: "success",
+    };
+  } catch (error) {
+    return { message: getError(error), status: "error" };
+  }
 }
 
 export async function updateOwnDeskReservationAction(formData: FormData) {

@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 
 import { requireCurrentUser } from "@/lib/auth";
 import {
@@ -15,6 +14,11 @@ export type BaleLinkActionState = {
   command?: string;
   error?: string;
   expiresAt?: string;
+};
+
+export type BaleConnectionActionState = {
+  message: string;
+  status: "error" | "idle" | "success";
 };
 
 export async function generateBaleLinkCodeAction(): Promise<BaleLinkActionState> {
@@ -31,13 +35,16 @@ export async function generateBaleLinkCodeAction(): Promise<BaleLinkActionState>
   }
 }
 
-export async function checkBaleConnectionAction(): Promise<never> {
+export async function checkBaleConnectionAction(
+  _previousState: BaleConnectionActionState,
+): Promise<BaleConnectionActionState> {
+  void _previousState;
   const user = await requireCurrentUser();
 
   try {
     await consumeBaleUpdates();
   } catch {
-    redirect("/settings/bale?error=sync");
+    return { message: "ارتباط با بات بله برقرار نشد. دوباره تلاش کنید.", status: "error" };
   }
 
   const connection = await db.baleConnection.findUnique({
@@ -46,16 +53,20 @@ export async function checkBaleConnectionAction(): Promise<never> {
   });
 
   revalidatePath("/settings/bale");
-  redirect(
-    connection
-      ? "/settings/bale?connected=1"
-      : "/settings/bale?error=not-connected",
-  );
+  return connection
+    ? { message: "حساب بله با موفقیت متصل شد.", status: "success" }
+    : {
+        message: "هنوز پیام اتصال از بات دریافت نشده است. ابتدا دستور را برای بات ارسال کنید.",
+        status: "error",
+      };
 }
 
-export async function disconnectBaleAccountAction(): Promise<never> {
+export async function disconnectBaleAccountAction(
+  _previousState: BaleConnectionActionState,
+): Promise<BaleConnectionActionState> {
+  void _previousState;
   const user = await requireCurrentUser();
   await disconnectBaleAccount(user.id);
   revalidatePath("/settings/bale");
-  redirect("/settings/bale?disconnected=1");
+  return { message: "اتصال حساب بله قطع شد.", status: "success" };
 }

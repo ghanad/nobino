@@ -1,17 +1,21 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarDays, Check, Clock3, MapPin, Pencil } from "lucide-react";
 
 import {
   cancelOwnDeskReservationAction,
-  createDeskReservationAction,
+  createDeskReservationInlineAction,
+  type CreateDeskReservationActionState,
   updateOwnDeskReservationAction,
 } from "@/app/desks/actions";
+import { type LunchActionState } from "@/app/lunch/actions";
 import { Button } from "@/components/ui/button";
 import { JalaliDatePicker } from "@/components/ui/jalali-date-picker";
 import { SubmitButton } from "@/components/ui/submit-button";
+import type { LunchAvailability, LunchLocationOption } from "@/components/reservation/create-reservation/types";
+import { shouldOfferBreakfastForStart } from "@/lib/food-reservation-rules";
 import { buildDeskLayout } from "@/lib/desk-layout";
 import { cn } from "@/lib/utils";
 
@@ -46,6 +50,12 @@ type DeskReservationFormProps = {
   isFullDay: boolean;
   isWorkingDay: boolean;
   isStarted: boolean;
+  lunchAvailability: LunchAvailability;
+  lunchLocations: LunchLocationOption[];
+  lunchReservationAction: (
+    previousState: LunchActionState,
+    formData: FormData,
+  ) => Promise<LunchActionState>;
   myReservation?: DeskReservation;
   officeId: string;
   officeName: string;
@@ -55,6 +65,8 @@ type DeskReservationFormProps = {
 
 const PERSIAN_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
 const inputClass = "h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring";
+const initialDeskActionState: CreateDeskReservationActionState = { message: "", status: "idle" };
+const initialLunchActionState: LunchActionState = { message: "", status: "idle" };
 
 function formatHour(hour: number) {
   return `${String(hour).padStart(2, "0")}:00`.replace(/\d/g, (digit) => PERSIAN_DIGITS[Number(digit)]);
@@ -102,6 +114,9 @@ export function DeskReservationForm({
   isFullDay,
   isWorkingDay,
   isStarted,
+  lunchAvailability,
+  lunchLocations,
+  lunchReservationAction,
   myReservation,
   officeId,
   officeName,
@@ -110,6 +125,10 @@ export function DeskReservationForm({
 }: DeskReservationFormProps) {
   const router = useRouter();
   const [isNavigating, startNavigation] = useTransition();
+  const [createState, createFormAction] = useActionState(createDeskReservationInlineAction, initialDeskActionState);
+  const [lunchState, lunchFormAction] = useActionState(lunchReservationAction, initialLunchActionState);
+  const [isFoodPromptOpen, setIsFoodPromptOpen] = useState(false);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [editingTime, setEditingTime] = useState(!myReservation);
   const [fullDay, setFullDay] = useState(isFullDay && !isStarted);
   const [startHour, setStartHour] = useState(defaultStartHour);
@@ -154,6 +173,32 @@ export function DeskReservationForm({
   const hasChanges = movingDesk || timeChanged;
   const canSubmit = Boolean(selectedDesk?.active && !approvedConflict && (!myReservation || (movingDesk ? true : editingTime && hasChanges)));
   const availableCount = deskStates.filter((item) => item.state === "available" || item.state === "pendingOther").length;
+
+  useEffect(() => {
+    if (createState.status === "error") setActionMessage(createState.message);
+    if (createState.status === "success") {
+      setActionMessage(null);
+      if (lunchAvailability.isOpen) {
+        setIsFoodPromptOpen(true);
+      } else {
+        router.refresh();
+      }
+    }
+  }, [createState, lunchAvailability.isOpen, router]);
+
+  useEffect(() => {
+    if (lunchState.status === "success") {
+      setIsFoodPromptOpen(false);
+      router.refresh();
+    } else if (lunchState.status === "error") {
+      setActionMessage(lunchState.message);
+    }
+  }, [lunchState, router]);
+
+  function dismissFoodPrompt() {
+    setIsFoodPromptOpen(false);
+    router.refresh();
+  }
 
   function navigate(nextOfficeId: string, nextDate: string) {
     const query = new URLSearchParams({ date: nextDate, officeId: nextOfficeId });
@@ -220,12 +265,14 @@ export function DeskReservationForm({
     : "یک میز انتخاب کنید";
 
   return (
-    <form action={myReservation ? updateOwnDeskReservationAction : createDeskReservationAction} className="grid gap-4">
+    <form action={myReservation ? updateOwnDeskReservationAction : createFormAction} className="grid gap-4">
       <input name="date" type="hidden" value={date} />
       <input name="officeId" type="hidden" value={officeId} />
       <input name="deskId" type="hidden" value={selectedDeskId ?? ""} />
       {myReservation ? <input name="reservationId" type="hidden" value={myReservation.id} /> : null}
       {fullDay ? <input name="fullDay" type="hidden" value="on" /> : null}
+
+      {actionMessage ? <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900" role="status">{actionMessage}</p> : null}
 
       <section className="rounded-xl border bg-card px-4 py-2.5 shadow-sm">
         <div className="grid items-end gap-2.5 sm:grid-cols-2 lg:grid-cols-[1fr_1.15fr_1.25fr_.8fr_.8fr]">
@@ -350,6 +397,20 @@ export function DeskReservationForm({
           </aside>
         </div>
       </section>
+
+      {isFoodPromptOpen && createState.mutation ? <div aria-labelledby="desk-food-dialog-title" aria-modal="true" className="fixed inset-0 z-50 flex items-end justify-center bg-black/55 p-0 sm:items-center sm:p-4" role="dialog">
+        <button aria-label="بستن پیشنهاد غذا" className="absolute inset-0 cursor-default" onClick={dismissFoodPrompt} type="button" />
+        <div className="relative z-10 grid max-h-[92vh] w-full max-w-lg gap-5 overflow-y-auto rounded-t-lg border bg-background p-5 shadow-lg sm:rounded-lg">
+          <div className="flex items-start justify-between gap-4"><div><h3 className="font-medium" id="desk-food-dialog-title">رزرو غذا</h3><div className="mt-1 grid gap-1 text-sm text-muted-foreground"><p>درخواست رزرو میز شما ثبت شد.</p><p>{dateLabel}</p></div></div><button aria-label="بستن پیشنهاد غذا" className="inline-flex h-9 w-9 items-center justify-center rounded-md border bg-background text-muted-foreground hover:bg-accent hover:text-foreground" onClick={dismissFoodPrompt} type="button">×</button></div>
+          <div className="grid gap-3 rounded-md border border-sky-100 bg-sky-50/60 p-3 text-sm">
+            <p className="font-medium">برای این روز غذا هم رزرو می‌کنید؟</p><p className="text-xs leading-5 text-muted-foreground">{lunchAvailability.cutoffLabel}</p>
+            <input name="date" type="hidden" value={date} />
+            {lunchAvailability.existingReservation ? <input name="reservationId" type="hidden" value={lunchAvailability.existingReservation.id} /> : null}
+            {lunchAvailability.isOpen ? <><fieldset className="grid gap-2 rounded-md border bg-white/70 p-3"><legend className="px-1 font-medium">وعده‌ها</legend>{shouldOfferBreakfastForStart(new Date(createState.mutation.startAt)) ? <label className="flex items-center gap-2"><input defaultChecked={lunchAvailability.existingReservation?.breakfastReserved ?? false} name="breakfastReserved" type="checkbox" />صبحانه</label> : lunchAvailability.existingReservation?.breakfastReserved ? <><input name="breakfastReserved" type="hidden" value="on" /><p className="text-xs text-muted-foreground">صبحانه‌ای که قبلاً رزرو کرده‌اید بدون تغییر باقی می‌ماند.</p></> : null}<label className="flex items-center gap-2"><input defaultChecked={lunchAvailability.existingReservation?.lunchReserved ?? true} name="lunchReserved" type="checkbox" />ناهار</label></fieldset><label className="grid gap-2 font-medium"><span>محل مشترک دریافت غذا</span><select className={inputClass} defaultValue={lunchAvailability.existingReservation?.locationId ?? lunchLocations[0]?.id ?? ""} name="locationId">{lunchLocations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}</select></label></> : <p className="rounded-md border border-amber-200 bg-white/80 px-3 py-2 text-xs leading-5 text-amber-900">{lunchAvailability.unavailableReason ?? "در حال حاضر امکان رزرو غذا برای این تاریخ وجود ندارد."}</p>}
+          </div>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><button className="inline-flex h-11 w-full items-center justify-center rounded-md border bg-background px-4 text-sm font-medium hover:bg-accent sm:h-10 sm:w-auto" onClick={dismissFoodPrompt} type="button">فعلاً نه</button><SubmitButton className="h-11 w-full sm:h-10 sm:w-auto" disabled={!lunchAvailability.isOpen} formAction={lunchFormAction} pendingLabel="در حال ثبت غذا...">ذخیره رزرو غذا</SubmitButton></div>
+        </div>
+      </div> : null}
     </form>
   );
 }

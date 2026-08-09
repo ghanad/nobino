@@ -1,12 +1,19 @@
-import { ReservationStatus } from "@prisma/client";
+import { LunchReservationStatus, ReservationStatus } from "@prisma/client";
 
+import { createLunchReservationAction } from "@/app/lunch/actions";
 import { PageHeader } from "@/components/app/page-header";
 import { DeskReservationForm } from "@/components/desks/desk-reservation-form";
 import { UrlToast } from "@/components/ui/url-toast";
 import { requireCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { endOfLocalDay, getOfficeWorkingWindowForDate, startOfLocalDay } from "@/lib/desk-schedule";
-import { formatJalaliDate, formatJalaliDateParam, parseJalaliDateParam } from "@/lib/jalali-date";
+import {
+  formatJalaliDate,
+  formatJalaliDateParam,
+  formatPersianLocalTime,
+  parseJalaliDateParam,
+} from "@/lib/jalali-date";
+import { getLunchDayState } from "@/lib/lunch-service";
 
 type Props = { searchParams?: Promise<{ cancelled?: string; created?: string; date?: string; error?: string; officeId?: string; updated?: string }> };
 
@@ -21,10 +28,20 @@ export default async function DesksPage({ searchParams }: Props) {
   const params = await searchParams;
   const date = parseJalaliDateParam(params?.date) ?? startOfLocalDay(new Date());
   const dateParam = formatJalaliDateParam(date);
-  const offices = await db.office.findMany({
-    where: { active: true, deletedAt: null }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    include: { desks: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] } },
-  });
+  const [offices, lunchLocations, lunchReservation, lunchDayState] = await Promise.all([
+    db.office.findMany({
+      where: { active: true, deletedAt: null }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      include: { desks: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] } },
+    }),
+    db.lunchLocation.findMany({
+      where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true },
+    }),
+    db.lunchReservation.findFirst({
+      where: { userId: user.id, date: startOfLocalDay(date), status: LunchReservationStatus.ACTIVE },
+      select: { breakfastReserved: true, id: true, locationId: true, lunchReserved: true },
+    }),
+    getLunchDayState({ date, now: new Date() }),
+  ]);
   const office = offices.find((item) => item.id === params?.officeId) ?? offices[0] ?? null;
   const window = office ? await getOfficeWorkingWindowForDate({ date, officeId: office.id }) : null;
   const reservations = office ? await db.deskReservation.findMany({
@@ -69,6 +86,14 @@ export default async function DesksPage({ searchParams }: Props) {
         isFullDay={Boolean(myReservation && myReservation.startAt.getHours() === hours[0] && myReservation.endAt.getHours() === hours.at(-1))}
         isWorkingDay={Boolean(window?.isWorkingDay)}
         isStarted={Boolean(myReservation && myReservation.startAt <= new Date())}
+        lunchAvailability={{
+          cutoffLabel: `مهلت رزرو غذا تا ${formatJalaliDate(lunchDayState.cutoffAt)}، ${formatPersianLocalTime(lunchDayState.cutoffAt)}`,
+          existingReservation: lunchReservation,
+          isOpen: lunchDayState.isOpen && lunchLocations.length > 0,
+          unavailableReason: lunchReservation ? null : lunchLocations.length === 0 ? "هنوز ساختمانی برای دریافت غذا تعریف نشده است." : lunchDayState.isServiceDay ? `مهلت رزرو غذا گذشته است. مهلت تا ${formatJalaliDate(lunchDayState.cutoffAt)}، ${formatPersianLocalTime(lunchDayState.cutoffAt)} بود.` : "برای این تاریخ سرویس غذا فعال نیست.",
+        }}
+        lunchLocations={lunchLocations}
+        lunchReservationAction={createLunchReservationAction}
         myReservation={serializedMine}
         officeId={office.id}
         officeName={office.name}

@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
@@ -45,6 +46,15 @@ export type CreateMeetingRoomReservationActionState = {
     userEmail: string | null;
     userId: string;
     userName: string | null;
+  };
+  status: "error" | "idle" | "success";
+};
+
+export type CancelMeetingRoomReservationActionState = {
+  message: string;
+  mutation?: {
+    reservationId: string;
+    type: "cancel";
   };
   status: "error" | "idle" | "success";
 };
@@ -193,8 +203,9 @@ export async function createMeetingRoomReservationInlineAction(
 }
 
 export async function cancelMeetingRoomReservationAction(
+  _previousState: CancelMeetingRoomReservationActionState,
   formData: FormData,
-): Promise<void> {
+): Promise<CancelMeetingRoomReservationActionState> {
   const user = await requireCurrentUser();
   const parsed = reservationIdSchema.safeParse({
     reservationId: formData.get("reservationId"),
@@ -203,9 +214,7 @@ export async function cancelMeetingRoomReservationAction(
   });
 
   if (!parsed.success) {
-    redirectToMeetingRooms({
-      error: "رزرو اتاق جلسه معتبر انتخاب کنید.",
-    });
+    return { message: "رزرو اتاق جلسه معتبر انتخاب کنید.", status: "error" };
   }
 
   try {
@@ -214,16 +223,14 @@ export async function cancelMeetingRoomReservationAction(
       userId: user.id,
     });
   } catch (error) {
-    redirectToMeetingRooms({
-      date: parsed.data.date,
-      error: getActionErrorMessage(error),
-      roomId: parsed.data.roomId,
-    });
+    return { message: getActionErrorMessage(error), status: "error" };
   }
 
-  redirectToMeetingRooms({
-    cancelled: "1",
-    date: parsed.data.date,
-    roomId: parsed.data.roomId,
-  });
+  revalidatePath("/meeting-rooms");
+
+  return {
+    message: "رزرو اتاق جلسه لغو شد.",
+    mutation: { reservationId: parsed.data.reservationId, type: "cancel" },
+    status: "success",
+  };
 }

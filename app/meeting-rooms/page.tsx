@@ -1,13 +1,10 @@
 import { ReservationStatus } from "@prisma/client";
 
-import {
-  cancelMeetingRoomReservationAction,
-  createMeetingRoomReservationInlineAction,
-} from "@/app/meeting-rooms/actions";
+import { createMeetingRoomReservationInlineAction } from "@/app/meeting-rooms/actions";
 import { PageHeader } from "@/components/app/page-header";
+import { MeetingRoomCancelForm } from "@/components/meeting-rooms/meeting-room-cancel-form";
 import { MeetingRoomCalendar } from "@/components/meeting-rooms/meeting-room-calendar";
 import { MeetingRoomSelector } from "@/components/meeting-rooms/meeting-room-selector";
-import { SubmitButton } from "@/components/ui/submit-button";
 import { UrlToast } from "@/components/ui/url-toast";
 import { requireCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -413,29 +410,11 @@ export default async function MeetingRoomsPage({
                           ? "تاییدشده"
                           : "در انتظار تایید"}
                       </div>
-                      <form
-                        action={cancelMeetingRoomReservationAction}
-                        className="mt-2"
-                      >
-                        <input
-                          name="reservationId"
-                          type="hidden"
-                          value={reservation.id}
-                        />
-                        <input
-                          name="roomId"
-                          type="hidden"
-                          value={reservation.roomId}
-                        />
-                        <input name="date" type="hidden" value={dateParam} />
-                        <SubmitButton
-                          className="h-8 px-3 text-xs"
-                          pendingLabel="در حال لغو"
-                          variant="outline"
-                        >
-                          لغو
-                        </SubmitButton>
-                      </form>
+                      <MeetingRoomCancelForm
+                        date={dateParam}
+                        reservationId={reservation.id}
+                        roomId={reservation.roomId}
+                      />
                     </div>
                   ))
               )}

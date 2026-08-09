@@ -2,8 +2,6 @@ import { ReservationStatus, UserRole, type Prisma } from "@prisma/client";
 import {
   Bell,
   CalendarClock,
-  Check,
-  CheckCheck,
   ChevronLeft,
   ChevronRight,
   Circle,
@@ -12,6 +10,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { PageHeader } from "@/components/app/page-header";
+import { MarkNotificationsReadForm } from "@/components/notifications/mark-notifications-read-form";
 import { Button } from "@/components/ui/button";
 import { UrlToast } from "@/components/ui/url-toast";
 import { requireCurrentUser } from "@/lib/auth";
@@ -483,14 +482,10 @@ function getNotificationAction(
 }
 
 function NotificationCard({
-  filter,
   notification,
-  page,
   userRole,
 }: {
-  filter: NotificationFilter;
   notification: NotificationItem;
-  page: number;
   userRole: UserRole;
 }) {
   const badge = getTypeBadge(notification);
@@ -554,20 +549,7 @@ function NotificationCard({
               </Button>
             ) : null}
             {isUnread ? (
-              <form action="/notifications/mark-read" method="post">
-                <input name="mode" type="hidden" value="single" />
-                <input name="page" type="hidden" value={page} />
-                <input name="filter" type="hidden" value={filter} />
-                <input
-                  name="notificationId"
-                  type="hidden"
-                  value={notification.id}
-                />
-                <Button size="sm" type="submit" variant="ghost">
-                  <Check className="h-4 w-4" />
-                  خواندم
-                </Button>
-              </form>
+              <MarkNotificationsReadForm mode="single" notificationId={notification.id} />
             ) : null}
           </div>
         ) : null}
@@ -655,15 +637,7 @@ export default async function NotificationsPage({
             </p>
           </div>
           {unreadCount > 0 ? (
-            <form action="/notifications/mark-read" method="post">
-              <input name="mode" type="hidden" value="all" />
-              <input name="page" type="hidden" value={currentPage} />
-              <input name="filter" type="hidden" value={activeFilter} />
-              <Button type="submit" variant="outline">
-                <CheckCheck className="h-4 w-4" />
-                همه را خواندم
-              </Button>
-            </form>
+            <MarkNotificationsReadForm mode="all" />
           ) : null}
         </div>
 
@@ -695,10 +669,8 @@ export default async function NotificationsPage({
             <div className="grid gap-3">
               {notifications.map((notification) => (
                 <NotificationCard
-                  filter={activeFilter}
                   key={notification.id}
                   notification={notification}
-                  page={currentPage}
                   userRole={user.role}
                 />
               ))}
