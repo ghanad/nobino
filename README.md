@@ -99,7 +99,7 @@ The seed script creates:
 
 ## Current Status
 
-The first operational version is implemented. Seeded users can sign in, create hourly reservation requests, see their own reservations grouped by status, cancel pending requests, and accept or reject manager-proposed alternatives. Managers can approve, reject, propose alternatives, and review auto-approval deadlines from `/manager`. Admins manage buildings centrally from `/admin/desks`, then assign each resource pool to an active real building from the capacity settings. A pool with future active reservations cannot be moved between real buildings, so an existing reservation’s physical location is never changed silently; initial assignment from the transitional placeholder preserves the reservation’s date and capacity. Admins can also manage capacity and active state, Jalali date-specific capacity exceptions, weekly working schedule rows, centralized operational-calendar corrections, service-specific schedule exceptions, reservation policy settings, users from `/admin`, and audit history from `/admin/audit`. Users and managers can review unread in-app notifications from `/notifications` and mark notifications as read. Capacity reductions are blocked when future approved reservations would exceed the new effective capacity. Core service rules are covered by automated tests.
+The first operational version is implemented. Seeded users can sign in, create hourly reservation requests, see their own reservations grouped by status, cancel pending requests, and accept or reject manager-proposed alternatives. Managers can approve, reject, propose alternatives, and review auto-approval deadlines from `/manager`. Admins manage buildings centrally from `/admin/buildings`, then assign each resource pool to an active real building from the capacity settings. A pool with future active reservations cannot be moved between real buildings, so an existing reservation’s physical location is never changed silently; initial assignment from the transitional placeholder preserves the reservation’s date and capacity. Admins can also manage capacity and active state, Jalali date-specific capacity exceptions, weekly working schedule rows, centralized operational-calendar corrections, service-specific schedule exceptions, reservation policy settings, users from `/admin`, and audit history from `/admin/audit`. Users and managers can review unread in-app notifications from `/notifications` and mark notifications as read. Capacity reductions are blocked when future approved reservations would exceed the new effective capacity. Core service rules are covered by automated tests.
 
 ## Auth Routes
 
@@ -123,8 +123,10 @@ The first operational version is implemented. Seeded users can sign in, create h
   the full working day, then edit or cancel it.
 - `/manager/desks` lets managers move, reschedule, or cancel active desk
   reservations.
-- `/admin/desks` lets admins manage buildings, named desks, schedules, Jalali
-  date exceptions, and the advance-booking limit.
+- `/admin/buildings` lets admins create, edit, activate, deactivate, and delete
+  buildings from one dedicated screen.
+- `/admin/desks` lets admins manage named desks, schedules, Jalali date
+  exceptions, and the advance-booking limit for each building.
 - `/admin/calendar` lets admins override imported Iran holidays or weekly
   schedules once for selected systems, lunch, buildings, and meeting rooms.
 - `/notifications` allows authenticated users to review unread notification
@@ -220,7 +222,7 @@ which approved reservation to cancel before applying the lower capacity.
 
 `Building` is the shared physical-location record for desks, system capacity,
 and food. Buildings are created, edited, deactivated, and deleted only through
-the central `/admin/desks` management screen. The food admin screen intentionally
+the central `/admin/buildings` management screen. The food admin screen intentionally
 contains only a summary and link to that central screen; it has no separate
 building CRUD.
 

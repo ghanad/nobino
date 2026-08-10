@@ -27,6 +27,12 @@ function result(ok: boolean, message: string, redirectTo?: string): AdminDeskAct
   return { id: crypto.randomUUID(), message, ok, redirectTo };
 }
 function message(error: unknown) { if (error instanceof AdminSettingsError) return error.message; throw error; }
+function refreshBuildings() {
+  revalidatePath("/admin/buildings");
+  revalidatePath("/admin/desks");
+  revalidatePath("/admin/capacity");
+  revalidatePath("/admin/lunch");
+}
 function refreshDesks() { revalidatePath("/admin/desks"); }
 
 export async function createBuildingAction(_state: AdminDeskActionState, formData: FormData): Promise<AdminDeskActionState> {
@@ -34,9 +40,9 @@ export async function createBuildingAction(_state: AdminDeskActionState, formDat
   const parsed = z.object({ name: nameSchema, sortOrder: sortSchema }).safeParse(Object.fromEntries(formData));
   if (!parsed.success) return result(false, "نام و ترتیب ساختمان را معتبر وارد کنید.");
   try {
-    const building = await createBuilding({ adminId: admin.id, ...parsed.data });
-    refreshDesks();
-    return result(true, "ساختمان ایجاد شد.", `/admin/desks?buildingId=${encodeURIComponent(building.id)}`);
+    await createBuilding({ adminId: admin.id, ...parsed.data });
+    refreshBuildings();
+    return result(true, "ساختمان ایجاد شد.", "/admin/buildings");
   }
   catch (error) { return result(false, message(error)); }
 }
@@ -47,7 +53,7 @@ export async function updateBuildingAction(_state: AdminDeskActionState, formDat
   if (!parsed.success) return result(false, "مشخصات ساختمان معتبر نیست.");
   try { await updateBuilding({ active: checked(formData.get("active")), adminId: admin.id, ...parsed.data }); }
   catch (error) { return result(false, message(error)); }
-  refreshDesks();
+  refreshBuildings();
   return result(true, "مشخصات ساختمان ذخیره شد.");
 }
 
@@ -57,8 +63,8 @@ export async function deleteBuildingAction(_state: AdminDeskActionState, formDat
   if (!parsed.success) return result(false, "ساختمان معتبر نیست.");
   try { await deleteBuilding({ adminId: admin.id, buildingId: parsed.data.buildingId }); }
   catch (error) { return result(false, message(error)); }
-  refreshDesks();
-  return result(true, "ساختمان و رزروهای آینده آن حذف شدند.", "/admin/desks");
+  refreshBuildings();
+  return result(true, "ساختمان و رزروهای آینده آن حذف شدند.", "/admin/buildings");
 }
 
 export async function createDeskAction(_state: AdminDeskActionState, formData: FormData): Promise<AdminDeskActionState> {

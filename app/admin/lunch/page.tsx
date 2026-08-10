@@ -178,7 +178,7 @@ export default async function AdminLunchPage({
             ساختمان‌ها منبع مشترک رزرو میز، سیستم و غذا هستند و فقط از بخش مدیریت مرکزی تغییر می‌کنند.
           </p>
         </div>
-        <Link className="w-fit text-sm font-medium text-primary hover:underline" href="/admin/desks">
+        <Link className="w-fit text-sm font-medium text-primary hover:underline" href="/admin/buildings">
           رفتن به مدیریت مرکزی ساختمان‌ها
         </Link>
       </section>

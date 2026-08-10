@@ -69,7 +69,7 @@ export function ResourcePoolSettings({
       {buildings.length === 0 ? (
         <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
           ابتدا یک ساختمان واقعی ایجاد کنید؛ سپس می‌توانید مخزن‌های ظرفیت را به آن تخصیص دهید. {" "}
-          <Link className="font-medium text-amber-950 underline underline-offset-4" href="/admin/desks">
+          <Link className="font-medium text-amber-950 underline underline-offset-4" href="/admin/buildings">
             رفتن به مدیریت مرکزی ساختمان‌ها
           </Link>
         </div>

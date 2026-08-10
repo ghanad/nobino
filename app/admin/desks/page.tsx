@@ -7,7 +7,6 @@ import {
   LayoutGrid,
   Plus,
   Save,
-  Settings2,
   SlidersHorizontal,
   Trash2,
 } from "lucide-react";
@@ -16,11 +15,8 @@ import type { ReactNode } from "react";
 
 import {
   createDeskAction,
-  createBuildingAction,
-  deleteBuildingAction,
   deleteBuildingExceptionAction,
   updateDeskSettingsAction,
-  updateBuildingAction,
   updateBuildingDesksAction,
   updateBuildingScheduleAction,
   upsertBuildingExceptionAction,
@@ -30,7 +26,6 @@ import {
   AdminDeskTrackedSubmitButton,
 } from "@/app/admin/desks/admin-desk-form";
 import { PageHeader } from "@/components/app/page-header";
-import { DeleteBuildingButton } from "@/app/admin/desks/delete-building-button";
 import { Button } from "@/components/ui/button";
 import { JalaliDatePicker } from "@/components/ui/jalali-date-picker";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -242,16 +237,12 @@ export default async function AdminDesksPage({ searchParams }: Props) {
   const building =
     buildings.find((item) => item.id === params?.buildingId) ?? buildings[0] ?? null;
   const activeView = getView(params?.view);
-  const isCreatingBuilding = params?.view === "new" || buildings.length === 0;
-  const activeBuildingCount = buildings.filter((item) => item.active).length;
   const totalActiveDeskCount = buildings.reduce(
     (count, item) => count + item.desks.filter((desk) => desk.active).length,
     0,
   );
   const activeDeskCount =
     building?.desks.filter((desk) => desk.active).length ?? 0;
-  const defaultBuildingSortOrder =
-    buildings.reduce((highest, item) => Math.max(highest, item.sortOrder), 0) + 1;
   const defaultDeskSortOrder =
     (building?.desks.reduce(
       (highest, desk) => Math.max(highest, desk.sortOrder),
@@ -262,18 +253,17 @@ export default async function AdminDesksPage({ searchParams }: Props) {
       <PageHeader
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <StatusPill tone="good">{activeBuildingCount} ساختمان فعال</StatusPill>
             <StatusPill>{totalActiveDeskCount} میز فعال</StatusPill>
-            <Button asChild size="sm">
-              <Link href="/admin/desks?view=new">
-                <Plus className="h-4 w-4" />
-                ساختمان جدید
+            <Button asChild size="sm" variant="outline">
+              <Link href="/admin/buildings">
+                <Building2 className="h-4 w-4" />
+                مدیریت ساختمان‌ها
               </Link>
             </Button>
           </div>
         }
-        subtitle="یک ساختمان را انتخاب کنید و میزها، ساعات کاری یا استثناهای آن را مدیریت کنید."
-        title="مدیریت ساختمان‌ها و میزها"
+        subtitle="یک ساختمان را انتخاب کنید و میزها، ساعات کاری یا استثناهای رزرو آن را مدیریت کنید."
+        title="مدیریت میزها و زمان‌بندی"
       />
 
       <section className={cn(panelClass, "p-4")}>
@@ -293,7 +283,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
               className="grid flex-1 gap-2 sm:grid-cols-2 xl:grid-cols-3"
             >
               {buildings.map((item) => {
-                const isSelected = !isCreatingBuilding && item.id === building?.id;
+                const isSelected = item.id === building?.id;
                 const itemActiveDesks = item.desks.filter(
                   (desk) => desk.active,
                 ).length;
@@ -336,63 +326,17 @@ export default async function AdminDesksPage({ searchParams }: Props) {
               })}
             </nav>
           ) : (
-            <p className="text-sm text-muted-foreground">
-              هنوز ساختمانی تعریف نشده است.
-            </p>
+            <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+              <span>هنوز ساختمانی تعریف نشده است.</span>
+              <Button asChild size="sm">
+                <Link href="/admin/buildings">تعریف ساختمان</Link>
+              </Button>
+            </div>
           )}
         </div>
       </section>
 
-      {isCreatingBuilding ? (
-        <section className={panelClass}>
-          <div className={panelHeaderClass}>
-            <div className="flex items-start gap-3">
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
-                <Plus className="h-5 w-5" />
-              </span>
-              <div className="grid gap-1">
-                <h2 className="text-lg font-semibold">تعریف ساختمان جدید</h2>
-                <p className="text-xs leading-5 text-muted-foreground">
-                  پس از ایجاد ساختمان می‌توانید میزها و برنامه کاری آن را تنظیم
-                  کنید.
-                </p>
-              </div>
-            </div>
-          </div>
-          <AdminDeskForm action={createBuildingAction} className="grid gap-6 p-5">
-            <div className="grid gap-4 md:grid-cols-2">
-              <Field label="نام ساختمان">
-                <input
-                  autoFocus
-                  className={inputClass}
-                  maxLength={100}
-                  name="name"
-                  placeholder="مثلاً ساختمان مرکزی"
-                  required
-                />
-              </Field>
-              <Field label="ترتیب نمایش">
-                <input
-                  className={inputClass}
-                  defaultValue={defaultBuildingSortOrder}
-                  min={0}
-                  name="sortOrder"
-                  type="number"
-                />
-              </Field>
-            </div>
-            <div className="flex justify-start border-t pt-5">
-              <SubmitButton
-                className="w-full sm:w-auto sm:min-w-40"
-                pendingLabel="در حال ایجاد"
-              >
-                <Plus className="h-4 w-4" />
-                ایجاد ساختمان
-              </SubmitButton>
-            </div>
-          </AdminDeskForm>
-        </section>
-      ) : building ? (
+      {building ? (
         <main className="grid min-w-0 gap-6">
           <section className={cn(panelClass, "min-w-0")}>
             <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -418,55 +362,6 @@ export default async function AdminDesksPage({ searchParams }: Props) {
 
           {activeView === "desks" ? (
             <>
-              <section className={panelClass}>
-                <div className={panelHeaderClass}>
-                  <div className="flex items-start gap-3">
-                    <Settings2 className="mt-0.5 h-5 w-5 text-primary" />
-                    <div className="grid gap-1">
-                      <h2 className="text-base font-semibold">مشخصات ساختمان</h2>
-                      <p className="text-xs text-slate-600">
-                        نام، ترتیب نمایش و وضعیت دسترسی کاربران را تغییر دهید.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <AdminDeskForm
-                  action={updateBuildingAction}
-                  className="grid gap-4 p-5 lg:grid-cols-[minmax(0,1fr)_180px_280px_auto] lg:items-end"
-                >
-                  <input name="buildingId" type="hidden" value={building.id} />
-                  <Field label="نام ساختمان">
-                    <input
-                      className={inputClass}
-                      defaultValue={building.name}
-                      name="name"
-                      required
-                    />
-                  </Field>
-                  <Field label="ترتیب نمایش">
-                    <input
-                      className={inputClass}
-                      defaultValue={building.sortOrder}
-                      min={0}
-                      name="sortOrder"
-                      type="number"
-                    />
-                  </Field>
-                  <ToggleSwitch
-                    defaultChecked={building.active}
-                    label="ساختمان فعال"
-                    name="active"
-                  />
-                  <SubmitButton
-                    className="w-full lg:w-auto"
-                    pendingLabel="در حال ذخیره"
-                  >
-                    <Save className="h-4 w-4" />
-                    ذخیره
-                  </SubmitButton>
-                </AdminDeskForm>
-              </section>
-
               <section className={panelClass}>
                 <div className={panelHeaderClass}>
                   <div className="grid gap-1">
@@ -929,24 +824,6 @@ export default async function AdminDesksPage({ searchParams }: Props) {
             </section>
           ) : null}
 
-          <section className="mt-6 border-t border-red-100 pt-6">
-            <div className="flex flex-col gap-4 rounded-lg border border-red-200 bg-red-50/50 p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h3 className="text-sm font-semibold text-slate-800">
-                  حذف ساختمان
-                </h3>
-                <p className="mt-1 text-xs leading-5 text-slate-600">
-                  ساختمان از دسترس خارج و رزروهای آینده میزهای آن حذف می‌شوند.
-                  سابقه رزروهای گذشته حفظ می‌شود.
-                </p>
-              </div>
-              <DeleteBuildingButton
-                action={deleteBuildingAction}
-                buildingId={building.id}
-                buildingName={building.name}
-              />
-            </div>
-          </section>
         </main>
       ) : null}
     </div>

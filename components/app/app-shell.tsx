@@ -90,7 +90,8 @@ function getNavItems(user: CurrentUser): GlobalNavItem[] {
             label: "اتاق‌های جلسه",
             match: "prefix",
           },
-          { href: "/admin/desks", label: "دفترها و میزها", match: "prefix" },
+          { href: "/admin/buildings", label: "ساختمان‌ها", match: "prefix" },
+          { href: "/admin/desks", label: "میزها و زمان‌بندی", match: "prefix" },
           { href: "/admin/lunch", label: "غذا", match: "prefix" },
           {
             href: "/admin/lunch-notifications",
