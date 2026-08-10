@@ -1,5 +1,8 @@
+"use client";
+
 import { AlertTriangle, CheckCircle2, Database, Gauge, Save } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 
 import { updateResourcePoolAction } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
@@ -27,8 +30,17 @@ export function ResourcePoolSettings({
     };
   }>;
 }) {
+  const selectableBuildingIds = new Set(buildings.map((building) => building.id));
+  const [buildingSelections, setBuildingSelections] = useState(() =>
+    Object.fromEntries(
+      resourcePools.map((pool) => [
+        pool.id,
+        selectableBuildingIds.has(pool.building.id) ? pool.building.id : "",
+      ]),
+    ),
+  );
   const availablePools = resourcePools.filter(
-    (pool) => pool.active && !pool.building.isTransitional,
+    (pool) => pool.active && selectableBuildingIds.has(pool.building.id),
   );
   const totalAvailableCapacity = availablePools.reduce(
     (sum, pool) => sum + pool.capacity,
@@ -128,11 +140,25 @@ export function ResourcePoolSettings({
           </div>
 
           <div className="grid gap-3">
-            {resourcePools.map((pool) => (
+            {resourcePools.map((pool) => {
+              const currentBuildingIsSelectable = selectableBuildingIds.has(
+                pool.building.id,
+              );
+              const needsBuildingAssignment =
+                pool.building.isTransitional || !currentBuildingIsSelectable;
+              const selectedBuildingId = buildingSelections[pool.id] ?? "";
+              const hasSelectedBuilding = selectableBuildingIds.has(
+                selectedBuildingId,
+              );
+              const assignmentWarning = pool.building.isTransitional
+                ? "این مخزن تا زمان انتخاب ساختمان واقعی در دسترس کاربران نیست."
+                : "ساختمان فعلی غیرفعال است؛ مقصد فعال را آگاهانه انتخاب کنید.";
+
+              return (
               <form
                 action={updateResourcePoolAction}
                 className={`rounded-lg border bg-card p-4 shadow-sm ${
-                  pool.building.isTransitional
+                  needsBuildingAssignment
                     ? "border-amber-300 bg-amber-50/40"
                     : ""
                 }`}
@@ -164,24 +190,29 @@ export function ResourcePoolSettings({
                       <FieldLabel htmlFor={`pool-building-${pool.id}`}>
                         ساختمان
                       </FieldLabel>
-                      {pool.building.isTransitional ? (
+                      {needsBuildingAssignment ? (
                         <span className="text-xs font-medium text-amber-800">
-                          نیازمند تعیین ساختمان
+                          {pool.building.isTransitional
+                            ? "نیازمند تعیین ساختمان"
+                            : "نیازمند انتخاب مقصد"}
                         </span>
                       ) : null}
                     </div>
                     <SelectInput
-                      defaultValue={
-                        pool.building.isTransitional ? "" : pool.building.id
-                      }
+                      onChange={(event) => {
+                        setBuildingSelections((selections) => ({
+                          ...selections,
+                          [pool.id]: event.target.value,
+                        }));
+                      }}
                       id={`pool-building-${pool.id}`}
                       name="buildingId"
                       required
-                      disabled={buildings.length === 0}
+                      value={selectedBuildingId}
                     >
-                      {pool.building.isTransitional ? (
+                      {needsBuildingAssignment ? (
                         <option disabled value="">
-                          ساختمان مقصد را انتخاب کنید
+                          ساختمان فعال را انتخاب کنید
                         </option>
                       ) : null}
                       {buildings.map((building) => (
@@ -190,6 +221,11 @@ export function ResourcePoolSettings({
                         </option>
                       ))}
                     </SelectInput>
+                    {needsBuildingAssignment ? (
+                      <p className="text-xs leading-5 text-amber-900">
+                        {assignmentWarning}
+                      </p>
+                    ) : null}
                   </div>
                   <div className="grid gap-2">
                     <FieldLabel htmlFor={`pool-capacity-${pool.id}`}>
@@ -217,7 +253,7 @@ export function ResourcePoolSettings({
                   </label>
                   <Button
                     className="w-full lg:w-auto"
-                    disabled={buildings.length === 0}
+                    disabled={!hasSelectedBuilding}
                     type="submit"
                   >
                     <Save className="h-4 w-4" />
@@ -225,15 +261,16 @@ export function ResourcePoolSettings({
                   </Button>
                 </div>
                 <p className="mt-3 text-xs leading-5 text-muted-foreground">
-                  {pool.building.isTransitional
-                    ? "این مخزن تا زمان انتخاب ساختمان واقعی در دسترس کاربران نیست."
+                  {needsBuildingAssignment
+                    ? assignmentWarning
                     : "فقط رزروهای تاییدشده ظرفیت را مصرف می‌کنند؛ درخواست‌های در انتظار در تقویم دیده می‌شوند اما جلوی درخواست جدید را نمی‌گیرند."}
                   {pool.building.isTransitional
                     ? " تعیین ساختمان زمان یا ظرفیت رزروهای موجود را تغییر نمی‌دهد."
                     : " تغییر ساختمان برای مخزنی که رزرو آینده دارد، برای جلوگیری از تغییر ناخواسته مکان رزروها مسدود می‌شود."}
                 </p>
               </form>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

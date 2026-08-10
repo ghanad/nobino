@@ -49,6 +49,30 @@ test("an active pool under an inactive building cannot accept system requests", 
   );
 });
 
+test("an inactive building cannot be selected as a resource pool destination", async () => {
+  await db.building.update({
+    where: { id: buildingId },
+    data: { active: false },
+  });
+
+  await assert.rejects(
+    updateResourcePoolSettings({
+      adminId,
+      buildingId,
+      resourcePoolId: poolId,
+      name: "Renamed Systems",
+      capacity: 1,
+      active: false,
+    }),
+    /ساختمان فعال و واقعی/,
+  );
+
+  assert.equal(
+    (await db.resourcePool.findUniqueOrThrow({ where: { id: poolId } })).name,
+    "Company Systems",
+  );
+});
+
 test("reservation people count does not consume additional capacity", async () => {
   const startAt = nextWorkingDateAtHour(9);
   const endAt = addHours(startAt, 1);
