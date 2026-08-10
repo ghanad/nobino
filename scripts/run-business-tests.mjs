@@ -49,6 +49,6 @@ run("npx", ["prisma", "db", "push", "--skip-generate"]);
 run(process.execPath, [
   "--test",
   path.join(buildDir, "tests/business-rules.test.js"),
-  path.join(buildDir, "tests/lunch-location-selection.test.js"),
+  path.join(buildDir, "tests/lunch-building-selection.test.js"),
   path.join(buildDir, "tests/manager-weekly-calendar-helpers.test.js"),
 ]);

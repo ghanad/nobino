@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { getLunchLocationSelection } from "@/components/lunch/lunch-location-selection";
+import { getLunchBuildingSelection } from "@/components/lunch/lunch-building-selection";
 
 const buildings = [
   { id: "building-a", name: "ساختمان A" },
@@ -10,7 +10,7 @@ const buildings = [
 
 test("new lunch reservations preserve the current building selection behavior", () => {
   assert.deepEqual(
-    getLunchLocationSelection({ buildings: [buildings[0]] }),
+    getLunchBuildingSelection({ buildings: [buildings[0]] }),
     {
       currentBuildingName: "",
       hasUnavailableCurrentBuilding: false,
@@ -20,7 +20,7 @@ test("new lunch reservations preserve the current building selection behavior", 
     },
   );
   assert.deepEqual(
-    getLunchLocationSelection({ buildings }),
+    getLunchBuildingSelection({ buildings }),
     {
       currentBuildingName: "",
       hasUnavailableCurrentBuilding: false,
@@ -32,10 +32,10 @@ test("new lunch reservations preserve the current building selection behavior", 
 });
 
 test("existing lunch reservations keep a valid building selected", () => {
-  const selection = getLunchLocationSelection({
+  const selection = getLunchBuildingSelection({
     buildings,
-    currentLocationId: "building-b",
-    currentLocationName: "ساختمان B",
+    currentBuildingId: "building-b",
+    currentBuildingName: "ساختمان B",
   });
 
   assert.equal(selection.hasUnavailableCurrentBuilding, false);
@@ -44,10 +44,10 @@ test("existing lunch reservations keep a valid building selected", () => {
 });
 
 test("an unavailable current building never falls back to the first active building", () => {
-  const selection = getLunchLocationSelection({
+  const selection = getLunchBuildingSelection({
     buildings,
-    currentLocationId: "retired-building",
-    currentLocationName: "ساختمان قدیمی",
+    currentBuildingId: "retired-building",
+    currentBuildingName: "ساختمان قدیمی",
   });
 
   assert.equal(selection.hasUnavailableCurrentBuilding, true);

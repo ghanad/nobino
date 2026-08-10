@@ -28,7 +28,7 @@ import {
   updateLunchReservationAction,
 } from "@/app/lunch/actions";
 import { Button } from "@/components/ui/button";
-import { getLunchLocationSelection } from "@/components/lunch/lunch-location-selection";
+import { getLunchBuildingSelection } from "@/components/lunch/lunch-building-selection";
 import { SwipeDismissToast } from "@/components/ui/swipe-dismiss-toast";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { cn } from "@/lib/utils";
@@ -71,25 +71,25 @@ const initialActionState: LunchActionState = {
   status: "idle",
 };
 
-function LocationSelect({
+function BuildingSelect({
   className,
-  currentLocationId,
-  currentLocationName,
+  currentBuildingId,
+  currentBuildingName,
   dateLabel,
   disabled,
   buildings,
 }: {
   className?: string;
-  currentLocationId?: string;
-  currentLocationName?: string;
+  currentBuildingId?: string;
+  currentBuildingName?: string;
   dateLabel: string;
   disabled: boolean;
   buildings: Building[];
 }) {
-  const selection = getLunchLocationSelection({
+  const selection = getLunchBuildingSelection({
     buildings,
-    currentLocationId,
-    currentLocationName,
+    currentBuildingId,
+    currentBuildingName,
   });
 
   if (!selection.shouldShowSelector) {
@@ -353,7 +353,7 @@ function CreateLunchReservationForm({
         onBreakfastChange={setBreakfastReserved}
         onLunchChange={setLunchReserved}
       />
-      <LocationSelect
+      <BuildingSelect
         className="w-full lg:w-60 lg:shrink-0"
         dateLabel={`${row.weekdayLabel} ${row.dateLabel}`}
         disabled={disabled}
@@ -413,10 +413,10 @@ function UpdateLunchReservationForm({
         onBreakfastChange={setBreakfastReserved}
         onLunchChange={setLunchReserved}
       />
-      <LocationSelect
+      <BuildingSelect
         className="w-full lg:w-60 lg:shrink-0"
-        currentLocationId={row.reservation.buildingId}
-        currentLocationName={row.reservation.buildingName}
+        currentBuildingId={row.reservation.buildingId}
+        currentBuildingName={row.reservation.buildingName}
         dateLabel={`${row.weekdayLabel} ${row.dateLabel}`}
         disabled={disabled}
         buildings={buildings}

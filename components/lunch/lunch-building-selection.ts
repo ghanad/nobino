@@ -3,22 +3,22 @@ export type LunchBuildingOption = {
   name: string;
 };
 
-export function getLunchLocationSelection(input: {
+export function getLunchBuildingSelection(input: {
   buildings: LunchBuildingOption[];
-  currentLocationId?: string;
-  currentLocationName?: string;
+  currentBuildingId?: string;
+  currentBuildingName?: string;
 }) {
   const currentBuilding = input.buildings.find(
-    (building) => building.id === input.currentLocationId,
+    (building) => building.id === input.currentBuildingId,
   );
   const hasUnavailableCurrentBuilding = Boolean(
-    input.currentLocationId && !currentBuilding,
+    input.currentBuildingId && !currentBuilding,
   );
   const selectedBuilding = currentBuilding ?? input.buildings[0];
 
   return {
     currentBuildingName:
-      currentBuilding?.name ?? input.currentLocationName ?? "",
+      currentBuilding?.name ?? input.currentBuildingName ?? "",
     hasUnavailableCurrentBuilding,
     selectedBuildingId: hasUnavailableCurrentBuilding
       ? ""
