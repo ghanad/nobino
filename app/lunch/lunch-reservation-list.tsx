@@ -28,6 +28,7 @@ import {
   updateLunchReservationAction,
 } from "@/app/lunch/actions";
 import { Button } from "@/components/ui/button";
+import { getLunchLocationSelection } from "@/components/lunch/lunch-location-selection";
 import { SwipeDismissToast } from "@/components/ui/swipe-dismiss-toast";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { cn } from "@/lib/utils";
@@ -85,28 +86,25 @@ function LocationSelect({
   disabled: boolean;
   buildings: Building[];
 }) {
-  const selectedBuilding = buildings.find(
-    (building) => building.id === currentLocationId,
-  );
-  const shouldShowSelector =
-    buildings.length > 1 ||
-    Boolean(currentLocationId && !selectedBuilding);
-  const selectedBuildingId =
-    currentLocationId && selectedBuilding
-      ? currentLocationId
-      : buildings[0]?.id ?? "";
-  const selectedBuildingName =
-    selectedBuilding?.name ?? currentLocationName ?? buildings[0]?.name ?? "";
+  const selection = getLunchLocationSelection({
+    buildings,
+    currentLocationId,
+    currentLocationName,
+  });
 
-  if (!shouldShowSelector) {
+  if (!selection.shouldShowSelector) {
     return (
       <div className={cn("grid min-w-0 gap-1 text-sm", className)}>
-        <input name="buildingId" type="hidden" value={selectedBuildingId} />
+        <input
+          name="buildingId"
+          type="hidden"
+          value={selection.selectedBuildingId}
+        />
         <span className="text-xs font-normal text-muted-foreground">
           محل تحویل
         </span>
         <p className="flex h-11 items-center rounded-xl border border-input bg-muted/30 px-3 text-sm font-medium text-foreground">
-          تحویل غذا در ساختمان {selectedBuildingName}
+          تحویل غذا در ساختمان {selection.selectedBuildingName}
         </p>
       </div>
     );
@@ -117,6 +115,11 @@ function LocationSelect({
       <span className="text-xs font-normal text-muted-foreground">
         محل تحویل
       </span>
+      {selection.hasUnavailableCurrentBuilding ? (
+        <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-950" role="status">
+          ساختمان فعلی «{selection.currentBuildingName}» غیرفعال شده است. برای ذخیره تغییرات، یک ساختمان فعال انتخاب کنید.
+        </p>
+      ) : null}
       <span className="relative block">
         <Building2
           aria-hidden="true"
@@ -125,11 +128,16 @@ function LocationSelect({
         <select
           aria-label={`محل تحویل ${dateLabel}`}
           className="h-11 w-full appearance-none rounded-xl border border-input bg-background px-9 text-sm font-medium outline-none transition-[border-color,box-shadow,background-color] hover:border-primary/40 focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60"
-          defaultValue={selectedBuildingId}
+          defaultValue={selection.selectedBuildingId}
           disabled={disabled || buildings.length === 0}
           name="buildingId"
           required
         >
+          {selection.hasUnavailableCurrentBuilding ? (
+            <option disabled value="">
+              ساختمان فعال را انتخاب کنید
+            </option>
+          ) : null}
           {buildings.map((building) => (
             <option key={building.id} value={building.id}>
               {building.name}

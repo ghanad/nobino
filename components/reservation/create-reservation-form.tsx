@@ -465,7 +465,7 @@ export function CreateReservationForm({
                 <p className="text-sm font-medium">{weekLabel}</p>
                 {!isCurrentWeek ? (
                   <Link
-                    className="inline-flex h-8 items-center justify-center whitespace-nowrap rounded-md bg-sky-50 px-3 text-xs font-medium text-sky-900 transition-colors hover:bg-sky-100 hover:text-sky-950"
+                    className="inline-flex h-8 items-center justify-center whitespace-nowrap rounded-md bg-sky-50 px-3 text-xs font-medium text-slate-600 transition-colors hover:bg-sky-100 hover:text-slate-800"
                     href={buildDateHref(todayDateParam)}
                     onClick={() => {
                       setSelectedMobileDayIndex(defaultMobileDayIndex);
@@ -582,7 +582,7 @@ export function CreateReservationForm({
                         >
                           <span>{day.shortLabel}</span>
                           {day.closedReason ? (
-                            <span className="mt-1 line-clamp-2 text-xs font-medium leading-4 text-red-600">
+                            <span className="mt-1 line-clamp-2 text-[10px] font-medium leading-4 text-red-600">
                               {day.closedReason}
                             </span>
                           ) : null}
