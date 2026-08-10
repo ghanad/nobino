@@ -32,11 +32,11 @@ function refreshDesks() { revalidatePath("/admin/desks"); }
 export async function createBuildingAction(_state: AdminDeskActionState, formData: FormData): Promise<AdminDeskActionState> {
   const admin = await requireRole([UserRole.ADMIN]);
   const parsed = z.object({ name: nameSchema, sortOrder: sortSchema }).safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return result(false, "نام و ترتیب دفتر را معتبر وارد کنید.");
+  if (!parsed.success) return result(false, "نام و ترتیب ساختمان را معتبر وارد کنید.");
   try {
     const building = await createBuilding({ adminId: admin.id, ...parsed.data });
     refreshDesks();
-    return result(true, "دفتر ایجاد شد.", `/admin/desks?buildingId=${encodeURIComponent(building.id)}`);
+    return result(true, "ساختمان ایجاد شد.", `/admin/desks?buildingId=${encodeURIComponent(building.id)}`);
   }
   catch (error) { return result(false, message(error)); }
 }
@@ -44,21 +44,21 @@ export async function createBuildingAction(_state: AdminDeskActionState, formDat
 export async function updateBuildingAction(_state: AdminDeskActionState, formData: FormData): Promise<AdminDeskActionState> {
   const admin = await requireRole([UserRole.ADMIN]);
   const parsed = z.object({ buildingId: idSchema, name: nameSchema, sortOrder: sortSchema }).safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return result(false, "مشخصات دفتر معتبر نیست.");
+  if (!parsed.success) return result(false, "مشخصات ساختمان معتبر نیست.");
   try { await updateBuilding({ active: checked(formData.get("active")), adminId: admin.id, ...parsed.data }); }
   catch (error) { return result(false, message(error)); }
   refreshDesks();
-  return result(true, "مشخصات دفتر ذخیره شد.");
+  return result(true, "مشخصات ساختمان ذخیره شد.");
 }
 
 export async function deleteBuildingAction(_state: AdminDeskActionState, formData: FormData): Promise<AdminDeskActionState> {
   const admin = await requireRole([UserRole.ADMIN]);
   const parsed = z.object({ buildingId: idSchema }).safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return result(false, "دفتر معتبر نیست.");
+  if (!parsed.success) return result(false, "ساختمان معتبر نیست.");
   try { await deleteBuilding({ adminId: admin.id, buildingId: parsed.data.buildingId }); }
   catch (error) { return result(false, message(error)); }
   refreshDesks();
-  return result(true, "دفتر و رزروهای آینده آن حذف شدند.", "/admin/desks");
+  return result(true, "ساختمان و رزروهای آینده آن حذف شدند.", "/admin/desks");
 }
 
 export async function createDeskAction(_state: AdminDeskActionState, formData: FormData): Promise<AdminDeskActionState> {
@@ -109,7 +109,7 @@ export async function updateBuildingDesksAction(_state: AdminDeskActionState, fo
   try { await updateBuildingDesks({ adminId: admin.id, ...parsed.data }); }
   catch (error) { return result(false, message(error)); }
   refreshDesks();
-  return result(true, "تغییرات میزهای دفتر ذخیره شد.");
+  return result(true, "تغییرات میزهای ساختمان ذخیره شد.");
 }
 
 export async function updateDeskSettingsAction(_state: AdminDeskActionState, formData: FormData): Promise<AdminDeskActionState> {

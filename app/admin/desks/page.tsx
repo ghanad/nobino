@@ -163,7 +163,7 @@ function BuildingNavigation({
     view: DeskView;
   }> = [
     {
-      description: "مشخصات دفتر و فهرست میزها",
+      description: "مشخصات ساختمان و فهرست میزها",
       icon: <LayoutGrid className="h-[18px] w-[18px]" />,
       label: "میزها",
       view: "desks",
@@ -181,7 +181,7 @@ function BuildingNavigation({
       view: "exceptions",
     },
     {
-      description: "قواعد مشترک همه دفترها",
+      description: "قواعد مشترک همه ساختمان‌ها",
       icon: <SlidersHorizontal className="h-[18px] w-[18px]" />,
       label: "سیاست رزرو",
       view: "policy",
@@ -190,7 +190,7 @@ function BuildingNavigation({
 
   return (
     <nav
-      aria-label="بخش‌های مدیریت دفتر"
+      aria-label="بخش‌های مدیریت ساختمان"
       className="flex overflow-x-auto border-t bg-slate-50 px-2 pt-2 lg:grid lg:grid-cols-4"
     >
       {items.map((item) => {
@@ -225,7 +225,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
   const params = await searchParams;
   const [buildings, settings] = await Promise.all([
     db.building.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, isTransitional: false },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       include: {
         desks: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] },
@@ -262,34 +262,34 @@ export default async function AdminDesksPage({ searchParams }: Props) {
       <PageHeader
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <StatusPill tone="good">{activeBuildingCount} دفتر فعال</StatusPill>
+            <StatusPill tone="good">{activeBuildingCount} ساختمان فعال</StatusPill>
             <StatusPill>{totalActiveDeskCount} میز فعال</StatusPill>
             <Button asChild size="sm">
               <Link href="/admin/desks?view=new">
                 <Plus className="h-4 w-4" />
-                دفتر جدید
+                ساختمان جدید
               </Link>
             </Button>
           </div>
         }
-        subtitle="یک دفتر را انتخاب کنید و میزها، ساعات کاری یا استثناهای آن را مدیریت کنید."
-        title="مدیریت دفترها و میزها"
+        subtitle="یک ساختمان را انتخاب کنید و میزها، ساعات کاری یا استثناهای آن را مدیریت کنید."
+        title="مدیریت ساختمان‌ها و میزها"
       />
 
       <section className={cn(panelClass, "p-4")}>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
           <div className="grid min-w-fit gap-0.5">
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-semibold">انتخاب دفتر</h2>
-              <StatusPill tone="muted">{buildings.length} دفتر</StatusPill>
+              <h2 className="text-base font-semibold">انتخاب ساختمان</h2>
+              <StatusPill tone="muted">{buildings.length} ساختمان</StatusPill>
             </div>
             <p className="text-xs text-slate-600">
-              تنظیمات هر دفتر مستقل است.
+              تنظیمات هر ساختمان مستقل است.
             </p>
           </div>
           {buildings.length ? (
             <nav
-              aria-label="دفترها"
+              aria-label="ساختمان‌ها"
               className="grid flex-1 gap-2 sm:grid-cols-2 xl:grid-cols-3"
             >
               {buildings.map((item) => {
@@ -337,7 +337,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
             </nav>
           ) : (
             <p className="text-sm text-muted-foreground">
-              هنوز دفتری تعریف نشده است.
+              هنوز ساختمانی تعریف نشده است.
             </p>
           )}
         </div>
@@ -351,9 +351,9 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                 <Plus className="h-5 w-5" />
               </span>
               <div className="grid gap-1">
-                <h2 className="text-lg font-semibold">تعریف دفتر جدید</h2>
+                <h2 className="text-lg font-semibold">تعریف ساختمان جدید</h2>
                 <p className="text-xs leading-5 text-muted-foreground">
-                  پس از ایجاد دفتر می‌توانید میزها و برنامه کاری آن را تنظیم
+                  پس از ایجاد ساختمان می‌توانید میزها و برنامه کاری آن را تنظیم
                   کنید.
                 </p>
               </div>
@@ -361,13 +361,13 @@ export default async function AdminDesksPage({ searchParams }: Props) {
           </div>
           <AdminDeskForm action={createBuildingAction} className="grid gap-6 p-5">
             <div className="grid gap-4 md:grid-cols-2">
-              <Field label="نام دفتر">
+              <Field label="نام ساختمان">
                 <input
                   autoFocus
                   className={inputClass}
                   maxLength={100}
                   name="name"
-                  placeholder="مثلاً دفتر مرکزی"
+                  placeholder="مثلاً ساختمان مرکزی"
                   required
                 />
               </Field>
@@ -387,7 +387,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                 pendingLabel="در حال ایجاد"
               >
                 <Plus className="h-4 w-4" />
-                ایجاد دفتر
+                ایجاد ساختمان
               </SubmitButton>
             </div>
           </AdminDeskForm>
@@ -423,7 +423,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                   <div className="flex items-start gap-3">
                     <Settings2 className="mt-0.5 h-5 w-5 text-primary" />
                     <div className="grid gap-1">
-                      <h2 className="text-base font-semibold">مشخصات دفتر</h2>
+                      <h2 className="text-base font-semibold">مشخصات ساختمان</h2>
                       <p className="text-xs text-slate-600">
                         نام، ترتیب نمایش و وضعیت دسترسی کاربران را تغییر دهید.
                       </p>
@@ -435,7 +435,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                   className="grid gap-4 p-5 lg:grid-cols-[minmax(0,1fr)_180px_280px_auto] lg:items-end"
                 >
                   <input name="buildingId" type="hidden" value={building.id} />
-                  <Field label="نام دفتر">
+                  <Field label="نام ساختمان">
                     <input
                       className={inputClass}
                       defaultValue={building.name}
@@ -454,7 +454,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                   </Field>
                   <ToggleSwitch
                     defaultChecked={building.active}
-                    label="دفتر فعال"
+                    label="ساختمان فعال"
                     name="active"
                   />
                   <SubmitButton
@@ -471,7 +471,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                 <div className={panelHeaderClass}>
                   <div className="grid gap-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="text-base font-semibold">میزهای دفتر</h2>
+                      <h2 className="text-base font-semibold">میزهای ساختمان</h2>
                       <StatusPill tone="good">
                         {activeDeskCount} میز فعال
                       </StatusPill>
@@ -846,7 +846,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                     <div className="grid justify-items-center gap-2 rounded-xl border border-dashed p-8 text-center">
                       <CalendarDays className="h-8 w-8 text-slate-300" />
                       <p className="text-sm text-muted-foreground">
-                        هنوز استثنایی برای این دفتر ثبت نشده است.
+                        هنوز استثنایی برای این ساختمان ثبت نشده است.
                       </p>
                     </div>
                   )}
@@ -865,10 +865,10 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                       <h2 className="text-base font-semibold">
                         سیاست رزرو میز
                       </h2>
-                      <StatusPill>مشترک بین همه دفترها</StatusPill>
+                      <StatusPill>مشترک بین همه ساختمان‌ها</StatusPill>
                     </div>
                     <p className="text-xs text-slate-600">
-                      این تنظیمات روی درخواست رزرو میز در تمام دفترها اعمال
+                      این تنظیمات روی درخواست رزرو میز در تمام ساختمان‌ها اعمال
                       می‌شود.
                     </p>
                   </div>
@@ -933,10 +933,10 @@ export default async function AdminDesksPage({ searchParams }: Props) {
             <div className="flex flex-col gap-4 rounded-lg border border-red-200 bg-red-50/50 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h3 className="text-sm font-semibold text-slate-800">
-                  حذف دفتر
+                  حذف ساختمان
                 </h3>
                 <p className="mt-1 text-xs leading-5 text-slate-600">
-                  دفتر از دسترس خارج و رزروهای آینده میزهای آن حذف می‌شوند.
+                  ساختمان از دسترس خارج و رزروهای آینده میزهای آن حذف می‌شوند.
                   سابقه رزروهای گذشته حفظ می‌شود.
                 </p>
               </div>

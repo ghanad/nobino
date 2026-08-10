@@ -42,7 +42,7 @@ export function DeleteBuildingButton({ action, buildingId, buildingName }: Props
         variant="outline"
       >
         <Trash2 className="h-[18px] w-[18px]" />
-        حذف دفتر
+        حذف ساختمان
       </Button>
 
       {isOpen ? (
@@ -63,10 +63,10 @@ export function DeleteBuildingButton({ action, buildingId, buildingName }: Props
               </span>
               <div className="min-w-0 flex-1">
                 <h2 className="text-base font-semibold" id="delete-building-title">
-                  حذف دفتر
+                  حذف ساختمان
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  دفتر «{buildingName}» و همه میزهای آن از دسترس خارج می‌شوند و
+                  ساختمان «{buildingName}» و همه میزهای آن از دسترس خارج می‌شوند و
                   رزروهای آینده حذف خواهند شد. سابقه رزروهای گذشته حفظ می‌شود.
                 </p>
               </div>
@@ -83,7 +83,7 @@ export function DeleteBuildingButton({ action, buildingId, buildingName }: Props
             <AdminDeskForm action={action} className="mt-6 grid gap-4">
               <input name="buildingId" type="hidden" value={buildingId} />
               <label className="grid gap-2 text-sm font-medium text-slate-700">
-                برای تأیید، نام دفتر را وارد کنید: <strong>{buildingName}</strong>
+                برای تأیید، نام ساختمان را وارد کنید: <strong>{buildingName}</strong>
                 <input
                   autoComplete="off"
                   className="h-11 rounded-md border bg-background px-3 outline-none focus-visible:ring-2 focus-visible:ring-red-500"
@@ -105,7 +105,7 @@ export function DeleteBuildingButton({ action, buildingId, buildingName }: Props
                   disabled={confirmation.trim() !== buildingName}
                   pendingLabel="در حال حذف"
                 >
-                  حذف دفتر
+                  حذف ساختمان
                 </SubmitButton>
               </div>
             </AdminDeskForm>

@@ -13,6 +13,11 @@ Internal capacity-based reservation web application for a small company resource
   and date-specific exceptions.
 - Resource pool capacity has a default value, plus optional Jalali date-specific
   capacity exceptions for repairs or temporary outages.
+- Buildings are the single source of truth for physical location. Every resource
+  pool belongs to one active, real building before it can be reserved.
+- Legacy pools can temporarily point to the internal `building-needs-assignment`
+  placeholder. They remain unavailable until an admin explicitly assigns a real
+  building; the placeholder is never shown to users or offered as a destination.
 - All user-facing date input, URLs, and date display use the Persian/Jalali
   calendar. Internal persistence and capacity calculations still use JavaScript
   `Date` values.
@@ -94,7 +99,7 @@ The seed script creates:
 
 ## Current Status
 
-The first operational version is implemented. Seeded users can sign in, create hourly reservation requests, see their own reservations grouped by status, cancel pending requests, and accept or reject manager-proposed alternatives. Managers can approve, reject, propose alternatives, and review auto-approval deadlines from `/manager`. Admins can manage resource pool capacity and active state, Jalali date-specific capacity exceptions, weekly working schedule rows, centralized operational-calendar corrections, service-specific schedule exceptions, reservation policy settings, users from `/admin`, and audit history from `/admin/audit`. Users and managers can review unread in-app notifications from `/notifications` and mark notifications as read. Capacity reductions are blocked when future approved reservations would exceed the new effective capacity. Core service rules are covered by automated tests.
+The first operational version is implemented. Seeded users can sign in, create hourly reservation requests, see their own reservations grouped by status, cancel pending requests, and accept or reject manager-proposed alternatives. Managers can approve, reject, propose alternatives, and review auto-approval deadlines from `/manager`. Admins manage buildings centrally from `/admin/desks`, then assign each resource pool to an active real building from the capacity settings. A pool with future active reservations cannot be moved between real buildings, so an existing reservation’s physical location is never changed silently; initial assignment from the transitional placeholder preserves the reservation’s date and capacity. Admins can also manage capacity and active state, Jalali date-specific capacity exceptions, weekly working schedule rows, centralized operational-calendar corrections, service-specific schedule exceptions, reservation policy settings, users from `/admin`, and audit history from `/admin/audit`. Users and managers can review unread in-app notifications from `/notifications` and mark notifications as read. Capacity reductions are blocked when future approved reservations would exceed the new effective capacity. Core service rules are covered by automated tests.
 
 ## Auth Routes
 
@@ -204,6 +209,23 @@ Jalali date, for example when one or more systems are unavailable for repair.
 The app prevents creating or lowering a daily capacity exception when existing
 approved reservations would exceed that day's capacity, so an admin must choose
 which approved reservation to cancel before applying the lower capacity.
+
+## Building assignment for system capacity
+
+`Building` is the shared physical-location record for desks, system capacity,
+and food. Buildings are created, edited, deactivated, and deleted only through
+the central `/admin/desks` management screen. The food admin screen intentionally
+contains only a summary and link to that central screen; it has no separate
+building CRUD.
+
+Every `ResourcePool` must be assigned to an active, non-transitional building.
+During the safe migration, old pools use the hidden
+`building-needs-assignment` transitional record and cannot accept reservations.
+An admin selects a real destination in `/admin/capacity`; that assignment is
+transactional and audited. It preserves reservation dates and capacity. Moving a
+pool from one real building to another is rejected while it has future pending,
+approved, or alternative-proposed reservations, so admins must resolve those
+reservations first.
 
 ## Environment Variables
 

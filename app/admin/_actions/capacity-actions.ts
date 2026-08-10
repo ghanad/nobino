@@ -24,6 +24,7 @@ import {
 } from "./shared";
 
 const resourcePoolSchema = z.object({
+  buildingId: z.string().min(1),
   resourcePoolId: z.string().min(1),
   name: z.string().trim().min(1).max(100),
   capacity: z.coerce.number().int().min(1).max(50),
@@ -84,6 +85,7 @@ export async function updateResourcePoolAction(
 ): Promise<void> {
   const admin = await requireRole([UserRole.ADMIN]);
   const parsed = resourcePoolSchema.safeParse({
+    buildingId: formData.get("buildingId"),
     resourcePoolId: formData.get("resourcePoolId"),
     name: formData.get("name"),
     capacity: formData.get("capacity"),
@@ -92,7 +94,7 @@ export async function updateResourcePoolAction(
 
   if (!parsed.success) {
     redirectToAdmin({
-      error: "Enter a valid resource pool name and capacity.",
+      error: "نام، ظرفیت و ساختمان مخزن را معتبر وارد کنید.",
       tab: "capacity",
     });
   }

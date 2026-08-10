@@ -27,7 +27,7 @@ export default async function AdminCapacityPage({
   await requireRole([UserRole.ADMIN]);
   const params = await searchParams;
   const toast = getAdminToast(params);
-  const [resourcePools, capacityExceptions] = await Promise.all([
+  const [resourcePools, buildings, capacityExceptions] = await Promise.all([
     db.resourcePool.findMany({
       orderBy: { name: "asc" },
       select: {
@@ -35,7 +35,19 @@ export default async function AdminCapacityPage({
         name: true,
         capacity: true,
         active: true,
+        building: {
+          select: {
+            id: true,
+            isTransitional: true,
+            name: true,
+          },
+        },
       },
+    }),
+    db.building.findMany({
+      where: { active: true, deletedAt: null, isTransitional: false },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: { id: true, name: true },
     }),
     db.resourcePoolCapacityException.findMany({
       orderBy: [{ date: "asc" }, { createdAt: "asc" }],
@@ -63,7 +75,7 @@ export default async function AdminCapacityPage({
       />
 
       {toast ? <UrlToast {...toast} /> : null}
-      <ResourcePoolSettings resourcePools={resourcePools} />
+      <ResourcePoolSettings buildings={buildings} resourcePools={resourcePools} />
       <CapacityExceptions
         capacityExceptions={capacityExceptions}
         resourcePools={resourcePools}

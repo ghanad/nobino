@@ -21,6 +21,7 @@ import {
   nextWorkingDateAtHour,
   poolId,
   registerBusinessRuleTestHooks,
+  secondBuildingId,
   secondUserId,
 } from "./business-rules-helpers";
 
@@ -191,10 +192,91 @@ test("admin cannot reduce capacity below future approved usage", async () => {
   await assert.rejects(() =>
     updateResourcePoolSettings({
       adminId,
+      buildingId,
       resourcePoolId: poolId,
       name: "Company Systems",
       capacity: 1,
       active: true,
     }),
+  );
+});
+
+test("assigning a transitional pool preserves its existing reservation time and capacity", async () => {
+  const transitionalBuilding = await db.building.create({
+    data: {
+      id: "building-needs-assignment",
+      name: "Needs assignment",
+      active: false,
+      isTransitional: true,
+    },
+  });
+  await db.resourcePool.update({
+    where: { id: poolId },
+    data: { buildingId: transitionalBuilding.id, capacity: 2 },
+  });
+  const startAt = nextWorkingDateAtHour(9);
+  const reservation = await createReservation({
+    startAt,
+    endAt: addHours(startAt, 1),
+    status: ReservationStatus.APPROVED,
+  });
+
+  await updateResourcePoolSettings({
+    adminId,
+    buildingId: secondBuildingId,
+    resourcePoolId: poolId,
+    name: "Company Systems",
+    capacity: 2,
+    active: true,
+  });
+
+  const [pool, unchangedReservation, audit] = await Promise.all([
+    db.resourcePool.findUniqueOrThrow({ where: { id: poolId } }),
+    db.reservation.findUniqueOrThrow({ where: { id: reservation.id } }),
+    db.auditLog.findFirstOrThrow({
+      where: {
+        action: "RESOURCE_POOL_BUILDING_ASSIGNED",
+        entityId: poolId,
+      },
+    }),
+  ]);
+
+  assert.equal(pool.buildingId, secondBuildingId);
+  assert.equal(pool.capacity, 2);
+  assert.equal(unchangedReservation.startAt.getTime(), startAt.getTime());
+  assert.equal(unchangedReservation.endAt.getTime(), addHours(startAt, 1).getTime());
+  assert.ok(audit.oldValue);
+  assert.ok(audit.newValue);
+});
+
+test("moving a pool with future reservations between real buildings is blocked", async () => {
+  const startAt = nextWorkingDateAtHour(9);
+  await createReservation({
+    startAt,
+    endAt: addHours(startAt, 1),
+    status: ReservationStatus.PENDING,
+  });
+
+  await assert.rejects(
+    updateResourcePoolSettings({
+      adminId,
+      buildingId: secondBuildingId,
+      resourcePoolId: poolId,
+      name: "Company Systems",
+      capacity: 1,
+      active: true,
+    }),
+    /رزرو آینده دارد/,
+  );
+
+  assert.equal(
+    (await db.resourcePool.findUniqueOrThrow({ where: { id: poolId } })).buildingId,
+    buildingId,
+  );
+  assert.equal(
+    await db.auditLog.count({
+      where: { action: "RESOURCE_POOL_BUILDING_ASSIGNED", entityId: poolId },
+    }),
+    0,
   );
 });
