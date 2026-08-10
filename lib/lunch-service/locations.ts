@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 
 import { assertAdmin, LunchReservationError } from "./shared";
 
-export async function createLunchLocation(input: {
+export async function createBuilding(input: {
   adminId: string;
   name: string;
 }) {
@@ -17,7 +17,7 @@ export async function createLunchLocation(input: {
   return db.$transaction(async (tx) => {
     await assertAdmin(input.adminId, tx);
 
-    const existing = await tx.lunchLocation.findUnique({
+    const existing = await tx.building.findUnique({
       where: { name },
       select: { id: true },
     });
@@ -26,27 +26,27 @@ export async function createLunchLocation(input: {
       throw new LunchReservationError("ساختمانی با این نام قبلا ثبت شده است.");
     }
 
-    const location = await tx.lunchLocation.create({
+    const building = await tx.building.create({
       data: { name, active: true },
     });
 
     await tx.auditLog.create({
       data: {
         actorUserId: input.adminId,
-        entityType: "LunchLocation",
-        entityId: location.id,
+        entityType: "Building",
+        entityId: building.id,
         action: "LUNCH_LOCATION_CREATED",
-        newValue: { name: location.name, active: location.active },
+        newValue: { name: building.name, active: building.active },
       },
     });
 
-    return location;
+    return building;
   });
 }
 
-export async function updateLunchLocation(input: {
+export async function updateBuilding(input: {
   adminId: string;
-  locationId: string;
+  buildingId: string;
   name: string;
   active: boolean;
 }) {
@@ -59,15 +59,15 @@ export async function updateLunchLocation(input: {
   return db.$transaction(async (tx) => {
     await assertAdmin(input.adminId, tx);
 
-    const current = await tx.lunchLocation.findUnique({
-      where: { id: input.locationId },
+    const current = await tx.building.findUnique({
+      where: { id: input.buildingId },
     });
 
     if (!current) {
       throw new LunchReservationError("ساختمان پیدا نشد.");
     }
 
-    const duplicate = await tx.lunchLocation.findUnique({
+    const duplicate = await tx.building.findUnique({
       where: { name },
       select: { id: true },
     });
@@ -76,7 +76,7 @@ export async function updateLunchLocation(input: {
       throw new LunchReservationError("ساختمانی با این نام قبلا ثبت شده است.");
     }
 
-    const updated = await tx.lunchLocation.update({
+    const updated = await tx.building.update({
       where: { id: current.id },
       data: { name, active: input.active },
     });
@@ -84,7 +84,7 @@ export async function updateLunchLocation(input: {
     await tx.auditLog.create({
       data: {
         actorUserId: input.adminId,
-        entityType: "LunchLocation",
+        entityType: "Building",
         entityId: updated.id,
         action: "LUNCH_LOCATION_UPDATED",
         oldValue: { name: current.name, active: current.active },
@@ -96,15 +96,15 @@ export async function updateLunchLocation(input: {
   });
 }
 
-export async function deleteLunchLocation(input: {
+export async function deleteBuilding(input: {
   adminId: string;
-  locationId: string;
+  buildingId: string;
 }) {
   return db.$transaction(async (tx) => {
     await assertAdmin(input.adminId, tx);
 
-    const current = await tx.lunchLocation.findUnique({
-      where: { id: input.locationId },
+    const current = await tx.building.findUnique({
+      where: { id: input.buildingId },
     });
 
     if (!current) {
@@ -112,7 +112,7 @@ export async function deleteLunchLocation(input: {
     }
 
     const usageCount = await tx.lunchReservation.count({
-      where: { locationId: current.id },
+      where: { buildingId: current.id },
     });
 
     if (usageCount > 0) {
@@ -121,11 +121,11 @@ export async function deleteLunchLocation(input: {
       );
     }
 
-    await tx.lunchLocation.delete({ where: { id: current.id } });
+    await tx.building.delete({ where: { id: current.id } });
     await tx.auditLog.create({
       data: {
         actorUserId: input.adminId,
-        entityType: "LunchLocation",
+        entityType: "Building",
         entityId: current.id,
         action: "LUNCH_LOCATION_DELETED",
         oldValue: { name: current.name, active: current.active },

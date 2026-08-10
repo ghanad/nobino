@@ -8,7 +8,7 @@ import { formatJalaliDate } from "@/lib/jalali-date";
 import { startOfLocalDay } from "./date-time";
 import { assertLunchDateIsReservable } from "./service-days";
 import {
-  assertActiveLocation,
+  assertActiveBuilding,
   assertManagerOrAdmin,
   type DbClient,
   LunchReservationError,
@@ -56,7 +56,7 @@ async function assertValidSourceReservation(input: {
 
 export async function createLunchReservation(input: {
   userId: string;
-  locationId: string;
+  buildingId: string;
   date: Date;
   breakfastReserved?: boolean;
   lunchReserved?: boolean;
@@ -71,7 +71,7 @@ export async function createLunchReservation(input: {
 
   return db.$transaction(async (tx) => {
     await assertLunchDateIsReservable({ date, now: input.now, client: tx });
-    await assertActiveLocation(input.locationId, tx);
+    await assertActiveBuilding(input.buildingId, tx);
     await assertValidSourceReservation({
       sourceReservationId: input.sourceReservationId,
       userId: input.userId,
@@ -95,7 +95,7 @@ export async function createLunchReservation(input: {
     const reservation = await tx.lunchReservation.create({
       data: {
         userId: input.userId,
-        locationId: input.locationId,
+        buildingId: input.buildingId,
         sourceReservationId: input.sourceReservationId,
         date,
         breakfastReserved,
@@ -112,7 +112,7 @@ export async function createLunchReservation(input: {
         action: "FOOD_RESERVATION_CREATED",
         newValue: {
           userId: reservation.userId,
-          locationId: reservation.locationId,
+          buildingId: reservation.buildingId,
           sourceReservationId: reservation.sourceReservationId,
           date: reservation.date.toISOString(),
           breakfastReserved: reservation.breakfastReserved,
@@ -139,7 +139,7 @@ export async function createLunchReservation(input: {
 export async function updateLunchReservationLocation(input: {
   reservationId: string;
   userId: string;
-  locationId: string;
+  buildingId: string;
   breakfastReserved?: boolean;
   lunchReserved?: boolean;
   sourceReservationId?: string;
@@ -168,7 +168,7 @@ export async function updateLunchReservationLocation(input: {
       now: input.now,
       client: tx,
     });
-    await assertActiveLocation(input.locationId, tx);
+    await assertActiveBuilding(input.buildingId, tx);
     await assertValidSourceReservation({
       sourceReservationId: input.sourceReservationId,
       userId: input.userId,
@@ -179,7 +179,7 @@ export async function updateLunchReservationLocation(input: {
     const updated = await tx.lunchReservation.update({
       where: { id: current.id },
       data: {
-        locationId: input.locationId,
+        buildingId: input.buildingId,
         breakfastReserved,
         lunchReserved,
         // A manually-created food reservation remains independent. A source is
@@ -197,12 +197,12 @@ export async function updateLunchReservationLocation(input: {
         entityId: updated.id,
         action: "FOOD_RESERVATION_UPDATED",
         oldValue: {
-          locationId: current.locationId,
+          buildingId: current.buildingId,
           breakfastReserved: current.breakfastReserved,
           lunchReserved: current.lunchReserved,
         },
         newValue: {
-          locationId: updated.locationId,
+          buildingId: updated.buildingId,
           breakfastReserved: updated.breakfastReserved,
           lunchReserved: updated.lunchReserved,
         },

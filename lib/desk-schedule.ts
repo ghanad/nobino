@@ -30,13 +30,13 @@ function parseTime(value: string | null): number | null {
   return Number(value.slice(0, 2)) * 60;
 }
 
-export async function getOfficeWorkingWindowForDate(
-  input: { officeId: string; date: Date },
+export async function getBuildingWorkingWindowForDate(
+  input: { buildingId: string; date: Date },
   client: DbClient = db,
 ): Promise<WorkingWindow> {
-  const exception = await client.officeScheduleException.findFirst({
+  const exception = await client.buildingScheduleException.findFirst({
     where: {
-      officeId: input.officeId,
+      buildingId: input.buildingId,
       date: { gte: startOfLocalDay(input.date), lt: endOfLocalDay(input.date) },
     },
     select: { endTime: true, isWorkingDay: true, reason: true, startTime: true },
@@ -47,8 +47,8 @@ export async function getOfficeWorkingWindowForDate(
   const calendarOverride = await getCalendarDayOverride(
     {
       date: input.date,
-      targetKey: input.officeId,
-      type: CalendarDayTargetType.OFFICE,
+      targetKey: input.buildingId,
+      type: CalendarDayTargetType.BUILDING,
     },
     client,
   );
@@ -79,9 +79,9 @@ export async function getOfficeWorkingWindowForDate(
     return { isWorkingDay: false, reason: holiday.title, startTime: null, endTime: null };
   }
 
-  const schedule = await client.officeWeeklySchedule.findUnique({
+  const schedule = await client.buildingWeeklySchedule.findUnique({
     where: {
-      officeId_dayOfWeek: { officeId: input.officeId, dayOfWeek: input.date.getDay() },
+      buildingId_dayOfWeek: { buildingId: input.buildingId, dayOfWeek: input.date.getDay() },
     },
     select: { endTime: true, isWorkingDay: true, startTime: true },
   });
@@ -135,15 +135,15 @@ export async function validateDeskReservationTimeRange(
     where: { id: input.deskId },
     select: {
       active: true,
-      office: { select: { active: true, deletedAt: true, id: true } },
+      building: { select: { active: true, deletedAt: true, id: true } },
     },
   });
-  if (!desk?.active || !desk.office.active || desk.office.deletedAt) {
+  if (!desk?.active || !desk.building.active || desk.building.deletedAt) {
     throw new ReservationTimeRangeError("این میز در دسترس نیست.");
   }
 
-  const window = await getOfficeWorkingWindowForDate(
-    { officeId: desk.office.id, date: startAt },
+  const window = await getBuildingWorkingWindowForDate(
+    { buildingId: desk.building.id, date: startAt },
     client,
   );
   if (!window.isWorkingDay) {

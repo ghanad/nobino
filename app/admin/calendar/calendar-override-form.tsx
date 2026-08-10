@@ -22,14 +22,14 @@ type CalendarOverrideFormProps = {
     endTime: string | null;
     lunch: boolean;
     mode: CalendarDayOverrideMode;
-    officeIds: string[];
+    buildingIds: string[];
     overrideId: string;
     reason: string | null;
     roomIds: string[];
     startTime: string | null;
     systems: boolean;
   };
-  offices: TargetOption[];
+  buildings: TargetOption[];
   rooms: TargetOption[];
 };
 
@@ -139,7 +139,7 @@ function TargetGroup({
 
 export function CalendarOverrideForm({
   initial,
-  offices,
+  buildings,
   rooms,
 }: CalendarOverrideFormProps) {
   const [mode, setMode] = useState(
@@ -147,17 +147,17 @@ export function CalendarOverrideForm({
   );
   const [systems, setSystems] = useState(initial?.systems ?? true);
   const [lunch, setLunch] = useState(initial?.lunch ?? true);
-  const [officeIds, setOfficeIds] = useState(
-    initial?.officeIds ?? offices.map(({ id }) => id),
+  const [buildingIds, setBuildingIds] = useState(
+    initial?.buildingIds ?? buildings.map(({ id }) => id),
   );
   const [roomIds, setRoomIds] = useState(
     initial?.roomIds ?? rooms.map(({ id }) => id),
   );
   const targetCount = useMemo(
-    () => Number(systems) + Number(lunch) + officeIds.length + roomIds.length,
-    [lunch, officeIds.length, roomIds.length, systems],
+    () => Number(systems) + Number(lunch) + buildingIds.length + roomIds.length,
+    [lunch, buildingIds.length, roomIds.length, systems],
   );
-  const hasTimedTarget = systems || officeIds.length > 0 || roomIds.length > 0;
+  const hasTimedTarget = systems || buildingIds.length > 0 || roomIds.length > 0;
   const isEditing = Boolean(initial);
 
   return (
@@ -282,10 +282,10 @@ export function CalendarOverrideForm({
             />
           </div>
           <TargetGroup
-            name="officeIds"
-            onChange={setOfficeIds}
-            options={offices}
-            selected={officeIds}
+            name="buildingIds"
+            onChange={setBuildingIds}
+            options={buildings}
+            selected={buildingIds}
             title="دفترها"
           />
           <TargetGroup

@@ -14,10 +14,10 @@ const DEFAULT_DAYS = Array.from({ length: 7 }, (_, dayOfWeek) => ({
 }));
 const EXACT_HOUR_PATTERN = /^([01]\d|2[0-3]):00$/;
 
-export async function createOffice(input: { adminId: string; name: string; sortOrder: number }) {
+export async function createBuilding(input: { adminId: string; name: string; sortOrder: number }) {
   return db.$transaction(async (tx) => {
     await assertAdmin(input.adminId, tx);
-    const office = await tx.office.create({
+    const building = await tx.building.create({
       data: {
         active: true,
         name: input.name.trim(),
@@ -27,14 +27,14 @@ export async function createOffice(input: { adminId: string; name: string; sortO
     });
     await tx.auditLog.create({
       data: {
-        action: "OFFICE_CREATED",
+        action: "BUILDING_CREATED",
         actorUserId: input.adminId,
-        entityId: office.id,
-        entityType: "Office",
-        newValue: { active: office.active, name: office.name, sortOrder: office.sortOrder },
+        entityId: building.id,
+        entityType: "Building",
+        newValue: { active: building.active, name: building.name, sortOrder: building.sortOrder },
       },
     });
-    return office;
+    return building;
   }).catch((error: unknown) => {
     if (error instanceof Error && error.message.includes("Unique constraint")) {
       throw new AdminSettingsError("دفتری با این نام قبلاً ثبت شده است.");
@@ -43,21 +43,21 @@ export async function createOffice(input: { adminId: string; name: string; sortO
   });
 }
 
-export async function updateOffice(input: {
+export async function updateBuilding(input: {
   active: boolean;
   adminId: string;
   name: string;
-  officeId: string;
+  buildingId: string;
   sortOrder: number;
 }) {
   return db.$transaction(async (tx) => {
     await assertAdmin(input.adminId, tx);
-    const old = await tx.office.findUnique({ where: { id: input.officeId } });
+    const old = await tx.building.findUnique({ where: { id: input.buildingId } });
     if (!old || old.deletedAt) throw new AdminSettingsError("دفتر پیدا نشد.");
     if (!input.active && old.active) {
       const future = await tx.deskReservation.findFirst({
         where: {
-          desk: { officeId: input.officeId },
+          desk: { buildingId: input.buildingId },
           endAt: { gt: new Date() },
           status: ReservationStatus.APPROVED,
         },
@@ -65,13 +65,13 @@ export async function updateOffice(input: {
       });
       if (future) throw new AdminSettingsError("ابتدا رزروهای فعال این دفتر را لغو یا منتقل کنید.");
     }
-    const updated = await tx.office.update({
-      where: { id: input.officeId },
+    const updated = await tx.building.update({
+      where: { id: input.buildingId },
       data: { active: input.active, name: input.name.trim(), sortOrder: input.sortOrder },
     });
     await tx.auditLog.create({
       data: {
-        action: "OFFICE_UPDATED", actorUserId: input.adminId, entityId: updated.id, entityType: "Office",
+        action: "BUILDING_UPDATED", actorUserId: input.adminId, entityId: updated.id, entityType: "Building",
         oldValue: { active: old.active, name: old.name, sortOrder: old.sortOrder },
         newValue: { active: updated.active, name: updated.name, sortOrder: updated.sortOrder },
       },
@@ -80,11 +80,11 @@ export async function updateOffice(input: {
   });
 }
 
-export async function deleteOffice(input: { adminId: string; officeId: string }) {
+export async function deleteBuilding(input: { adminId: string; buildingId: string }) {
   return db.$transaction(async (tx) => {
     await assertAdmin(input.adminId, tx);
-    const current = await tx.office.findUnique({
-      where: { id: input.officeId },
+    const current = await tx.building.findUnique({
+      where: { id: input.buildingId },
       select: { deletedAt: true, id: true, name: true },
     });
     if (!current || current.deletedAt) {
@@ -94,20 +94,20 @@ export async function deleteOffice(input: { adminId: string; officeId: string })
     const deletedAt = new Date();
     const deletedFutureReservations = await tx.deskReservation.deleteMany({
       where: {
-        desk: { officeId: current.id },
+        desk: { buildingId: current.id },
         startAt: { gte: deletedAt },
       },
     });
-    await tx.office.update({
+    await tx.building.update({
       where: { id: current.id },
       data: { active: false, deletedAt },
     });
     await tx.auditLog.create({
       data: {
-        action: "OFFICE_DELETED",
+        action: "BUILDING_DELETED",
         actorUserId: input.adminId,
         entityId: current.id,
-        entityType: "Office",
+        entityType: "Building",
         oldValue: { name: current.name },
         newValue: {
           deletedAt: deletedAt.toISOString(),
@@ -121,14 +121,14 @@ export async function deleteOffice(input: { adminId: string; officeId: string })
   });
 }
 
-export async function createDesk(input: { adminId: string; name: string; officeId: string; sortOrder: number }) {
+export async function createDesk(input: { adminId: string; name: string; buildingId: string; sortOrder: number }) {
   return db.$transaction(async (tx) => {
     await assertAdmin(input.adminId, tx);
-    const office = await tx.office.findUnique({ where: { id: input.officeId }, select: { deletedAt: true, id: true } });
-    if (!office || office.deletedAt) throw new AdminSettingsError("دفتر پیدا نشد.");
-    const desk = await tx.desk.create({ data: { active: true, name: input.name.trim(), officeId: input.officeId, sortOrder: input.sortOrder } });
+    const building = await tx.building.findUnique({ where: { id: input.buildingId }, select: { deletedAt: true, id: true } });
+    if (!building || building.deletedAt) throw new AdminSettingsError("دفتر پیدا نشد.");
+    const desk = await tx.desk.create({ data: { active: true, name: input.name.trim(), buildingId: input.buildingId, sortOrder: input.sortOrder } });
     await tx.auditLog.create({
-      data: { action: "DESK_CREATED", actorUserId: input.adminId, entityId: desk.id, entityType: "Desk", newValue: { active: desk.active, name: desk.name, officeId: desk.officeId, sortOrder: desk.sortOrder } },
+      data: { action: "DESK_CREATED", actorUserId: input.adminId, entityId: desk.id, entityType: "Desk", newValue: { active: desk.active, name: desk.name, buildingId: desk.buildingId, sortOrder: desk.sortOrder } },
     });
     return desk;
   }).catch((error: unknown) => {
@@ -167,17 +167,17 @@ export async function updateDesk(input: {
   });
 }
 
-type OfficeDeskInput = {
+type BuildingDeskInput = {
   active: boolean;
   deskId: string;
   name: string;
   sortOrder: number;
 };
 
-export async function updateOfficeDesks(input: {
+export async function updateBuildingDesks(input: {
   adminId: string;
-  desks: OfficeDeskInput[];
-  officeId: string;
+  desks: BuildingDeskInput[];
+  buildingId: string;
 }) {
   const deskIds = new Set(input.desks.map((desk) => desk.deskId));
   const deskNames = new Set(input.desks.map((desk) => desk.name.trim()));
@@ -198,16 +198,16 @@ export async function updateOfficeDesks(input: {
 
   return db.$transaction(async (tx) => {
     await assertAdmin(input.adminId, tx);
-    const office = await tx.office.findUnique({
-      where: { id: input.officeId },
+    const building = await tx.building.findUnique({
+      where: { id: input.buildingId },
       select: { deletedAt: true, id: true },
     });
-    if (!office || office.deletedAt) {
+    if (!building || building.deletedAt) {
       throw new AdminSettingsError("دفتر پیدا نشد.");
     }
 
     const currentDesks = await tx.desk.findMany({
-      where: { officeId: input.officeId },
+      where: { buildingId: input.buildingId },
     });
     if (
       currentDesks.length !== input.desks.length ||
@@ -348,17 +348,17 @@ export async function updateDeskSettings(input: {
   });
 }
 
-type OfficeWeeklyScheduleInput = {
+type BuildingWeeklyScheduleInput = {
   dayOfWeek: number;
   endTime: string;
   isWorkingDay: boolean;
   startTime: string;
 };
 
-export async function updateOfficeWeeklySchedule(input: {
+export async function updateBuildingWeeklySchedule(input: {
   adminId: string;
-  officeId: string;
-  schedules: OfficeWeeklyScheduleInput[];
+  buildingId: string;
+  schedules: BuildingWeeklyScheduleInput[];
 }) {
   const dayNumbers = new Set(input.schedules.map((schedule) => schedule.dayOfWeek));
   if (
@@ -389,16 +389,16 @@ export async function updateOfficeWeeklySchedule(input: {
 
   return db.$transaction(async (tx) => {
     await assertAdmin(input.adminId, tx);
-    const office = await tx.office.findUnique({
-      where: { id: input.officeId },
+    const building = await tx.building.findUnique({
+      where: { id: input.buildingId },
       select: { deletedAt: true, id: true },
     });
-    if (!office || office.deletedAt) {
+    if (!building || building.deletedAt) {
       throw new AdminSettingsError("دفتر پیدا نشد.");
     }
 
-    const currentSchedules = await tx.officeWeeklySchedule.findMany({
-      where: { officeId: input.officeId },
+    const currentSchedules = await tx.buildingWeeklySchedule.findMany({
+      where: { buildingId: input.buildingId },
     });
     const currentByDay = new Map(
       currentSchedules.map((schedule) => [schedule.dayOfWeek, schedule]),
@@ -407,10 +407,10 @@ export async function updateOfficeWeeklySchedule(input: {
 
     for (const schedule of input.schedules) {
       const current = currentByDay.get(schedule.dayOfWeek);
-      const updated = await tx.officeWeeklySchedule.upsert({
+      const updated = await tx.buildingWeeklySchedule.upsert({
         where: {
-          officeId_dayOfWeek: {
-            officeId: input.officeId,
+          buildingId_dayOfWeek: {
+            buildingId: input.buildingId,
             dayOfWeek: schedule.dayOfWeek,
           },
         },
@@ -421,7 +421,7 @@ export async function updateOfficeWeeklySchedule(input: {
         },
         create: {
           ...schedule,
-          officeId: input.officeId,
+          buildingId: input.buildingId,
         },
       });
       updatedSchedules.push(updated);
@@ -435,16 +435,16 @@ export async function updateOfficeWeeklySchedule(input: {
 
       await tx.auditLog.create({
         data: {
-          action: "OFFICE_SCHEDULE_UPDATED",
+          action: "BUILDING_SCHEDULE_UPDATED",
           actorUserId: input.adminId,
           entityId: updated.id,
-          entityType: "OfficeWeeklySchedule",
+          entityType: "BuildingWeeklySchedule",
           oldValue: current
             ? {
                 dayOfWeek: current.dayOfWeek,
                 endTime: current.endTime,
                 isWorkingDay: current.isWorkingDay,
-                officeId: current.officeId,
+                buildingId: current.buildingId,
                 startTime: current.startTime,
               }
             : undefined,
@@ -452,7 +452,7 @@ export async function updateOfficeWeeklySchedule(input: {
             dayOfWeek: updated.dayOfWeek,
             endTime: updated.endTime,
             isWorkingDay: updated.isWorkingDay,
-            officeId: updated.officeId,
+            buildingId: updated.buildingId,
             startTime: updated.startTime,
           },
         },
@@ -463,12 +463,12 @@ export async function updateOfficeWeeklySchedule(input: {
   });
 }
 
-export async function upsertOfficeScheduleException(input: {
+export async function upsertBuildingScheduleException(input: {
   adminId: string;
   date: Date;
   endTime?: string;
   isWorkingDay: boolean;
-  officeId: string;
+  buildingId: string;
   reason?: string;
   startTime?: string;
 }) {
@@ -478,26 +478,26 @@ export async function upsertOfficeScheduleException(input: {
   return db.$transaction(async (tx) => {
     await assertAdmin(input.adminId, tx);
     const date = startOfLocalDay(input.date);
-    const existing = await tx.officeScheduleException.findUnique({ where: { officeId_date: { officeId: input.officeId, date } } });
-    const updated = await tx.officeScheduleException.upsert({
-      where: { officeId_date: { officeId: input.officeId, date } },
+    const existing = await tx.buildingScheduleException.findUnique({ where: { buildingId_date: { buildingId: input.buildingId, date } } });
+    const updated = await tx.buildingScheduleException.upsert({
+      where: { buildingId_date: { buildingId: input.buildingId, date } },
       update: { endTime: input.isWorkingDay ? input.endTime : null, isWorkingDay: input.isWorkingDay, reason: input.reason?.trim() || null, startTime: input.isWorkingDay ? input.startTime : null },
-      create: { date, endTime: input.isWorkingDay ? input.endTime : null, isWorkingDay: input.isWorkingDay, officeId: input.officeId, reason: input.reason?.trim() || null, startTime: input.isWorkingDay ? input.startTime : null },
+      create: { date, endTime: input.isWorkingDay ? input.endTime : null, isWorkingDay: input.isWorkingDay, buildingId: input.buildingId, reason: input.reason?.trim() || null, startTime: input.isWorkingDay ? input.startTime : null },
     });
     await tx.auditLog.create({ data: {
-      action: existing ? "OFFICE_EXCEPTION_UPDATED" : "OFFICE_EXCEPTION_CREATED", actorUserId: input.adminId, entityId: updated.id, entityType: "OfficeScheduleException",
-      newValue: { date: updated.date.toISOString(), endTime: updated.endTime, isWorkingDay: updated.isWorkingDay, officeId: updated.officeId, reason: updated.reason, startTime: updated.startTime },
+      action: existing ? "BUILDING_EXCEPTION_UPDATED" : "BUILDING_EXCEPTION_CREATED", actorUserId: input.adminId, entityId: updated.id, entityType: "BuildingScheduleException",
+      newValue: { date: updated.date.toISOString(), endTime: updated.endTime, isWorkingDay: updated.isWorkingDay, buildingId: updated.buildingId, reason: updated.reason, startTime: updated.startTime },
     } });
     return updated;
   });
 }
 
-export async function deleteOfficeScheduleException(input: { adminId: string; exceptionId: string }) {
+export async function deleteBuildingScheduleException(input: { adminId: string; exceptionId: string }) {
   return db.$transaction(async (tx) => {
     await assertAdmin(input.adminId, tx);
-    const exception = await tx.officeScheduleException.findUnique({ where: { id: input.exceptionId } });
+    const exception = await tx.buildingScheduleException.findUnique({ where: { id: input.exceptionId } });
     if (!exception) throw new AdminSettingsError("استثنا پیدا نشد.");
-    await tx.officeScheduleException.delete({ where: { id: exception.id } });
-    await tx.auditLog.create({ data: { action: "OFFICE_EXCEPTION_DELETED", actorUserId: input.adminId, entityId: exception.id, entityType: "OfficeScheduleException", oldValue: { date: exception.date.toISOString(), officeId: exception.officeId } } });
+    await tx.buildingScheduleException.delete({ where: { id: exception.id } });
+    await tx.auditLog.create({ data: { action: "BUILDING_EXCEPTION_DELETED", actorUserId: input.adminId, entityId: exception.id, entityType: "BuildingScheduleException", oldValue: { date: exception.date.toISOString(), buildingId: exception.buildingId } } });
   });
 }

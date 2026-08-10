@@ -34,11 +34,11 @@ import {
   addDays,
   createLunchReportRecipient,
   db,
-  lunchLocationId,
+  buildingId,
   lunchReportRecipientId,
   nextWorkingDateAtHour,
   registerBusinessRuleTestHooks,
-  secondLunchLocationId,
+  secondBuildingId,
   secondLunchReportRecipientId,
   secondUserId,
   startOfLocalDay,
@@ -671,21 +671,21 @@ test("lunch report sends one minute after cutoff with Jalali date and Persian di
     data: [
       {
         userId,
-        locationId: lunchLocationId,
+        buildingId: buildingId,
         date: startOfLocalDay(targetDate),
         breakfastReserved: true,
         status: LunchReservationStatus.ACTIVE,
       },
       {
         userId: secondUserId,
-        locationId: lunchLocationId,
+        buildingId: buildingId,
         date: startOfLocalDay(targetDate),
         status: LunchReservationStatus.CANCELLED_BY_USER,
       },
     ],
   });
 
-  await db.lunchLocation.create({
+  await db.building.create({
     data: {
       id: "building-c",
       name: "Building C",
@@ -695,7 +695,7 @@ test("lunch report sends one minute after cutoff with Jalali date and Persian di
   await db.lunchReservation.create({
     data: {
       userId: secondUserId,
-      locationId: "building-c",
+      buildingId: "building-c",
       date: startOfLocalDay(targetDate),
       status: LunchReservationStatus.ACTIVE,
     },
@@ -739,7 +739,7 @@ test("lunch report sends one minute after cutoff with Jalali date and Persian di
   assert.match(text, /جمع ناهار: ۲/);
   assert.match(
     text,
-    /Building A:\nصبحانه: ۱\nناهار: ۱\nاسامی ناهار:\n• Normal User/,
+    /Main Building:\nصبحانه: ۱\nناهار: ۱\nاسامی ناهار:\n• Normal User/,
   );
   assert.match(text, /Building B:\nصبحانه: ۰\nناهار: ۰/);
   assert.match(
@@ -768,7 +768,7 @@ test("lunch report name lists can be configured separately for each meal", async
   await db.lunchReservation.create({
     data: {
       userId,
-      locationId: lunchLocationId,
+      buildingId: buildingId,
       date: startOfLocalDay(targetDate),
       breakfastReserved: true,
       lunchReserved: true,
@@ -831,7 +831,7 @@ test("lunch report sends zero totals for a service day without reservations", as
   const text = new URLSearchParams(sentBodies[0]).get("text") ?? "";
   assert.match(text, /جمع صبحانه: ۰/);
   assert.match(text, /جمع ناهار: ۰/);
-  assert.match(text, /Building A:\nصبحانه: ۰\nناهار: ۰/);
+  assert.match(text, /Main Building:\nصبحانه: ۰\nناهار: ۰/);
   assert.match(text, /Building B:\nصبحانه: ۰\nناهار: ۰/);
 });
 
@@ -1103,7 +1103,7 @@ test("lunch report failures are stored and retries send the original snapshot", 
   await db.lunchReservation.create({
     data: {
       userId,
-      locationId: lunchLocationId,
+      buildingId: buildingId,
       date: startOfLocalDay(targetDate),
       status: LunchReservationStatus.ACTIVE,
     },
@@ -1155,7 +1155,7 @@ test("lunch report failures are stored and retries send the original snapshot", 
       await db.lunchReservation.create({
         data: {
           userId: secondUserId,
-          locationId: secondLunchLocationId,
+          buildingId: secondBuildingId,
           date: startOfLocalDay(targetDate),
           status: LunchReservationStatus.ACTIVE,
         },

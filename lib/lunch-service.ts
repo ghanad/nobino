@@ -7,9 +7,9 @@ export {
   updateLunchException,
 } from "./lunch-service/exceptions";
 export {
-  createLunchLocation,
-  deleteLunchLocation,
-  updateLunchLocation,
+  createBuilding,
+  deleteBuilding,
+  updateBuilding,
 } from "./lunch-service/locations";
 export { getLunchReport } from "./lunch-service/reports";
 export {

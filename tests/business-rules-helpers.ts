@@ -11,11 +11,10 @@ export const passwordHash = "test-password-hash";
 export const poolId = "company-systems";
 export const meetingRoomId = "main-meeting-room";
 export const secondMeetingRoomId = "second-meeting-room";
-export const officeId = "main-office";
+export const buildingId = "main-building";
 export const deskId = "desk-one";
 export const secondDeskId = "desk-two";
-export const lunchLocationId = "building-a";
-export const secondLunchLocationId = "building-b";
+export const secondBuildingId = "building-b";
 export const lunchReportRecipientId = "lunch-report-recipient-a";
 export const secondLunchReportRecipientId = "lunch-report-recipient-b";
 export const userId = "normal-user";
@@ -163,7 +162,6 @@ export async function resetDatabase() {
   await db.wikiPageRevision.deleteMany();
   await db.wikiPage.deleteMany();
   await db.lunchReservation.deleteMany();
-  await db.lunchLocation.deleteMany();
   await db.lunchException.deleteMany();
   await db.lunchWeeklySchedule.deleteMany();
   await db.lunchSettings.deleteMany();
@@ -174,17 +172,17 @@ export async function resetDatabase() {
   await db.meetingRoomWeeklySchedule.deleteMany();
   await db.meetingRoom.deleteMany();
   await db.deskReservation.deleteMany();
-  await db.officeScheduleException.deleteMany();
-  await db.officeWeeklySchedule.deleteMany();
+  await db.buildingScheduleException.deleteMany();
+  await db.buildingWeeklySchedule.deleteMany();
   await db.desk.deleteMany();
-  await db.office.deleteMany();
   await db.deskSettings.deleteMany();
   await db.resourcePoolCapacityException.deleteMany();
+  await db.resourcePool.deleteMany();
+  await db.building.deleteMany();
   await db.scheduleException.deleteMany();
   await db.workingSchedule.deleteMany();
   await db.teamMembership.deleteMany();
   await db.team.deleteMany();
-  await db.resourcePool.deleteMany();
   await db.reservationPolicy.deleteMany();
   await db.user.deleteMany();
 
@@ -221,9 +219,14 @@ export async function resetDatabase() {
     ],
   });
 
+  await db.building.create({
+    data: { id: buildingId, name: "Main Building", active: true },
+  });
+
   await db.resourcePool.create({
     data: {
       id: poolId,
+      buildingId,
       name: "Company Systems",
       capacity: 1,
       active: true,
@@ -290,22 +293,21 @@ export async function resetDatabase() {
       maxAdvanceDays: 14,
     },
   });
-  await db.office.create({ data: { id: officeId, name: "Main Office", active: true } });
   await db.desk.createMany({ data: [
-    { id: deskId, officeId, name: "Desk One", active: true, sortOrder: 1 },
-    { id: secondDeskId, officeId, name: "Desk Two", active: true, sortOrder: 2 },
+    { id: deskId, buildingId, name: "Desk One", active: true, sortOrder: 1 },
+    { id: secondDeskId, buildingId, name: "Desk Two", active: true, sortOrder: 2 },
   ] });
-  await db.officeWeeklySchedule.createMany({
+  await db.buildingWeeklySchedule.createMany({
     data: Array.from({ length: 7 }, (_, dayOfWeek) => ({
-      officeId, dayOfWeek, isWorkingDay: dayOfWeek !== 5, startTime: "09:00", endTime: "17:00",
+      buildingId, dayOfWeek, isWorkingDay: dayOfWeek !== 5, startTime: "09:00", endTime: "17:00",
     })),
   });
-  await db.officeScheduleException.create({
+  await db.buildingScheduleException.create({
     data: {
       date: startOfLocalDay(nextWorkingDateAtHour(9)),
       endTime: "17:00",
       isWorkingDay: true,
-      officeId,
+      buildingId,
       reason: "Test working day",
       startTime: "09:00",
     },
@@ -334,15 +336,10 @@ export async function resetDatabase() {
     },
   });
 
-  await db.lunchLocation.createMany({
+  await db.building.createMany({
     data: [
       {
-        id: lunchLocationId,
-        name: "Building A",
-        active: true,
-      },
-      {
-        id: secondLunchLocationId,
+        id: secondBuildingId,
         name: "Building B",
         active: true,
       },

@@ -21,13 +21,13 @@ import {
   addDays,
   addHours,
   db,
-  lunchLocationId,
+  buildingId,
   managerId,
   nextMidweekIranHolidayDateAtHour,
   nextWorkingDateAtHour,
   poolId,
   registerBusinessRuleTestHooks,
-  secondLunchLocationId,
+  secondBuildingId,
   startOfLocalDay,
   userId,
 } from "./business-rules-helpers";
@@ -44,11 +44,11 @@ test("breakfast is suggested only when a system reservation starts before 12", (
   assert.equal(shouldOfferBreakfastForStart(afterNoon), false);
 });
 
-test("food reservations store breakfast and lunch with one shared location", async () => {
+test("food reservations store breakfast and lunch with one shared building", async () => {
   const targetDate = nextWorkingDateAtHour(9);
   const reservation = await createLunchReservation({
     userId,
-    locationId: lunchLocationId,
+    buildingId: buildingId,
     date: targetDate,
     breakfastReserved: true,
     lunchReserved: true,
@@ -56,19 +56,19 @@ test("food reservations store breakfast and lunch with one shared location", asy
 
   assert.equal(reservation.breakfastReserved, true);
   assert.equal(reservation.lunchReserved, true);
-  assert.equal(reservation.locationId, lunchLocationId);
+  assert.equal(reservation.buildingId, buildingId);
 
   const updated = await updateLunchReservationLocation({
     reservationId: reservation.id,
     userId,
-    locationId: secondLunchLocationId,
+    buildingId: secondBuildingId,
     breakfastReserved: true,
     lunchReserved: false,
   });
 
   assert.equal(updated.breakfastReserved, true);
   assert.equal(updated.lunchReserved, false);
-  assert.equal(updated.locationId, secondLunchLocationId);
+  assert.equal(updated.buildingId, secondBuildingId);
 });
 
 test("food reservations require at least one meal", async () => {
@@ -78,11 +78,22 @@ test("food reservations require at least one meal", async () => {
     () =>
       createLunchReservation({
         userId,
-        locationId: lunchLocationId,
+        buildingId: buildingId,
         date: targetDate,
         breakfastReserved: false,
         lunchReserved: false,
       }),
+    LunchReservationError,
+  );
+});
+
+test("transitional buildings cannot be used for lunch even when accidentally enabled", async () => {
+  const transitional = await db.building.create({
+    data: { id: "needs-assignment", name: "Needs assignment", active: true, isTransitional: true },
+  });
+
+  await assert.rejects(
+    createLunchReservation({ userId, buildingId: transitional.id, date: nextWorkingDateAtHour(12) }),
     LunchReservationError,
   );
 });
@@ -100,7 +111,7 @@ test("manager cancellation and rejection cancel linked food but preserve manual 
   });
   const linkedFood = await createLunchReservation({
     userId,
-    locationId: lunchLocationId,
+    buildingId: buildingId,
     date: firstStartAt,
     breakfastReserved: true,
     lunchReserved: true,
@@ -121,7 +132,7 @@ test("manager cancellation and rejection cancel linked food but preserve manual 
     LunchReservationStatus.CANCELLED_BY_ADMIN,
   );
 
-  const secondStartAt = addDays(firstStartAt, firstStartAt.getDay() === 4 ? 2 : 1);
+  const secondStartAt = nextWorkingDateAtHour(9);
   const pendingSystemReservation = await db.reservation.create({
     data: {
       userId,
@@ -133,7 +144,7 @@ test("manager cancellation and rejection cancel linked food but preserve manual 
   });
   const linkedToPendingFood = await createLunchReservation({
     userId,
-    locationId: lunchLocationId,
+    buildingId: buildingId,
     date: secondStartAt,
     breakfastReserved: true,
     lunchReserved: false,
@@ -165,7 +176,7 @@ test("manager cancellation and rejection cancel linked food but preserve manual 
   });
   const manualFood = await createLunchReservation({
     userId,
-    locationId: lunchLocationId,
+    buildingId: buildingId,
     date: secondStartAt,
     breakfastReserved: true,
     lunchReserved: false,
@@ -197,7 +208,7 @@ test("lunch reservation closes at and after the previous-day cutoff", async () =
     () =>
       createLunchReservation({
         userId,
-        locationId: lunchLocationId,
+        buildingId: buildingId,
         date: targetDate,
         now: atCutoff,
       }),
@@ -208,7 +219,7 @@ test("lunch reservation closes at and after the previous-day cutoff", async () =
     () =>
       createLunchReservation({
         userId,
-        locationId: lunchLocationId,
+        buildingId: buildingId,
         date: targetDate,
         now: afterCutoff,
       }),
@@ -223,7 +234,7 @@ test("users can have only one active lunch reservation per day", async () => {
 
   await createLunchReservation({
     userId,
-    locationId: lunchLocationId,
+    buildingId: buildingId,
     date: targetDate,
     now: beforeCutoff,
   });
@@ -232,7 +243,7 @@ test("users can have only one active lunch reservation per day", async () => {
     () =>
       createLunchReservation({
         userId,
-        locationId: secondLunchLocationId,
+        buildingId: secondBuildingId,
         date: targetDate,
         now: beforeCutoff,
       }),
@@ -247,7 +258,7 @@ test("users can change or cancel their own lunch reservation before cutoff", asy
 
   const reservation = await createLunchReservation({
     userId,
-    locationId: lunchLocationId,
+    buildingId: buildingId,
     date: targetDate,
     now: beforeCutoff,
   });
@@ -255,11 +266,11 @@ test("users can change or cancel their own lunch reservation before cutoff", asy
   const updated = await updateLunchReservationLocation({
     reservationId: reservation.id,
     userId,
-    locationId: secondLunchLocationId,
+    buildingId: secondBuildingId,
     now: beforeCutoff,
   });
 
-  assert.equal(updated.locationId, secondLunchLocationId);
+  assert.equal(updated.buildingId, secondBuildingId);
 
   const cancelled = await cancelLunchReservationByUser({
     reservationId: reservation.id,
@@ -279,7 +290,7 @@ test("users cannot change or cancel their own lunch reservation at the cutoff", 
 
   const reservation = await createLunchReservation({
     userId,
-    locationId: lunchLocationId,
+    buildingId: buildingId,
     date: targetDate,
     now: beforeCutoff,
   });
@@ -289,7 +300,7 @@ test("users cannot change or cancel their own lunch reservation at the cutoff", 
       updateLunchReservationLocation({
         reservationId: reservation.id,
         userId,
-        locationId: secondLunchLocationId,
+        buildingId: secondBuildingId,
         now: atCutoff,
       }),
     LunchReservationError,
@@ -315,7 +326,7 @@ test("users cannot cancel their own lunch reservation after cutoff", async () =>
 
   const reservation = await createLunchReservation({
     userId,
-    locationId: lunchLocationId,
+    buildingId: buildingId,
     date: targetDate,
     now: beforeCutoff,
   });
@@ -340,7 +351,7 @@ test("managers can cancel anyone's active lunch reservation after cutoff", async
 
   const reservation = await createLunchReservation({
     userId,
-    locationId: lunchLocationId,
+    buildingId: buildingId,
     date: targetDate,
     now: beforeCutoff,
   });
@@ -382,7 +393,7 @@ test("regular users cannot use manager lunch cancellation", async () => {
 
   const reservation = await createLunchReservation({
     userId,
-    locationId: lunchLocationId,
+    buildingId: buildingId,
     date: targetDate,
     now: beforeCutoff,
   });
@@ -411,7 +422,7 @@ test("friday lunch is disabled by default", async () => {
     () =>
       createLunchReservation({
         userId,
-        locationId: lunchLocationId,
+        buildingId: buildingId,
         date: targetDate,
         now: beforeCutoff,
       }),
@@ -431,7 +442,7 @@ test("official Iran holidays disable lunch service on midweek days", async () =>
     () =>
       createLunchReservation({
         userId,
-        locationId: lunchLocationId,
+        buildingId: buildingId,
         date: targetDate,
         now: beforeCutoff,
       }),
@@ -456,7 +467,7 @@ test("lunch exceptions can enable service on official Iran holidays", async () =
 
   const reservation = await createLunchReservation({
     userId,
-    locationId: lunchLocationId,
+    buildingId: buildingId,
     date: targetDate,
     now: beforeCutoff,
   });

@@ -68,12 +68,12 @@ export default async function AdminCalendarPage({
   await requireRole([UserRole.ADMIN]);
   const params = await searchParams;
   const toast = getToast(params);
-  const [overrides, offices, rooms] = await Promise.all([
+  const [overrides, buildings, rooms] = await Promise.all([
     db.calendarDayOverride.findMany({
       include: { targets: true },
       orderBy: { date: "asc" },
     }),
-    db.office.findMany({
+    db.building.findMany({
       where: { active: true, deletedAt: null },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       select: { id: true, name: true },
@@ -106,7 +106,7 @@ export default async function AdminCalendarPage({
             </p>
           </div>
         </div>
-        <CalendarOverrideForm offices={offices} rooms={rooms} />
+        <CalendarOverrideForm buildings={buildings} rooms={rooms} />
       </section>
 
       <section className="grid gap-3">
@@ -172,7 +172,7 @@ export default async function AdminCalendarPage({
                         {[
                           targetTypes.has(CalendarDayTargetType.SYSTEMS) && "سامانه‌ها",
                           targetTypes.has(CalendarDayTargetType.LUNCH) && "غذا",
-                          targetTypes.has(CalendarDayTargetType.OFFICE) && "دفترها",
+                          targetTypes.has(CalendarDayTargetType.BUILDING) && "ساختمان‌ها",
                           targetTypes.has(CalendarDayTargetType.MEETING_ROOM) && "اتاق‌ها",
                         ]
                           .filter(Boolean)
@@ -190,11 +190,11 @@ export default async function AdminCalendarPage({
                             target.targetKey === GLOBAL_CALENDAR_TARGET_KEY,
                         ),
                         mode: override.mode,
-                        officeIds: override.targets
+                        buildingIds: override.targets
                           .filter(
                             (target) =>
-                              target.type === CalendarDayTargetType.OFFICE &&
-                              offices.some((office) => office.id === target.targetKey),
+                              target.type === CalendarDayTargetType.BUILDING &&
+                              buildings.some((building) => building.id === target.targetKey),
                           )
                           .map((target) => target.targetKey),
                         overrideId: override.id,
@@ -213,7 +213,7 @@ export default async function AdminCalendarPage({
                             target.targetKey === GLOBAL_CALENDAR_TARGET_KEY,
                         ),
                       }}
-                      offices={offices}
+                      buildings={buildings}
                       rooms={rooms}
                     />
                   </div>

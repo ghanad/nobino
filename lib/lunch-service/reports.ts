@@ -15,13 +15,13 @@ export async function getLunchReport(date: Date) {
       status: LunchReservationStatus.ACTIVE,
     },
     orderBy: [
-      { location: { name: "asc" } },
+      { building: { name: "asc" } },
       { user: { name: "asc" } },
     ],
     select: {
       id: true,
       date: true,
-      location: {
+      building: {
         select: {
           id: true,
           name: true,

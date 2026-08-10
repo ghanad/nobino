@@ -14,7 +14,7 @@ Managers review reservation requests and oversee operational reservations. Admin
 
 ## Product Purpose
 
-Nobino gives employees one internal place to reserve food, shared company systems, and desks in the office. It exists to make these recurring workplace reservations clear and manageable for employees while giving the firm appropriate control over shared capacity and approvals.
+Nobino gives employees one internal place to reserve food, shared company systems, and desks in the building. It exists to make these recurring workplace reservations clear and manageable for employees while giving the firm appropriate control over shared capacity and approvals.
 
 Success means employees can quickly make and understand their reservations, shared resources are not overbooked, and managers and administrators can resolve requests and maintain availability without relying on scattered manual coordination.
 
@@ -25,7 +25,7 @@ Nobino is a firm-specific reservation system shaped around the firm's real worki
 ## Operating Context
 
 - The product is an internal authenticated web application used in a Persian, right-to-left interface.
-- Employees reserve food, company-system capacity, named office desks, and meeting rooms.
+- Employees reserve food, company-system capacity, named building desks, and meeting rooms.
 - Managers review requests and can manage reservations within their permissions.
 - Administrators configure users, teams, schedules, capacities, policies, exceptions, announcements, and integrations.
 - In-app notifications and the Bale messenger integration communicate relevant reservation events and operational reports.

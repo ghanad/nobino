@@ -3,11 +3,11 @@ import { Plus, Save, Trash2 } from "lucide-react";
 
 import {
   createLunchExceptionAction,
-  createLunchLocationAction,
+  createBuildingAction,
   deleteLunchExceptionAction,
-  deleteLunchLocationAction,
+  deleteBuildingAction,
   updateLunchExceptionAction,
-  updateLunchLocationAction,
+  updateBuildingAction,
   updateLunchSettingsAction,
   updateLunchWeeklyScheduleAction,
 } from "@/app/admin/lunch/actions";
@@ -25,9 +25,9 @@ type AdminLunchPageProps = {
     exceptionCreated?: string;
     exceptionDeleted?: string;
     exceptionUpdated?: string;
-    locationCreated?: string;
-    locationDeleted?: string;
-    locationUpdated?: string;
+    buildingCreated?: string;
+    buildingDeleted?: string;
+    buildingUpdated?: string;
     settingsUpdated?: string;
     weeklyUpdated?: string;
   }>;
@@ -54,9 +54,9 @@ function getAdminLunchToast(params: Awaited<AdminLunchPageProps["searchParams"]>
 
   const successKeys = [
     "settingsUpdated",
-    "locationCreated",
-    "locationUpdated",
-    "locationDeleted",
+    "buildingCreated",
+    "buildingUpdated",
+    "buildingDeleted",
     "weeklyUpdated",
     "exceptionCreated",
     "exceptionUpdated",
@@ -103,20 +103,18 @@ export default async function AdminLunchPage({
   const toast = getAdminLunchToast(params);
   const [
     settings,
-    locations,
+    buildings,
     weeklySchedule,
     exceptions,
   ] = await Promise.all([
     db.lunchSettings.findUnique({ where: { id: "default" } }),
-    db.lunchLocation.findMany({
+    db.building.findMany({
       orderBy: [{ active: "desc" }, { name: "asc" }],
       select: {
         id: true,
         name: true,
         active: true,
-        _count: {
-          select: { reservations: true },
-        },
+        _count: { select: { lunchReservations: true } },
       },
     }),
     db.lunchWeeklySchedule.findMany({
@@ -199,7 +197,7 @@ export default async function AdminLunchPage({
           </p>
         </div>
         <form
-          action={createLunchLocationAction}
+          action={createBuildingAction}
           className="grid gap-3 md:grid-cols-[1fr_auto]"
         >
           <InputText name="name" placeholder="نام ساختمان" />
@@ -209,20 +207,20 @@ export default async function AdminLunchPage({
           </SubmitButton>
         </form>
         <div className="grid gap-3">
-          {locations.map((location) => (
+          {buildings.map((building) => (
             <div
               className="grid gap-3 rounded-md border bg-background p-3 md:grid-cols-[1fr_auto_auto] md:items-center"
-              key={location.id}
+              key={building.id}
             >
               <form
-                action={updateLunchLocationAction}
+                action={updateBuildingAction}
                 className="grid gap-3 md:grid-cols-[1fr_auto_auto]"
               >
-                <input name="locationId" type="hidden" value={location.id} />
-                <InputText defaultValue={location.name} name="name" />
+                <input name="buildingId" type="hidden" value={building.id} />
+                <InputText defaultValue={building.name} name="name" />
                 <label className="flex h-10 items-center gap-2 text-sm">
                   <input
-                    defaultChecked={location.active}
+                    defaultChecked={building.active}
                     name="active"
                     type="checkbox"
                   />
@@ -234,10 +232,10 @@ export default async function AdminLunchPage({
                 </SubmitButton>
               </form>
               <span className="text-xs text-muted-foreground">
-                {location._count.reservations} رزرو
+                {building._count.lunchReservations} رزرو
               </span>
-              <form action={deleteLunchLocationAction}>
-                <input name="locationId" type="hidden" value={location.id} />
+              <form action={deleteBuildingAction}>
+                <input name="buildingId" type="hidden" value={building.id} />
                 <SubmitButton pendingLabel="در حال حذف" variant="outline">
                   <Trash2 className="h-4 w-4" />
                   حذف

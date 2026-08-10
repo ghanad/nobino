@@ -13,11 +13,11 @@ type Props = {
     state: AdminDeskActionState,
     formData: FormData,
   ) => Promise<AdminDeskActionState>;
-  officeId: string;
-  officeName: string;
+  buildingId: string;
+  buildingName: string;
 };
 
-export function DeleteOfficeButton({ action, officeId, officeName }: Props) {
+export function DeleteBuildingButton({ action, buildingId, buildingName }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [confirmation, setConfirmation] = useState("");
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
@@ -47,7 +47,7 @@ export function DeleteOfficeButton({ action, officeId, officeName }: Props) {
 
       {isOpen ? (
         <div
-          aria-labelledby="delete-office-title"
+          aria-labelledby="delete-building-title"
           aria-modal="true"
           className="fixed inset-0 z-50 grid place-items-center bg-slate-950/40 px-4 py-6"
           dir="rtl"
@@ -62,11 +62,11 @@ export function DeleteOfficeButton({ action, officeId, officeName }: Props) {
                 <AlertTriangle className="h-5 w-5" />
               </span>
               <div className="min-w-0 flex-1">
-                <h2 className="text-base font-semibold" id="delete-office-title">
+                <h2 className="text-base font-semibold" id="delete-building-title">
                   حذف دفتر
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  دفتر «{officeName}» و همه میزهای آن از دسترس خارج می‌شوند و
+                  دفتر «{buildingName}» و همه میزهای آن از دسترس خارج می‌شوند و
                   رزروهای آینده حذف خواهند شد. سابقه رزروهای گذشته حفظ می‌شود.
                 </p>
               </div>
@@ -81,9 +81,9 @@ export function DeleteOfficeButton({ action, officeId, officeName }: Props) {
               </Button>
             </div>
             <AdminDeskForm action={action} className="mt-6 grid gap-4">
-              <input name="officeId" type="hidden" value={officeId} />
+              <input name="buildingId" type="hidden" value={buildingId} />
               <label className="grid gap-2 text-sm font-medium text-slate-700">
-                برای تأیید، نام دفتر را وارد کنید: <strong>{officeName}</strong>
+                برای تأیید، نام دفتر را وارد کنید: <strong>{buildingName}</strong>
                 <input
                   autoComplete="off"
                   className="h-11 rounded-md border bg-background px-3 outline-none focus-visible:ring-2 focus-visible:ring-red-500"
@@ -102,7 +102,7 @@ export function DeleteOfficeButton({ action, officeId, officeName }: Props) {
                 </Button>
                 <SubmitButton
                   className="bg-red-600 text-white hover:bg-red-700"
-                  disabled={confirmation.trim() !== officeName}
+                  disabled={confirmation.trim() !== buildingName}
                   pendingLabel="در حال حذف"
                 >
                   حذف دفتر

@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { requireCurrentUser } from "@/lib/auth";
-import { getOfficeWorkingWindowForDate } from "@/lib/desk-schedule";
+import { getBuildingWorkingWindowForDate } from "@/lib/desk-schedule";
 import { cancelDeskReservationByUser, createDeskReservation, updateDeskReservation } from "@/lib/desk-reservation-service";
 import { buildLocalDateAtHourFromJalali, formatJalaliDateParam, isValidJalaliDateParam, parseJalaliDateParam } from "@/lib/jalali-date";
 import { ReservationTransitionError } from "@/lib/reservation-service";
@@ -52,9 +52,9 @@ async function parseRange(formData: FormData) {
   let { endHour, startHour } = parsed.data;
   if (parsed.data.fullDay) {
     const date = parseJalaliDateParam(parsed.data.date)!;
-    const desk = await import("@/lib/db").then(({ db }) => db.desk.findUnique({ where: { id: parsed.data.deskId }, select: { officeId: true } }));
+    const desk = await import("@/lib/db").then(({ db }) => db.desk.findUnique({ where: { id: parsed.data.deskId }, select: { buildingId: true } }));
     if (!desk) throw new ReservationTimeRangeError("میز پیدا نشد.");
-    const window = await getOfficeWorkingWindowForDate({ date, officeId: desk.officeId });
+    const window = await getBuildingWorkingWindowForDate({ date, buildingId: desk.buildingId });
     if (!window.startTime || !window.endTime) throw new ReservationTimeRangeError("دفتر در این روز فعال نیست.");
     startHour = Number(window.startTime.slice(0, 2));
     endHour = Number(window.endTime.slice(0, 2));
@@ -70,7 +70,7 @@ async function parseRange(formData: FormData) {
 export async function createDeskReservationAction(formData: FormData) {
   const user = await requireCurrentUser();
   let date = typeof formData.get("date") === "string" ? String(formData.get("date")) : undefined;
-  const officeId = typeof formData.get("officeId") === "string" ? String(formData.get("officeId")) : undefined;
+  const buildingId = typeof formData.get("buildingId") === "string" ? String(formData.get("buildingId")) : undefined;
   try {
     const range = await parseRange(formData);
     date = formatJalaliDateParam(range.startAt);
@@ -81,9 +81,9 @@ export async function createDeskReservationAction(formData: FormData) {
       userId: user.id,
     });
   } catch (error) {
-    redirectToDesks({ date, error: getError(error), officeId });
+    redirectToDesks({ date, error: getError(error), buildingId });
   }
-  redirectToDesks({ created: "1", date, officeId });
+  redirectToDesks({ created: "1", date, buildingId });
 }
 
 export async function createDeskReservationInlineAction(
@@ -119,7 +119,7 @@ export async function createDeskReservationInlineAction(
 export async function updateOwnDeskReservationAction(formData: FormData) {
   const user = await requireCurrentUser();
   const reservationId = String(formData.get("reservationId") || "");
-  const officeId = String(formData.get("officeId") || "") || undefined;
+  const buildingId = String(formData.get("buildingId") || "") || undefined;
   let date = String(formData.get("date") || "") || undefined;
   try {
     if (!reservationId) throw new ReservationTransitionError("رزرو میز معتبر نیست.");
@@ -133,21 +133,21 @@ export async function updateOwnDeskReservationAction(formData: FormData) {
       startAt: range.startAt,
     });
   } catch (error) {
-    redirectToDesks({ date, error: getError(error), officeId });
+    redirectToDesks({ date, error: getError(error), buildingId });
   }
-  redirectToDesks({ date, officeId, updated: "1" });
+  redirectToDesks({ date, buildingId, updated: "1" });
 }
 
 export async function cancelOwnDeskReservationAction(formData: FormData) {
   const user = await requireCurrentUser();
   const reservationId = String(formData.get("reservationId") || "");
   const date = String(formData.get("date") || "") || undefined;
-  const officeId = String(formData.get("officeId") || "") || undefined;
+  const buildingId = String(formData.get("buildingId") || "") || undefined;
   try {
     if (!reservationId) throw new ReservationTransitionError("رزرو میز معتبر نیست.");
     await cancelDeskReservationByUser({ reservationId, userId: user.id });
   } catch (error) {
-    redirectToDesks({ date, error: getError(error), officeId });
+    redirectToDesks({ date, error: getError(error), buildingId });
   }
-  redirectToDesks({ cancelled: "1", date, officeId });
+  redirectToDesks({ cancelled: "1", date, buildingId });
 }

@@ -20,14 +20,14 @@ const inputClass = "h-10 rounded-md border bg-background px-3 text-sm";
 const initialActionState: ManagerDeskActionState = {};
 const noConsumedQueryKeys: string[] = [];
 
-type Office = {
+type Building = {
   desks: { id: string; name: string }[];
   id: string;
   name: string;
 };
 
 type Reservation = {
-  desk: { name: string; office: { name: string } };
+  desk: { name: string; building: { name: string } };
   deskId: string;
   endAt: Date;
   id: string;
@@ -63,7 +63,7 @@ type Props = {
     update: ActionFormProps["action"];
   };
   initialReservations: Reservation[];
-  offices: Office[];
+  buildings: Building[];
 };
 
 function sortReservations(reservations: Reservation[]) {
@@ -76,7 +76,7 @@ function sortReservations(reservations: Reservation[]) {
   });
 }
 
-export function ManagerDeskReservations({ actions, initialReservations, offices }: Props) {
+export function ManagerDeskReservations({ actions, initialReservations, buildings }: Props) {
   const [reservations, setReservations] = useState(initialReservations);
   const [feedback, setFeedback] = useState<ManagerDeskActionState | null>(null);
   const sortedReservations = sortReservations(reservations);
@@ -99,11 +99,11 @@ export function ManagerDeskReservations({ actions, initialReservations, offices 
       return;
     }
 
-    const office = offices.find((item) =>
+    const building = buildings.find((item) =>
       item.desks.some((desk) => desk.id === mutation.deskId)
     );
-    const desk = office?.desks.find((item) => item.id === mutation.deskId);
-    if (!office || !desk || !mutation.startAt || !mutation.endAt || !mutation.deskId) return;
+    const desk = building?.desks.find((item) => item.id === mutation.deskId);
+    if (!building || !desk || !mutation.startAt || !mutation.endAt || !mutation.deskId) return;
     const deskId = mutation.deskId;
     const endAt = new Date(mutation.endAt);
     const startAt = new Date(mutation.startAt);
@@ -111,14 +111,14 @@ export function ManagerDeskReservations({ actions, initialReservations, offices 
       item.id === mutation.reservationId
         ? {
             ...item,
-            desk: { name: desk.name, office: { name: office.name } },
+            desk: { name: desk.name, building: { name: building.name } },
             deskId,
             endAt,
             startAt,
           }
         : item
     ));
-  }, [offices]);
+  }, [buildings]);
 
   return (
     <>
@@ -146,7 +146,7 @@ export function ManagerDeskReservations({ actions, initialReservations, offices 
                     {reservation.status === ReservationStatus.PENDING ? "در انتظار تأیید" : "تأییدشده"}
                   </span>
                 </div>
-                ({reservation.user.email}) — {reservation.desk.office.name}، {reservation.desk.name}
+                ({reservation.user.email}) — {reservation.desk.building.name}، {reservation.desk.name}
                 <br />
                 {formatJalaliDate(reservation.startAt)}، {formatPersianLocalTime(reservation.startAt)} تا {formatPersianLocalTime(reservation.endAt)}
               </div>
@@ -155,7 +155,7 @@ export function ManagerDeskReservations({ actions, initialReservations, offices 
                 <JalaliDatePicker disabled={hasStarted} name="date" required value={formatJalaliDateParam(reservation.startAt)} />
                 {hasStarted ? <input name="date" type="hidden" value={formatJalaliDateParam(reservation.startAt)} /> : null}
                 <select className={inputClass} defaultValue={reservation.deskId} disabled={hasStarted} key={reservation.deskId} name="deskId">
-                  {offices.map((office) => <optgroup key={office.id} label={office.name}>{office.desks.map((desk) => <option key={desk.id} value={desk.id}>{desk.name}</option>)}</optgroup>)}
+                  {buildings.map((building) => <optgroup key={building.id} label={building.name}>{building.desks.map((desk) => <option key={desk.id} value={desk.id}>{desk.name}</option>)}</optgroup>)}
                 </select>
                 {hasStarted ? <input name="deskId" type="hidden" value={reservation.deskId} /> : null}
                 <input className={inputClass} defaultValue={reservation.startAt.getHours()} key={`start-${reservation.startAt.toISOString()}`} max={23} min={0} name="startHour" readOnly={hasStarted} type="number" />

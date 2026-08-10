@@ -65,10 +65,10 @@ export default async function LunchPage({ searchParams }: LunchPageProps) {
   const user = await requireCurrentUser();
   const params = await searchParams;
   const toast = getLunchToast(params);
-  const [days, locations] = await Promise.all([
+  const [days, buildings] = await Promise.all([
     getLunchReservationWindow(),
-    db.lunchLocation.findMany({
-      where: { active: true },
+    db.building.findMany({
+      where: { active: true, isTransitional: false },
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
@@ -92,10 +92,10 @@ export default async function LunchPage({ searchParams }: LunchPageProps) {
       select: {
         id: true,
         date: true,
-        locationId: true,
+        buildingId: true,
         breakfastReserved: true,
         lunchReserved: true,
-        location: {
+        building: {
           select: {
             name: true,
           },
@@ -131,14 +131,14 @@ export default async function LunchPage({ searchParams }: LunchPageProps) {
       availabilityVariant,
       dateLabel: formatJalaliDateWithoutWeekday(date),
       dateParam,
-      isActionDisabled: !dayState.isOpen || locations.length === 0,
+      isActionDisabled: !dayState.isOpen || buildings.length === 0,
       isOpen: dayState.isOpen,
       weekdayLabel: dateParts.weekdayLabel,
       reservation: reservation
         ? {
             id: reservation.id,
-            locationId: reservation.locationId,
-            locationName: reservation.location.name,
+            buildingId: reservation.buildingId,
+            buildingName: reservation.building.name,
             breakfastReserved: reservation.breakfastReserved,
             lunchReserved: reservation.lunchReserved,
           }
@@ -174,13 +174,13 @@ export default async function LunchPage({ searchParams }: LunchPageProps) {
           روزهای آینده
         </h2>
 
-        {locations.length === 0 ? (
+        {buildings.length === 0 ? (
           <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
             هنوز ساختمان فعالی برای دریافت غذا تعریف نشده است.
           </div>
         ) : null}
 
-        <LunchReservationList locations={locations} rows={rows} />
+        <LunchReservationList buildings={buildings} rows={rows} />
       </section>
     </div>
   );

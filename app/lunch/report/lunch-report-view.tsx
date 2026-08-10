@@ -223,7 +223,7 @@ export function LunchReportView({
         </div>
       ) : null}
 
-      {report.locations.length === 0 ? (
+      {report.buildings.length === 0 ? (
         <div className="rounded-md border bg-muted/30 p-4 text-sm text-muted-foreground">
           هنوز ساختمان فعالی برای گزارش غذا تعریف نشده است.
         </div>
@@ -235,7 +235,7 @@ export function LunchReportView({
           )}
         >
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {report.locations.map((location) => (
+            {report.buildings.map((location) => (
               <div className="rounded-md border bg-background p-4" key={location.id}>
                 <div className="flex items-center justify-between gap-3">
                   <h3 className="font-medium">{location.name}</h3>
@@ -266,7 +266,7 @@ export function LunchReportView({
                 {canCancelReservations ? <span>عملیات</span> : null}
               </div>
               <div className="divide-y">
-                {report.locations.flatMap((location) =>
+                {report.buildings.flatMap((location) =>
                   location.reservations.map((reservation) => (
                     <div
                       className={`grid items-center gap-2 ${

@@ -16,21 +16,21 @@ import type { ReactNode } from "react";
 
 import {
   createDeskAction,
-  createOfficeAction,
-  deleteOfficeAction,
-  deleteOfficeExceptionAction,
+  createBuildingAction,
+  deleteBuildingAction,
+  deleteBuildingExceptionAction,
   updateDeskSettingsAction,
-  updateOfficeAction,
-  updateOfficeDesksAction,
-  updateOfficeScheduleAction,
-  upsertOfficeExceptionAction,
+  updateBuildingAction,
+  updateBuildingDesksAction,
+  updateBuildingScheduleAction,
+  upsertBuildingExceptionAction,
 } from "@/app/admin/desks/actions";
 import {
   AdminDeskForm,
   AdminDeskTrackedSubmitButton,
 } from "@/app/admin/desks/admin-desk-form";
 import { PageHeader } from "@/components/app/page-header";
-import { DeleteOfficeButton } from "@/app/admin/desks/delete-office-button";
+import { DeleteBuildingButton } from "@/app/admin/desks/delete-building-button";
 import { Button } from "@/components/ui/button";
 import { JalaliDatePicker } from "@/components/ui/jalali-date-picker";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -69,8 +69,8 @@ function getView(value: string | undefined): DeskView {
   return "desks";
 }
 
-function getOfficeHref(officeId: string, view: DeskView = "desks") {
-  const query = new URLSearchParams({ officeId });
+function getBuildingHref(buildingId: string, view: DeskView = "desks") {
+  const query = new URLSearchParams({ buildingId });
   if (view !== "desks") query.set("view", view);
   return `/admin/desks?${query.toString()}`;
 }
@@ -147,14 +147,14 @@ function ToggleSwitch({
   );
 }
 
-function OfficeNavigation({
+function BuildingNavigation({
   activeView,
   exceptionCount,
-  officeId,
+  buildingId,
 }: {
   activeView: DeskView;
   exceptionCount: number;
-  officeId: string;
+  buildingId: string;
 }) {
   const items: Array<{
     description: string;
@@ -203,9 +203,9 @@ function OfficeNavigation({
               "relative grid min-w-[185px] flex-1 gap-1 rounded-t-lg px-4 py-3 text-right transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary lg:min-w-0",
               isActive
                 ? "bg-white text-slate-950 shadow-sm after:absolute after:inset-x-4 after:bottom-0 after:h-0.5 after:bg-primary"
-                : "text-slate-600 hover:bg-blue-50/50 hover:text-slate-950",
+                : "text-blue-800 hover:bg-blue-50/50 hover:text-blue-950",
             )}
-            href={getOfficeHref(officeId, item.view)}
+            href={getBuildingHref(buildingId, item.view)}
             key={item.view}
           >
             <span className="flex items-center gap-2 text-sm font-medium">
@@ -223,8 +223,8 @@ function OfficeNavigation({
 export default async function AdminDesksPage({ searchParams }: Props) {
   await requireRole([UserRole.ADMIN]);
   const params = await searchParams;
-  const [offices, settings] = await Promise.all([
-    db.office.findMany({
+  const [buildings, settings] = await Promise.all([
+    db.building.findMany({
       where: { deletedAt: null },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       include: {
@@ -239,21 +239,21 @@ export default async function AdminDesksPage({ searchParams }: Props) {
       create: { id: "default", maxAdvanceDays: 14 },
     }),
   ]);
-  const office =
-    offices.find((item) => item.id === params?.officeId) ?? offices[0] ?? null;
+  const building =
+    buildings.find((item) => item.id === params?.buildingId) ?? buildings[0] ?? null;
   const activeView = getView(params?.view);
-  const isCreatingOffice = params?.view === "new" || offices.length === 0;
-  const activeOfficeCount = offices.filter((item) => item.active).length;
-  const totalActiveDeskCount = offices.reduce(
+  const isCreatingBuilding = params?.view === "new" || buildings.length === 0;
+  const activeBuildingCount = buildings.filter((item) => item.active).length;
+  const totalActiveDeskCount = buildings.reduce(
     (count, item) => count + item.desks.filter((desk) => desk.active).length,
     0,
   );
   const activeDeskCount =
-    office?.desks.filter((desk) => desk.active).length ?? 0;
-  const defaultOfficeSortOrder =
-    offices.reduce((highest, item) => Math.max(highest, item.sortOrder), 0) + 1;
+    building?.desks.filter((desk) => desk.active).length ?? 0;
+  const defaultBuildingSortOrder =
+    buildings.reduce((highest, item) => Math.max(highest, item.sortOrder), 0) + 1;
   const defaultDeskSortOrder =
-    (office?.desks.reduce(
+    (building?.desks.reduce(
       (highest, desk) => Math.max(highest, desk.sortOrder),
       0,
     ) ?? 0) + 1;
@@ -262,7 +262,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
       <PageHeader
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <StatusPill tone="good">{activeOfficeCount} دفتر فعال</StatusPill>
+            <StatusPill tone="good">{activeBuildingCount} دفتر فعال</StatusPill>
             <StatusPill>{totalActiveDeskCount} میز فعال</StatusPill>
             <Button asChild size="sm">
               <Link href="/admin/desks?view=new">
@@ -281,19 +281,19 @@ export default async function AdminDesksPage({ searchParams }: Props) {
           <div className="grid min-w-fit gap-0.5">
             <div className="flex items-center gap-2">
               <h2 className="text-base font-semibold">انتخاب دفتر</h2>
-              <StatusPill tone="muted">{offices.length} دفتر</StatusPill>
+              <StatusPill tone="muted">{buildings.length} دفتر</StatusPill>
             </div>
             <p className="text-xs text-slate-600">
               تنظیمات هر دفتر مستقل است.
             </p>
           </div>
-          {offices.length ? (
+          {buildings.length ? (
             <nav
               aria-label="دفترها"
               className="grid flex-1 gap-2 sm:grid-cols-2 xl:grid-cols-3"
             >
-              {offices.map((item) => {
-                const isSelected = !isCreatingOffice && item.id === office?.id;
+              {buildings.map((item) => {
+                const isSelected = !isCreatingBuilding && item.id === building?.id;
                 const itemActiveDesks = item.desks.filter(
                   (desk) => desk.active,
                 ).length;
@@ -307,7 +307,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                         ? "border-blue-300 bg-blue-50/70 ring-1 ring-blue-100"
                         : "bg-background hover:border-blue-200 hover:bg-blue-50/30",
                     )}
-                    href={getOfficeHref(item.id, activeView)}
+                    href={getBuildingHref(item.id, activeView)}
                     key={item.id}
                   >
                     <span
@@ -343,7 +343,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
         </div>
       </section>
 
-      {isCreatingOffice ? (
+      {isCreatingBuilding ? (
         <section className={panelClass}>
           <div className={panelHeaderClass}>
             <div className="flex items-start gap-3">
@@ -359,7 +359,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
               </div>
             </div>
           </div>
-          <AdminDeskForm action={createOfficeAction} className="grid gap-6 p-5">
+          <AdminDeskForm action={createBuildingAction} className="grid gap-6 p-5">
             <div className="grid gap-4 md:grid-cols-2">
               <Field label="نام دفتر">
                 <input
@@ -374,7 +374,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
               <Field label="ترتیب نمایش">
                 <input
                   className={inputClass}
-                  defaultValue={defaultOfficeSortOrder}
+                  defaultValue={defaultBuildingSortOrder}
                   min={0}
                   name="sortOrder"
                   type="number"
@@ -392,27 +392,27 @@ export default async function AdminDesksPage({ searchParams }: Props) {
             </div>
           </AdminDeskForm>
         </section>
-      ) : office ? (
+      ) : building ? (
         <main className="grid min-w-0 gap-6">
           <section className={cn(panelClass, "min-w-0")}>
             <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="grid gap-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <Building2 className="h-5 w-5 text-primary" />
-                  <h2 className="text-lg font-semibold">{office.name}</h2>
-                  <StatusPill tone={office.active ? "good" : "muted"}>
-                    {office.active ? "فعال" : "غیرفعال"}
+                  <h2 className="text-lg font-semibold">{building.name}</h2>
+                  <StatusPill tone={building.active ? "good" : "muted"}>
+                    {building.active ? "فعال" : "غیرفعال"}
                   </StatusPill>
                 </div>
                 <p className="text-xs text-slate-600">
-                  {activeDeskCount} میز فعال از {office.desks.length} میز
+                  {activeDeskCount} میز فعال از {building.desks.length} میز
                 </p>
               </div>
             </div>
-            <OfficeNavigation
+            <BuildingNavigation
               activeView={activeView}
-              exceptionCount={office.exceptions.length}
-              officeId={office.id}
+              exceptionCount={building.exceptions.length}
+              buildingId={building.id}
             />
           </section>
 
@@ -431,14 +431,14 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                   </div>
                 </div>
                 <AdminDeskForm
-                  action={updateOfficeAction}
+                  action={updateBuildingAction}
                   className="grid gap-4 p-5 lg:grid-cols-[minmax(0,1fr)_180px_280px_auto] lg:items-end"
                 >
-                  <input name="officeId" type="hidden" value={office.id} />
+                  <input name="buildingId" type="hidden" value={building.id} />
                   <Field label="نام دفتر">
                     <input
                       className={inputClass}
-                      defaultValue={office.name}
+                      defaultValue={building.name}
                       name="name"
                       required
                     />
@@ -446,14 +446,14 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                   <Field label="ترتیب نمایش">
                     <input
                       className={inputClass}
-                      defaultValue={office.sortOrder}
+                      defaultValue={building.sortOrder}
                       min={0}
                       name="sortOrder"
                       type="number"
                     />
                   </Field>
                   <ToggleSwitch
-                    defaultChecked={office.active}
+                    defaultChecked={building.active}
                     label="دفتر فعال"
                     name="active"
                   />
@@ -475,9 +475,9 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                       <StatusPill tone="good">
                         {activeDeskCount} میز فعال
                       </StatusPill>
-                      {office.desks.length - activeDeskCount > 0 ? (
+                      {building.desks.length - activeDeskCount > 0 ? (
                         <StatusPill tone="muted">
-                          {office.desks.length - activeDeskCount} غیرفعال
+                          {building.desks.length - activeDeskCount} غیرفعال
                         </StatusPill>
                       ) : null}
                     </div>
@@ -488,18 +488,18 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                   </div>
                 </div>
                 <AdminDeskForm
-                  action={updateOfficeDesksAction}
+                  action={updateBuildingDesksAction}
                   className="grid gap-4 p-5"
                   trackChanges
                 >
-                  <input name="officeId" type="hidden" value={office.id} />
+                  <input name="buildingId" type="hidden" value={building.id} />
                   <input
                     name="deskCount"
                     type="hidden"
-                    value={office.desks.length}
+                    value={building.desks.length}
                   />
                   <div className="grid gap-4 lg:grid-cols-2">
-                    {office.desks.map((desk, index) => (
+                    {building.desks.map((desk, index) => (
                       <div
                         className="grid gap-4 rounded-xl border bg-background p-4 transition hover:border-slate-300 hover:shadow-sm"
                         key={desk.id}
@@ -581,7 +581,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                     className="grid gap-4 rounded-xl border border-dashed border-blue-300 bg-blue-50/30 p-4"
                     resetOnSuccess
                   >
-                    <input name="officeId" type="hidden" value={office.id} />
+                    <input name="buildingId" type="hidden" value={building.id} />
                     <div className="flex items-center gap-2 text-primary">
                       <Plus className="h-5 w-5" />
                       <h3 className="font-semibold">افزودن میز جدید</h3>
@@ -636,13 +636,13 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                 </div>
               </div>
               <AdminDeskForm
-                action={updateOfficeScheduleAction}
+                action={updateBuildingScheduleAction}
                 className="m-5 overflow-hidden rounded-xl border"
                 trackChanges
               >
-                <input name="officeId" type="hidden" value={office.id} />
+                <input name="buildingId" type="hidden" value={building.id} />
                 {days.map(({ dayOfWeek, label }) => {
-                    const schedule = office.weeklySchedules.find(
+                    const schedule = building.weeklySchedules.find(
                       (item) => item.dayOfWeek === dayOfWeek,
                     );
                     const isWorkingDay = Boolean(schedule?.isWorkingDay);
@@ -741,16 +741,16 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                   </div>
                 </div>
                 <StatusPill tone="muted">
-                  {office.exceptions.length} مورد
+                  {building.exceptions.length} مورد
                 </StatusPill>
               </div>
               <div className="grid gap-6 p-5 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.8fr)]">
                 <AdminDeskForm
-                  action={upsertOfficeExceptionAction}
+                  action={upsertBuildingExceptionAction}
                   className="grid content-start gap-4 rounded-xl border bg-slate-50/60 p-4"
                   resetOnSuccess
                 >
-                  <input name="officeId" type="hidden" value={office.id} />
+                  <input name="buildingId" type="hidden" value={building.id} />
                   <h3 className="font-semibold">ثبت استثنای جدید</h3>
                   <Field label="تاریخ">
                     <JalaliDatePicker
@@ -800,8 +800,8 @@ export default async function AdminDesksPage({ searchParams }: Props) {
 
                 <div className="grid content-start gap-3">
                   <h3 className="font-semibold">استثناهای ثبت‌شده</h3>
-                  {office.exceptions.length ? (
-                    office.exceptions.map((exception) => (
+                  {building.exceptions.length ? (
+                    building.exceptions.map((exception) => (
                       <div
                         className="flex flex-col gap-3 rounded-xl border bg-background p-4 sm:flex-row sm:items-center sm:justify-between"
                         key={exception.id}
@@ -819,16 +819,16 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                               : ""}
                           </span>
                         </div>
-                        <AdminDeskForm action={deleteOfficeExceptionAction}>
+                        <AdminDeskForm action={deleteBuildingExceptionAction}>
                           <input
                             name="exceptionId"
                             type="hidden"
                             value={exception.id}
                           />
                           <input
-                            name="officeId"
+                            name="buildingId"
                             type="hidden"
-                            value={office.id}
+                            value={building.id}
                           />
                           <SubmitButton
                             className="w-full sm:w-auto"
@@ -875,7 +875,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                 </div>
               </div>
               <AdminDeskForm action={updateDeskSettingsAction} className="grid gap-6 p-5">
-                <input name="officeId" type="hidden" value={office.id} />
+                <input name="buildingId" type="hidden" value={building.id} />
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field label="حداکثر رزرو از قبل">
                     <div className="flex h-11 overflow-hidden rounded-md border border-input bg-background transition focus-within:border-primary focus-within:ring-2 focus-within:ring-ring">
@@ -940,10 +940,10 @@ export default async function AdminDesksPage({ searchParams }: Props) {
                   سابقه رزروهای گذشته حفظ می‌شود.
                 </p>
               </div>
-              <DeleteOfficeButton
-                action={deleteOfficeAction}
-                officeId={office.id}
-                officeName={office.name}
+              <DeleteBuildingButton
+                action={deleteBuildingAction}
+                buildingId={building.id}
+                buildingName={building.name}
               />
             </div>
           </section>

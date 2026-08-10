@@ -113,15 +113,23 @@ async function main() {
     password: "User123!",
   });
 
+  await prisma.building.upsert({
+    where: { id: "main-building" },
+    update: {},
+    create: { id: "main-building", active: true, name: "دفتر مرکزی", sortOrder: 1 },
+  });
+
   await prisma.resourcePool.upsert({
     where: { id: "company-systems" },
     update: {
       name: "Company Systems",
+      buildingId: "main-building",
       capacity: 5,
       active: true,
     },
     create: {
       id: "company-systems",
+      buildingId: "main-building",
       name: "Company Systems",
       capacity: 5,
       active: true,
@@ -168,7 +176,7 @@ async function main() {
     update: {
       name: "اتاق جلسه اصلی",
       description: "اتاق جلسه پیش‌فرض",
-      location: "دفتر مرکزی",
+      building: "دفتر مرکزی",
       isActive: true,
       sortOrder: 1,
       autoApprovalEnabled: false,
@@ -178,7 +186,7 @@ async function main() {
       id: "main-meeting-room",
       name: "اتاق جلسه اصلی",
       description: "اتاق جلسه پیش‌فرض",
-      location: "دفتر مرکزی",
+      building: "دفتر مرکزی",
       isActive: true,
       sortOrder: 1,
       autoApprovalEnabled: false,
@@ -215,25 +223,25 @@ async function main() {
     create: { id: "default", maxAdvanceDays: 14 },
   });
 
-  await prisma.office.upsert({
-    where: { id: "main-office" },
+  await prisma.building.upsert({
+    where: { id: "main-building" },
     update: { active: true, name: "دفتر مرکزی", sortOrder: 1 },
-    create: { id: "main-office", active: true, name: "دفتر مرکزی", sortOrder: 1 },
+    create: { id: "main-building", active: true, name: "دفتر مرکزی", sortOrder: 1 },
   });
 
   for (const day of weeklySchedule) {
-    await prisma.officeWeeklySchedule.upsert({
-      where: { officeId_dayOfWeek: { officeId: "main-office", dayOfWeek: day.dayOfWeek } },
+    await prisma.buildingWeeklySchedule.upsert({
+      where: { buildingId_dayOfWeek: { buildingId: "main-building", dayOfWeek: day.dayOfWeek } },
       update: { endTime: day.endTime, isWorkingDay: day.isWorkingDay, startTime: day.startTime },
-      create: { officeId: "main-office", ...day },
+      create: { buildingId: "main-building", ...day },
     });
   }
 
   for (const index of Array.from({ length: 16 }, (_, value) => value + 1)) {
     await prisma.desk.upsert({
-      where: { officeId_name: { officeId: "main-office", name: `میز ${index}` } },
+      where: { buildingId_name: { buildingId: "main-building", name: `میز ${index}` } },
       update: { active: true, sortOrder: index },
-      create: { active: true, name: `میز ${index}`, officeId: "main-office", sortOrder: index },
+      create: { active: true, name: `میز ${index}`, buildingId: "main-building", sortOrder: index },
     });
   }
 
@@ -266,7 +274,7 @@ async function main() {
   }
 
   for (const name of ["ساختمان A", "ساختمان B"]) {
-    await prisma.lunchLocation.upsert({
+    await prisma.building.upsert({
       where: { name },
       update: { active: true },
       create: { name, active: true },

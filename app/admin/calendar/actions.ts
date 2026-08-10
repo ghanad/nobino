@@ -71,7 +71,7 @@ function buildTargets(input: z.infer<typeof formSchema>) {
   targets.push(
     ...input.officeIds.map((targetKey) => ({
       targetKey,
-      type: CalendarDayTargetType.OFFICE,
+      type: CalendarDayTargetType.BUILDING,
     })),
     ...input.roomIds.map((targetKey) => ({
       targetKey,

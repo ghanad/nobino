@@ -43,13 +43,13 @@ export async function assertManagerOrAdmin(userId: string, client: DbClient = db
   }
 }
 
-export async function assertActiveLocation(locationId: string, client: DbClient) {
-  const location = await client.lunchLocation.findUnique({
-    where: { id: locationId },
-    select: { id: true, active: true },
+export async function assertActiveBuilding(buildingId: string, client: DbClient) {
+  const building = await client.building.findUnique({
+    where: { id: buildingId },
+    select: { id: true, active: true, isTransitional: true },
   });
 
-  if (!location?.active) {
+  if (!building?.active || building.isTransitional) {
     throw new LunchReservationError("ساختمان انتخاب‌شده فعال نیست.");
   }
 }

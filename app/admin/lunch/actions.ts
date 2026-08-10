@@ -11,12 +11,12 @@ import {
 } from "@/lib/jalali-date";
 import {
   createLunchException,
-  createLunchLocation,
+  createBuilding,
   deleteLunchException,
-  deleteLunchLocation,
+  deleteBuilding,
   LunchReservationError,
   updateLunchException,
-  updateLunchLocation,
+  updateBuilding,
   updateLunchSettings,
   updateLunchWeeklySchedule,
 } from "@/lib/lunch-service";
@@ -34,12 +34,12 @@ const createLocationSchema = z.object({
 });
 
 const updateLocationSchema = createLocationSchema.extend({
-  locationId: z.string().min(1),
+  buildingId: z.string().min(1),
   active: z.coerce.boolean(),
 });
 
 const deleteLocationSchema = z.object({
-  locationId: z.string().min(1),
+  buildingId: z.string().min(1),
 });
 
 const weeklyScheduleSchema = z.object({
@@ -123,7 +123,7 @@ export async function updateLunchSettingsAction(
   redirectToLunchAdmin({ settingsUpdated: "1" });
 }
 
-export async function createLunchLocationAction(
+export async function createBuildingAction(
   formData: FormData,
 ): Promise<void> {
   const admin = await requireRole([UserRole.ADMIN]);
@@ -136,7 +136,7 @@ export async function createLunchLocationAction(
   }
 
   try {
-    await createLunchLocation({
+    await createBuilding({
       adminId: admin.id,
       name: parsed.data.name,
     });
@@ -144,15 +144,15 @@ export async function createLunchLocationAction(
     redirectToLunchAdmin({ error: getActionErrorMessage(error) });
   }
 
-  redirectToLunchAdmin({ locationCreated: "1" });
+  redirectToLunchAdmin({ buildingCreated: "1" });
 }
 
-export async function updateLunchLocationAction(
+export async function updateBuildingAction(
   formData: FormData,
 ): Promise<void> {
   const admin = await requireRole([UserRole.ADMIN]);
   const parsed = updateLocationSchema.safeParse({
-    locationId: formData.get("locationId"),
+    buildingId: formData.get("buildingId"),
     name: formData.get("name"),
     active: checkboxToBoolean(formData.get("active")),
   });
@@ -162,7 +162,7 @@ export async function updateLunchLocationAction(
   }
 
   try {
-    await updateLunchLocation({
+    await updateBuilding({
       adminId: admin.id,
       ...parsed.data,
     });
@@ -170,15 +170,15 @@ export async function updateLunchLocationAction(
     redirectToLunchAdmin({ error: getActionErrorMessage(error) });
   }
 
-  redirectToLunchAdmin({ locationUpdated: "1" });
+  redirectToLunchAdmin({ buildingUpdated: "1" });
 }
 
-export async function deleteLunchLocationAction(
+export async function deleteBuildingAction(
   formData: FormData,
 ): Promise<void> {
   const admin = await requireRole([UserRole.ADMIN]);
   const parsed = deleteLocationSchema.safeParse({
-    locationId: formData.get("locationId"),
+    buildingId: formData.get("buildingId"),
   });
 
   if (!parsed.success) {
@@ -186,15 +186,15 @@ export async function deleteLunchLocationAction(
   }
 
   try {
-    await deleteLunchLocation({
+    await deleteBuilding({
       adminId: admin.id,
-      locationId: parsed.data.locationId,
+      buildingId: parsed.data.buildingId,
     });
   } catch (error) {
     redirectToLunchAdmin({ error: getActionErrorMessage(error) });
   }
 
-  redirectToLunchAdmin({ locationDeleted: "1" });
+  redirectToLunchAdmin({ buildingDeleted: "1" });
 }
 
 export async function updateLunchWeeklyScheduleAction(

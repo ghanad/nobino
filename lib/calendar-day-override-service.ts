@@ -99,17 +99,17 @@ async function assertTargetsExist(
   targets: CalendarDayOverrideTargetInput[],
   client: Prisma.TransactionClient,
 ) {
-  const officeIds = targets
-    .filter((target) => target.type === CalendarDayTargetType.OFFICE)
+  const buildingIds = targets
+    .filter((target) => target.type === CalendarDayTargetType.BUILDING)
     .map((target) => target.targetKey);
   const roomIds = targets
     .filter((target) => target.type === CalendarDayTargetType.MEETING_ROOM)
     .map((target) => target.targetKey);
 
-  const [officeCount, roomCount] = await Promise.all([
-    officeIds.length
-      ? client.office.count({
-          where: { active: true, deletedAt: null, id: { in: officeIds } },
+  const [buildingCount, roomCount] = await Promise.all([
+    buildingIds.length
+      ? client.building.count({
+          where: { active: true, deletedAt: null, id: { in: buildingIds } },
         })
       : 0,
     roomIds.length
@@ -119,7 +119,7 @@ async function assertTargetsExist(
       : 0,
   ]);
 
-  if (officeCount !== officeIds.length || roomCount !== roomIds.length) {
+  if (buildingCount !== buildingIds.length || roomCount !== roomIds.length) {
     throw new AdminSettingsError("یکی از دفترها یا اتاق‌های انتخاب‌شده فعال نیست.");
   }
 }

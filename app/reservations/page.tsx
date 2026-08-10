@@ -375,7 +375,7 @@ export default async function ReservationsPage({
     addDays(weekStart, index),
   );
   const weekSpansMultipleJalaliMonths = !isSameJalaliMonth(weekDates);
-  const [resourcePools, reservationPolicy, reservations, lunchLocations] =
+  const [resourcePools, reservationPolicy, reservations, buildings] =
     await Promise.all([
     db.resourcePool.findMany({
       where: { active: true },
@@ -427,8 +427,8 @@ export default async function ReservationsPage({
         },
       },
     }),
-    db.lunchLocation.findMany({
-      where: { active: true },
+    db.building.findMany({
+      where: { active: true, isTransitional: false },
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
@@ -574,7 +574,7 @@ export default async function ReservationsPage({
       select: {
         id: true,
         date: true,
-        locationId: true,
+        buildingId: true,
         breakfastReserved: true,
         lunchReserved: true,
       },
@@ -601,7 +601,7 @@ export default async function ReservationsPage({
         lunchReservationByDate.get(dateParamForLunch) ?? null;
       const unavailableReason = existingReservation
         ? null
-        : lunchLocations.length === 0
+        : buildings.length === 0
           ? "هنوز ساختمانی برای دریافت غذا تعریف نشده است."
           : dayState.isOpen
             ? null
@@ -616,13 +616,13 @@ export default async function ReservationsPage({
           existingReservation: existingReservation
             ? {
                 id: existingReservation.id,
-                locationId: existingReservation.locationId,
+                buildingId: existingReservation.buildingId,
                 breakfastReserved: existingReservation.breakfastReserved,
                 lunchReserved: existingReservation.lunchReserved,
               }
             : null,
           isOpen:
-            dayState.isOpen && lunchLocations.length > 0,
+            dayState.isOpen && buildings.length > 0,
           unavailableReason,
         },
       ];
@@ -741,7 +741,7 @@ export default async function ReservationsPage({
             : "No active resource pool is configured."
         }
         lunchAvailabilityByDate={lunchAvailabilityByDate}
-        lunchLocations={lunchLocations}
+        buildings={buildings}
         lunchReservationAction={createLunchReservationAction}
         nextWeekDateParam={formatJalaliDateParam(addDays(weekStart, 7))}
         previousWeekDateParam={formatJalaliDateParam(addDays(weekStart, -7))}

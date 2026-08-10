@@ -6,7 +6,7 @@ import { DeskReservationForm } from "@/components/desks/desk-reservation-form";
 import { UrlToast } from "@/components/ui/url-toast";
 import { requireCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { endOfLocalDay, getOfficeWorkingWindowForDate, startOfLocalDay } from "@/lib/desk-schedule";
+import { endOfLocalDay, getBuildingWorkingWindowForDate, startOfLocalDay } from "@/lib/desk-schedule";
 import {
   formatJalaliDate,
   formatJalaliDateParam,
@@ -15,7 +15,7 @@ import {
 } from "@/lib/jalali-date";
 import { getLunchDayState } from "@/lib/lunch-service";
 
-type Props = { searchParams?: Promise<{ cancelled?: string; created?: string; date?: string; error?: string; officeId?: string; updated?: string }> };
+type Props = { searchParams?: Promise<{ cancelled?: string; created?: string; date?: string; error?: string; buildingId?: string; updated?: string }> };
 
 function hourOptions(startTime: string | null, endTime: string | null) {
   const start = Number(startTime?.slice(0, 2) ?? 9);
@@ -28,25 +28,25 @@ export default async function DesksPage({ searchParams }: Props) {
   const params = await searchParams;
   const date = parseJalaliDateParam(params?.date) ?? startOfLocalDay(new Date());
   const dateParam = formatJalaliDateParam(date);
-  const [offices, lunchLocations, lunchReservation, lunchDayState] = await Promise.all([
-    db.office.findMany({
+  const [buildings, lunchBuildings, lunchReservation, lunchDayState] = await Promise.all([
+    db.building.findMany({
       where: { active: true, deletedAt: null }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       include: { desks: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] } },
     }),
-    db.lunchLocation.findMany({
-      where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true },
+    db.building.findMany({
+      where: { active: true, isTransitional: false }, orderBy: { name: "asc" }, select: { id: true, name: true },
     }),
     db.lunchReservation.findFirst({
       where: { userId: user.id, date: startOfLocalDay(date), status: LunchReservationStatus.ACTIVE },
-      select: { breakfastReserved: true, id: true, locationId: true, lunchReserved: true },
+      select: { breakfastReserved: true, id: true, buildingId: true, lunchReserved: true },
     }),
     getLunchDayState({ date, now: new Date() }),
   ]);
-  const office = offices.find((item) => item.id === params?.officeId) ?? offices[0] ?? null;
-  const window = office ? await getOfficeWorkingWindowForDate({ date, officeId: office.id }) : null;
-  const reservations = office ? await db.deskReservation.findMany({
+  const building = buildings.find((item) => item.id === params?.buildingId) ?? buildings[0] ?? null;
+  const window = building ? await getBuildingWorkingWindowForDate({ date, buildingId: building.id }) : null;
+  const reservations = building ? await db.deskReservation.findMany({
     where: {
-      desk: { officeId: office.id },
+      desk: { buildingId: building.id },
       startAt: { gte: startOfLocalDay(date), lt: endOfLocalDay(date) },
       status: { in: [ReservationStatus.PENDING, ReservationStatus.APPROVED] },
     },
@@ -73,7 +73,7 @@ export default async function DesksPage({ searchParams }: Props) {
   return <div className="grid gap-3" dir="rtl">
     <PageHeader title="رزرو میز" subtitle="دفتر، تاریخ و زمان حضور خود را انتخاب کنید و میز مناسب را از روی نقشه رزرو کنید." />
     {toast ? <UrlToast {...toast} /> : null}
-    {!office ? <p className="rounded-lg border bg-card p-5 text-sm text-muted-foreground">هنوز دفتر فعالی تعریف نشده است.</p> :
+    {!building ? <p className="rounded-lg border bg-card p-5 text-sm text-muted-foreground">هنوز دفتر فعالی تعریف نشده است.</p> :
       <DeskReservationForm
         closedReason={window?.reason ?? undefined}
         currentUserId={user.id}
@@ -81,7 +81,7 @@ export default async function DesksPage({ searchParams }: Props) {
         dateLabel={formatJalaliDate(date)}
         defaultEndHour={myReservation?.endAt.getHours() ?? hours.at(-1) ?? 17}
         defaultStartHour={myReservation?.startAt.getHours() ?? hours[0] ?? 9}
-        desks={office.desks.map((desk) => ({ active: desk.active, id: desk.id, name: desk.name }))}
+        desks={building.desks.map((desk) => ({ active: desk.active, id: desk.id, name: desk.name }))}
         hours={hours}
         isFullDay={Boolean(myReservation && myReservation.startAt.getHours() === hours[0] && myReservation.endAt.getHours() === hours.at(-1))}
         isWorkingDay={Boolean(window?.isWorkingDay)}
@@ -89,15 +89,14 @@ export default async function DesksPage({ searchParams }: Props) {
         lunchAvailability={{
           cutoffLabel: `مهلت رزرو غذا تا ${formatJalaliDate(lunchDayState.cutoffAt)}، ${formatPersianLocalTime(lunchDayState.cutoffAt)}`,
           existingReservation: lunchReservation,
-          isOpen: lunchDayState.isOpen && lunchLocations.length > 0,
-          unavailableReason: lunchReservation ? null : lunchLocations.length === 0 ? "هنوز ساختمانی برای دریافت غذا تعریف نشده است." : lunchDayState.isServiceDay ? `مهلت رزرو غذا گذشته است. مهلت تا ${formatJalaliDate(lunchDayState.cutoffAt)}، ${formatPersianLocalTime(lunchDayState.cutoffAt)} بود.` : "برای این تاریخ سرویس غذا فعال نیست.",
+          isOpen: lunchDayState.isOpen && lunchBuildings.length > 0,
+          unavailableReason: lunchReservation ? null : lunchBuildings.length === 0 ? "هنوز ساختمانی برای دریافت غذا تعریف نشده است." : lunchDayState.isServiceDay ? `مهلت رزرو غذا گذشته است. مهلت تا ${formatJalaliDate(lunchDayState.cutoffAt)}، ${formatPersianLocalTime(lunchDayState.cutoffAt)} بود.` : "برای این تاریخ سرویس غذا فعال نیست.",
         }}
-        lunchLocations={lunchLocations}
         lunchReservationAction={createLunchReservationAction}
         myReservation={serializedMine}
-        officeId={office.id}
-        officeName={office.name}
-        offices={offices.map((item) => ({ id: item.id, name: item.name }))}
+        buildingId={building.id}
+        buildingName={building.name}
+        lunchBuildings={lunchBuildings}
         reservations={serializedReservations}
       />}
   </div>;

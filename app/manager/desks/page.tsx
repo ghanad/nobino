@@ -12,12 +12,12 @@ type Props = { searchParams?: Promise<{ approved?: string; cancelled?: string; e
 export default async function ManagerDesksPage({ searchParams }: Props) {
   await requireRole([UserRole.MANAGER, UserRole.ADMIN]);
   const params = await searchParams;
-  const [reservations, offices] = await Promise.all([
+  const [reservations, buildings] = await Promise.all([
     db.deskReservation.findMany({
       where: { endAt: { gt: new Date() }, status: { in: [ReservationStatus.PENDING, ReservationStatus.APPROVED] } },
-      orderBy: [{ status: "desc" }, { startAt: "asc" }], include: { desk: { include: { office: true } }, user: { select: { email: true, name: true } } },
+      orderBy: [{ status: "desc" }, { startAt: "asc" }], include: { desk: { include: { building: true } }, user: { select: { email: true, name: true } } },
     }),
-    db.office.findMany({ where: { active: true, deletedAt: null }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }], include: { desks: { where: { active: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }] } } }),
+    db.building.findMany({ where: { active: true, deletedAt: null }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }], include: { desks: { where: { active: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }] } } }),
   ]);
   const toast = params?.error ? { consumeKeys: ["error"], message: params.error, variant: "error" as const } :
     params?.approved ? { consumeKeys: ["approved"], message: "درخواست رزرو میز تأیید شد.", variant: "success" as const } :
@@ -36,7 +36,7 @@ export default async function ManagerDesksPage({ searchParams }: Props) {
         update: updateDeskReservationByManagerAction,
       }}
       initialReservations={reservations}
-      offices={offices}
+      buildings={buildings}
     />
   </div>;
 }

@@ -8,7 +8,7 @@ import {
 } from "@/components/reservation/create-reservation/formatters";
 import type {
   LunchAvailability,
-  LunchLocationOption,
+  BuildingOption,
   LunchPrompt,
   Selection,
   WeekDay,
@@ -25,7 +25,7 @@ export function ReservationRequestDialog({
   isSelectionOverDailyLimit,
   lunchAvailability,
   lunchFormAction,
-  lunchLocations,
+  buildings,
   lunchPrompt,
   partySize,
   reservedHoursForSelectedDay,
@@ -44,7 +44,7 @@ export function ReservationRequestDialog({
   isSelectionOverDailyLimit: boolean;
   lunchAvailability: LunchAvailability | null;
   lunchFormAction: (formData: FormData) => void;
-  lunchLocations: LunchLocationOption[];
+  buildings: BuildingOption[];
   lunchPrompt: LunchPrompt | null;
   partySize: number;
   reservedHoursForSelectedDay: number;
@@ -181,15 +181,15 @@ export function ReservationRequestDialog({
                     <select
                       className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
                       defaultValue={
-                        lunchAvailability?.existingReservation?.locationId ??
-                        lunchLocations[0]?.id ??
+                        lunchAvailability?.existingReservation?.buildingId ??
+                        buildings[0]?.id ??
                         ""
                       }
-                      name="locationId"
+                      name="buildingId"
                     >
-                      {lunchLocations.map((location) => (
-                        <option key={location.id} value={location.id}>
-                          {location.name}
+                      {buildings.map((building) => (
+                        <option key={building.id} value={building.id}>
+                          {building.name}
                         </option>
                       ))}
                     </select>

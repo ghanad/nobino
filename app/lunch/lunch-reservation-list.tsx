@@ -5,7 +5,7 @@
  * OWN-WORLD: Crisp route geometry, ink-and-blue controls, and semantic station dots.
  * STORY: Scan day status, choose meals and pickup inline, then submit once.
  * FIRST VIEWPORT: Week summary above a connected vertical line; nearest open day leads.
- * FORM: Office wayfinding map, fourth grounded direction, seed 080204f5.
+ * FORM: Building wayfinding map, fourth grounded direction, seed 080204f5.
  */
 
 import { useActionState, useCallback, useEffect, useState } from "react";
@@ -32,7 +32,7 @@ import { SwipeDismissToast } from "@/components/ui/swipe-dismiss-toast";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { cn } from "@/lib/utils";
 
-type LunchLocation = {
+type Building = {
   id: string;
   name: string;
 };
@@ -46,8 +46,8 @@ type LunchReservationRow = {
   isOpen: boolean;
   reservation: {
     id: string;
-    locationId: string;
-    locationName: string;
+    buildingId: string;
+    buildingName: string;
     breakfastReserved: boolean;
     lunchReserved: boolean;
   } | null;
@@ -61,7 +61,7 @@ type ActionToast = {
 };
 
 type LunchReservationListProps = {
-  locations: LunchLocation[];
+  buildings: Building[];
   rows: LunchReservationRow[];
 };
 
@@ -75,13 +75,13 @@ function LocationSelect({
   currentLocationId,
   dateLabel,
   disabled,
-  locations,
+  buildings,
 }: {
   className?: string;
   currentLocationId?: string;
   dateLabel: string;
   disabled: boolean;
-  locations: LunchLocation[];
+  buildings: Building[];
 }) {
   return (
     <label className={cn("grid min-w-0 gap-1 text-sm", className)}>
@@ -96,14 +96,14 @@ function LocationSelect({
         <select
           aria-label={`محل تحویل ${dateLabel}`}
           className="h-11 w-full appearance-none rounded-xl border border-input bg-background px-9 text-sm font-medium outline-none transition-[border-color,box-shadow,background-color] hover:border-primary/40 focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60"
-          defaultValue={currentLocationId ?? locations[0]?.id ?? ""}
-          disabled={disabled || locations.length === 0}
-          name="locationId"
+          defaultValue={currentLocationId ?? buildings[0]?.id ?? ""}
+          disabled={disabled || buildings.length === 0}
+          name="buildingId"
           required
         >
-          {locations.map((location) => (
-            <option key={location.id} value={location.id}>
-              {location.name}
+          {buildings.map((building) => (
+            <option key={building.id} value={building.id}>
+              {building.name}
             </option>
           ))}
         </select>
@@ -284,12 +284,12 @@ function ActionResultBridge({
 
 function CreateLunchReservationForm({
   disabled,
-  locations,
+  buildings,
   onComplete,
   row,
 }: {
   disabled: boolean;
-  locations: LunchLocation[];
+  buildings: Building[];
   onComplete: (state: LunchActionState) => void;
   row: LunchReservationRow;
 }) {
@@ -320,7 +320,7 @@ function CreateLunchReservationForm({
         className="w-full lg:w-60 lg:shrink-0"
         dateLabel={`${row.weekdayLabel} ${row.dateLabel}`}
         disabled={disabled}
-        locations={locations}
+        buildings={buildings}
       />
       <SubmitButton
         className="h-11 w-full rounded-xl lg:w-44 lg:shrink-0"
@@ -335,13 +335,13 @@ function CreateLunchReservationForm({
 
 function UpdateLunchReservationForm({
   disabled,
-  locations,
+  buildings,
   onCancelEdit,
   onComplete,
   row,
 }: {
   disabled: boolean;
-  locations: LunchLocation[];
+  buildings: Building[];
   onCancelEdit: () => void;
   onComplete: (state: LunchActionState) => void;
   row: LunchReservationRow & {
@@ -378,10 +378,10 @@ function UpdateLunchReservationForm({
       />
       <LocationSelect
         className="w-full lg:w-60 lg:shrink-0"
-        currentLocationId={row.reservation.locationId}
+        currentLocationId={row.reservation.buildingId}
         dateLabel={`${row.weekdayLabel} ${row.dateLabel}`}
         disabled={disabled}
-        locations={locations}
+        buildings={buildings}
       />
       <div className="grid grid-cols-2 gap-2 lg:w-72 lg:shrink-0">
         <SubmitButton
@@ -501,7 +501,7 @@ function getReservationMealLabel(
 }
 
 export function LunchReservationList({
-  locations,
+  buildings,
   rows,
 }: LunchReservationListProps) {
   const [currentRows, setCurrentRows] = useState(rows);
@@ -544,7 +544,7 @@ export function LunchReservationList({
           const isUnavailable = !row.isOpen && !reservation;
           const isCompact = isUnavailable || Boolean(reservation && !isEditing);
           const isActionDisabled =
-            row.isActionDisabled || locations.length === 0;
+            row.isActionDisabled || buildings.length === 0;
           const displayedStatus = reservation
             ? {
                 label: "رزرو شده",
@@ -622,7 +622,7 @@ export function LunchReservationList({
                   {isEditing ? (
                     <UpdateLunchReservationForm
                       disabled={isActionDisabled}
-                      locations={locations}
+                      buildings={buildings}
                       onCancelEdit={() => setEditingReservationId(null)}
                       onComplete={handleActionComplete}
                       row={{
@@ -640,7 +640,7 @@ export function LunchReservationList({
                         <span className="min-w-0">
                           {getReservationMealLabel(reservation)}
                           <span className="mx-1.5 text-muted-foreground">·</span>
-                          تحویل از {reservation.locationName}
+                          تحویل از {reservation.buildingName}
                         </span>
                       </p>
                       <div className="mr-auto flex shrink-0 items-center text-sm">
@@ -677,7 +677,7 @@ export function LunchReservationList({
                 <div className="min-w-0 px-3 py-3 sm:px-6">
                   <CreateLunchReservationForm
                     disabled={isActionDisabled}
-                    locations={locations}
+                    buildings={buildings}
                     onComplete={handleActionComplete}
                     row={row}
                   />

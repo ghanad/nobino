@@ -11,7 +11,7 @@ import {
   GLOBAL_CALENDAR_TARGET_KEY,
 } from "@/lib/calendar-day-override-service";
 import { importIranHolidayScheduleExceptions } from "@/lib/admin-settings-service";
-import { getOfficeWorkingWindowForDate } from "@/lib/desk-schedule";
+import { getBuildingWorkingWindowForDate } from "@/lib/desk-schedule";
 import { isLunchServiceDay } from "@/lib/lunch-service/service-days";
 import { getMeetingRoomWorkingWindowForDate } from "@/lib/meeting-room-schedule";
 import { getWorkingWindowForDate } from "@/lib/schedule";
@@ -23,7 +23,7 @@ import {
   meetingRoomId,
   nextMidweekIranHolidayDateAtHour,
   nextWorkingDateAtHour,
-  officeId,
+  buildingId,
   registerBusinessRuleTestHooks,
   startOfLocalDay,
 } from "./business-rules-helpers";
@@ -39,7 +39,7 @@ const allTargets = [
     targetKey: GLOBAL_CALENDAR_TARGET_KEY,
     type: CalendarDayTargetType.LUNCH,
   },
-  { targetKey: officeId, type: CalendarDayTargetType.OFFICE },
+  { targetKey: buildingId, type: CalendarDayTargetType.BUILDING },
   {
     targetKey: meetingRoomId,
     type: CalendarDayTargetType.MEETING_ROOM,
@@ -56,19 +56,19 @@ test("normal calendar correction bypasses an incorrect Iran holiday for every se
     targets: allTargets,
   });
 
-  const [systems, lunch, office, room] = await Promise.all([
+  const [systems, lunch, building, room] = await Promise.all([
     getWorkingWindowForDate(date),
     isLunchServiceDay(date),
-    getOfficeWorkingWindowForDate({ date, officeId }),
+    getBuildingWorkingWindowForDate({ date, buildingId }),
     getMeetingRoomWorkingWindowForDate({ date, roomId: meetingRoomId }),
   ]);
 
   assert.equal(systems.isWorkingDay, true);
   assert.equal(lunch, true);
-  assert.equal(office.isWorkingDay, true);
+  assert.equal(building.isWorkingDay, true);
   assert.equal(room.isWorkingDay, true);
   assert.equal(systems.startTime, "09:00");
-  assert.equal(office.startTime, "09:00");
+  assert.equal(building.startTime, "09:00");
   assert.equal(room.startTime, "09:00");
 });
 
@@ -101,8 +101,8 @@ test("closed calendar correction disables every selected service on a working da
   const date = nextWorkingDateAtHour(10);
   await Promise.all([
     db.lunchException.deleteMany({ where: { date: startOfLocalDay(date) } }),
-    db.officeScheduleException.deleteMany({
-      where: { date: startOfLocalDay(date), officeId },
+    db.buildingScheduleException.deleteMany({
+      where: { date: startOfLocalDay(date), buildingId },
     }),
   ]);
   await createCalendarDayOverride({
@@ -113,16 +113,16 @@ test("closed calendar correction disables every selected service on a working da
     targets: allTargets,
   });
 
-  const [systems, lunch, office, room] = await Promise.all([
+  const [systems, lunch, building, room] = await Promise.all([
     getWorkingWindowForDate(date),
     isLunchServiceDay(date),
-    getOfficeWorkingWindowForDate({ date, officeId }),
+    getBuildingWorkingWindowForDate({ date, buildingId }),
     getMeetingRoomWorkingWindowForDate({ date, roomId: meetingRoomId }),
   ]);
 
   assert.equal(systems.isWorkingDay, false);
   assert.equal(lunch, false);
-  assert.equal(office.isWorkingDay, false);
+  assert.equal(building.isWorkingDay, false);
   assert.equal(room.isWorkingDay, false);
 });
 
@@ -130,8 +130,8 @@ test("custom calendar correction applies shared hours and enables lunch", async 
   const date = nextWorkingDateAtHour(10);
   await Promise.all([
     db.lunchException.deleteMany({ where: { date: startOfLocalDay(date) } }),
-    db.officeScheduleException.deleteMany({
-      where: { date: startOfLocalDay(date), officeId },
+    db.buildingScheduleException.deleteMany({
+      where: { date: startOfLocalDay(date), buildingId },
     }),
   ]);
   await createCalendarDayOverride({
@@ -144,10 +144,10 @@ test("custom calendar correction applies shared hours and enables lunch", async 
     targets: allTargets,
   });
 
-  const [systems, lunch, office, room] = await Promise.all([
+  const [systems, lunch, building, room] = await Promise.all([
     getWorkingWindowForDate(date),
     isLunchServiceDay(date),
-    getOfficeWorkingWindowForDate({ date, officeId }),
+    getBuildingWorkingWindowForDate({ date, buildingId }),
     getMeetingRoomWorkingWindowForDate({ date, roomId: meetingRoomId }),
   ]);
 
@@ -156,7 +156,7 @@ test("custom calendar correction applies shared hours and enables lunch", async 
     ["10:00", "14:00"],
   );
   assert.equal(lunch, true);
-  assert.deepEqual([office.startTime, office.endTime], ["10:00", "14:00"]);
+  assert.deepEqual([building.startTime, building.endTime], ["10:00", "14:00"]);
   assert.deepEqual([room.startTime, room.endTime], ["10:00", "14:00"]);
 });
 

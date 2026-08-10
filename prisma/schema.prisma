@@ -63,7 +63,7 @@ enum CalendarDayOverrideMode {
 enum CalendarDayTargetType {
   SYSTEMS
   LUNCH
-  OFFICE
+  BUILDING
   MEETING_ROOM
 }
 
@@ -110,15 +110,19 @@ model User {
 }
 
 model ResourcePool {
-  id        String   @id @default(cuid())
-  name      String
-  capacity  Int
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  buildingId String
+  name       String
+  capacity   Int
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   reservations       Reservation[]
   capacityExceptions ResourcePoolCapacityException[]
+  building           Building     @relation(fields: [buildingId], references: [id])
+
+  @@index([buildingId])
 }
 
 model ResourcePoolCapacityException {
@@ -245,42 +249,49 @@ model MeetingRoomScheduleException {
   @@index([date])
 }
 
-model Office {
+/// The database tables retain their pre-Building names to keep SQLite upgrades non-destructive.
+/// New application code must use the Building domain model rather than those storage names.
+model Building {
   id        String    @id @default(cuid())
   name      String    @unique
   active    Boolean   @default(true)
+  isTransitional Boolean @default(false)
   sortOrder Int       @default(0)
   deletedAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  desks           Desk[]
-  weeklySchedules OfficeWeeklySchedule[]
-  exceptions      OfficeScheduleException[]
+  desks             Desk[]
+  resourcePools     ResourcePool[]
+  lunchReservations LunchReservation[]
+  weeklySchedules   BuildingWeeklySchedule[]
+  exceptions        BuildingScheduleException[]
 
+  @@map("Office")
   @@index([deletedAt])
   @@index([active, sortOrder, name])
+  @@index([isTransitional])
 }
 
 model Desk {
   id        String   @id @default(cuid())
-  officeId  String
+  buildingId String @map("officeId")
   name      String
   active    Boolean  @default(true)
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  office       Office            @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  building     Building          @relation(fields: [buildingId], references: [id], onDelete: Cascade)
   reservations DeskReservation[]
 
-  @@unique([officeId, name])
-  @@index([officeId, active, sortOrder, name])
+  @@unique([buildingId, name])
+  @@index([buildingId, active, sortOrder, name])
 }
 
-model OfficeWeeklySchedule {
+model BuildingWeeklySchedule {
   id           String   @id @default(cuid())
-  officeId     String
+  buildingId   String   @map("officeId")
   /// Uses JavaScript Date.getDay(): Sunday=0, Monday=1, ..., Friday=5, Saturday=6.
   dayOfWeek    Int
   isWorkingDay Boolean  @default(true)
@@ -289,14 +300,15 @@ model OfficeWeeklySchedule {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  office Office @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  building Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
 
-  @@unique([officeId, dayOfWeek])
+  @@map("OfficeWeeklySchedule")
+  @@unique([buildingId, dayOfWeek])
 }
 
-model OfficeScheduleException {
+model BuildingScheduleException {
   id           String   @id @default(cuid())
-  officeId     String
+  buildingId   String   @map("officeId")
   date         DateTime
   isWorkingDay Boolean
   startTime    String?
@@ -305,9 +317,10 @@ model OfficeScheduleException {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  office Office @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  building Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
 
-  @@unique([officeId, date])
+  @@map("OfficeScheduleException")
+  @@unique([buildingId, date])
   @@index([date])
 }
 
@@ -341,19 +354,6 @@ model LunchSettings {
   updatedAt                     DateTime @updatedAt
 }
 
-model LunchLocation {
-  id        String   @id @default(cuid())
-  name      String
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  reservations LunchReservation[]
-
-  @@unique([name])
-  @@index([active])
-}
-
 model LunchWeeklySchedule {
   id           String   @id @default(cuid())
   /// Uses JavaScript Date.getDay(): Sunday=0, Monday=1, ..., Friday=5, Saturday=6.
@@ -377,7 +377,7 @@ model LunchException {
 model LunchReservation {
   id                  String                 @id @default(cuid())
   userId              String
-  locationId          String
+  buildingId          String
   sourceReservationId String?
   date                DateTime
   breakfastReserved   Boolean                @default(false)
@@ -388,12 +388,12 @@ model LunchReservation {
   updatedAt           DateTime               @updatedAt
 
   user              User           @relation("LunchReservationUser", fields: [userId], references: [id])
-  location          LunchLocation  @relation(fields: [locationId], references: [id])
+  building          Building       @relation(fields: [buildingId], references: [id])
   sourceReservation Reservation?   @relation(fields: [sourceReservationId], references: [id], onDelete: SetNull)
   notifications     Notification[]
 
   @@index([userId, date])
-  @@index([locationId, date])
+  @@index([buildingId, date])
   @@index([sourceReservationId])
   @@index([status, date])
 }

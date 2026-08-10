@@ -6,17 +6,17 @@ import { ReservationStatus } from "@prisma/client";
 import { runAutoAcceptBatch } from "@/lib/auto-accept-service";
 import { runDeskAutoAcceptBatch } from "@/lib/desk-auto-accept-service";
 import {
-  deleteOffice,
+  deleteBuilding,
   updateDesk,
   updateDeskSettings,
-  updateOfficeDesks,
-  updateOfficeWeeklySchedule,
+  updateBuildingDesks,
+  updateBuildingWeeklySchedule,
 } from "@/lib/desk-admin-service";
 import { approveDeskReservation, createDeskReservation, updateDeskReservation } from "@/lib/desk-reservation-service";
 import { formatJalaliDate } from "@/lib/jalali-date";
 import { ReservationTransitionError } from "@/lib/reservation-service";
 
-import { addHours, adminId, db, deskId, managerId, nextWorkingDateAtHour, officeId, registerBusinessRuleTestHooks, secondDeskId, secondUserId, userId } from "./business-rules-helpers";
+import { addHours, adminId, db, deskId, managerId, nextWorkingDateAtHour, buildingId, registerBusinessRuleTestHooks, secondDeskId, secondUserId, userId } from "./business-rules-helpers";
 
 registerBusinessRuleTestHooks();
 
@@ -31,7 +31,7 @@ test("desk reservation starts pending and notifies managers", async () => {
   });
   assert.equal(
     notification.body,
-    `درخواست رزرو Desk One در Main Office توسط Normal User برای تاریخ ${formatJalaliDate(startAt)} در انتظار بررسی است.`,
+    `درخواست رزرو Desk One در Main Building توسط Normal User برای تاریخ ${formatJalaliDate(startAt)} در انتظار بررسی است.`,
   );
 });
 
@@ -214,10 +214,10 @@ test("desk with a future approved reservation cannot be disabled", async () => {
   assert.equal((await db.desk.findUniqueOrThrow({ where: { id: deskId } })).active, true);
 });
 
-test("existing office desks are saved together with per-desk audit logs", async () => {
-  await updateOfficeDesks({
+test("existing building desks are saved together with per-desk audit logs", async () => {
+  await updateBuildingDesks({
     adminId,
-    officeId,
+    buildingId,
     desks: [
       { active: true, deskId, name: "Renamed Desk", sortOrder: 1 },
       { active: true, deskId: secondDeskId, name: "Desk Two", sortOrder: 3 },
@@ -225,7 +225,7 @@ test("existing office desks are saved together with per-desk audit logs", async 
   });
 
   const desks = await db.desk.findMany({
-    where: { officeId },
+    where: { buildingId },
     orderBy: { id: "asc" },
   });
   assert.equal(desks.find((desk) => desk.id === deskId)?.name, "Renamed Desk");
@@ -246,9 +246,9 @@ test("a blocked desk change prevents every desk edit from being saved", async ()
   await approveDeskReservation({ managerId, reservationId: reservation.id });
 
   await assert.rejects(
-    updateOfficeDesks({
+    updateBuildingDesks({
       adminId,
-      officeId,
+      buildingId,
       desks: [
         { active: true, deskId, name: "Must Not Save", sortOrder: 1 },
         {
@@ -275,7 +275,7 @@ test("a blocked desk change prevents every desk edit from being saved", async ()
   }), 0);
 });
 
-test("office weekly schedule is saved as one audited update", async () => {
+test("building weekly schedule is saved as one audited update", async () => {
   const schedules = Array.from({ length: 7 }, (_, dayOfWeek) => ({
     dayOfWeek,
     endTime: dayOfWeek === 0 ? "21:00" : "17:00",
@@ -283,10 +283,10 @@ test("office weekly schedule is saved as one audited update", async () => {
     startTime: "09:00",
   }));
 
-  await updateOfficeWeeklySchedule({ adminId, officeId, schedules });
+  await updateBuildingWeeklySchedule({ adminId, buildingId, schedules });
 
-  const stored = await db.officeWeeklySchedule.findMany({
-    where: { officeId },
+  const stored = await db.buildingWeeklySchedule.findMany({
+    where: { buildingId },
     orderBy: { dayOfWeek: "asc" },
   });
   assert.equal(stored.length, 7);
@@ -294,13 +294,13 @@ test("office weekly schedule is saved as one audited update", async () => {
   assert.equal(stored[4].isWorkingDay, false);
   assert.equal(await db.auditLog.count({
     where: {
-      action: "OFFICE_SCHEDULE_UPDATED",
-      entityType: "OfficeWeeklySchedule",
+      action: "BUILDING_SCHEDULE_UPDATED",
+      entityType: "BuildingWeeklySchedule",
     },
   }), 2);
 });
 
-test("invalid office weekly schedule does not partially update any day", async () => {
+test("invalid building weekly schedule does not partially update any day", async () => {
   const schedules = Array.from({ length: 7 }, (_, dayOfWeek) => ({
     dayOfWeek,
     endTime: dayOfWeek === 3 ? "08:00" : "18:00",
@@ -309,20 +309,20 @@ test("invalid office weekly schedule does not partially update any day", async (
   }));
 
   await assert.rejects(
-    updateOfficeWeeklySchedule({ adminId, officeId, schedules }),
+    updateBuildingWeeklySchedule({ adminId, buildingId, schedules }),
     /ساعت پایان هر روز کاری/,
   );
 
-  const stored = await db.officeWeeklySchedule.findMany({
-    where: { officeId },
+  const stored = await db.buildingWeeklySchedule.findMany({
+    where: { buildingId },
   });
   assert.ok(stored.every((schedule) => schedule.endTime === "17:00"));
   assert.equal(await db.auditLog.count({
-    where: { action: "OFFICE_SCHEDULE_UPDATED" },
+    where: { action: "BUILDING_SCHEDULE_UPDATED" },
   }), 0);
 });
 
-test("deleting an office preserves history and removes future desk reservations", async () => {
+test("deleting an building preserves history and removes future desk reservations", async () => {
   const futureStart = nextWorkingDateAtHour(9);
   const pastStart = addHours(new Date(), -48);
   const futureReservation = await db.deskReservation.create({
@@ -344,19 +344,19 @@ test("deleting an office preserves history and removes future desk reservations"
     },
   });
 
-  await deleteOffice({ adminId, officeId: (await db.desk.findUniqueOrThrow({
+  await deleteBuilding({ adminId, buildingId: (await db.desk.findUniqueOrThrow({
     where: { id: deskId },
-    select: { officeId: true },
-  })).officeId });
+    select: { buildingId: true },
+  })).buildingId });
 
-  const office = await db.office.findUniqueOrThrow({
-    where: { id: (await db.desk.findUniqueOrThrow({ where: { id: deskId } })).officeId },
+  const building = await db.building.findUniqueOrThrow({
+    where: { id: (await db.desk.findUniqueOrThrow({ where: { id: deskId } })).buildingId },
   });
-  assert.equal(office.active, false);
-  assert.ok(office.deletedAt);
+  assert.equal(building.active, false);
+  assert.ok(building.deletedAt);
   assert.equal(await db.deskReservation.findUnique({ where: { id: futureReservation.id } }), null);
   assert.ok(await db.deskReservation.findUnique({ where: { id: historicalReservation.id } }));
   assert.equal(await db.auditLog.count({
-    where: { action: "OFFICE_DELETED", entityId: office.id },
+    where: { action: "BUILDING_DELETED", entityId: building.id },
   }), 1);
 });

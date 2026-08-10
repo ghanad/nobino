@@ -14,13 +14,13 @@ import { type LunchActionState } from "@/app/lunch/actions";
 import { Button } from "@/components/ui/button";
 import { JalaliDatePicker } from "@/components/ui/jalali-date-picker";
 import { SubmitButton } from "@/components/ui/submit-button";
-import type { LunchAvailability, LunchLocationOption } from "@/components/reservation/create-reservation/types";
+import type { LunchAvailability } from "@/components/reservation/create-reservation/types";
 import { shouldOfferBreakfastForStart } from "@/lib/food-reservation-rules";
 import { buildDeskLayout } from "@/lib/desk-layout";
 import { cn } from "@/lib/utils";
 
 type DeskOption = { active: boolean; id: string; name: string };
-type OfficeOption = { id: string; name: string };
+type BuildingOption = { id: string; name: string };
 type DeskReservation = {
   deskId: string;
   endHour: number;
@@ -51,15 +51,14 @@ type DeskReservationFormProps = {
   isWorkingDay: boolean;
   isStarted: boolean;
   lunchAvailability: LunchAvailability;
-  lunchLocations: LunchLocationOption[];
+  lunchBuildings: BuildingOption[];
   lunchReservationAction: (
     previousState: LunchActionState,
     formData: FormData,
   ) => Promise<LunchActionState>;
   myReservation?: DeskReservation;
-  officeId: string;
-  officeName: string;
-  offices: OfficeOption[];
+  buildingId: string;
+  buildingName: string;
   reservations: DeskReservation[];
 };
 
@@ -115,12 +114,11 @@ export function DeskReservationForm({
   isWorkingDay,
   isStarted,
   lunchAvailability,
-  lunchLocations,
+  lunchBuildings,
   lunchReservationAction,
   myReservation,
-  officeId,
-  officeName,
-  offices,
+  buildingId,
+  buildingName,
   reservations,
 }: DeskReservationFormProps) {
   const router = useRouter();
@@ -200,19 +198,19 @@ export function DeskReservationForm({
     router.refresh();
   }
 
-  function navigate(nextOfficeId: string, nextDate: string) {
-    const query = new URLSearchParams({ date: nextDate, officeId: nextOfficeId });
+  function navigate(nextBuildingId: string, nextDate: string) {
+    const query = new URLSearchParams({ date: nextDate, buildingId: nextBuildingId });
     startNavigation(() => router.replace(`/desks?${query.toString()}`));
   }
 
   const navigationControls = <>
     <label className="grid gap-1 text-xs font-medium text-slate-600">دفتر
-      <select className={inputClass} disabled={isNavigating} onChange={(event) => navigate(event.target.value, date)} value={officeId}>
-        {offices.map((office) => <option key={office.id} value={office.id}>{office.name}</option>)}
+      <select className={inputClass} disabled={isNavigating} onChange={(event) => navigate(event.target.value, date)} value={buildingId}>
+        {lunchBuildings.map((building) => <option key={building.id} value={building.id}>{building.name}</option>)}
       </select>
     </label>
     <label className="grid gap-1 text-xs font-medium text-slate-600">تاریخ
-      <JalaliDatePicker disabled={isNavigating} name="filterDate" onValueChange={(value) => value && navigate(officeId, value)} required value={date} />
+      <JalaliDatePicker disabled={isNavigating} name="filterDate" onValueChange={(value) => value && navigate(buildingId, value)} required value={date} />
     </label>
   </>;
 
@@ -267,7 +265,7 @@ export function DeskReservationForm({
   return (
     <form action={myReservation ? updateOwnDeskReservationAction : createFormAction} className="grid gap-4">
       <input name="date" type="hidden" value={date} />
-      <input name="officeId" type="hidden" value={officeId} />
+      <input name="buildingId" type="hidden" value={buildingId} />
       <input name="deskId" type="hidden" value={selectedDeskId ?? ""} />
       {myReservation ? <input name="reservationId" type="hidden" value={myReservation.id} /> : null}
       {fullDay ? <input name="fullDay" type="hidden" value="on" /> : null}
@@ -367,7 +365,7 @@ export function DeskReservationForm({
 
           <aside className="border-t bg-white lg:border-r lg:border-t-0">
             {!selectedDesk || !selectedDeskState ? <div className="flex min-h-24 items-center gap-2.5 p-4 text-xs leading-5 text-muted-foreground"><MapPin className="h-4 w-4 shrink-0 text-primary" />برای مشاهده برنامه روز، یک میز را انتخاب کنید.</div> : <div className="grid gap-4 p-4 sm:p-5">
-              <div className="flex items-start justify-between gap-3"><div><h3 className="font-semibold">{selectedDesk.name}</h3><p className="mt-0.5 text-xs text-muted-foreground">{officeName} · {dateLabel}</p></div><span className={cn("rounded-full px-2.5 py-1 text-[11px] font-medium", selectedDeskState.state === "inactive" ? "bg-slate-100 text-slate-600" : selectedDeskState.state === "reservedOther" ? "bg-red-50 text-red-700" : selectedDeskState.state === "pendingOther" || selectedDeskState.state === "currentPending" ? "bg-amber-50 text-amber-800" : selectedDeskState.state === "currentApproved" ? "bg-blue-50 text-blue-800" : "bg-emerald-50 text-emerald-700")}>{stateLabel(selectedDeskState.state)}</span></div>
+              <div className="flex items-start justify-between gap-3"><div><h3 className="font-semibold">{selectedDesk.name}</h3><p className="mt-0.5 text-xs text-muted-foreground">{buildingName} · {dateLabel}</p></div><span className={cn("rounded-full px-2.5 py-1 text-[11px] font-medium", selectedDeskState.state === "inactive" ? "bg-slate-100 text-slate-600" : selectedDeskState.state === "reservedOther" ? "bg-red-50 text-red-700" : selectedDeskState.state === "pendingOther" || selectedDeskState.state === "currentPending" ? "bg-amber-50 text-amber-800" : selectedDeskState.state === "currentApproved" ? "bg-blue-50 text-blue-800" : "bg-emerald-50 text-emerald-700")}>{stateLabel(selectedDeskState.state)}</span></div>
 
               <section className="grid gap-2.5" aria-label={`برنامه روزانه ${selectedDesk.name}`}>
                 <div className="flex items-center gap-2 text-xs font-semibold"><CalendarDays className="h-4 w-4 text-primary" />برنامه کامل روز</div>
@@ -406,7 +404,7 @@ export function DeskReservationForm({
             <p className="font-medium">برای این روز غذا هم رزرو می‌کنید؟</p><p className="text-xs leading-5 text-muted-foreground">{lunchAvailability.cutoffLabel}</p>
             <input name="date" type="hidden" value={date} />
             {lunchAvailability.existingReservation ? <input name="reservationId" type="hidden" value={lunchAvailability.existingReservation.id} /> : null}
-            {lunchAvailability.isOpen ? <><fieldset className="grid gap-2 rounded-md border bg-white/70 p-3"><legend className="px-1 font-medium">وعده‌ها</legend>{shouldOfferBreakfastForStart(new Date(createState.mutation.startAt)) ? <label className="flex items-center gap-2"><input defaultChecked={lunchAvailability.existingReservation?.breakfastReserved ?? false} name="breakfastReserved" type="checkbox" />صبحانه</label> : lunchAvailability.existingReservation?.breakfastReserved ? <><input name="breakfastReserved" type="hidden" value="on" /><p className="text-xs text-muted-foreground">صبحانه‌ای که قبلاً رزرو کرده‌اید بدون تغییر باقی می‌ماند.</p></> : null}<label className="flex items-center gap-2"><input defaultChecked={lunchAvailability.existingReservation?.lunchReserved ?? true} name="lunchReserved" type="checkbox" />ناهار</label></fieldset><label className="grid gap-2 font-medium"><span>محل مشترک دریافت غذا</span><select className={inputClass} defaultValue={lunchAvailability.existingReservation?.locationId ?? lunchLocations[0]?.id ?? ""} name="locationId">{lunchLocations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}</select></label></> : <p className="rounded-md border border-amber-200 bg-white/80 px-3 py-2 text-xs leading-5 text-amber-900">{lunchAvailability.unavailableReason ?? "در حال حاضر امکان رزرو غذا برای این تاریخ وجود ندارد."}</p>}
+            {lunchAvailability.isOpen ? <><fieldset className="grid gap-2 rounded-md border bg-white/70 p-3"><legend className="px-1 font-medium">وعده‌ها</legend>{shouldOfferBreakfastForStart(new Date(createState.mutation.startAt)) ? <label className="flex items-center gap-2"><input defaultChecked={lunchAvailability.existingReservation?.breakfastReserved ?? false} name="breakfastReserved" type="checkbox" />صبحانه</label> : lunchAvailability.existingReservation?.breakfastReserved ? <><input name="breakfastReserved" type="hidden" value="on" /><p className="text-xs text-muted-foreground">صبحانه‌ای که قبلاً رزرو کرده‌اید بدون تغییر باقی می‌ماند.</p></> : null}<label className="flex items-center gap-2"><input defaultChecked={lunchAvailability.existingReservation?.lunchReserved ?? true} name="lunchReserved" type="checkbox" />ناهار</label></fieldset><label className="grid gap-2 font-medium"><span>محل مشترک دریافت غذا</span><select className={inputClass} defaultValue={lunchAvailability.existingReservation?.buildingId ?? lunchBuildings[0]?.id ?? ""} name="buildingId">{lunchBuildings.map((building) => <option key={building.id} value={building.id}>{building.name}</option>)}</select></label></> : <p className="rounded-md border border-amber-200 bg-white/80 px-3 py-2 text-xs leading-5 text-amber-900">{lunchAvailability.unavailableReason ?? "در حال حاضر امکان رزرو غذا برای این تاریخ وجود ندارد."}</p>}
           </div>
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><button className="inline-flex h-11 w-full items-center justify-center rounded-md border bg-background px-4 text-sm font-medium hover:bg-accent sm:h-10 sm:w-auto" onClick={dismissFoodPrompt} type="button">فعلاً نه</button><SubmitButton className="h-11 w-full sm:h-10 sm:w-auto" disabled={!lunchAvailability.isOpen} formAction={lunchFormAction} pendingLabel="در حال ثبت غذا...">ذخیره رزرو غذا</SubmitButton></div>
         </div>

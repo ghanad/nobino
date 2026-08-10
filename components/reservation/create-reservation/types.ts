@@ -8,7 +8,7 @@ export type ResourcePoolOption = {
   name: string;
 };
 
-export type LunchLocationOption = {
+export type BuildingOption = {
   id: string;
   name: string;
 };
@@ -17,7 +17,7 @@ export type LunchAvailability = {
   cutoffLabel: string;
   existingReservation: {
     id: string;
-    locationId: string;
+    buildingId: string;
     breakfastReserved: boolean;
     lunchReserved: boolean;
   } | null;
@@ -67,7 +67,7 @@ export type CreateReservationFormProps = {
   dailyUserHourLimit: number;
   emptyMessage: string;
   lunchAvailabilityByDate: Record<string, LunchAvailability>;
-  lunchLocations: LunchLocationOption[];
+  buildings: BuildingOption[];
   lunchReservationAction: (
     previousState: LunchActionState,
     formData: FormData,

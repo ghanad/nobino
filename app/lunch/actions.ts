@@ -18,7 +18,7 @@ import {
 
 const lunchReservationSchema = z.object({
   date: z.string().refine(isValidJalaliDateParam),
-  locationId: z.string().min(1),
+  buildingId: z.string().min(1),
   breakfastReserved: z.boolean(),
   lunchReserved: z.boolean(),
   reservationId: z.string().min(1).optional(),
@@ -40,8 +40,8 @@ export type LunchActionState = {
         dateParam: string;
         reservation: {
           id: string;
-          locationId: string;
-          locationName: string;
+          buildingId: string;
+          buildingName: string;
           breakfastReserved: boolean;
           lunchReserved: boolean;
         };
@@ -70,13 +70,13 @@ function createActionState(
   return { message, mutation, status };
 }
 
-async function getLocationName(locationId: string): Promise<string> {
-  const location = await db.lunchLocation.findUnique({
-    where: { id: locationId },
+async function getLocationName(buildingId: string): Promise<string> {
+  const building = await db.building.findUnique({
+    where: { id: buildingId },
     select: { name: true },
   });
 
-  return location?.name ?? "";
+  return building?.name ?? "";
 }
 
 export async function createLunchReservationAction(
@@ -86,7 +86,7 @@ export async function createLunchReservationAction(
   const user = await requireCurrentUser();
   const parsed = lunchReservationSchema.safeParse({
     date: formData.get("date"),
-    locationId: formData.get("locationId"),
+    buildingId: formData.get("buildingId"),
     breakfastReserved: formData.has("breakfastReserved"),
     lunchReserved: formData.has("lunchReserved"),
     reservationId: formData.get("reservationId") || undefined,
@@ -99,7 +99,7 @@ export async function createLunchReservationAction(
 
   let reservation: {
     id: string;
-    locationId: string;
+    buildingId: string;
     breakfastReserved: boolean;
     lunchReserved: boolean;
   };
@@ -109,14 +109,14 @@ export async function createLunchReservationAction(
       ? await updateLunchReservationLocation({
           reservationId: parsed.data.reservationId,
           userId: user.id,
-          locationId: parsed.data.locationId,
+          buildingId: parsed.data.buildingId,
           breakfastReserved: parsed.data.breakfastReserved,
           lunchReserved: parsed.data.lunchReserved,
           sourceReservationId: parsed.data.sourceReservationId,
         })
       : await createLunchReservation({
           userId: user.id,
-          locationId: parsed.data.locationId,
+          buildingId: parsed.data.buildingId,
           date: buildLocalDateAtHourFromJalali(parsed.data.date, 0),
           breakfastReserved: parsed.data.breakfastReserved,
           lunchReserved: parsed.data.lunchReserved,
@@ -137,8 +137,8 @@ export async function createLunchReservationAction(
     dateParam: parsed.data.date,
     reservation: {
       id: reservation.id,
-      locationId: reservation.locationId,
-      locationName: await getLocationName(reservation.locationId),
+      buildingId: reservation.buildingId,
+      buildingName: await getLocationName(reservation.buildingId),
       breakfastReserved: reservation.breakfastReserved,
       lunchReserved: reservation.lunchReserved,
     },
@@ -155,7 +155,7 @@ export async function updateLunchReservationAction(
   const parsed = updateLunchReservationSchema.safeParse({
     reservationId: formData.get("reservationId"),
     date: formData.get("date"),
-    locationId: formData.get("locationId"),
+    buildingId: formData.get("buildingId"),
     breakfastReserved: formData.has("breakfastReserved"),
     lunchReserved: formData.has("lunchReserved"),
     sourceReservationId: formData.get("sourceReservationId") || undefined,
@@ -167,7 +167,7 @@ export async function updateLunchReservationAction(
 
   let reservation: {
     id: string;
-    locationId: string;
+    buildingId: string;
     breakfastReserved: boolean;
     lunchReserved: boolean;
   };
@@ -176,7 +176,7 @@ export async function updateLunchReservationAction(
     reservation = await updateLunchReservationLocation({
       reservationId: parsed.data.reservationId,
       userId: user.id,
-      locationId: parsed.data.locationId,
+      buildingId: parsed.data.buildingId,
       breakfastReserved: parsed.data.breakfastReserved,
       lunchReserved: parsed.data.lunchReserved,
       sourceReservationId: parsed.data.sourceReservationId,
@@ -193,8 +193,8 @@ export async function updateLunchReservationAction(
     dateParam: parsed.data.date,
     reservation: {
       id: reservation.id,
-      locationId: reservation.locationId,
-      locationName: await getLocationName(reservation.locationId),
+      buildingId: reservation.buildingId,
+      buildingName: await getLocationName(reservation.buildingId),
       breakfastReserved: reservation.breakfastReserved,
       lunchReserved: reservation.lunchReserved,
     },

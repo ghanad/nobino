@@ -73,7 +73,7 @@ export function CreateReservationForm({
   dailyUserHourLimit,
   emptyMessage,
   lunchAvailabilityByDate,
-  lunchLocations,
+  buildings,
   lunchReservationAction,
   nextWeekDateParam,
   oneReservationPerDayEnabled,
@@ -153,7 +153,7 @@ export function CreateReservationForm({
     ? lunchAvailabilityByDate[selectedLunchDateParam] ?? null
     : null;
   const canSubmitLunchReservation = Boolean(
-    lunchAvailability?.isOpen && lunchLocations.length > 0,
+    lunchAvailability?.isOpen && buildings.length > 0,
   );
   const dismissToast = useCallback(() => setToast(null), []);
 
@@ -777,7 +777,7 @@ export function CreateReservationForm({
           isSelectionOverDailyLimit={isSelectionOverDailyLimit}
           lunchAvailability={lunchAvailability}
           lunchFormAction={lunchFormAction}
-          lunchLocations={lunchLocations}
+          buildings={buildings}
           lunchPrompt={lunchPrompt}
           partySize={partySize}
           reservedHoursForSelectedDay={reservedHoursForSelectedDay}
