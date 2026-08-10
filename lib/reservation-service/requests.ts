@@ -3,6 +3,7 @@ import "server-only";
 import { ReservationStatus, UserRole } from "@prisma/client";
 
 import { db } from "@/lib/db";
+import { formatJalaliDate } from "@/lib/jalali-date";
 import {
   calculateAutoAcceptAt,
   getReservationPolicy,
@@ -96,6 +97,16 @@ export async function createReservationRequest(input: {
       },
       select: { id: true },
     });
+    const [requester, resourcePool] = await Promise.all([
+      tx.user.findUniqueOrThrow({
+        where: { id: reservation.userId },
+        select: { name: true },
+      }),
+      tx.resourcePool.findUniqueOrThrow({
+        where: { id: reservation.resourcePoolId },
+        select: { name: true },
+      }),
+    ]);
 
     if (managers.length > 0) {
       await tx.notification.createMany({
@@ -104,7 +115,7 @@ export async function createReservationRequest(input: {
           reservationId: reservation.id,
           type: "NEW_PENDING_RESERVATION",
           title: "New pending reservation",
-          body: "A reservation request is waiting for review.",
+          body: `درخواست رزرو ${resourcePool.name} توسط ${requester.name} برای تاریخ ${formatJalaliDate(reservation.startAt)} در انتظار بررسی است.`,
         })),
       });
     }

@@ -3,6 +3,7 @@ import "server-only";
 import { LunchReservationStatus, ReservationStatus } from "@prisma/client";
 
 import { db } from "@/lib/db";
+import { formatJalaliDate } from "@/lib/jalali-date";
 
 import { startOfLocalDay } from "./date-time";
 import { assertLunchDateIsReservable } from "./service-days";
@@ -20,6 +21,10 @@ function assertAtLeastOneMeal(input: {
   if (!input.breakfastReserved && !input.lunchReserved) {
     throw new LunchReservationError("حداقل یکی از وعده‌های صبحانه یا ناهار را انتخاب کنید.");
   }
+}
+
+function formatLunchReservationDate(date: Date): string {
+  return `برای ${formatJalaliDate(date)}`;
 }
 
 async function assertValidSourceReservation(input: {
@@ -123,7 +128,7 @@ export async function createLunchReservation(input: {
         lunchReservationId: reservation.id,
         type: "FOOD_RESERVED",
         title: "رزرو غذا ثبت شد",
-        body: "رزرو غذای شما ثبت شد.",
+        body: `رزرو غذای شما ${formatLunchReservationDate(reservation.date)} ثبت شد.`,
       },
     });
 
@@ -210,7 +215,7 @@ export async function updateLunchReservationLocation(input: {
         lunchReservationId: updated.id,
         type: "FOOD_UPDATED",
         title: "رزرو غذا تغییر کرد",
-        body: "وعده‌ها یا محل دریافت غذای شما تغییر کرد.",
+        body: `وعده‌ها یا محل دریافت غذای شما ${formatLunchReservationDate(updated.date)} تغییر کرد.`,
       },
     });
 
@@ -272,7 +277,7 @@ export async function cancelLunchReservationByUser(input: {
         lunchReservationId: cancelled.id,
         type: "FOOD_CANCELLED",
         title: "رزرو غذا لغو شد",
-        body: "رزرو غذای شما لغو شد.",
+        body: `رزرو غذای شما ${formatLunchReservationDate(cancelled.date)} لغو شد.`,
       },
     });
 
@@ -325,7 +330,7 @@ export async function cancelLunchReservationByManager(input: {
         lunchReservationId: cancelled.id,
         type: "FOOD_CANCELLED",
         title: "رزرو غذا لغو شد",
-        body: "رزرو غذای شما توسط مدیر لغو شد.",
+        body: `رزرو غذای شما ${formatLunchReservationDate(cancelled.date)} توسط مدیر لغو شد.`,
       },
     });
 
@@ -379,7 +384,7 @@ export async function cancelLinkedFoodReservationInTransaction(input: {
       lunchReservationId: cancelled.id,
       type: "FOOD_CANCELLED",
       title: "رزرو غذا لغو شد",
-      body: "با لغو یا رد رزرو سیستم، رزرو غذای مرتبط نیز لغو شد.",
+      body: `با لغو یا رد رزرو سیستم، رزرو غذای مرتبط ${formatLunchReservationDate(cancelled.date)} نیز لغو شد.`,
     },
   });
 

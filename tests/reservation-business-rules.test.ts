@@ -5,6 +5,7 @@ import { ReservationStatus } from "@prisma/client";
 
 import { updateReservationPolicy } from "@/lib/admin-settings-service";
 import { CapacityUnavailableError, getSlotUsage } from "@/lib/capacity-service";
+import { formatJalaliDate } from "@/lib/jalali-date";
 import {
   approveReservation,
   cancelReservationByManager,
@@ -46,6 +47,16 @@ test("reservation requests store the requested people count", async () => {
   });
 
   assert.equal(reservation.partySize, 3);
+  const notification = await db.notification.findFirstOrThrow({
+    where: {
+      reservationId: reservation.id,
+      type: "NEW_PENDING_RESERVATION",
+    },
+  });
+  assert.equal(
+    notification.body,
+    `درخواست رزرو Company Systems توسط Normal User برای تاریخ ${formatJalaliDate(startAt)} در انتظار بررسی است.`,
+  );
 });
 
 test("manager time updates keep reservations pending", async () => {

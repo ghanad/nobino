@@ -4,6 +4,7 @@ import { ReservationStatus, UserRole } from "@prisma/client";
 
 import { db } from "@/lib/db";
 import { endOfLocalDay, startOfLocalDay, validateDeskReservationTimeRange } from "@/lib/desk-schedule";
+import { formatJalaliDate } from "@/lib/jalali-date";
 import { assertManagerOrAdmin, ReservationTransitionError, type DbClient } from "@/lib/reservation-service/shared";
 
 const ACTIVE_STATUSES: ReservationStatus[] = [
@@ -84,6 +85,7 @@ async function notifyManagersOfPendingReservation(
       where: { id: reservationId },
       select: {
         desk: { select: { name: true, office: { select: { name: true } } } },
+        startAt: true,
         user: { select: { name: true } },
       },
     }),
@@ -95,7 +97,7 @@ async function notifyManagersOfPendingReservation(
   if (!reservation || managers.length === 0) return;
   await tx.notification.createMany({
     data: managers.map((manager) => ({
-      body: `درخواست رزرو ${reservation.desk.name} در ${reservation.desk.office.name} توسط ${reservation.user.name} در انتظار بررسی است.`,
+      body: `درخواست رزرو ${reservation.desk.name} در ${reservation.desk.office.name} توسط ${reservation.user.name} برای تاریخ ${formatJalaliDate(reservation.startAt)} در انتظار بررسی است.`,
       deskReservationId: reservationId,
       title: "درخواست رزرو میز",
       type: "NEW_PENDING_DESK_RESERVATION",

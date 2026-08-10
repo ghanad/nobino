@@ -13,6 +13,7 @@ import {
   updateOfficeWeeklySchedule,
 } from "@/lib/desk-admin-service";
 import { approveDeskReservation, createDeskReservation, updateDeskReservation } from "@/lib/desk-reservation-service";
+import { formatJalaliDate } from "@/lib/jalali-date";
 import { ReservationTransitionError } from "@/lib/reservation-service";
 
 import { addHours, adminId, db, deskId, managerId, nextWorkingDateAtHour, officeId, registerBusinessRuleTestHooks, secondDeskId, secondUserId, userId } from "./business-rules-helpers";
@@ -30,7 +31,7 @@ test("desk reservation starts pending and notifies managers", async () => {
   });
   assert.equal(
     notification.body,
-    "درخواست رزرو Desk One در Main Office توسط Normal User در انتظار بررسی است.",
+    `درخواست رزرو Desk One در Main Office توسط Normal User برای تاریخ ${formatJalaliDate(startAt)} در انتظار بررسی است.`,
   );
 });
 

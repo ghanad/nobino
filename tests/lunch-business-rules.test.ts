@@ -11,6 +11,7 @@ import {
   updateLunchReservationLocation,
 } from "@/lib/lunch-service";
 import { shouldOfferBreakfastForStart } from "@/lib/food-reservation-rules";
+import { formatJalaliDate } from "@/lib/jalali-date";
 import {
   cancelReservationByManager,
   rejectReservation,
@@ -368,7 +369,10 @@ test("managers can cancel anyone's active lunch reservation after cutoff", async
   assert.equal(auditLog?.actorUserId, managerId);
   assert.equal(auditLog?.action, "FOOD_RESERVATION_CANCELLED_BY_MANAGER");
   assert.equal(notification?.userId, userId);
-  assert.equal(notification?.body, "رزرو غذای شما توسط مدیر لغو شد.");
+  assert.equal(
+    notification?.body,
+    `رزرو غذای شما برای ${formatJalaliDate(targetDate)} توسط مدیر لغو شد.`,
+  );
 });
 
 test("regular users cannot use manager lunch cancellation", async () => {
