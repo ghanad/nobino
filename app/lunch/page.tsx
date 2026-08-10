@@ -68,7 +68,7 @@ export default async function LunchPage({ searchParams }: LunchPageProps) {
   const [days, buildings] = await Promise.all([
     getLunchReservationWindow(),
     db.building.findMany({
-      where: { active: true, isTransitional: false },
+      where: { active: true, deletedAt: null, isTransitional: false },
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),

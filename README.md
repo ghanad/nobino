@@ -107,10 +107,16 @@ The first operational version is implemented. Seeded users can sign in, create h
 - `/reservations` allows authenticated users to create pending reservation
   requests and review their recent requests. After a successful request, it
   offers breakfast only for starts before `12:00` and offers lunch for every
-  start while the shared food window is open.
+  start while the shared food window is open. The food suggestion uses the
+  resource pool's building directly; a conflicting existing food reservation is
+  never moved without the user's explicit confirmation.
 - `/lunch` is the unified food-reservation page. Each user has one active food
   reservation per day with breakfast and/or lunch and one shared delivery
-  location for both meals.
+  location for both meals. When exactly one real active building exists, it is
+  selected automatically; otherwise the user chooses. Desk-originated food
+  suggestions validate the source desk reservation during the transaction but
+  intentionally do not persist a desk relation, so later desk changes cannot
+  alter an already confirmed food reservation.
 - `/lunch/report` shows breakfast and lunch counts and reservation details by
   delivery location.
 - `/desks` lets authenticated users reserve a named building desk hourly or for

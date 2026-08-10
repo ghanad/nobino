@@ -228,6 +228,11 @@ export function DeskReservationForm({
     </div>;
   }
 
+  const hasLunchBuildingConflict = Boolean(
+    lunchAvailability.existingReservation &&
+      lunchAvailability.existingReservation.buildingId !== buildingId,
+  );
+
   function chooseAvailableSegment(segmentStart: number, segmentEnd: number) {
     if (isStarted) return;
     setEditingTime(true);
@@ -403,10 +408,12 @@ export function DeskReservationForm({
           <div className="grid gap-3 rounded-md border border-sky-100 bg-sky-50/60 p-3 text-sm">
             <p className="font-medium">برای این روز غذا هم رزرو می‌کنید؟</p><p className="text-xs leading-5 text-muted-foreground">{lunchAvailability.cutoffLabel}</p>
             <input name="date" type="hidden" value={date} />
+            <input name="buildingId" type="hidden" value={buildingId} />
+            <input name="sourceDeskReservationId" type="hidden" value={createState.mutation.reservationId} />
             {lunchAvailability.existingReservation ? <input name="reservationId" type="hidden" value={lunchAvailability.existingReservation.id} /> : null}
-            {lunchAvailability.isOpen ? <><fieldset className="grid gap-2 rounded-md border bg-white/70 p-3"><legend className="px-1 font-medium">وعده‌ها</legend>{shouldOfferBreakfastForStart(new Date(createState.mutation.startAt)) ? <label className="flex items-center gap-2"><input defaultChecked={lunchAvailability.existingReservation?.breakfastReserved ?? false} name="breakfastReserved" type="checkbox" />صبحانه</label> : lunchAvailability.existingReservation?.breakfastReserved ? <><input name="breakfastReserved" type="hidden" value="on" /><p className="text-xs text-muted-foreground">صبحانه‌ای که قبلاً رزرو کرده‌اید بدون تغییر باقی می‌ماند.</p></> : null}<label className="flex items-center gap-2"><input defaultChecked={lunchAvailability.existingReservation?.lunchReserved ?? true} name="lunchReserved" type="checkbox" />ناهار</label></fieldset><label className="grid gap-2 font-medium"><span>محل مشترک دریافت غذا</span><select className={inputClass} defaultValue={lunchAvailability.existingReservation?.buildingId ?? lunchBuildings[0]?.id ?? ""} name="buildingId">{lunchBuildings.map((building) => <option key={building.id} value={building.id}>{building.name}</option>)}</select></label></> : <p className="rounded-md border border-amber-200 bg-white/80 px-3 py-2 text-xs leading-5 text-amber-900">{lunchAvailability.unavailableReason ?? "در حال حاضر امکان رزرو غذا برای این تاریخ وجود ندارد."}</p>}
+            {lunchAvailability.isOpen ? <><p className="rounded-md border border-sky-200 bg-white/80 px-3 py-2 text-xs font-medium leading-5 text-sky-950">تحویل غذا در ساختمان {buildingName}</p>{hasLunchBuildingConflict ? <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-950" role="alert">برای این روز غذا در ساختمان {lunchAvailability.existingReservation?.buildingName} رزرو شده است. با ادامه، محل تحویل به ساختمان {buildingName} تغییر می‌کند.</p> : null}<fieldset className="grid gap-2 rounded-md border bg-white/70 p-3"><legend className="px-1 font-medium">وعده‌ها</legend>{shouldOfferBreakfastForStart(new Date(createState.mutation.startAt)) ? <label className="flex items-center gap-2"><input defaultChecked={lunchAvailability.existingReservation?.breakfastReserved ?? false} name="breakfastReserved" type="checkbox" />صبحانه</label> : lunchAvailability.existingReservation?.breakfastReserved ? <><input name="breakfastReserved" type="hidden" value="on" /><p className="text-xs text-muted-foreground">صبحانه‌ای که قبلاً رزرو کرده‌اید بدون تغییر باقی می‌ماند.</p></> : null}<label className="flex items-center gap-2"><input defaultChecked={lunchAvailability.existingReservation?.lunchReserved ?? true} name="lunchReserved" type="checkbox" />ناهار</label></fieldset></> : <p className="rounded-md border border-amber-200 bg-white/80 px-3 py-2 text-xs leading-5 text-amber-900">{lunchAvailability.unavailableReason ?? "در حال حاضر امکان رزرو غذا برای این تاریخ وجود ندارد."}</p>}
           </div>
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><button className="inline-flex h-11 w-full items-center justify-center rounded-md border bg-background px-4 text-sm font-medium hover:bg-accent sm:h-10 sm:w-auto" onClick={dismissFoodPrompt} type="button">فعلاً نه</button><SubmitButton className="h-11 w-full sm:h-10 sm:w-auto" disabled={!lunchAvailability.isOpen} formAction={lunchFormAction} pendingLabel="در حال ثبت غذا...">ذخیره رزرو غذا</SubmitButton></div>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><button className="inline-flex h-11 w-full items-center justify-center rounded-md border bg-background px-4 text-sm font-medium hover:bg-accent sm:h-10 sm:w-auto" onClick={dismissFoodPrompt} type="button">{hasLunchBuildingConflict ? `حفظ رزرو در ${lunchAvailability.existingReservation?.buildingName}` : "فعلاً نه"}</button><SubmitButton className="h-11 w-full sm:h-10 sm:w-auto" disabled={!lunchAvailability.isOpen} formAction={lunchFormAction} pendingLabel="در حال ثبت غذا...">{hasLunchBuildingConflict ? `تغییر تحویل به ${buildingName}` : "ذخیره رزرو غذا"}</SubmitButton></div>
         </div>
       </div> : null}
     </form>

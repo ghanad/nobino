@@ -73,16 +73,45 @@ const initialActionState: LunchActionState = {
 function LocationSelect({
   className,
   currentLocationId,
+  currentLocationName,
   dateLabel,
   disabled,
   buildings,
 }: {
   className?: string;
   currentLocationId?: string;
+  currentLocationName?: string;
   dateLabel: string;
   disabled: boolean;
   buildings: Building[];
 }) {
+  const selectedBuilding = buildings.find(
+    (building) => building.id === currentLocationId,
+  );
+  const shouldShowSelector =
+    buildings.length > 1 ||
+    Boolean(currentLocationId && !selectedBuilding);
+  const selectedBuildingId =
+    currentLocationId && selectedBuilding
+      ? currentLocationId
+      : buildings[0]?.id ?? "";
+  const selectedBuildingName =
+    selectedBuilding?.name ?? currentLocationName ?? buildings[0]?.name ?? "";
+
+  if (!shouldShowSelector) {
+    return (
+      <div className={cn("grid min-w-0 gap-1 text-sm", className)}>
+        <input name="buildingId" type="hidden" value={selectedBuildingId} />
+        <span className="text-xs font-normal text-muted-foreground">
+          محل تحویل
+        </span>
+        <p className="flex h-11 items-center rounded-xl border border-input bg-muted/30 px-3 text-sm font-medium text-foreground">
+          تحویل غذا در ساختمان {selectedBuildingName}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <label className={cn("grid min-w-0 gap-1 text-sm", className)}>
       <span className="text-xs font-normal text-muted-foreground">
@@ -96,7 +125,7 @@ function LocationSelect({
         <select
           aria-label={`محل تحویل ${dateLabel}`}
           className="h-11 w-full appearance-none rounded-xl border border-input bg-background px-9 text-sm font-medium outline-none transition-[border-color,box-shadow,background-color] hover:border-primary/40 focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60"
-          defaultValue={currentLocationId ?? buildings[0]?.id ?? ""}
+          defaultValue={selectedBuildingId}
           disabled={disabled || buildings.length === 0}
           name="buildingId"
           required
@@ -379,6 +408,7 @@ function UpdateLunchReservationForm({
       <LocationSelect
         className="w-full lg:w-60 lg:shrink-0"
         currentLocationId={row.reservation.buildingId}
+        currentLocationName={row.reservation.buildingName}
         dateLabel={`${row.weekdayLabel} ${row.dateLabel}`}
         disabled={disabled}
         buildings={buildings}

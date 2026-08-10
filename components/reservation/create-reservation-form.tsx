@@ -273,9 +273,11 @@ export function CreateReservationForm({
       }
 
       if (nextState.status === "success" && nextState.mutation) {
-        onReservationCreated?.(nextState.mutation);
+        const mutation = nextState.mutation;
 
-        const reservationStartAt = new Date(nextState.mutation.startAt);
+        onReservationCreated?.(mutation);
+
+        const reservationStartAt = new Date(mutation.startAt);
         const reservationDateParam = formatJalaliDateParam(reservationStartAt);
         const promptAvailability =
           lunchAvailabilityByDate[reservationDateParam] ?? null;
@@ -284,13 +286,29 @@ export function CreateReservationForm({
         );
 
         if (promptAvailability?.isOpen) {
+          const sourcePool = resourcePools.find(
+            (pool) => pool.id === mutation.resourcePoolId,
+          );
+
+          if (!sourcePool) {
+            setToast({
+              id: Date.now(),
+              message: nextState.message,
+              variant: "success",
+            });
+            clearSelection();
+            return;
+          }
+
           setToast(null);
           setLunchPrompt({
             canOfferBreakfast: shouldOfferBreakfastForStart(reservationStartAt),
             dateLabel: reservationDay?.modalDateLabel ?? reservationDateParam,
             dateParam: reservationDateParam,
-            partySize: nextState.mutation.partySize,
-            sourceReservationId: nextState.mutation.reservationId,
+            partySize: mutation.partySize,
+            sourceReservationId: mutation.reservationId,
+            sourceBuildingId: sourcePool.building.id,
+            sourceBuildingName: sourcePool.building.name,
           });
           setIsReasonDialogOpen(true);
           return;
@@ -304,7 +322,13 @@ export function CreateReservationForm({
         clearSelection();
       }
     },
-    [clearSelection, lunchAvailabilityByDate, onReservationCreated, weekDays],
+    [
+      clearSelection,
+      lunchAvailabilityByDate,
+      onReservationCreated,
+      resourcePools,
+      weekDays,
+    ],
   );
 
   const handleLunchActionComplete = useCallback(
@@ -441,7 +465,7 @@ export function CreateReservationForm({
                 <p className="text-sm font-medium">{weekLabel}</p>
                 {!isCurrentWeek ? (
                   <Link
-                    className="inline-flex h-8 items-center justify-center whitespace-nowrap rounded-md bg-sky-50 px-3 text-xs font-medium text-slate-600 transition-colors hover:bg-sky-100 hover:text-slate-800"
+                    className="inline-flex h-8 items-center justify-center whitespace-nowrap rounded-md bg-sky-50 px-3 text-xs font-medium text-sky-900 transition-colors hover:bg-sky-100 hover:text-sky-950"
                     href={buildDateHref(todayDateParam)}
                     onClick={() => {
                       setSelectedMobileDayIndex(defaultMobileDayIndex);
@@ -558,7 +582,7 @@ export function CreateReservationForm({
                         >
                           <span>{day.shortLabel}</span>
                           {day.closedReason ? (
-                            <span className="mt-1 line-clamp-2 text-[10px] font-medium leading-4 text-red-600">
+                            <span className="mt-1 line-clamp-2 text-xs font-medium leading-4 text-red-600">
                               {day.closedReason}
                             </span>
                           ) : null}
@@ -777,7 +801,6 @@ export function CreateReservationForm({
           isSelectionOverDailyLimit={isSelectionOverDailyLimit}
           lunchAvailability={lunchAvailability}
           lunchFormAction={lunchFormAction}
-          buildings={buildings}
           lunchPrompt={lunchPrompt}
           partySize={partySize}
           reservedHoursForSelectedDay={reservedHoursForSelectedDay}

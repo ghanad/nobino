@@ -30,15 +30,15 @@ export default async function DesksPage({ searchParams }: Props) {
   const dateParam = formatJalaliDateParam(date);
   const [buildings, lunchBuildings, lunchReservation, lunchDayState] = await Promise.all([
     db.building.findMany({
-      where: { active: true, deletedAt: null }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      where: { active: true, deletedAt: null, isTransitional: false }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       include: { desks: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] } },
     }),
     db.building.findMany({
-      where: { active: true, isTransitional: false }, orderBy: { name: "asc" }, select: { id: true, name: true },
+      where: { active: true, deletedAt: null, isTransitional: false }, orderBy: { name: "asc" }, select: { id: true, name: true },
     }),
     db.lunchReservation.findFirst({
       where: { userId: user.id, date: startOfLocalDay(date), status: LunchReservationStatus.ACTIVE },
-      select: { breakfastReserved: true, id: true, buildingId: true, lunchReserved: true },
+      select: { breakfastReserved: true, id: true, buildingId: true, building: { select: { name: true } }, lunchReserved: true },
     }),
     getLunchDayState({ date, now: new Date() }),
   ]);
@@ -88,7 +88,12 @@ export default async function DesksPage({ searchParams }: Props) {
         isStarted={Boolean(myReservation && myReservation.startAt <= new Date())}
         lunchAvailability={{
           cutoffLabel: `مهلت رزرو غذا تا ${formatJalaliDate(lunchDayState.cutoffAt)}، ${formatPersianLocalTime(lunchDayState.cutoffAt)}`,
-          existingReservation: lunchReservation,
+          existingReservation: lunchReservation
+            ? {
+                ...lunchReservation,
+                buildingName: lunchReservation.building.name,
+              }
+            : null,
           isOpen: lunchDayState.isOpen && lunchBuildings.length > 0,
           unavailableReason: lunchReservation ? null : lunchBuildings.length === 0 ? "هنوز ساختمانی برای دریافت غذا تعریف نشده است." : lunchDayState.isServiceDay ? `مهلت رزرو غذا گذشته است. مهلت تا ${formatJalaliDate(lunchDayState.cutoffAt)}، ${formatPersianLocalTime(lunchDayState.cutoffAt)} بود.` : "برای این تاریخ سرویس غذا فعال نیست.",
         }}

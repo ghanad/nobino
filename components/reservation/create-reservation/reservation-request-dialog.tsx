@@ -8,7 +8,6 @@ import {
 } from "@/components/reservation/create-reservation/formatters";
 import type {
   LunchAvailability,
-  BuildingOption,
   LunchPrompt,
   Selection,
   WeekDay,
@@ -25,7 +24,6 @@ export function ReservationRequestDialog({
   isSelectionOverDailyLimit,
   lunchAvailability,
   lunchFormAction,
-  buildings,
   lunchPrompt,
   partySize,
   reservedHoursForSelectedDay,
@@ -44,7 +42,6 @@ export function ReservationRequestDialog({
   isSelectionOverDailyLimit: boolean;
   lunchAvailability: LunchAvailability | null;
   lunchFormAction: (formData: FormData) => void;
-  buildings: BuildingOption[];
   lunchPrompt: LunchPrompt | null;
   partySize: number;
   reservedHoursForSelectedDay: number;
@@ -66,6 +63,13 @@ export function ReservationRequestDialog({
 
     setIsReasonDialogOpen(false);
   }
+
+  const hasLunchBuildingConflict = Boolean(
+    lunchPrompt &&
+      lunchAvailability?.existingReservation &&
+      lunchAvailability.existingReservation.buildingId !==
+        lunchPrompt.sourceBuildingId,
+  );
 
   return (
     <div
@@ -131,6 +135,11 @@ export function ReservationRequestDialog({
                 type="hidden"
                 value={lunchPrompt.sourceReservationId}
               />
+              <input
+                name="buildingId"
+                type="hidden"
+                value={lunchPrompt.sourceBuildingId}
+              />
               {lunchAvailability?.existingReservation ? (
                 <input
                   name="reservationId"
@@ -141,6 +150,14 @@ export function ReservationRequestDialog({
 
               {canSubmitLunchReservation ? (
                 <>
+                  <p className="rounded-md border border-sky-200 bg-white/80 px-3 py-2 text-xs font-medium leading-5 text-sky-950">
+                    تحویل غذا در ساختمان {lunchPrompt.sourceBuildingName}
+                  </p>
+                  {hasLunchBuildingConflict ? (
+                    <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-950" role="alert">
+                      برای این روز غذا در ساختمان {lunchAvailability?.existingReservation?.buildingName} رزرو شده است. با ادامه، محل تحویل به ساختمان {lunchPrompt.sourceBuildingName} تغییر می‌کند.
+                    </p>
+                  ) : null}
                   <fieldset className="grid gap-2 rounded-md border bg-white/70 p-3">
                     <legend className="px-1 font-medium">وعده‌ها</legend>
                     {lunchPrompt.canOfferBreakfast ? (
@@ -176,24 +193,6 @@ export function ReservationRequestDialog({
                       ناهار
                     </label>
                   </fieldset>
-                  <label className="grid gap-2 font-medium">
-                    <span>محل مشترک دریافت غذا</span>
-                    <select
-                      className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                      defaultValue={
-                        lunchAvailability?.existingReservation?.buildingId ??
-                        buildings[0]?.id ??
-                        ""
-                      }
-                      name="buildingId"
-                    >
-                      {buildings.map((building) => (
-                        <option key={building.id} value={building.id}>
-                          {building.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
                 </>
               ) : (
                 <p className="rounded-md border border-amber-200 bg-white/80 px-3 py-2 text-xs leading-5 text-amber-900">
@@ -216,7 +215,9 @@ export function ReservationRequestDialog({
                 onClick={clearSelection}
                 type="button"
               >
-                فعلاً نه
+                {hasLunchBuildingConflict
+                  ? `حفظ رزرو در ${lunchAvailability?.existingReservation?.buildingName}`
+                  : "فعلاً نه"}
               </button>
               <SubmitButton
                 className="h-11 w-full sm:h-10 sm:w-auto"
@@ -224,7 +225,9 @@ export function ReservationRequestDialog({
                 formAction={lunchFormAction}
                 pendingLabel="در حال ثبت غذا..."
               >
-                ذخیره رزرو غذا
+                {hasLunchBuildingConflict
+                  ? `تغییر تحویل به ${lunchPrompt.sourceBuildingName}`
+                  : "ذخیره رزرو غذا"}
               </SubmitButton>
             </div>
           </>

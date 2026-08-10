@@ -23,6 +23,7 @@ const lunchReservationSchema = z.object({
   lunchReserved: z.boolean(),
   reservationId: z.string().min(1).optional(),
   sourceReservationId: z.string().min(1).optional(),
+  sourceDeskReservationId: z.string().min(1).optional(),
 });
 
 const updateLunchReservationSchema = lunchReservationSchema.extend({
@@ -91,6 +92,8 @@ export async function createLunchReservationAction(
     lunchReserved: formData.has("lunchReserved"),
     reservationId: formData.get("reservationId") || undefined,
     sourceReservationId: formData.get("sourceReservationId") || undefined,
+    sourceDeskReservationId:
+      formData.get("sourceDeskReservationId") || undefined,
   });
 
   if (!parsed.success) {
@@ -113,6 +116,7 @@ export async function createLunchReservationAction(
           breakfastReserved: parsed.data.breakfastReserved,
           lunchReserved: parsed.data.lunchReserved,
           sourceReservationId: parsed.data.sourceReservationId,
+          sourceDeskReservationId: parsed.data.sourceDeskReservationId,
         })
       : await createLunchReservation({
           userId: user.id,
@@ -121,6 +125,7 @@ export async function createLunchReservationAction(
           breakfastReserved: parsed.data.breakfastReserved,
           lunchReserved: parsed.data.lunchReserved,
           sourceReservationId: parsed.data.sourceReservationId,
+          sourceDeskReservationId: parsed.data.sourceDeskReservationId,
         });
   } catch (error) {
     return createActionState("error", getActionErrorMessage(error));
@@ -159,6 +164,8 @@ export async function updateLunchReservationAction(
     breakfastReserved: formData.has("breakfastReserved"),
     lunchReserved: formData.has("lunchReserved"),
     sourceReservationId: formData.get("sourceReservationId") || undefined,
+    sourceDeskReservationId:
+      formData.get("sourceDeskReservationId") || undefined,
   });
 
   if (!parsed.success) {
@@ -180,6 +187,7 @@ export async function updateLunchReservationAction(
       breakfastReserved: parsed.data.breakfastReserved,
       lunchReserved: parsed.data.lunchReserved,
       sourceReservationId: parsed.data.sourceReservationId,
+      sourceDeskReservationId: parsed.data.sourceDeskReservationId,
     });
   } catch (error) {
     return createActionState("error", getActionErrorMessage(error));

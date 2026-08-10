@@ -4,6 +4,7 @@ import type { LunchActionState } from "@/app/lunch/actions";
 import type { CreateReservationActionState } from "@/app/reservations/actions";
 
 export type ResourcePoolOption = {
+  building: BuildingOption;
   id: string;
   name: string;
 };
@@ -16,6 +17,7 @@ export type BuildingOption = {
 export type LunchAvailability = {
   cutoffLabel: string;
   existingReservation: {
+    buildingName: string;
     id: string;
     buildingId: string;
     breakfastReserved: boolean;
@@ -130,4 +132,6 @@ export type LunchPrompt = {
   dateParam: string;
   partySize: number;
   sourceReservationId: string;
+  sourceBuildingId: string;
+  sourceBuildingName: string;
 };

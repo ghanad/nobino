@@ -27,7 +27,17 @@ function formatLunchReservationDate(date: Date): string {
   return `برای ${formatJalaliDate(date)}`;
 }
 
+function assertAtMostOneSource(input: {
+  sourceDeskReservationId?: string;
+  sourceReservationId?: string;
+}) {
+  if (input.sourceDeskReservationId && input.sourceReservationId) {
+    throw new LunchReservationError("فقط یک رزرو مبدا می‌تواند برای پیشنهاد غذا استفاده شود.");
+  }
+}
+
 async function assertValidSourceReservation(input: {
+  buildingId: string;
   sourceReservationId?: string;
   userId: string;
   date: Date;
@@ -39,18 +49,57 @@ async function assertValidSourceReservation(input: {
 
   const source = await input.client.reservation.findUnique({
     where: { id: input.sourceReservationId },
-    select: { userId: true, startAt: true, status: true },
+    select: {
+      userId: true,
+      startAt: true,
+      status: true,
+      resourcePool: { select: { buildingId: true } },
+    },
   });
 
   if (
     !source ||
     source.userId !== input.userId ||
+    source.resourcePool.buildingId !== input.buildingId ||
     startOfLocalDay(source.startAt).getTime() !== input.date.getTime() ||
     source.status !== ReservationStatus.PENDING &&
     source.status !== ReservationStatus.APPROVED &&
     source.status !== ReservationStatus.ALTERNATIVE_PROPOSED
   ) {
     throw new LunchReservationError("رزرو سیستم مرتبط با این درخواست غذا معتبر نیست.");
+  }
+}
+
+async function assertValidSourceDeskReservation(input: {
+  buildingId: string;
+  sourceDeskReservationId?: string;
+  userId: string;
+  date: Date;
+  client: DbClient;
+}) {
+  if (!input.sourceDeskReservationId) {
+    return;
+  }
+
+  const source = await input.client.deskReservation.findUnique({
+    where: { id: input.sourceDeskReservationId },
+    select: {
+      userId: true,
+      startAt: true,
+      status: true,
+      desk: { select: { buildingId: true } },
+    },
+  });
+
+  if (
+    !source ||
+    source.userId !== input.userId ||
+    source.desk.buildingId !== input.buildingId ||
+    startOfLocalDay(source.startAt).getTime() !== input.date.getTime() ||
+    (source.status !== ReservationStatus.PENDING &&
+      source.status !== ReservationStatus.APPROVED)
+  ) {
+    throw new LunchReservationError("رزرو میز مرتبط با این درخواست غذا معتبر نیست.");
   }
 }
 
@@ -61,6 +110,7 @@ export async function createLunchReservation(input: {
   breakfastReserved?: boolean;
   lunchReserved?: boolean;
   sourceReservationId?: string;
+  sourceDeskReservationId?: string;
   now?: Date;
 }) {
   const date = startOfLocalDay(input.date);
@@ -68,12 +118,24 @@ export async function createLunchReservation(input: {
   const lunchReserved = input.lunchReserved ?? true;
 
   assertAtLeastOneMeal({ breakfastReserved, lunchReserved });
+  assertAtMostOneSource(input);
 
   return db.$transaction(async (tx) => {
     await assertLunchDateIsReservable({ date, now: input.now, client: tx });
     await assertActiveBuilding(input.buildingId, tx);
     await assertValidSourceReservation({
+      buildingId: input.buildingId,
       sourceReservationId: input.sourceReservationId,
+      userId: input.userId,
+      date,
+      client: tx,
+    });
+    // Desk-originated suggestions are validated at submission time only. The
+    // lunch row intentionally stores no desk relation, so moving/cancelling a
+    // desk later never changes an independently confirmed food reservation.
+    await assertValidSourceDeskReservation({
+      buildingId: input.buildingId,
+      sourceDeskReservationId: input.sourceDeskReservationId,
       userId: input.userId,
       date,
       client: tx,
@@ -143,6 +205,7 @@ export async function updateLunchReservationLocation(input: {
   breakfastReserved?: boolean;
   lunchReserved?: boolean;
   sourceReservationId?: string;
+  sourceDeskReservationId?: string;
   now?: Date;
 }) {
   return db.$transaction(async (tx) => {
@@ -162,6 +225,7 @@ export async function updateLunchReservationLocation(input: {
       input.breakfastReserved ?? current.breakfastReserved;
     const lunchReserved = input.lunchReserved ?? current.lunchReserved;
     assertAtLeastOneMeal({ breakfastReserved, lunchReserved });
+    assertAtMostOneSource(input);
 
     await assertLunchDateIsReservable({
       date: current.date,
@@ -170,7 +234,15 @@ export async function updateLunchReservationLocation(input: {
     });
     await assertActiveBuilding(input.buildingId, tx);
     await assertValidSourceReservation({
+      buildingId: input.buildingId,
       sourceReservationId: input.sourceReservationId,
+      userId: input.userId,
+      date: startOfLocalDay(current.date),
+      client: tx,
+    });
+    await assertValidSourceDeskReservation({
+      buildingId: input.buildingId,
+      sourceDeskReservationId: input.sourceDeskReservationId,
       userId: input.userId,
       date: startOfLocalDay(current.date),
       client: tx,

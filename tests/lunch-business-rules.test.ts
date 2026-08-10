@@ -28,6 +28,7 @@ import {
   poolId,
   registerBusinessRuleTestHooks,
   secondBuildingId,
+  secondUserId,
   startOfLocalDay,
   userId,
 } from "./business-rules-helpers";
@@ -94,6 +95,171 @@ test("transitional buildings cannot be used for lunch even when accidentally ena
 
   await assert.rejects(
     createLunchReservation({ userId, buildingId: transitional.id, date: nextWorkingDateAtHour(12) }),
+    LunchReservationError,
+  );
+});
+
+test("system food suggestions infer the source pool building and reject tampered input", async () => {
+  const targetDate = nextWorkingDateAtHour(9);
+  const beforeCutoff = addDays(startOfLocalDay(targetDate), -1);
+  beforeCutoff.setHours(12, 0, 0, 0);
+  const pool = await db.resourcePool.create({
+    data: {
+      id: "building-b-systems",
+      buildingId: secondBuildingId,
+      capacity: 1,
+      name: "Building B Systems",
+      active: true,
+    },
+  });
+  const source = await db.reservation.create({
+    data: {
+      userId,
+      resourcePoolId: pool.id,
+      startAt: targetDate,
+      endAt: addHours(targetDate, 1),
+      status: ReservationStatus.PENDING,
+    },
+  });
+
+  await assert.rejects(
+    () =>
+      createLunchReservation({
+        userId,
+        buildingId,
+        date: targetDate,
+        sourceReservationId: source.id,
+        now: beforeCutoff,
+      }),
+    LunchReservationError,
+  );
+
+  const reservation = await createLunchReservation({
+    userId,
+    buildingId: secondBuildingId,
+    date: targetDate,
+    sourceReservationId: source.id,
+    now: beforeCutoff,
+  });
+
+  assert.equal(reservation.buildingId, secondBuildingId);
+});
+
+test("system food suggestions require a source reservation owned by the user", async () => {
+  const targetDate = nextWorkingDateAtHour(9);
+  const beforeCutoff = addDays(startOfLocalDay(targetDate), -1);
+  beforeCutoff.setHours(12, 0, 0, 0);
+  const pool = await db.resourcePool.create({
+    data: {
+      id: "building-b-systems",
+      buildingId: secondBuildingId,
+      capacity: 1,
+      name: "Building B Systems",
+      active: true,
+    },
+  });
+  const source = await db.reservation.create({
+    data: {
+      userId: secondUserId,
+      resourcePoolId: pool.id,
+      startAt: targetDate,
+      endAt: addHours(targetDate, 1),
+      status: ReservationStatus.PENDING,
+    },
+  });
+
+  await assert.rejects(
+    () =>
+      createLunchReservation({
+        userId,
+        buildingId: secondBuildingId,
+        date: targetDate,
+        sourceReservationId: source.id,
+        now: beforeCutoff,
+      }),
+    LunchReservationError,
+  );
+});
+
+test("desk food suggestions infer the desk building without storing a desk relation", async () => {
+  const targetDate = nextWorkingDateAtHour(9);
+  const beforeCutoff = addDays(startOfLocalDay(targetDate), -1);
+  beforeCutoff.setHours(12, 0, 0, 0);
+  const desk = await db.desk.create({
+    data: {
+      id: "building-b-desk",
+      buildingId: secondBuildingId,
+      name: "Building B Desk",
+      active: true,
+      sortOrder: 1,
+    },
+  });
+  const source = await db.deskReservation.create({
+    data: {
+      userId,
+      deskId: desk.id,
+      startAt: targetDate,
+      endAt: addHours(targetDate, 1),
+      status: ReservationStatus.PENDING,
+    },
+  });
+
+  await assert.rejects(
+    () =>
+      createLunchReservation({
+        userId,
+        buildingId,
+        date: targetDate,
+        sourceDeskReservationId: source.id,
+        now: beforeCutoff,
+      }),
+    LunchReservationError,
+  );
+
+  const reservation = await createLunchReservation({
+    userId,
+    buildingId: secondBuildingId,
+    date: targetDate,
+    sourceDeskReservationId: source.id,
+    now: beforeCutoff,
+  });
+
+  assert.equal(reservation.buildingId, secondBuildingId);
+  assert.equal(reservation.sourceReservationId, null);
+});
+
+test("lunch rejects buildings deactivated or deleted after the form was rendered", async () => {
+  const targetDate = nextWorkingDateAtHour(9);
+  const beforeCutoff = addDays(startOfLocalDay(targetDate), -1);
+  beforeCutoff.setHours(12, 0, 0, 0);
+
+  await db.building.update({
+    where: { id: secondBuildingId },
+    data: { active: false },
+  });
+  await assert.rejects(
+    () =>
+      createLunchReservation({
+        userId,
+        buildingId: secondBuildingId,
+        date: targetDate,
+        now: beforeCutoff,
+      }),
+    LunchReservationError,
+  );
+
+  await db.building.update({
+    where: { id: buildingId },
+    data: { deletedAt: new Date() },
+  });
+  await assert.rejects(
+    () =>
+      createLunchReservation({
+        userId,
+        buildingId,
+        date: targetDate,
+        now: beforeCutoff,
+      }),
     LunchReservationError,
   );
 });

@@ -384,6 +384,7 @@ export default async function ReservationsPage({
       },
       orderBy: { name: "asc" },
       select: {
+        building: { select: { id: true, name: true } },
         id: true,
         name: true,
         capacity: true,
@@ -431,7 +432,7 @@ export default async function ReservationsPage({
       },
     }),
     db.building.findMany({
-      where: { active: true, isTransitional: false },
+      where: { active: true, deletedAt: null, isTransitional: false },
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
@@ -578,6 +579,7 @@ export default async function ReservationsPage({
         id: true,
         date: true,
         buildingId: true,
+        building: { select: { name: true } },
         breakfastReserved: true,
         lunchReserved: true,
       },
@@ -620,6 +622,7 @@ export default async function ReservationsPage({
             ? {
                 id: existingReservation.id,
                 buildingId: existingReservation.buildingId,
+                buildingName: existingReservation.building.name,
                 breakfastReserved: existingReservation.breakfastReserved,
                 lunchReserved: existingReservation.lunchReserved,
               }
