@@ -6,7 +6,9 @@ import { ReservationStatus } from "@prisma/client";
 import { runAutoAcceptBatch } from "@/lib/auto-accept-service";
 import { runDeskAutoAcceptBatch } from "@/lib/desk-auto-accept-service";
 import {
+  createBuilding,
   deleteBuilding,
+  updateBuilding,
   updateDesk,
   updateDeskSettings,
   updateBuildingDesks,
@@ -344,6 +346,17 @@ test("deleting an building preserves history and removes future desk reservation
     },
   });
 
+  const historicalLunchReservation = await db.lunchReservation.create({
+    data: {
+      userId,
+      buildingId,
+      date: pastStart,
+      breakfastReserved: false,
+      lunchReserved: true,
+    },
+  });
+  await db.resourcePool.deleteMany({ where: { buildingId } });
+
   await deleteBuilding({ adminId, buildingId: (await db.desk.findUniqueOrThrow({
     where: { id: deskId },
     select: { buildingId: true },
@@ -356,7 +369,47 @@ test("deleting an building preserves history and removes future desk reservation
   assert.ok(building.deletedAt);
   assert.equal(await db.deskReservation.findUnique({ where: { id: futureReservation.id } }), null);
   assert.ok(await db.deskReservation.findUnique({ where: { id: historicalReservation.id } }));
+  assert.ok(await db.lunchReservation.findUnique({ where: { id: historicalLunchReservation.id } }));
   assert.equal(await db.auditLog.count({
     where: { action: "BUILDING_DELETED", entityId: building.id },
   }), 1);
+});
+
+test("building lifecycle blocks active pools and preserves desks when deletion is blocked", async () => {
+  await assert.rejects(
+    updateBuilding({ active: false, adminId, buildingId, name: "Main Building", sortOrder: 1 }),
+    /مخزن‌های ظرفیت فعال/,
+  );
+  await assert.rejects(
+    deleteBuilding({ adminId, buildingId }),
+    /دارای مخزن ظرفیت/,
+  );
+  assert.ok(await db.desk.findUnique({ where: { id: deskId } }));
+  assert.equal((await db.building.findUniqueOrThrow({ where: { id: buildingId } })).active, true);
+});
+
+test("central building lifecycle writes BUILDING audit actions", async () => {
+  const building = await createBuilding({ adminId, name: "Audited Building", sortOrder: 9 });
+  await updateBuilding({ active: true, adminId, buildingId: building.id, name: "Updated Building", sortOrder: 10 });
+  await deleteBuilding({ adminId, buildingId: building.id });
+
+  const actions = await db.auditLog.findMany({
+    where: { entityId: building.id },
+    orderBy: { createdAt: "asc" },
+    select: { action: true },
+  });
+  assert.deepEqual(actions.map(({ action }) => action), ["BUILDING_CREATED", "BUILDING_UPDATED", "BUILDING_DELETED"]);
+  assert.equal(await db.auditLog.count({ where: { action: { startsWith: "LUNCH_LOCATION_" } } }), 0);
+});
+
+test("transitional buildings cannot use ordinary building lifecycle actions", async () => {
+  const transitional = await db.building.create({
+    data: { id: "needs-assignment", name: "Needs assignment", active: false, isTransitional: true },
+  });
+
+  await assert.rejects(
+    updateBuilding({ active: true, adminId, buildingId: transitional.id, name: "Renamed", sortOrder: 1 }),
+    /انتقالی/,
+  );
+  await assert.rejects(deleteBuilding({ adminId, buildingId: transitional.id }), /انتقالی/);
 });

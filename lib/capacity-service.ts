@@ -53,10 +53,19 @@ export async function getEffectiveCapacityForDate(
 ): Promise<number> {
   const resourcePool = await client.resourcePool.findUnique({
     where: { id: input.resourcePoolId },
-    select: { capacity: true, active: true },
+    select: {
+      capacity: true,
+      active: true,
+      building: { select: { active: true, deletedAt: true, isTransitional: true } },
+    },
   });
 
-  if (!resourcePool?.active) {
+  if (
+    !resourcePool?.active ||
+    !resourcePool.building.active ||
+    resourcePool.building.deletedAt ||
+    resourcePool.building.isTransitional
+  ) {
     throw new CapacityUnavailableError("Resource pool is not available.");
   }
 

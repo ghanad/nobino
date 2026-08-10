@@ -3,6 +3,7 @@ import "server-only";
 import { ReservationStatus, UserRole } from "@prisma/client";
 
 import { db } from "@/lib/db";
+import { getEffectiveCapacityForDate } from "@/lib/capacity-service";
 import { formatJalaliDate } from "@/lib/jalali-date";
 import {
   calculateAutoAcceptAt,
@@ -38,6 +39,10 @@ export async function createReservationRequest(input: {
   });
 
   return db.$transaction(async (tx) => {
+    await getEffectiveCapacityForDate(
+      { resourcePoolId: input.resourcePoolId, date: input.startAt },
+      tx,
+    );
     await assertDailyUserReservationPolicy(
       {
         userId: input.userId,

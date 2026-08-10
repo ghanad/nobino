@@ -9,10 +9,12 @@ import {
 } from "@/lib/admin-settings-service";
 import { CapacityUnavailableError, getSlotUsage } from "@/lib/capacity-service";
 import { approveReservation } from "@/lib/reservation-service";
+import { createReservationRequest } from "@/lib/reservation-service";
 
 import {
   addHours,
   adminId,
+  buildingId,
   createReservation,
   db,
   managerId,
@@ -34,6 +36,16 @@ test("pending reservations are visible but do not consume approved capacity", as
   assert.equal(usage[0].approvedCount, 0);
   assert.equal(usage[0].pendingCount, 1);
   assert.equal(usage[0].capacity, 1);
+});
+
+test("an active pool under an inactive building cannot accept system requests", async () => {
+  const startAt = nextWorkingDateAtHour(9);
+  await db.building.update({ where: { id: buildingId }, data: { active: false } });
+
+  await assert.rejects(
+    createReservationRequest({ userId: secondUserId, resourcePoolId: poolId, startAt, endAt: addHours(startAt, 1) }),
+    CapacityUnavailableError,
+  );
 });
 
 test("reservation people count does not consume additional capacity", async () => {

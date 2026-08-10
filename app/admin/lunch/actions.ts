@@ -11,12 +11,9 @@ import {
 } from "@/lib/jalali-date";
 import {
   createLunchException,
-  createBuilding,
   deleteLunchException,
-  deleteBuilding,
   LunchReservationError,
   updateLunchException,
-  updateBuilding,
   updateLunchSettings,
   updateLunchWeeklySchedule,
 } from "@/lib/lunch-service";
@@ -27,19 +24,6 @@ const settingsSchema = z.object({
   enabled: z.coerce.boolean(),
   maxAdvanceDays: z.coerce.number().int().min(1).max(31),
   cutoffTime: timeSchema,
-});
-
-const createLocationSchema = z.object({
-  name: z.string().trim().min(1).max(100),
-});
-
-const updateLocationSchema = createLocationSchema.extend({
-  buildingId: z.string().min(1),
-  active: z.coerce.boolean(),
-});
-
-const deleteLocationSchema = z.object({
-  buildingId: z.string().min(1),
 });
 
 const weeklyScheduleSchema = z.object({
@@ -121,80 +105,6 @@ export async function updateLunchSettingsAction(
   }
 
   redirectToLunchAdmin({ settingsUpdated: "1" });
-}
-
-export async function createBuildingAction(
-  formData: FormData,
-): Promise<void> {
-  const admin = await requireRole([UserRole.ADMIN]);
-  const parsed = createLocationSchema.safeParse({
-    name: formData.get("name"),
-  });
-
-  if (!parsed.success) {
-    redirectToLunchAdmin({ error: "نام ساختمان معتبر نیست." });
-  }
-
-  try {
-    await createBuilding({
-      adminId: admin.id,
-      name: parsed.data.name,
-    });
-  } catch (error) {
-    redirectToLunchAdmin({ error: getActionErrorMessage(error) });
-  }
-
-  redirectToLunchAdmin({ buildingCreated: "1" });
-}
-
-export async function updateBuildingAction(
-  formData: FormData,
-): Promise<void> {
-  const admin = await requireRole([UserRole.ADMIN]);
-  const parsed = updateLocationSchema.safeParse({
-    buildingId: formData.get("buildingId"),
-    name: formData.get("name"),
-    active: checkboxToBoolean(formData.get("active")),
-  });
-
-  if (!parsed.success) {
-    redirectToLunchAdmin({ error: "ساختمان معتبر نیست." });
-  }
-
-  try {
-    await updateBuilding({
-      adminId: admin.id,
-      ...parsed.data,
-    });
-  } catch (error) {
-    redirectToLunchAdmin({ error: getActionErrorMessage(error) });
-  }
-
-  redirectToLunchAdmin({ buildingUpdated: "1" });
-}
-
-export async function deleteBuildingAction(
-  formData: FormData,
-): Promise<void> {
-  const admin = await requireRole([UserRole.ADMIN]);
-  const parsed = deleteLocationSchema.safeParse({
-    buildingId: formData.get("buildingId"),
-  });
-
-  if (!parsed.success) {
-    redirectToLunchAdmin({ error: "ساختمان معتبر نیست." });
-  }
-
-  try {
-    await deleteBuilding({
-      adminId: admin.id,
-      buildingId: parsed.data.buildingId,
-    });
-  } catch (error) {
-    redirectToLunchAdmin({ error: getActionErrorMessage(error) });
-  }
-
-  redirectToLunchAdmin({ buildingDeleted: "1" });
 }
 
 export async function updateLunchWeeklyScheduleAction(

@@ -1,13 +1,11 @@
 import { UserRole } from "@prisma/client";
 import { Plus, Save, Trash2 } from "lucide-react";
+import Link from "next/link";
 
 import {
   createLunchExceptionAction,
-  createBuildingAction,
   deleteLunchExceptionAction,
-  deleteBuildingAction,
   updateLunchExceptionAction,
-  updateBuildingAction,
   updateLunchSettingsAction,
   updateLunchWeeklyScheduleAction,
 } from "@/app/admin/lunch/actions";
@@ -25,9 +23,6 @@ type AdminLunchPageProps = {
     exceptionCreated?: string;
     exceptionDeleted?: string;
     exceptionUpdated?: string;
-    buildingCreated?: string;
-    buildingDeleted?: string;
-    buildingUpdated?: string;
     settingsUpdated?: string;
     weeklyUpdated?: string;
   }>;
@@ -54,9 +49,6 @@ function getAdminLunchToast(params: Awaited<AdminLunchPageProps["searchParams"]>
 
   const successKeys = [
     "settingsUpdated",
-    "buildingCreated",
-    "buildingUpdated",
-    "buildingDeleted",
     "weeklyUpdated",
     "exceptionCreated",
     "exceptionUpdated",
@@ -103,20 +95,10 @@ export default async function AdminLunchPage({
   const toast = getAdminLunchToast(params);
   const [
     settings,
-    buildings,
     weeklySchedule,
     exceptions,
   ] = await Promise.all([
     db.lunchSettings.findUnique({ where: { id: "default" } }),
-    db.building.findMany({
-      orderBy: [{ active: "desc" }, { name: "asc" }],
-      select: {
-        id: true,
-        name: true,
-        active: true,
-        _count: { select: { lunchReservations: true } },
-      },
-    }),
     db.lunchWeeklySchedule.findMany({
       orderBy: { dayOfWeek: "asc" },
       select: { id: true, dayOfWeek: true, isServiceDay: true },
@@ -136,7 +118,7 @@ export default async function AdminLunchPage({
   return (
     <div className="grid gap-6 text-right" dir="rtl">
       <PageHeader
-        subtitle="تنظیمات رزرو غذا، ساختمان‌ها، روزهای سرویس و استثناها"
+        subtitle="تنظیمات رزرو غذا، روزهای سرویس و استثناها"
         title="مدیریت غذا"
       />
 
@@ -193,57 +175,12 @@ export default async function AdminLunchPage({
         <div>
           <h2 className="font-medium">ساختمان‌ها</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            ساختمان غیرفعال در فرم رزرو نمایش داده نمی‌شود اما گزارش‌های قبلی حفظ می‌شوند.
+            ساختمان‌ها منبع مشترک رزرو میز، سیستم و غذا هستند و فقط از بخش مدیریت مرکزی تغییر می‌کنند.
           </p>
         </div>
-        <form
-          action={createBuildingAction}
-          className="grid gap-3 md:grid-cols-[1fr_auto]"
-        >
-          <InputText name="name" placeholder="نام ساختمان" />
-          <SubmitButton pendingLabel="در حال افزودن">
-            <Plus className="h-4 w-4" />
-            افزودن
-          </SubmitButton>
-        </form>
-        <div className="grid gap-3">
-          {buildings.map((building) => (
-            <div
-              className="grid gap-3 rounded-md border bg-background p-3 md:grid-cols-[1fr_auto_auto] md:items-center"
-              key={building.id}
-            >
-              <form
-                action={updateBuildingAction}
-                className="grid gap-3 md:grid-cols-[1fr_auto_auto]"
-              >
-                <input name="buildingId" type="hidden" value={building.id} />
-                <InputText defaultValue={building.name} name="name" />
-                <label className="flex h-10 items-center gap-2 text-sm">
-                  <input
-                    defaultChecked={building.active}
-                    name="active"
-                    type="checkbox"
-                  />
-                  فعال
-                </label>
-                <SubmitButton pendingLabel="در حال ذخیره" variant="outline">
-                  <Save className="h-4 w-4" />
-                  ذخیره
-                </SubmitButton>
-              </form>
-              <span className="text-xs text-muted-foreground">
-                {building._count.lunchReservations} رزرو
-              </span>
-              <form action={deleteBuildingAction}>
-                <input name="buildingId" type="hidden" value={building.id} />
-                <SubmitButton pendingLabel="در حال حذف" variant="outline">
-                  <Trash2 className="h-4 w-4" />
-                  حذف
-                </SubmitButton>
-              </form>
-            </div>
-          ))}
-        </div>
+        <Link className="w-fit text-sm font-medium text-primary hover:underline" href="/admin/desks">
+          رفتن به مدیریت مرکزی ساختمان‌ها
+        </Link>
       </section>
 
       <section className="grid gap-4 rounded-lg border bg-card p-5">

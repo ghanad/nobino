@@ -378,7 +378,10 @@ export default async function ReservationsPage({
   const [resourcePools, reservationPolicy, reservations, buildings] =
     await Promise.all([
     db.resourcePool.findMany({
-      where: { active: true },
+      where: {
+        active: true,
+        building: { active: true, deletedAt: null, isTransitional: false },
+      },
       orderBy: { name: "asc" },
       select: {
         id: true,

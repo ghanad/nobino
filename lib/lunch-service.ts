@@ -6,11 +6,6 @@ export {
   deleteLunchException,
   updateLunchException,
 } from "./lunch-service/exceptions";
-export {
-  createBuilding,
-  deleteBuilding,
-  updateBuilding,
-} from "./lunch-service/locations";
 export { getLunchReport } from "./lunch-service/reports";
 export {
   cancelLinkedFoodReservationInTransaction,

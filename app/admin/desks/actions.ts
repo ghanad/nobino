@@ -6,7 +6,8 @@ import { z } from "zod";
 
 import { AdminSettingsError } from "@/lib/admin-settings-service/shared";
 import { requireRole } from "@/lib/auth";
-import { createDesk, createBuilding, deleteBuilding, deleteBuildingScheduleException, updateDesk, updateDeskSettings, updateBuilding, updateBuildingDesks, updateBuildingWeeklySchedule, upsertBuildingScheduleException } from "@/lib/desk-admin-service";
+import { createBuilding, deleteBuilding, updateBuilding } from "@/lib/building-service";
+import { createDesk, deleteBuildingScheduleException, updateDesk, updateDeskSettings, updateBuildingDesks, updateBuildingWeeklySchedule, upsertBuildingScheduleException } from "@/lib/desk-admin-service";
 import { isValidJalaliDateParam, parseJalaliDateParam } from "@/lib/jalali-date";
 
 const nameSchema = z.string().trim().min(1).max(100);
