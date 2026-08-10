@@ -222,6 +222,25 @@ test("normal users cannot approve their own reservation", async () => {
   );
 });
 
+test("manager approval notification includes the resource pool, building, and Jalali date", async () => {
+  const startAt = nextWorkingDateAtHour(9);
+  const pending = await createReservation({
+    startAt,
+    endAt: addHours(startAt, 1),
+    status: ReservationStatus.PENDING,
+  });
+
+  await approveReservation({ reservationId: pending.id, managerId });
+
+  const notification = await db.notification.findFirstOrThrow({
+    where: { reservationId: pending.id, type: "RESERVATION_APPROVED", userId },
+  });
+  assert.equal(
+    notification.body,
+    `رزرو شما برای Company Systems در ساختمان Main Building در تاریخ ${formatJalaliDate(startAt)} تایید شد.`,
+  );
+});
+
 test("manager cancellation removes approved reservation from capacity", async () => {
   const startAt = nextWorkingDateAtHour(9);
   const endAt = addHours(startAt, 1);

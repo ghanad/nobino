@@ -3,6 +3,7 @@ import "server-only";
 import { ReservationStatus } from "@prisma/client";
 
 import { db } from "@/lib/db";
+import { formatJalaliDate } from "@/lib/jalali-date";
 import { assertApprovalPolicies } from "./approval-policies";
 import {
   assertManagerOrAdmin,
@@ -32,6 +33,14 @@ async function finalizeApprovedReservation(
       rejectionReason: null,
       status: ReservationStatus.APPROVED,
     },
+    include: {
+      resourcePool: {
+        select: {
+          building: { select: { name: true } },
+          name: true,
+        },
+      },
+    },
   });
 
   await tx.auditLog.create({
@@ -50,7 +59,12 @@ async function finalizeApprovedReservation(
 
   await tx.notification.create({
     data: {
-      body: input.notificationBody,
+      body:
+        input.notificationBody === "Your reservation request has been approved."
+          ? `رزرو شما برای ${approvedReservation.resourcePool.name} در ساختمان ${approvedReservation.resourcePool.building.name} در تاریخ ${formatJalaliDate(approvedReservation.startAt)} تایید شد.`
+          : input.notificationBody === "Your reservation request was automatically approved."
+            ? `رزرو شما برای ${approvedReservation.resourcePool.name} در ساختمان ${approvedReservation.resourcePool.building.name} در تاریخ ${formatJalaliDate(approvedReservation.startAt)} به‌صورت خودکار تایید شد.`
+            : input.notificationBody,
       reservationId: input.reservationId,
       title: input.notificationTitle,
       type: input.notificationType,
