@@ -37,6 +37,35 @@ test("desk reservation starts pending and notifies managers", async () => {
   );
 });
 
+test("a desk in a transitional building cannot be reserved", async () => {
+  const transitional = await db.building.create({
+    data: {
+      id: "building-needs-assignment",
+      name: "Needs assignment",
+      active: true,
+      isTransitional: true,
+    },
+  });
+  const transitionalDesk = await db.desk.create({
+    data: {
+      buildingId: transitional.id,
+      name: "Transitional desk",
+      sortOrder: 1,
+    },
+  });
+  const startAt = nextWorkingDateAtHour(9);
+
+  await assert.rejects(
+    createDeskReservation({
+      deskId: transitionalDesk.id,
+      startAt,
+      endAt: addHours(startAt, 1),
+      userId,
+    }),
+    /در دسترس نیست/,
+  );
+});
+
 test("desk auto approval uses the existing shared cron batch", async () => {
   await updateDeskSettings({
     adminId,

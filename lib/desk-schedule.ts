@@ -135,10 +135,17 @@ export async function validateDeskReservationTimeRange(
     where: { id: input.deskId },
     select: {
       active: true,
-      building: { select: { active: true, deletedAt: true, id: true } },
+      building: {
+        select: { active: true, deletedAt: true, id: true, isTransitional: true },
+      },
     },
   });
-  if (!desk?.active || !desk.building.active || desk.building.deletedAt) {
+  if (
+    !desk?.active ||
+    !desk.building.active ||
+    desk.building.deletedAt ||
+    desk.building.isTransitional
+  ) {
     throw new ReservationTimeRangeError("این میز در دسترس نیست.");
   }
 
