@@ -337,7 +337,7 @@ export function WikiChat({ enabled, hasContent, suggestions }: WikiChatProps) {
                 <article
                   className={cn(
                     "flex items-start gap-3",
-                    !isAssistant && "flex-row-reverse",
+                    isAssistant && "flex-row-reverse",
                   )}
                   key={message.id}
                 >
@@ -355,12 +355,7 @@ export function WikiChat({ enabled, hasContent, suggestions }: WikiChatProps) {
                       <UserRound aria-hidden="true" className="h-4 w-4" />
                     )}
                   </span>
-                  <div
-                    className={cn(
-                      "min-w-0 max-w-[calc(100%-2.75rem)]",
-                      !isAssistant && "text-left",
-                    )}
-                  >
+                  <div className="min-w-0 max-w-[calc(100%-2.75rem)]">
                     <div
                       className={cn(
                         "whitespace-pre-wrap text-sm leading-7",

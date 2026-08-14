@@ -1,12 +1,8 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import { Settings2 } from "lucide-react";
 
 import { WikiChat } from "@/app/wiki/_components/wiki-chat";
 import { WikiWorkspace } from "@/app/wiki/_components/wiki-workspace";
 import { AppShell } from "@/components/app/app-shell";
-import { PageHeader } from "@/components/app/page-header";
-import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth";
 import { canManageWiki } from "@/lib/permissions";
 import { getWikiAiSettings } from "@/lib/wiki-ai-settings-service";
@@ -60,22 +56,7 @@ export default async function WikiIndexPage() {
   return (
     <AppShell user={user}>
       <WikiWorkspace activeSlug="" isAdmin={isAdmin} tree={tree}>
-        <div className="grid gap-5" dir="rtl">
-          <PageHeader
-            actions={
-              isAdmin ? (
-                <Button asChild variant="outline">
-                  <Link href="/admin/wiki-ai">
-                    <Settings2 aria-hidden="true" className="h-4 w-4" />
-                    تنظیمات دستیار
-                  </Link>
-                </Button>
-              ) : undefined
-            }
-            subtitle="پاسخ مستند از محتوای داخلی شرکت"
-            title="پرسش از دانش‌نامه"
-          />
-
+        <div dir="rtl">
           <WikiChat
             enabled={settings.enabled}
             hasContent={hasContent}
