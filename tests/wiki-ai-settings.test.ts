@@ -3,6 +3,8 @@ import test from "node:test";
 
 import { AdminSettingsError } from "@/lib/admin-settings-service/shared";
 import {
+  buildWikiAssistantSystemPrompt,
+  getCasualWikiAssistantResponse,
   parseWikiAiSourceReferences,
   selectRelevantWikiDocuments,
 } from "@/lib/wiki-ai-chat-service";
@@ -102,6 +104,51 @@ test("wiki AI citations accept known page IDs and ignore invented sources", () =
     { slug: "page-one", title: "صفحه اول" },
     { slug: "page-two", title: "صفحه دوم" },
   ]);
+});
+
+test("wiki AI prompt guides users instead of merely repeating documents", () => {
+  const prompt = buildWikiAssistantSystemPrompt([
+    {
+      contentText: "درخواست باید در سامانه منابع انسانی ثبت شود.",
+      id: "s1",
+      slug: "sick-leave",
+      title: "مرخصی استعلاجی",
+    },
+  ]);
+
+  assert.match(prompt, /کاربر را برای انجام کارش راهنمایی کنی/);
+  assert.match(prompt, /اقدام بعدی/);
+  assert.match(prompt, /۲ تا ۵ گام کوتاه و عملی/);
+  assert.match(prompt, /یک سؤال روشن بپرس/);
+  assert.match(prompt, /«می‌باشد»، «نمایید» و «گردد»/);
+  assert.match(prompt, /فقط با اتکا به سندهای زیر/);
+  assert.match(prompt, /درخواست باید در سامانه منابع انسانی ثبت شود/);
+});
+
+test("wiki AI handles greetings without requiring a wiki source", () => {
+  assert.equal(
+    getCasualWikiAssistantResponse("سلام"),
+    "سلام! خوشحالم که اینجام. دربارهٔ فرایندهای شرکت هر سؤالی دارید بپرسید تا راهنمایی‌تان کنم.",
+  );
+  assert.equal(
+    getCasualWikiAssistantResponse("سلام، وقت بخیر!"),
+    "سلام! خوشحالم که اینجام. دربارهٔ فرایندهای شرکت هر سؤالی دارید بپرسید تا راهنمایی‌تان کنم.",
+  );
+  assert.equal(
+    getCasualWikiAssistantResponse("سلام، برای استعلاجی چه کار کنم؟"),
+    null,
+  );
+});
+
+test("wiki AI responds naturally to thanks and farewells", () => {
+  assert.equal(
+    getCasualWikiAssistantResponse("خیلی ممنون"),
+    "خواهش می‌کنم! اگر سؤال دیگری دارید، بپرسید.",
+  );
+  assert.equal(
+    getCasualWikiAssistantResponse("خداحافظ"),
+    "خداحافظ! هر وقت سؤالی داشتید، من اینجا هستم.",
+  );
 });
 
 test("wiki AI retrieval ranks relevant visible pages independent of tree order", () => {
