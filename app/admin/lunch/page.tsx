@@ -7,8 +7,8 @@ import {
   deleteLunchExceptionAction,
   updateLunchExceptionAction,
   updateLunchSettingsAction,
-  updateLunchWeeklyScheduleAction,
 } from "@/app/admin/lunch/actions";
+import { LunchWeeklyScheduleForm } from "@/app/admin/lunch/lunch-weekly-schedule-form";
 import { PageHeader } from "@/components/app/page-header";
 import { JalaliDatePicker } from "@/components/ui/jalali-date-picker";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -24,18 +24,7 @@ type AdminLunchPageProps = {
     exceptionDeleted?: string;
     exceptionUpdated?: string;
     settingsUpdated?: string;
-    weeklyUpdated?: string;
   }>;
-};
-
-const WEEKDAY_LABELS: Record<number, string> = {
-  0: "یک شنبه",
-  1: "دو شنبه",
-  2: "سه شنبه",
-  3: "چهار شنبه",
-  4: "پنج شنبه",
-  5: "جمعه",
-  6: "شنبه",
 };
 
 function getAdminLunchToast(params: Awaited<AdminLunchPageProps["searchParams"]>) {
@@ -49,7 +38,6 @@ function getAdminLunchToast(params: Awaited<AdminLunchPageProps["searchParams"]>
 
   const successKeys = [
     "settingsUpdated",
-    "weeklyUpdated",
     "exceptionCreated",
     "exceptionUpdated",
     "exceptionDeleted",
@@ -185,28 +173,7 @@ export default async function AdminLunchPage({
 
       <section className="grid gap-4 rounded-lg border bg-card p-5">
         <h2 className="font-medium">برنامه هفتگی غذا</h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {weeklySchedule.map((day) => (
-            <form
-              action={updateLunchWeeklyScheduleAction}
-              className="flex items-center justify-between gap-3 rounded-md border bg-background p-3"
-              key={day.id}
-            >
-              <input name="scheduleId" type="hidden" value={day.id} />
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  defaultChecked={day.isServiceDay}
-                  name="isServiceDay"
-                  type="checkbox"
-                />
-                {WEEKDAY_LABELS[day.dayOfWeek]}
-              </label>
-              <SubmitButton pendingLabel="..." size="sm" variant="outline">
-                ذخیره
-              </SubmitButton>
-            </form>
-          ))}
-        </div>
+        <LunchWeeklyScheduleForm days={weeklySchedule} />
       </section>
 
       <section className="grid gap-4 rounded-lg border bg-card p-5">

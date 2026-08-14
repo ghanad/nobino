@@ -1,6 +1,7 @@
 "use server";
 
 import { UserRole } from "@prisma/client";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
@@ -26,10 +27,14 @@ const settingsSchema = z.object({
   cutoffTime: timeSchema,
 });
 
-const weeklyScheduleSchema = z.object({
-  scheduleId: z.string().min(1),
-  isServiceDay: z.coerce.boolean(),
-});
+const weeklyScheduleSchema = z
+  .array(
+    z.object({
+      scheduleId: z.string().min(1),
+      isServiceDay: z.coerce.boolean(),
+    }),
+  )
+  .length(7);
 
 const createExceptionSchema = z.object({
   date: z.string().refine(isValidJalaliDateParam),
@@ -107,29 +112,44 @@ export async function updateLunchSettingsAction(
   redirectToLunchAdmin({ settingsUpdated: "1" });
 }
 
-export async function updateLunchWeeklyScheduleAction(
+export type LunchWeeklyScheduleActionState = {
+  status: "error" | "idle" | "success";
+  message: string;
+};
+
+export async function saveLunchWeeklyScheduleAction(
+  _previousState: LunchWeeklyScheduleActionState,
   formData: FormData,
-): Promise<void> {
+): Promise<LunchWeeklyScheduleActionState> {
   const admin = await requireRole([UserRole.ADMIN]);
-  const parsed = weeklyScheduleSchema.safeParse({
-    scheduleId: formData.get("scheduleId"),
-    isServiceDay: checkboxToBoolean(formData.get("isServiceDay")),
-  });
+  const parsed = weeklyScheduleSchema.safeParse(
+    Array.from({ length: 7 }, (_, index) => ({
+      scheduleId: formData.get(`schedules.${index}.scheduleId`),
+      isServiceDay: checkboxToBoolean(
+        formData.get(`schedules.${index}.isServiceDay`),
+      ),
+    })),
+  );
 
   if (!parsed.success) {
-    redirectToLunchAdmin({ error: "روز برنامه هفتگی معتبر نیست." });
+    return { message: "روز برنامه هفتگی معتبر نیست.", status: "error" };
   }
 
   try {
     await updateLunchWeeklySchedule({
       adminId: admin.id,
-      ...parsed.data,
+      schedules: parsed.data,
     });
   } catch (error) {
-    redirectToLunchAdmin({ error: getActionErrorMessage(error) });
+    if (error instanceof LunchReservationError) {
+      return { message: error.message, status: "error" };
+    }
+
+    throw error;
   }
 
-  redirectToLunchAdmin({ weeklyUpdated: "1" });
+  revalidatePath("/admin/lunch");
+  return { message: "برنامه هفتگی ذخیره شد.", status: "success" };
 }
 
 export async function createLunchExceptionAction(
