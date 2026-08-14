@@ -1,0 +1,1 @@
+ALTER TABLE "WikiAiSettings" ADD COLUMN "systemPrompt" TEXT NOT NULL DEFAULT '';

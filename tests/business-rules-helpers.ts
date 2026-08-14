@@ -161,6 +161,7 @@ export async function resetDatabase() {
   await db.calendarDayOverride.deleteMany();
   await db.wikiPageRevision.deleteMany();
   await db.wikiPage.deleteMany();
+  await db.wikiAiSettings.deleteMany();
   await db.lunchReservation.deleteMany();
   await db.lunchException.deleteMany();
   await db.lunchWeeklySchedule.deleteMany();

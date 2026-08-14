@@ -139,9 +139,9 @@ The first operational version is implemented. Seeded users can sign in, create h
   delivery health.
 - `/manager` is available to managers and admins.
 - `/admin` is available to admins only.
-- `/wiki` is the internal knowledge base for every authenticated user. It opens
-  the first page visible to the current role, or an empty state when no visible
-  page exists.
+- `/wiki` is the internal knowledge-base landing page for every authenticated
+  user. It includes a Persian streaming assistant that answers only from wiki
+  pages visible to the current user and links cited pages for manual review.
 - `/wiki/[slug]` renders a published knowledge-base page. `USER` and `MANAGER`
   users receive a 404 for a hidden page or any page below a hidden parent, even
   when they know the direct URL.
@@ -150,6 +150,9 @@ The first operational version is implemented. Seeded users can sign in, create h
   Admins can create root pages or children, choose a parent, reorder siblings,
   set hidden state, soft-delete leaf pages, review immutable revisions, and
   transfer the knowledge base between environments with a versioned JSON file.
+- `/admin/wiki-ai` is admin-only and controls the OpenAI-compatible model base
+  URL, model name, timeout, output limit, enabled state, assistant behavior
+  instructions, default-instruction restore, and connection test.
 
 ## Knowledge Base
 
@@ -175,6 +178,20 @@ deletes destination-only pages. Existing revision history is preserved, while
 created or changed imported pages receive new revisions and audit entries. The
 transfer file does not include soft-deleted pages or historical revisions and
 is limited to 2,000 pages and 10 MB on import.
+
+The wiki assistant targets the internal vLLM connection at
+`http://192.168.223.11:8001/v1` with model ID `Qwen3.6` by default. Admins can
+edit these values in `/admin/wiki-ai`. Requests use streaming Chat Completions
+with thinking disabled, and reasoning events are discarded server-side. The
+current internal endpoint does not require an API key. Nobino builds source
+links from validated wiki slugs instead of trusting model-generated URLs.
+Admins can edit the assistant's behavior instructions and restore the shipped
+default in `/admin/wiki-ai`; grounding, document-injection protection, and the
+validated source-marker contract remain fixed server-side. Prompt changes and
+restores are included in the existing wiki AI settings audit history.
+`WIKI_AI_ALLOWED_HOSTS` is a comma-separated server-side allowlist for editable
+model endpoints and defaults to `192.168.223.11`; redirects and local or
+link-local metadata targets are rejected.
 
 ## Schedule Rules
 
@@ -286,6 +303,9 @@ Use `.env.example` as the source of truth for required settings:
 - `BALE_SYNC_SECRET`: long random bearer secret protecting the Bale sync route.
 - `AUTO_ACCEPT_CRON_SECRET`: long random bearer secret protecting the auto-accept
   route.
+- `WIKI_AI_ALLOWED_HOSTS`: comma-separated allowlist of hostnames or IPs that
+  admins may use as the wiki assistant model endpoint. It defaults to the
+  current internal vLLM host, `192.168.223.11`.
 - `NEXT_PUBLIC_APP_NAME`: display name used by the app shell.
 
 LDAP authentication validates the password against LDAP. When an LDAP login is

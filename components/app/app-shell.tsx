@@ -100,6 +100,11 @@ function getNavItems(user: CurrentUser): GlobalNavItem[] {
           },
           { href: "/admin/announcements", label: "اعلان‌ها", match: "prefix" },
           { href: "/admin/bale", label: "پیام‌رسان بله", match: "prefix" },
+          {
+            href: "/admin/wiki-ai",
+            label: "دستیار دانش‌نامه",
+            match: "prefix",
+          },
         ],
       },
       {
