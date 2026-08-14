@@ -123,6 +123,7 @@ export const ACTION_LABELS: Record<string, string> = {
   WIKI_PAGE_REORDERED: "ترتیب صفحه دانشنامه تغییر کرد",
   WIKI_PAGE_SHOWN: "صفحه دانشنامه نمایش داده شد",
   WIKI_PAGE_UPDATED: "صفحه دانشنامه ویرایش شد",
+  WIKI_AI_SETTINGS_UPDATED: "تنظیمات دستیار دانش‌نامه تغییر کرد",
 };
 
 export const ENTITY_LABELS: Record<string, string> = {
@@ -148,10 +149,12 @@ export const ENTITY_LABELS: Record<string, string> = {
   User: "کاربر",
   WorkingSchedule: "برنامه هفتگی",
   WikiPage: "صفحه دانشنامه",
+  WikiAiSettings: "تنظیمات دستیار دانش‌نامه",
 };
 
 const FIELD_LABELS: Record<string, string> = {
   active: "وضعیت کاربر",
+  baseUrl: "نشانی سرویس مدل",
   capacity: "ظرفیت",
   dailyUserHourLimit: "سقف روزانه هر کاربر",
   autoAcceptAt: "مهلت تایید خودکار",
@@ -162,6 +165,10 @@ const FIELD_LABELS: Record<string, string> = {
   autoApprovalEnabled: "فعال بودن auto accept اتاق جلسه",
   date: "تاریخ",
   email: "ایمیل",
+  enabled: "فعال بودن",
+  maxOutputTokens: "حداکثر توکن پاسخ",
+  model: "نام مدل",
+  timeoutSeconds: "مهلت پاسخ",
   endAt: "پایان",
   endTime: "پایان کار",
   isWorkingDay: "روز کاری",

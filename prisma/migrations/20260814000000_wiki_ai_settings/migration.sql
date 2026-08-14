@@ -1,0 +1,10 @@
+CREATE TABLE "WikiAiSettings" (
+    "id" TEXT NOT NULL PRIMARY KEY DEFAULT 'default',
+    "enabled" BOOLEAN NOT NULL DEFAULT true,
+    "baseUrl" TEXT NOT NULL DEFAULT 'http://192.168.223.11:8001/v1',
+    "model" TEXT NOT NULL DEFAULT 'Qwen3.6',
+    "timeoutSeconds" INTEGER NOT NULL DEFAULT 60,
+    "maxOutputTokens" INTEGER NOT NULL DEFAULT 900,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL
+);
