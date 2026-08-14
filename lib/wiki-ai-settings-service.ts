@@ -9,12 +9,24 @@ import {
   type DbClient,
 } from "@/lib/admin-settings-service/shared";
 
+export const DEFAULT_WIKI_AI_SYSTEM_PROMPT = [
+  "نقش شما فقط پیدا کردن یا بازگویی سند نیست؛ باید کاربر را برای انجام کارش راهنمایی کنی.",
+  "لحن را با موقعیت کاربر هماهنگ کن: اگر کاربر مسئله، نگرانی یا وضعیت شخصی مطرح کرده، با یک جمله کوتاه، طبیعی و غیرکلیشه‌ای همراهی کن، اما احساس یا شدت شرایط او را حدس نزن؛ برای پرسش‌های خنثی همدلی مصنوعی اضافه نکن.",
+  "بعد، پاسخ مستقیم و اقدام بعدی را بگو. اگر پاسخ شامل یک فرایند است، آن را به ۲ تا ۵ گام کوتاه و عملی تبدیل کن و مسئول، مسیر ثبت، شرط یا زمان مهم را فقط وقتی در سند آمده حفظ کن.",
+  "با فارسی گفتاریِ محترمانه بنویس؛ تا وقتی اصطلاح رسمی سازمان نیست، به‌جای عبارت‌های اداری مثل «می‌باشد»، «نمایید» و «گردد» از فعل‌های ساده و طبیعی استفاده کن.",
+  "متن سند را عیناً یا به‌صورت طولانی بازگو نکن و پاسخ را با عبارت‌هایی مثل «طبق مستند» یا معرفی نام صفحه شروع نکن؛ منبع‌ها جداگانه در رابط نمایش داده می‌شوند.",
+  "اگر اطلاعاتی که بین چند مسیر مستند تعیین‌کننده است در پرسش وجود ندارد، فقط یک سؤال روشن بپرس و در صورت امکان تا قبل از پاسخ کاربر، بخش مشترک و امن راهنما را هم بگو.",
+  "هرگز وانمود نکن کاری را برای کاربر انجام داده‌ای یا قول پیگیری خارج از این گفت‌وگو نده.",
+  "پاسخ را روشن، کوتاه و به فارسی روان بنویس. از جدول، عنوان‌های طولانی و مقدمه‌چینی استفاده نکن.",
+].join("\n");
+
 export const DEFAULT_WIKI_AI_SETTINGS = {
   baseUrl: "http://192.168.223.11:8001/v1",
   enabled: true,
   id: "default",
   maxOutputTokens: 900,
   model: "Qwen3.6",
+  systemPrompt: DEFAULT_WIKI_AI_SYSTEM_PROMPT,
   timeoutSeconds: 60,
 } as const;
 
@@ -24,6 +36,7 @@ export type WikiAiSettingsValue = {
   id: string;
   maxOutputTokens: number;
   model: string;
+  systemPrompt: string;
   timeoutSeconds: number;
 };
 
@@ -85,12 +98,22 @@ function validateWikiAiSettings(input: {
   enabled: boolean;
   maxOutputTokens: number;
   model: string;
+  systemPrompt?: string;
   timeoutSeconds: number;
 }): Omit<WikiAiSettingsValue, "id"> {
   const model = input.model.trim();
+  const systemPrompt = (
+    input.systemPrompt ?? DEFAULT_WIKI_AI_SYSTEM_PROMPT
+  ).trim();
 
   if (!model || model.length > 200) {
     throw new AdminSettingsError("نام مدل معتبر نیست.");
+  }
+
+  if (!systemPrompt || systemPrompt.length > 12_000) {
+    throw new AdminSettingsError(
+      "دستورهای رفتاری دستیار باید بین ۱ تا ۱۲۰۰۰ نویسه باشد.",
+    );
   }
 
   if (
@@ -114,6 +137,7 @@ function validateWikiAiSettings(input: {
     enabled: input.enabled,
     maxOutputTokens: input.maxOutputTokens,
     model,
+    systemPrompt,
     timeoutSeconds: input.timeoutSeconds,
   };
 }
@@ -121,7 +145,15 @@ function validateWikiAiSettings(input: {
 function mapSettings(
   settings: WikiAiSettingsValue | null,
 ): WikiAiSettingsValue {
-  return settings ?? { ...DEFAULT_WIKI_AI_SETTINGS };
+  if (!settings) {
+    return { ...DEFAULT_WIKI_AI_SETTINGS };
+  }
+
+  return {
+    ...settings,
+    systemPrompt:
+      settings.systemPrompt.trim() || DEFAULT_WIKI_AI_SYSTEM_PROMPT,
+  };
 }
 
 export async function getWikiAiSettings(
@@ -136,6 +168,7 @@ export async function getWikiAiSettings(
         id: true,
         maxOutputTokens: true,
         model: true,
+        systemPrompt: true,
         timeoutSeconds: true,
       },
     }),
@@ -148,6 +181,7 @@ export async function updateWikiAiSettings(input: {
   enabled: boolean;
   maxOutputTokens: number;
   model: string;
+  systemPrompt?: string;
   timeoutSeconds: number;
 }): Promise<WikiAiSettingsValue> {
   const values = validateWikiAiSettings(input);
@@ -165,6 +199,7 @@ export async function updateWikiAiSettings(input: {
         id: true,
         maxOutputTokens: true,
         model: true,
+        systemPrompt: true,
         timeoutSeconds: true,
       },
     });
@@ -184,6 +219,22 @@ export async function updateWikiAiSettings(input: {
   });
 }
 
+export async function resetWikiAiSystemPrompt(
+  adminId: string,
+): Promise<WikiAiSettingsValue> {
+  const current = await getWikiAiSettings();
+
+  return updateWikiAiSettings({
+    adminId,
+    baseUrl: current.baseUrl,
+    enabled: current.enabled,
+    maxOutputTokens: current.maxOutputTokens,
+    model: current.model,
+    systemPrompt: DEFAULT_WIKI_AI_SYSTEM_PROMPT,
+    timeoutSeconds: current.timeoutSeconds,
+  });
+}
+
 export async function testWikiAiConnection(input: {
   baseUrl: string;
   model: string;
@@ -193,6 +244,7 @@ export async function testWikiAiConnection(input: {
     ...input,
     enabled: true,
     maxOutputTokens: DEFAULT_WIKI_AI_SETTINGS.maxOutputTokens,
+    systemPrompt: DEFAULT_WIKI_AI_SYSTEM_PROMPT,
   });
   const controller = new AbortController();
   const timeout = setTimeout(

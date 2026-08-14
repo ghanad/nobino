@@ -7,6 +7,7 @@ import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { AdminSettingsError } from "@/lib/admin-settings-service/shared";
 import {
+  resetWikiAiSystemPrompt,
   testWikiAiConnection,
   updateWikiAiSettings,
 } from "@/lib/wiki-ai-settings-service";
@@ -16,6 +17,7 @@ const settingsSchema = z.object({
   enabled: z.boolean(),
   maxOutputTokens: z.coerce.number().int().min(100).max(8_000),
   model: z.string().trim().min(1).max(200),
+  systemPrompt: z.string().trim().min(1).max(12_000),
   timeoutSeconds: z.coerce.number().int().min(5).max(300),
 });
 
@@ -25,8 +27,21 @@ function parseSettingsForm(formData: FormData) {
     enabled: formData.get("enabled") === "on",
     maxOutputTokens: formData.get("maxOutputTokens"),
     model: formData.get("model"),
+    systemPrompt: formData.get("systemPrompt"),
     timeoutSeconds: formData.get("timeoutSeconds"),
   });
+}
+
+export async function resetWikiAiSystemPromptAction(): Promise<void> {
+  const admin = await requireRole([UserRole.ADMIN]);
+
+  try {
+    await resetWikiAiSystemPrompt(admin.id);
+  } catch (error) {
+    redirectToSettings({ error: getErrorMessage(error) });
+  }
+
+  redirectToSettings({ reset: "1" });
 }
 
 function redirectToSettings(

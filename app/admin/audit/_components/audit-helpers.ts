@@ -168,6 +168,7 @@ const FIELD_LABELS: Record<string, string> = {
   enabled: "فعال بودن",
   maxOutputTokens: "حداکثر توکن پاسخ",
   model: "نام مدل",
+  systemPrompt: "دستورهای رفتاری دستیار",
   timeoutSeconds: "مهلت پاسخ",
   endAt: "پایان",
   endTime: "پایان کار",

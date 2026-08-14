@@ -10,7 +10,9 @@ import {
 } from "@/lib/wiki-ai-chat-service";
 import {
   DEFAULT_WIKI_AI_SETTINGS,
+  DEFAULT_WIKI_AI_SYSTEM_PROMPT,
   getWikiAiSettings,
+  resetWikiAiSystemPrompt,
   updateWikiAiSettings,
 } from "@/lib/wiki-ai-settings-service";
 
@@ -49,17 +51,41 @@ test("only admins can change wiki AI settings and changes are audited", async ()
     enabled: false,
     maxOutputTokens: 700,
     model: " Qwen3.6 ",
+    systemPrompt: "پاسخ را دوستانه و کوتاه بنویس.",
     timeoutSeconds: 45,
   });
 
   assert.equal(updated.baseUrl, "http://192.168.223.11:8000/v1");
   assert.equal(updated.model, "Qwen3.6");
   assert.equal(updated.enabled, false);
+  assert.equal(updated.systemPrompt, "پاسخ را دوستانه و کوتاه بنویس.");
   assert.equal(
     await db.auditLog.count({
       where: { action: "WIKI_AI_SETTINGS_UPDATED" },
     }),
     1,
+  );
+});
+
+test("admins can restore the default wiki AI prompt", async () => {
+  await updateWikiAiSettings({
+    adminId,
+    baseUrl: DEFAULT_WIKI_AI_SETTINGS.baseUrl,
+    enabled: true,
+    maxOutputTokens: 900,
+    model: "Qwen3.6",
+    systemPrompt: "فقط یک جمله پاسخ بده.",
+    timeoutSeconds: 60,
+  });
+
+  const reset = await resetWikiAiSystemPrompt(adminId);
+
+  assert.equal(reset.systemPrompt, DEFAULT_WIKI_AI_SYSTEM_PROMPT);
+  assert.equal(
+    await db.auditLog.count({
+      where: { action: "WIKI_AI_SETTINGS_UPDATED" },
+    }),
+    2,
   );
 });
 
@@ -123,6 +149,15 @@ test("wiki AI prompt guides users instead of merely repeating documents", () => 
   assert.match(prompt, /«می‌باشد»، «نمایید» و «گردد»/);
   assert.match(prompt, /فقط با اتکا به سندهای زیر/);
   assert.match(prompt, /درخواست باید در سامانه منابع انسانی ثبت شود/);
+});
+
+test("wiki AI prompt includes admin instructions without weakening fixed rules", () => {
+  const prompt = buildWikiAssistantSystemPrompt([], "پاسخ را خیلی کوتاه بنویس.");
+
+  assert.match(prompt, /<assistant-instructions>/);
+  assert.match(prompt, /پاسخ را خیلی کوتاه بنویس/);
+  assert.match(prompt, /فقط با اتکا به سندهای زیر/);
+  assert.match(prompt, /<sources>s1,s2<\/sources>/);
 });
 
 test("wiki AI handles greetings without requiring a wiki source", () => {

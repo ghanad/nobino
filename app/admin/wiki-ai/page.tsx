@@ -1,6 +1,7 @@
-import { Activity, Bot, Save } from "lucide-react";
+import { Activity, Bot, RotateCcw, Save } from "lucide-react";
 
 import {
+  resetWikiAiSystemPromptAction,
   testWikiAiConnectionAction,
   updateWikiAiSettingsAction,
 } from "@/app/admin/wiki-ai/actions";
@@ -14,6 +15,7 @@ type WikiAiAdminPageProps = {
     error?: string;
     latency?: string;
     modelMissing?: string;
+    reset?: string;
     tested?: string;
     updated?: string;
   }>;
@@ -54,6 +56,14 @@ function getToast(params: Awaited<WikiAiAdminPageProps["searchParams"]>) {
     return {
       consumeKeys: ["updated"],
       message: "تنظیمات دستیار دانش‌نامه ذخیره شد.",
+      variant: "success" as const,
+    };
+  }
+
+  if (params?.reset) {
+    return {
+      consumeKeys: ["reset"],
+      message: "دستورهای رفتاری دستیار به نسخه پیش‌فرض بازگردانده شد.",
       variant: "success" as const,
     };
   }
@@ -180,10 +190,41 @@ export default async function WikiAiAdminPage({
             پرسش از دانش‌نامه برای کاربران فعال باشد
           </label>
 
+          <div className="grid gap-3 border-t border-slate-100 pt-5">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-950">
+                دستورهای رفتاری دستیار
+              </h2>
+              <p className="mt-1 max-w-3xl text-xs leading-5 text-muted-foreground">
+                لحن، شیوه راهنمایی و ساختار پاسخ را مشخص کنید. قواعد امنیتی،
+                اتکا به دانش‌نامه و ثبت منابع به‌صورت ثابت توسط نوبینو اضافه
+                می‌شوند و از این بخش قابل تغییر نیستند.
+              </p>
+            </div>
+            <textarea
+              className="min-h-72 w-full resize-y rounded-md border border-input bg-background px-3 py-3 text-right text-sm leading-7 text-slate-900 outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-ring"
+              defaultValue={settings.systemPrompt}
+              dir="rtl"
+              maxLength={12000}
+              name="systemPrompt"
+              required
+              spellCheck={false}
+            />
+          </div>
+
           <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-5">
             <SubmitButton pendingLabel="در حال ذخیره">
               <Save aria-hidden="true" className="h-4 w-4" />
               ذخیره تنظیمات
+            </SubmitButton>
+            <SubmitButton
+              formAction={resetWikiAiSystemPromptAction}
+              formNoValidate
+              pendingLabel="در حال بازگردانی"
+              variant="outline"
+            >
+              <RotateCcw aria-hidden="true" className="h-4 w-4" />
+              بازگردانی متن پیش‌فرض
             </SubmitButton>
             <SubmitButton
               formAction={testWikiAiConnectionAction}

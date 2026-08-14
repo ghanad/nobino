@@ -548,6 +548,7 @@ model WikiAiSettings {
   model           String   @default("Qwen3.6")
   timeoutSeconds  Int      @default(60)
   maxOutputTokens Int      @default(900)
+  systemPrompt    String   @default("")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }

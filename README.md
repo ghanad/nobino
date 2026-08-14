@@ -151,7 +151,8 @@ The first operational version is implemented. Seeded users can sign in, create h
   set hidden state, soft-delete leaf pages, review immutable revisions, and
   transfer the knowledge base between environments with a versioned JSON file.
 - `/admin/wiki-ai` is admin-only and controls the OpenAI-compatible model base
-  URL, model name, timeout, output limit, enabled state, and connection test.
+  URL, model name, timeout, output limit, enabled state, assistant behavior
+  instructions, default-instruction restore, and connection test.
 
 ## Knowledge Base
 
@@ -184,6 +185,10 @@ edit these values in `/admin/wiki-ai`. Requests use streaming Chat Completions
 with thinking disabled, and reasoning events are discarded server-side. The
 current internal endpoint does not require an API key. Nobino builds source
 links from validated wiki slugs instead of trusting model-generated URLs.
+Admins can edit the assistant's behavior instructions and restore the shipped
+default in `/admin/wiki-ai`; grounding, document-injection protection, and the
+validated source-marker contract remain fixed server-side. Prompt changes and
+restores are included in the existing wiki AI settings audit history.
 `WIKI_AI_ALLOWED_HOSTS` is a comma-separated server-side allowlist for editable
 model endpoints and defaults to `192.168.223.11`; redirects and local or
 link-local metadata targets are rejected.
