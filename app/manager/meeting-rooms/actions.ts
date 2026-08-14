@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -14,15 +13,30 @@ import {
 import { ReservationTransitionError } from "@/lib/reservation-service";
 import { ReservationTimeRangeError } from "@/lib/schedule";
 
-const reservationIdSchema = z.object({
-  reservationId: z.string().min(1),
-});
+export type ManagerMeetingRoomActionState = {
+  id?: string;
+  message?: string;
+  mutation?: {
+    reservationId: string;
+    type: "approve" | "remove";
+  };
+  ok?: boolean;
+};
 
-const rejectSchema = reservationIdSchema.extend({
+const rejectSchema = z.object({
+  reservationId: z.string().min(1),
   rejectionReason: z.string().trim().max(500).optional(),
 });
 
-function getActionErrorMessage(error: unknown): string {
+function result(
+  ok: boolean,
+  message: string,
+  mutation?: ManagerMeetingRoomActionState["mutation"],
+): ManagerMeetingRoomActionState {
+  return { id: crypto.randomUUID(), message, mutation, ok };
+}
+
+function errorMessage(error: unknown): string {
   if (
     error instanceof ReservationTransitionError ||
     error instanceof CapacityUnavailableError ||
@@ -34,91 +48,69 @@ function getActionErrorMessage(error: unknown): string {
   throw error;
 }
 
-function redirectToManager(params: Record<string, string | undefined>): never {
-  const searchParams = new URLSearchParams();
-
-  for (const [key, value] of Object.entries(params)) {
-    if (value) {
-      searchParams.set(key, value);
-    }
-  }
-
-  redirect(`/manager/meeting-rooms?${searchParams.toString()}`);
-}
-
 export async function approveMeetingRoomReservationAction(
+  _state: ManagerMeetingRoomActionState,
   formData: FormData,
-): Promise<void> {
-  const user = await requireCurrentUser();
-  const parsed = reservationIdSchema.safeParse({
-    reservationId: formData.get("reservationId"),
-  });
-
-  if (!parsed.success) {
-    redirectToManager({ error: "رزرو اتاق جلسه معتبر انتخاب کنید." });
-  }
-
+): Promise<ManagerMeetingRoomActionState> {
+  const manager = await requireCurrentUser();
+  const reservationId = String(formData.get("reservationId") || "");
+  if (!reservationId) return result(false, "درخواست رزرو اتاق جلسه معتبر نیست.");
   try {
-    await approveMeetingRoomReservation({
-      reservationId: parsed.data.reservationId,
-      managerId: user.id,
-    });
+    await approveMeetingRoomReservation({ managerId: manager.id, reservationId });
   } catch (error) {
-    redirectToManager({ error: getActionErrorMessage(error) });
+    return result(false, errorMessage(error));
   }
-
   revalidatePath("/meeting-rooms");
-  redirectToManager({ approved: "1" });
+  return result(true, "درخواست رزرو اتاق جلسه تأیید شد.", {
+    reservationId,
+    type: "approve",
+  });
 }
 
 export async function rejectMeetingRoomReservationAction(
+  _state: ManagerMeetingRoomActionState,
   formData: FormData,
-): Promise<void> {
-  const user = await requireCurrentUser();
+): Promise<ManagerMeetingRoomActionState> {
+  const manager = await requireCurrentUser();
   const parsed = rejectSchema.safeParse({
     reservationId: formData.get("reservationId"),
     rejectionReason: formData.get("rejectionReason") || undefined,
   });
-
-  if (!parsed.success) {
-    redirectToManager({ error: "رزرو اتاق جلسه معتبر انتخاب کنید." });
-  }
-
+  if (!parsed.success) return result(false, "درخواست رزرو اتاق جلسه معتبر نیست.");
   try {
     await rejectMeetingRoomReservation({
-      reservationId: parsed.data.reservationId,
-      managerId: user.id,
+      managerId: manager.id,
       rejectionReason: parsed.data.rejectionReason,
+      reservationId: parsed.data.reservationId,
     });
   } catch (error) {
-    redirectToManager({ error: getActionErrorMessage(error) });
+    return result(false, errorMessage(error));
   }
-
   revalidatePath("/meeting-rooms");
-  redirectToManager({ rejected: "1" });
+  return result(true, "درخواست رزرو اتاق جلسه رد شد.", {
+    reservationId: parsed.data.reservationId,
+    type: "remove",
+  });
 }
 
 export async function cancelMeetingRoomReservationByManagerAction(
+  _state: ManagerMeetingRoomActionState,
   formData: FormData,
-): Promise<void> {
-  const user = await requireCurrentUser();
-  const parsed = reservationIdSchema.safeParse({
-    reservationId: formData.get("reservationId"),
-  });
-
-  if (!parsed.success) {
-    redirectToManager({ error: "رزرو اتاق جلسه معتبر انتخاب کنید." });
-  }
-
+): Promise<ManagerMeetingRoomActionState> {
+  const manager = await requireCurrentUser();
+  const reservationId = String(formData.get("reservationId") || "");
+  if (!reservationId) return result(false, "رزرو اتاق جلسه معتبر نیست.");
   try {
     await cancelMeetingRoomReservationByManager({
-      reservationId: parsed.data.reservationId,
-      managerId: user.id,
+      managerId: manager.id,
+      reservationId,
     });
   } catch (error) {
-    redirectToManager({ error: getActionErrorMessage(error) });
+    return result(false, errorMessage(error));
   }
-
   revalidatePath("/meeting-rooms");
-  redirectToManager({ cancelled: "1" });
+  return result(true, "رزرو اتاق جلسه لغو شد.", {
+    reservationId,
+    type: "remove",
+  });
 }
