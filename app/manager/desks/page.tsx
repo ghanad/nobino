@@ -25,8 +25,8 @@ export default async function ManagerDesksPage({ searchParams }: Props) {
     params?.updated ? { consumeKeys: ["updated"], message: "رزرو میز تغییر کرد.", variant: "success" as const } :
     params?.cancelled ? { consumeKeys: ["cancelled"], message: "رزرو میز لغو شد.", variant: "success" as const } : null;
 
-  return <div className="grid gap-6" dir="rtl">
-    <PageHeader title="مدیریت رزرو میزها" subtitle="بررسی، تأیید، ویرایش یا لغو درخواست‌های همکاران" />
+  return <div className="mx-auto grid max-w-5xl gap-4" dir="rtl">
+    <PageHeader title="مدیریت رزرو میزها" subtitle="بررسی و مدیریت درخواست‌های رزرو میز" />
     {toast ? <UrlToast {...toast} /> : null}
     <ManagerDeskReservations
       actions={{
