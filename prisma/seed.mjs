@@ -176,7 +176,7 @@ async function main() {
     update: {
       name: "اتاق جلسه اصلی",
       description: "اتاق جلسه پیش‌فرض",
-      building: "دفتر مرکزی",
+      location: "دفتر مرکزی",
       isActive: true,
       sortOrder: 1,
       autoApprovalEnabled: false,
@@ -186,7 +186,7 @@ async function main() {
       id: "main-meeting-room",
       name: "اتاق جلسه اصلی",
       description: "اتاق جلسه پیش‌فرض",
-      building: "دفتر مرکزی",
+      location: "دفتر مرکزی",
       isActive: true,
       sortOrder: 1,
       autoApprovalEnabled: false,
