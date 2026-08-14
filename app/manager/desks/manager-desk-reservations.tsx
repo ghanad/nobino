@@ -15,8 +15,10 @@ import { JalaliDatePicker } from "@/components/ui/jalali-date-picker";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { UrlToast } from "@/components/ui/url-toast";
 import { formatJalaliDate, formatJalaliDateParam, formatPersianLocalTime } from "@/lib/jalali-date";
+import { cn } from "@/lib/utils";
+import { Calendar, Clock, CheckCircle, XCircle, User, Building2, AlertCircle } from "lucide-react";
 
-const inputClass = "h-10 rounded-md border bg-background px-3 text-sm";
+const inputClass = "h-10 rounded-md border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring";
 const initialActionState: ManagerDeskActionState = {};
 const noConsumedQueryKeys: string[] = [];
 
