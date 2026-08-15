@@ -147,6 +147,9 @@ model User {
   ownedSurveys                     Survey[]                        @relation("SurveyOwner")
   surveyCollaborations             SurveyCollaborator[]            @relation("SurveyCollaboratorUser")
   surveyAudienceSelections         SurveyAudienceUser[]            @relation("SurveyAudienceUser")
+  surveyRecipients                 SurveyRecipient[]
+  surveyDrafts                     SurveyDraft[]
+  surveyResponses                  SurveyResponse[]
 }
 
 model ResourcePool {
@@ -654,6 +657,7 @@ model Notification {
   meetingRoomReservationId String?
   lunchReservationId       String?
   deskReservationId        String?
+  surveyId                 String?
   type                     String
   title                    String
   body                     String
@@ -665,6 +669,7 @@ model Notification {
   meetingRoomReservation MeetingRoomReservation?   @relation(fields: [meetingRoomReservationId], references: [id])
   lunchReservation       LunchReservation?         @relation(fields: [lunchReservationId], references: [id])
   deskReservation        DeskReservation?          @relation(fields: [deskReservationId], references: [id])
+  survey                 Survey?                   @relation(fields: [surveyId], references: [id], onDelete: SetNull)
   baleDelivery           BaleNotificationDelivery?
 
   @@index([userId, readAt])
@@ -672,6 +677,7 @@ model Notification {
   @@index([meetingRoomReservationId])
   @@index([lunchReservationId])
   @@index([deskReservationId])
+  @@index([surveyId])
 }
 
 model BaleConnection {
@@ -809,6 +815,10 @@ model Survey {
   audienceTeams SurveyAudienceTeam[]
   audienceUsers SurveyAudienceUser[]
   questions     SurveyQuestion[]
+  recipients    SurveyRecipient[]
+  drafts        SurveyDraft[]
+  responses     SurveyResponse[]
+  notifications Notification[]
 
   @@index([ownerId, state])
   @@index([state, startsAt, endsAt])
@@ -872,6 +882,7 @@ model SurveyQuestion {
 
   survey           Survey                    @relation(fields: [surveyId], references: [id], onDelete: Cascade)
   options          SurveyOption[]
+  answers          SurveyAnswer[]
   targetCondition  SurveyQuestionCondition?  @relation("ConditionTargetQuestion")
   sourceConditions SurveyQuestionCondition[] @relation("ConditionSourceQuestion")
 
@@ -888,6 +899,7 @@ model SurveyOption {
 
   question         SurveyQuestion            @relation(fields: [questionId], references: [id], onDelete: Cascade)
   sourceConditions SurveyQuestionCondition[] @relation("ConditionSourceOption")
+  answerOptions    SurveyAnswerOption[]
 
   @@index([questionId, sortOrder])
 }
@@ -907,4 +919,78 @@ model SurveyQuestionCondition {
 
   @@index([sourceQuestionId])
   @@index([sourceOptionId])
+}
+
+model SurveyRecipient {
+  id             String   @id @default(cuid())
+  surveyId       String
+  userId         String
+  hasSubmitted   Boolean  @default(false)
+  invitedAt      DateTime?
+  lastReminderAt DateTime?
+  reminderCount  Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  survey Survey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([surveyId, userId])
+  @@index([userId, surveyId])
+}
+
+model SurveyDraft {
+  id        String   @id @default(cuid())
+  surveyId  String
+  userId    String
+  answers   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  survey Survey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([surveyId, userId])
+  @@index([userId, surveyId])
+}
+
+model SurveyResponse {
+  id          String   @id @default(cuid())
+  surveyId    String
+  userId      String?
+  submittedAt DateTime @default(now())
+
+  survey  Survey         @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  user    User?          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  answers SurveyAnswer[]
+
+  @@index([surveyId, submittedAt])
+  @@index([userId, surveyId])
+}
+
+model SurveyAnswer {
+  id           String   @id @default(cuid())
+  responseId   String
+  questionId   String
+  textValue    String?
+  numericValue Int?
+  createdAt    DateTime @default(now())
+
+  response        SurveyResponse      @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  question        SurveyQuestion      @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  selectedOptions SurveyAnswerOption[]
+
+  @@unique([responseId, questionId])
+  @@index([questionId])
+}
+
+model SurveyAnswerOption {
+  id       String @id @default(cuid())
+  answerId String
+  optionId String
+
+  answer SurveyAnswer @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  option SurveyOption @relation(fields: [optionId], references: [id], onDelete: Restrict)
+
+  @@unique([answerId, optionId])
+  @@index([optionId])
 }

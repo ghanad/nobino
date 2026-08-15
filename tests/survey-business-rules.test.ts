@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  Prisma,
   SurveyAudienceMode,
   SurveyConditionOperator,
   SurveyIdentityMode,
@@ -151,4 +152,228 @@ test("admin team deletion removes its survey audience selection but preserves th
     null,
   );
   assert.ok(await db.survey.findUnique({ where: { id: survey.id } }));
+});
+
+async function createSurvey(overrides: {
+  identityMode?: SurveyIdentityMode;
+  title?: string;
+} = {}) {
+  return db.survey.create({
+    data: {
+      title: overrides.title ?? "Participation schema test",
+      kind: SurveyKind.DATA_COLLECTION,
+      state: SurveyState.PUBLISHED,
+      identityMode: overrides.identityMode ?? SurveyIdentityMode.NAMED,
+      audienceMode: SurveyAudienceMode.ALL_ACTIVE,
+      ownerId: userId,
+    },
+  });
+}
+
+test("only one survey recipient exists per survey/user", async () => {
+  const survey = await createSurvey();
+
+  await db.surveyRecipient.create({
+    data: { surveyId: survey.id, userId, hasSubmitted: true },
+  });
+  await assert.rejects(
+    db.surveyRecipient.create({ data: { surveyId: survey.id, userId } }),
+  );
+
+  const count = await db.surveyRecipient.count({
+    where: { surveyId: survey.id, userId },
+  });
+  assert.equal(count, 1);
+});
+
+test("only one survey draft exists per survey/user", async () => {
+  const survey = await createSurvey();
+
+  await db.surveyDraft.create({
+    data: { surveyId: survey.id, userId, answers: { draft: "in progress" } },
+  });
+  await assert.rejects(
+    db.surveyDraft.create({
+      data: { surveyId: survey.id, userId, answers: { other: true } },
+    }),
+  );
+
+  const count = await db.surveyDraft.count({
+    where: { surveyId: survey.id, userId },
+  });
+  assert.equal(count, 1);
+});
+
+test("only one survey answer exists per response/question", async () => {
+  const survey = await createSurvey();
+  const question = await db.surveyQuestion.create({
+    data: { surveyId: survey.id, prompt: "Feedback", type: SurveyQuestionType.SHORT_TEXT },
+  });
+  const response = await db.surveyResponse.create({ data: { surveyId: survey.id, userId } });
+
+  await db.surveyAnswer.create({
+    data: { responseId: response.id, questionId: question.id, textValue: "Great" },
+  });
+  await assert.rejects(
+    db.surveyAnswer.create({
+      data: { responseId: response.id, questionId: question.id, textValue: "Again" },
+    }),
+  );
+
+  const count = await db.surveyAnswer.count({
+    where: { responseId: response.id, questionId: question.id },
+  });
+  assert.equal(count, 1);
+});
+
+test("duplicate survey answer option rows are rejected", async () => {
+  const survey = await createSurvey();
+  const question = await db.surveyQuestion.create({
+    data: {
+      surveyId: survey.id,
+      prompt: "Pick",
+      type: SurveyQuestionType.MULTIPLE_CHOICE,
+    },
+  });
+  const option = await db.surveyOption.create({
+    data: { questionId: question.id, label: "A" },
+  });
+  const response = await db.surveyResponse.create({ data: { surveyId: survey.id, userId } });
+  const answer = await db.surveyAnswer.create({
+    data: { responseId: response.id, questionId: question.id },
+  });
+
+  await db.surveyAnswerOption.create({
+    data: { answerId: answer.id, optionId: option.id },
+  });
+  await assert.rejects(
+    db.surveyAnswerOption.create({
+      data: { answerId: answer.id, optionId: option.id },
+    }),
+  );
+
+  const count = await db.surveyAnswerOption.count({ where: { answerId: answer.id } });
+  assert.equal(count, 1);
+});
+
+test("an anonymous response can be stored with userId = null", async () => {
+  const survey = await createSurvey({ identityMode: SurveyIdentityMode.ANONYMOUS });
+
+  const response = await db.surveyResponse.create({ data: { surveyId: survey.id, userId: null } });
+
+  assert.equal(response.userId, null);
+  const stored = await db.surveyResponse.findUniqueOrThrow({ where: { id: response.id } });
+  assert.equal(stored.userId, null);
+});
+
+test("an anonymous response has no recipient relation or identity-bearing key", async () => {
+  const survey = await createSurvey({ identityMode: SurveyIdentityMode.ANONYMOUS });
+  const response = await db.surveyResponse.create({ data: { surveyId: survey.id, userId: null } });
+
+  const responseKeys = Object.keys(response);
+  assert.ok(!responseKeys.includes("recipientId"));
+  assert.ok(!responseKeys.includes("anonymousKey"));
+  assert.ok(!responseKeys.includes("responseKey"));
+
+  const models = Prisma.dmmf.datamodel.models;
+  const responseModel = models.find((model) => model.name === "SurveyResponse");
+  const recipientModel = models.find((model) => model.name === "SurveyRecipient");
+  assert.ok(responseModel);
+  assert.ok(recipientModel);
+
+  const responseRelations = responseModel.fields.filter((field) => field.kind === "object");
+  assert.ok(!responseRelations.some((field) => field.type === "SurveyRecipient"));
+
+  const recipientFields = recipientModel.fields.map((field) => field.name);
+  assert.ok(!recipientFields.includes("responseId"));
+  assert.ok(!recipientFields.includes("submittedAt"));
+  assert.ok(!recipientFields.includes("completedAt"));
+  const recipientRelations = recipientModel.fields.filter((field) => field.kind === "object");
+  assert.ok(!recipientRelations.some((field) => field.type === "SurveyResponse"));
+});
+
+test("deleting a response cascades its answers and selected options", async () => {
+  const survey = await createSurvey();
+  const question = await db.surveyQuestion.create({
+    data: {
+      surveyId: survey.id,
+      prompt: "Pick",
+      type: SurveyQuestionType.MULTIPLE_CHOICE,
+    },
+  });
+  const option = await db.surveyOption.create({
+    data: { questionId: question.id, label: "A" },
+  });
+  const response = await db.surveyResponse.create({ data: { surveyId: survey.id, userId } });
+  const answer = await db.surveyAnswer.create({
+    data: { responseId: response.id, questionId: question.id, textValue: "x" },
+  });
+  await db.surveyAnswerOption.create({
+    data: { answerId: answer.id, optionId: option.id },
+  });
+
+  await db.surveyResponse.delete({ where: { id: response.id } });
+
+  assert.equal(await db.surveyAnswer.count({ where: { responseId: response.id } }), 0);
+  assert.equal(await db.surveyAnswerOption.count({ where: { answerId: answer.id } }), 0);
+});
+
+test("existing answers prevent unsafe deletion of referenced questions and options", async () => {
+  const survey = await createSurvey();
+  const question = await db.surveyQuestion.create({
+    data: {
+      surveyId: survey.id,
+      prompt: "Pick",
+      type: SurveyQuestionType.MULTIPLE_CHOICE,
+    },
+  });
+  const option = await db.surveyOption.create({
+    data: { questionId: question.id, label: "A" },
+  });
+  const response = await db.surveyResponse.create({ data: { surveyId: survey.id, userId } });
+  const answer = await db.surveyAnswer.create({
+    data: { responseId: response.id, questionId: question.id },
+  });
+  await db.surveyAnswerOption.create({
+    data: { answerId: answer.id, optionId: option.id },
+  });
+
+  await assert.rejects(db.surveyQuestion.delete({ where: { id: question.id } }));
+  await assert.rejects(db.surveyOption.delete({ where: { id: option.id } }));
+
+  assert.ok(await db.surveyQuestion.findUnique({ where: { id: question.id } }));
+  assert.ok(await db.surveyOption.findUnique({ where: { id: option.id } }));
+});
+
+test("a notification can optionally reference a survey and deletion is isolated", async () => {
+  const survey = await createSurvey();
+  const withSurvey = await db.notification.create({
+    data: {
+      userId,
+      surveyId: survey.id,
+      type: "SURVEY_INVITATION",
+      title: "Invite",
+      body: "Please respond",
+    },
+  });
+  assert.equal(withSurvey.surveyId, survey.id);
+
+  const withoutSurvey = await db.notification.create({
+    data: {
+      userId,
+      type: "RESERVATION_UPDATED",
+      title: "No survey",
+      body: "Unrelated",
+    },
+  });
+  assert.equal(withoutSurvey.surveyId, null);
+
+  await db.notification.delete({ where: { id: withSurvey.id } });
+  assert.ok(await db.survey.findUnique({ where: { id: survey.id } }));
+
+  await db.survey.delete({ where: { id: survey.id } });
+  const preserved = await db.notification.findUniqueOrThrow({
+    where: { id: withoutSurvey.id },
+  });
+  assert.equal(preserved.surveyId, null);
 });
