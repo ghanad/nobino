@@ -117,7 +117,10 @@
   }
 
   .wiki-editor.tiptap {
-    min-height: 320px;
+    margin-left: auto;
+    margin-right: 0;
+    max-width: 48rem;
+    min-height: 12rem;
   }
 
   .wiki-editor.tiptap p.is-editor-empty:first-child::before,

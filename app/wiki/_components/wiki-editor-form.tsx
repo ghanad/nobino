@@ -7,15 +7,15 @@ import {
   Bold,
   Code2,
   Heading1,
-  Heading2,
-  Heading3,
   Italic,
   Link2,
   List,
   ListOrdered,
+  MoreHorizontal,
   Pilcrow,
   Quote,
   Redo2,
+  Unlink,
   Undo2,
 } from "lucide-react";
 
@@ -47,19 +47,22 @@ function formatParentOptionLabel(option: WikiParentOption): string {
 function EditorToolbarButton({
   active,
   children,
+  className,
   onClick,
   title,
 }: {
   active?: boolean;
   children: React.ReactNode;
+  className?: string;
   onClick: () => void;
   title: string;
 }) {
   return (
     <Button
       className={cn(
-        "h-9 px-3 text-xs",
-        active ? "border-slate-300 bg-slate-100 text-slate-950" : "",
+        "h-9 px-3 text-xs text-slate-700 hover:bg-white hover:text-slate-950",
+        active ? "border-primary/30 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary" : "",
+        className,
       )}
       onClick={onClick}
       size="sm"
@@ -107,6 +110,8 @@ export function WikiEditorForm({
   const [parentId, setParentId] = useState(initialParentId ?? "");
   const [isHidden, setIsHidden] = useState(initialIsHidden);
   const [linkUrl, setLinkUrl] = useState("");
+  const [isLinkPanelOpen, setIsLinkPanelOpen] = useState(false);
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [contentValue, setContentValue] = useState(
     JSON.stringify(contentJson),
   );
@@ -157,11 +162,37 @@ export function WikiEditorForm({
     if (!sanitized) {
       editor.chain().focus().unsetLink().run();
       setLinkUrl("");
+      setIsLinkPanelOpen(false);
       return;
     }
 
     editor.chain().focus().setLink({ href: sanitized }).run();
     setLinkUrl(sanitized);
+    setIsLinkPanelOpen(false);
+  }
+
+  const formatValue = editor?.isActive("heading", { level: 1 })
+    ? "heading-1"
+    : editor?.isActive("heading", { level: 2 })
+      ? "heading-2"
+      : editor?.isActive("heading", { level: 3 })
+        ? "heading-3"
+        : "paragraph";
+
+  function setBlockFormat(value: string) {
+    if (!editor) {
+      return;
+    }
+
+    const chain = editor.chain().focus();
+
+    if (value === "paragraph") {
+      chain.setParagraph().run();
+      return;
+    }
+
+    const level = Number(value.at(-1)) as 1 | 2 | 3;
+    chain.setHeading({ level }).run();
   }
 
   return (
@@ -232,128 +263,192 @@ export function WikiEditorForm({
         </label>
       </div>
 
-      <div className="grid gap-3 rounded-2xl border border-slate-200">
-        <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2">
-          <EditorToolbarButton
-            active={editor?.isActive("paragraph")}
-            onClick={() => editor?.chain().focus().setParagraph().run()}
-            title="متن"
+      <div className="w-full overflow-visible rounded-2xl border border-slate-200 bg-white">
+        <div className="sticky top-0 z-10 flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-slate-200 bg-slate-50 px-3 py-2.5">
+          <label className="sr-only" htmlFor="wiki-block-format">
+            سبک متن
+          </label>
+          <select
+            className="h-9 min-w-32 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none transition-colors hover:border-slate-300 focus:border-primary"
+            id="wiki-block-format"
+            onChange={(event) => setBlockFormat(event.target.value)}
+            value={formatValue}
           >
-            <Pilcrow className="h-4 w-4" />
-          </EditorToolbarButton>
-          <EditorToolbarButton
-            active={editor?.isActive("heading", { level: 1 })}
-            onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}
-            title="تیتر ۱"
-          >
-            <Heading1 className="h-4 w-4" />
-          </EditorToolbarButton>
-          <EditorToolbarButton
-            active={editor?.isActive("heading", { level: 2 })}
-            onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
-            title="تیتر ۲"
-          >
-            <Heading2 className="h-4 w-4" />
-          </EditorToolbarButton>
-          <EditorToolbarButton
-            active={editor?.isActive("heading", { level: 3 })}
-            onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
-            title="تیتر ۳"
-          >
-            <Heading3 className="h-4 w-4" />
-          </EditorToolbarButton>
-          <div className="mx-1 h-6 w-px bg-slate-200" />
-          <EditorToolbarButton
-            active={editor?.isActive("bold")}
-            onClick={() => editor?.chain().focus().toggleBold().run()}
-            title="Bold"
-          >
-            <Bold className="h-4 w-4" />
-          </EditorToolbarButton>
-          <EditorToolbarButton
-            active={editor?.isActive("italic")}
-            onClick={() => editor?.chain().focus().toggleItalic().run()}
-            title="Italic"
-          >
-            <Italic className="h-4 w-4" />
-          </EditorToolbarButton>
-          <EditorToolbarButton
-            active={editor?.isActive("bulletList")}
-            onClick={() => editor?.chain().focus().toggleBulletList().run()}
-            title="فهرست گلوله‌ای"
-          >
-            <List className="h-4 w-4" />
-          </EditorToolbarButton>
-          <EditorToolbarButton
-            active={editor?.isActive("orderedList")}
-            onClick={() => editor?.chain().focus().toggleOrderedList().run()}
-            title="فهرست شماره‌دار"
-          >
-            <ListOrdered className="h-4 w-4" />
-          </EditorToolbarButton>
-          <EditorToolbarButton
-            active={editor?.isActive("blockquote")}
-            onClick={() => editor?.chain().focus().toggleBlockquote().run()}
-            title="نقل‌قول"
-          >
-            <Quote className="h-4 w-4" />
-          </EditorToolbarButton>
-          <EditorToolbarButton
-            active={editor?.isActive("codeBlock")}
-            onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
-            title="بلوک کد"
-          >
-            <Code2 className="h-4 w-4" />
-          </EditorToolbarButton>
-          <div className="mx-1 h-6 w-px bg-slate-200" />
-          <div className="flex flex-1 flex-wrap items-center gap-2">
-            <input
-              className="h-9 min-w-44 flex-1 rounded-md border border-slate-200 bg-white px-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-slate-300"
-              onChange={(event) => setLinkUrl(event.target.value)}
-              placeholder="آدرس پیوند"
-              type="url"
-              value={linkUrl}
-            />
-            <Button
-              className="h-9 px-3 text-xs"
-              onClick={applyLink}
-              size="sm"
-              type="button"
-              variant="outline"
+            <option value="paragraph">متن عادی</option>
+            <option value="heading-1">تیتر ۱</option>
+            <option value="heading-2">تیتر ۲</option>
+            <option value="heading-3">تیتر ۳</option>
+          </select>
+
+          <div className="flex items-center gap-1 border-s border-slate-200 ps-3">
+            <EditorToolbarButton
+              active={editor?.isActive("bold")}
+              className="w-9 px-0"
+              onClick={() => editor?.chain().focus().toggleBold().run()}
+              title="پررنگ"
+            >
+              <Bold className="h-4 w-4" />
+            </EditorToolbarButton>
+            <EditorToolbarButton
+              active={editor?.isActive("italic")}
+              className="w-9 px-0"
+              onClick={() => editor?.chain().focus().toggleItalic().run()}
+              title="مورب"
+            >
+              <Italic className="h-4 w-4" />
+            </EditorToolbarButton>
+          </div>
+
+          <div className="flex items-center gap-1 border-s border-slate-200 ps-3">
+            <EditorToolbarButton
+              active={editor?.isActive("bulletList")}
+              className="w-9 px-0"
+              onClick={() => editor?.chain().focus().toggleBulletList().run()}
+              title="فهرست گلوله‌ای"
+            >
+              <List className="h-4 w-4" />
+            </EditorToolbarButton>
+            <EditorToolbarButton
+              active={editor?.isActive("orderedList")}
+              className="w-9 px-0"
+              onClick={() => editor?.chain().focus().toggleOrderedList().run()}
+              title="فهرست شماره‌دار"
+            >
+              <ListOrdered className="h-4 w-4" />
+            </EditorToolbarButton>
+          </div>
+
+          <div className="relative flex items-center gap-1 border-s border-slate-200 ps-3">
+            <EditorToolbarButton
+              active={Boolean(currentLink)}
+              className="w-9 px-0"
+              onClick={() => {
+                setLinkUrl(currentLink);
+                setIsMoreMenuOpen(false);
+                setIsLinkPanelOpen((isOpen) => !isOpen);
+              }}
+              title="افزودن یا ویرایش پیوند"
             >
               <Link2 className="h-4 w-4" />
-              اعمال پیوند
-            </Button>
-            <Button
-              className="h-9 px-3 text-xs"
-              disabled={!currentLink}
-              onClick={() => {
-                editor?.chain().focus().unsetLink().run();
-                setLinkUrl("");
-              }}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              حذف پیوند
-            </Button>
+            </EditorToolbarButton>
+
+            {isLinkPanelOpen ? (
+              <div
+                aria-label="ویرایش پیوند"
+                className="absolute right-0 top-12 z-20 w-80 rounded-xl border border-slate-200 bg-white p-3 shadow-lg"
+                role="dialog"
+              >
+                <label className="grid gap-2 text-sm font-medium text-slate-700">
+                  آدرس پیوند
+                  <input
+                    autoFocus
+                    className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none transition-colors placeholder:text-muted-foreground focus:border-primary"
+                    onChange={(event) => setLinkUrl(event.target.value)}
+                    placeholder="https://example.com"
+                    type="url"
+                    value={linkUrl}
+                  />
+                </label>
+                <div className="mt-3 flex items-center gap-2">
+                  <Button className="h-9 px-3 text-xs" onClick={applyLink} size="sm" type="button">
+                    اعمال پیوند
+                  </Button>
+                  <Button
+                    className="h-9 px-3 text-xs"
+                    onClick={() => setIsLinkPanelOpen(false)}
+                    size="sm"
+                    type="button"
+                    variant="ghost"
+                  >
+                    انصراف
+                  </Button>
+                </div>
+              </div>
+            ) : null}
           </div>
-          <div className="mx-1 h-6 w-px bg-slate-200" />
-          <EditorToolbarButton
-            onClick={() => editor?.chain().focus().undo().run()}
-            title="Undo"
-          >
-            <Undo2 className="h-4 w-4" />
-          </EditorToolbarButton>
-          <EditorToolbarButton
-            onClick={() => editor?.chain().focus().redo().run()}
-            title="Redo"
-          >
-            <Redo2 className="h-4 w-4" />
-          </EditorToolbarButton>
+
+          <div className="relative flex items-center border-s border-slate-200 ps-3">
+            <EditorToolbarButton
+              active={editor?.isActive("blockquote") || editor?.isActive("codeBlock")}
+              className="w-9 px-0"
+              onClick={() => {
+                setIsLinkPanelOpen(false);
+                setIsMoreMenuOpen((isOpen) => !isOpen);
+              }}
+              title="ابزارهای بیشتر"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </EditorToolbarButton>
+
+            {isMoreMenuOpen ? (
+              <div className="absolute right-0 top-12 z-20 grid min-w-44 gap-1 rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
+                <Button
+                  className="justify-start"
+                  onClick={() => {
+                    editor?.chain().focus().toggleBlockquote().run();
+                    setIsMoreMenuOpen(false);
+                  }}
+                  size="sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  <Quote className="h-4 w-4" />
+                  نقل‌قول
+                </Button>
+                <Button
+                  className="justify-start"
+                  onClick={() => {
+                    editor?.chain().focus().toggleCodeBlock().run();
+                    setIsMoreMenuOpen(false);
+                  }}
+                  size="sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  <Code2 className="h-4 w-4" />
+                  بلوک کد
+                </Button>
+                {currentLink ? (
+                  <Button
+                    className="justify-start text-destructive hover:text-destructive"
+                    onClick={() => {
+                      editor?.chain().focus().unsetLink().run();
+                      setLinkUrl("");
+                      setIsMoreMenuOpen(false);
+                    }}
+                    size="sm"
+                    type="button"
+                    variant="ghost"
+                  >
+                    <Unlink className="h-4 w-4" />
+                    حذف پیوند
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="flex items-center gap-1 border-s border-slate-200 ps-3">
+            <EditorToolbarButton
+              className="w-9 px-0"
+              onClick={() => editor?.chain().focus().undo().run()}
+              title="بازگردانی"
+            >
+              <Undo2 className="h-4 w-4" />
+            </EditorToolbarButton>
+            <EditorToolbarButton
+              className="w-9 px-0"
+              onClick={() => editor?.chain().focus().redo().run()}
+              title="انجام دوباره"
+            >
+              <Redo2 className="h-4 w-4" />
+            </EditorToolbarButton>
+          </div>
         </div>
 
-        <EditorContent editor={editor} />
+        <div className="px-5 py-4 sm:px-8">
+          <EditorContent editor={editor} />
+        </div>
       </div>
 
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
