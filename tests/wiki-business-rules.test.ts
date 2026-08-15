@@ -8,6 +8,7 @@ import { type CurrentUser } from "@/lib/auth";
 import {
   createEmptyWikiContent,
   extractWikiPlainText,
+  validateWikiContentJson,
 } from "@/lib/wiki-content";
 import {
   createWikiPage,
@@ -143,6 +144,24 @@ const sampleContent: JSONContent = {
   ],
   type: "doc",
 };
+
+test("wiki content keeps an LTR block direction", () => {
+  const content = validateWikiContentJson({
+    content: [
+      {
+        attrs: { dir: "ltr", textAlign: "left" },
+        content: [{ text: "English text", type: "text" }],
+        type: "paragraph",
+      },
+    ],
+    type: "doc",
+  });
+
+  assert.deepEqual(content.content?.[0]?.attrs, {
+    dir: "ltr",
+    textAlign: "left",
+  });
+});
 
 test("wiki export can recreate content and hierarchy in another database", async () => {
   const parent = await createWikiPage(

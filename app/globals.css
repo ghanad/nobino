@@ -66,6 +66,13 @@
     @apply text-sm leading-7 text-slate-700;
   }
 
+  .wiki-content :is(h1, h2, h3, p)[dir="ltr"],
+  .wiki-editor.tiptap :is(h1, h2, h3, p)[dir="ltr"] {
+    direction: ltr;
+    text-align: left;
+    unicode-bidi: plaintext;
+  }
+
   .wiki-content ul,
   .wiki-content ol {
     @apply mr-6 grid gap-1 text-sm leading-7 text-slate-700;

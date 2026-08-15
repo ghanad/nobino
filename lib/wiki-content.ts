@@ -185,7 +185,17 @@ function validateNode(node: unknown, path: string): JSONContent {
   }
 
   const sourceAttrs = isRecord(node.attrs) ? node.attrs : undefined;
+  const direction = sourceAttrs?.dir;
   const textAlign = sourceAttrs?.textAlign;
+
+  if (
+    direction !== undefined &&
+    direction !== null &&
+    direction !== "ltr" &&
+    direction !== "rtl"
+  ) {
+    throw new Error(`Wiki content direction is invalid at ${path}.`);
+  }
 
   if (
     textAlign !== undefined &&
@@ -201,12 +211,14 @@ function validateNode(node: unknown, path: string): JSONContent {
           ...(typeof sourceAttrs?.level === "number"
             ? { level: sourceAttrs.level }
             : {}),
+          ...(typeof direction === "string" ? { dir: direction } : {}),
           ...(typeof textAlign === "string" ? { textAlign } : {}),
         }
       : node.type === "paragraph"
-        ? typeof textAlign === "string"
-          ? { textAlign }
-          : undefined
+        ? {
+            ...(typeof direction === "string" ? { dir: direction } : {}),
+            ...(typeof textAlign === "string" ? { textAlign } : {}),
+          }
         : undefined;
 
   const normalizedNode = {

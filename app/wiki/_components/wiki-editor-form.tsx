@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { JSONContent } from "@tiptap/core";
-import { EditorContent, useEditor } from "@tiptap/react";
+import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import {
   Bold,
   Code2,
@@ -12,7 +12,8 @@ import {
   List,
   ListOrdered,
   MoreHorizontal,
-  Pilcrow,
+  PilcrowLeft,
+  PilcrowRight,
   Quote,
   Redo2,
   Unlink,
@@ -150,7 +151,26 @@ export function WikiEditorForm({
     [parentOptions],
   );
 
-  const currentLink = editor?.getAttributes("link")?.href ?? "";
+  const editorState = useEditorState({
+    editor,
+    selector: ({ editor: activeEditor }) => ({
+      currentLink: activeEditor?.getAttributes("link")?.href ?? "",
+      formatValue: activeEditor?.isActive("heading", { level: 1 })
+        ? "heading-1"
+        : activeEditor?.isActive("heading", { level: 2 })
+          ? "heading-2"
+          : activeEditor?.isActive("heading", { level: 3 })
+            ? "heading-3"
+            : "paragraph",
+      isLeftToRight: Boolean(
+        activeEditor?.isActive("paragraph", { dir: "ltr" }) ||
+          activeEditor?.isActive("heading", { dir: "ltr" }),
+      ),
+    }),
+  });
+  const currentLink = editorState?.currentLink ?? "";
+  const formatValue = editorState?.formatValue ?? "paragraph";
+  const isLeftToRight = editorState?.isLeftToRight ?? false;
 
   function applyLink() {
     if (!editor) {
@@ -171,14 +191,6 @@ export function WikiEditorForm({
     setIsLinkPanelOpen(false);
   }
 
-  const formatValue = editor?.isActive("heading", { level: 1 })
-    ? "heading-1"
-    : editor?.isActive("heading", { level: 2 })
-      ? "heading-2"
-      : editor?.isActive("heading", { level: 3 })
-        ? "heading-3"
-        : "paragraph";
-
   function setBlockFormat(value: string) {
     if (!editor) {
       return;
@@ -193,6 +205,21 @@ export function WikiEditorForm({
 
     const level = Number(value.at(-1)) as 1 | 2 | 3;
     chain.setHeading({ level }).run();
+  }
+
+  function setTextDirection(direction: "ltr" | "rtl") {
+    if (!editor) {
+      return;
+    }
+
+    const alignment = direction === "ltr" ? "left" : "right";
+
+    editor
+      .chain()
+      .focus()
+      .updateAttributes("paragraph", { dir: direction, textAlign: alignment })
+      .updateAttributes("heading", { dir: direction, textAlign: alignment })
+      .run();
   }
 
   return (
@@ -296,6 +323,25 @@ export function WikiEditorForm({
               title="مورب"
             >
               <Italic className="h-4 w-4" />
+            </EditorToolbarButton>
+          </div>
+
+          <div className="flex items-center gap-1 border-s border-slate-200 ps-3">
+            <EditorToolbarButton
+              active={isLeftToRight}
+              className="w-9 px-0"
+              onClick={() => setTextDirection("ltr")}
+              title="جهت پاراگراف: چپ‌به‌راست (LTR)"
+            >
+              <PilcrowRight className="h-4 w-5" />
+            </EditorToolbarButton>
+            <EditorToolbarButton
+              active={!isLeftToRight}
+              className="w-9 px-0"
+              onClick={() => setTextDirection("rtl")}
+              title="جهت پاراگراف: راست‌به‌چپ (RTL)"
+            >
+              <PilcrowLeft className="h-4 w-5" />
             </EditorToolbarButton>
           </div>
 
