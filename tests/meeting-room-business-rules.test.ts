@@ -25,6 +25,7 @@ import { ReservationTransitionError } from "@/lib/reservation-service";
 import { ReservationTimeRangeError } from "@/lib/schedule";
 import {
   buildLocalDateAtHourFromJalali,
+  formatJalaliDate,
   formatJalaliDateParam,
 } from "@/lib/jalali-date";
 
@@ -61,6 +62,36 @@ test("meeting room reservation starts pending when auto approval is disabled", a
 
   assert.equal(reservation.status, ReservationStatus.PENDING);
   assert.equal(reservation.title, "Planning");
+});
+
+test("pending meeting room notifications identify the requester and reservation date", async () => {
+  const startAt = nextWorkingDateAtHour(9);
+  await markMeetingRoomDateWorkingForTest(startAt);
+
+  const reservation = await createMeetingRoomReservationRequest({
+    userId,
+    roomId: meetingRoomId,
+    startAt,
+    endAt: addHours(startAt, 1),
+  });
+
+  const notifications = await db.notification.findMany({
+    where: {
+      meetingRoomReservationId: reservation.id,
+      type: "NEW_PENDING_MEETING_ROOM_RESERVATION",
+    },
+    select: { body: true, userId: true },
+    orderBy: { userId: "asc" },
+  });
+
+  assert.deepEqual(notifications.map((notification) => notification.userId), [adminId, managerId]);
+  assert.deepEqual(
+    notifications.map((notification) => notification.body),
+    [
+      `درخواست رزرو Main Meeting Room توسط Normal User برای تاریخ ${formatJalaliDate(startAt)} در انتظار بررسی است.`,
+      `درخواست رزرو Main Meeting Room توسط Normal User برای تاریخ ${formatJalaliDate(startAt)} در انتظار بررسی است.`,
+    ],
+  );
 });
 
 test("meeting room auto approval uses its own delay and approves only when capacity is available", async () => {

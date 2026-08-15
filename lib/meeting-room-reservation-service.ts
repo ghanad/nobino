@@ -3,6 +3,7 @@ import "server-only";
 import { ReservationStatus, UserRole } from "@prisma/client";
 
 import { db } from "@/lib/db";
+import { formatJalaliDate } from "@/lib/jalali-date";
 import { assertMeetingRoomCapacityAvailableForApproval } from "@/lib/meeting-room-capacity-service";
 import { validateMeetingRoomReservationTimeRange } from "@/lib/meeting-room-schedule";
 import {
@@ -35,8 +36,10 @@ export function calculateMeetingRoomAutoApprovalAt(input: {
 async function notifyManagers(
   tx: DbClient,
   input: {
+    requesterName: string;
     reservationId: string;
     roomName: string;
+    startAt: Date;
   },
 ) {
   const managers = await tx.user.findMany({
@@ -57,7 +60,7 @@ async function notifyManagers(
       meetingRoomReservationId: input.reservationId,
       type: "NEW_PENDING_MEETING_ROOM_RESERVATION",
       title: "درخواست اتاق جلسه",
-      body: `درخواست رزرو ${input.roomName} در انتظار بررسی است.`,
+      body: `درخواست رزرو ${input.roomName} توسط ${input.requesterName} برای تاریخ ${formatJalaliDate(input.startAt)} در انتظار بررسی است.`,
     })),
   });
 }
@@ -193,6 +196,11 @@ export async function createMeetingRoomReservationRequest(input: {
       throw new ReservationTransitionError("Meeting room is not available.");
     }
 
+    const requester = await tx.user.findUniqueOrThrow({
+      where: { id: input.userId },
+      select: { name: true },
+    });
+
     const createdAt = new Date();
     const autoApprovalAt = calculateMeetingRoomAutoApprovalAt({
       autoApprovalDelayHours: room.autoApprovalDelayHours,
@@ -234,8 +242,10 @@ export async function createMeetingRoomReservationRequest(input: {
     });
 
     await notifyManagers(tx, {
+      requesterName: requester.name,
       reservationId: reservation.id,
       roomName: room.name,
+      startAt: reservation.startAt,
     });
 
     return reservation;
