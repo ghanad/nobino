@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { WikiChatMarkdown } from "@/app/wiki/_components/wiki-chat-markdown";
 import type {
   WikiChatRequestMessage,
   WikiChatSource,
@@ -358,13 +359,19 @@ export function WikiChat({ enabled, hasContent, suggestions }: WikiChatProps) {
                   <div className="min-w-0 max-w-[calc(100%-2.75rem)]">
                     <div
                       className={cn(
-                        "whitespace-pre-wrap text-sm leading-7",
+                        "text-sm leading-7",
                         isAssistant
                           ? "text-slate-800"
                           : "rounded-xl bg-slate-100 px-4 py-2.5 text-slate-900",
                       )}
                     >
-                      {message.content || (
+                      {message.content ? (
+                        isAssistant ? (
+                          <WikiChatMarkdown content={message.content} />
+                        ) : (
+                          <span className="whitespace-pre-wrap">{message.content}</span>
+                        )
+                      ) : (
                         <span className="inline-flex items-center gap-2 text-muted-foreground">
                           <Loader2
                             aria-hidden="true"
