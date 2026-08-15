@@ -669,8 +669,8 @@ export function LunchReservationList({
                       }}
                     />
                   ) : (
-                    <div className="flex w-full min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-                      <p className="flex min-w-0 flex-1 items-center gap-2 text-sm font-medium leading-6 text-foreground">
+                    <div className="flex w-full min-w-0 flex-col gap-2 md:flex-row md:items-center md:gap-x-3">
+                      <p className="flex min-w-0 items-center gap-2 text-sm font-medium leading-6 text-foreground md:flex-1">
                         <CheckCircle2
                           aria-hidden="true"
                           className="h-4 w-4 shrink-0 text-primary"
@@ -681,7 +681,7 @@ export function LunchReservationList({
                           تحویل از {reservation.buildingName}
                         </span>
                       </p>
-                      <div className="mr-auto flex shrink-0 items-center text-sm">
+                      <div className="flex items-center text-sm md:mr-auto md:shrink-0">
                         <Button
                           className="h-11 rounded-md bg-transparent px-3 font-semibold text-primary transition-[color,background-color,transform] hover:bg-primary/[0.07] hover:text-primary active:scale-[0.97] active:bg-primary/[0.12] motion-reduce:transform-none"
                           disabled={isActionDisabled}
