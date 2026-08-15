@@ -5,6 +5,7 @@ import type { JSONContent } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import {
   Bold,
+  Code2,
   Heading1,
   Heading2,
   Heading3,
@@ -296,6 +297,13 @@ export function WikiEditorForm({
             title="نقل‌قول"
           >
             <Quote className="h-4 w-4" />
+          </EditorToolbarButton>
+          <EditorToolbarButton
+            active={editor?.isActive("codeBlock")}
+            onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
+            title="بلوک کد"
+          >
+            <Code2 className="h-4 w-4" />
           </EditorToolbarButton>
           <div className="mx-1 h-6 w-px bg-slate-200" />
           <div className="flex flex-1 flex-wrap items-center gap-2">

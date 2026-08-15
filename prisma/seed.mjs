@@ -53,6 +53,14 @@ function bulletList(items) {
   };
 }
 
+function codeBlock(text) {
+  return {
+    type: "codeBlock",
+    attrs: { language: null },
+    content: [{ type: "text", text }],
+  };
+}
+
 function wikiDocument(...content) {
   return { type: "doc", content };
 }
@@ -408,6 +416,15 @@ async function main() {
     title: "خدمات واحد اداری",
   });
 
+  const infrastructureCategory = await upsertWikiPage({
+    adminId: admin.id,
+    contentJson: wikiDocument(),
+    contentText: "",
+    slug: "زیرساخت",
+    sortOrder: 10,
+    title: "زیرساخت",
+  });
+
   await upsertWikiPage({
     adminId: admin.id,
     contentJson: wikiDocument(
@@ -557,6 +574,28 @@ async function main() {
       sortOrder: 0,
       updatedById: admin.id,
     },
+  });
+
+  await upsertWikiPage({
+    adminId: admin.id,
+    contentJson: wikiDocument(
+      paragraph(
+        "این راهنما فقط برای اتصال از طریق macOS است. برای اتصال به پوشهٔ اختصاصی خود در فایل‌سرور، این دستور را در ترمینال اجرا کنید:",
+      ),
+      codeBlock('open "smb://<نام‌کاربری>@diode.balout.co/<نام‌کاربری>"'),
+      paragraph(
+        "نام‌کاربری را با نام کاربری خودتان جایگزین کنید. بخش بعد از آخرین / مسیر پوشهٔ اختصاصی شماست و برای هر همکار متفاوت است.",
+      ),
+    ),
+    contentText: [
+      "این راهنما فقط برای اتصال از طریق macOS است. برای اتصال به پوشهٔ اختصاصی خود در فایل‌سرور، این دستور را در ترمینال اجرا کنید:",
+      'open "smb://<نام‌کاربری>@diode.balout.co/<نام‌کاربری>"',
+      "نام‌کاربری را با نام کاربری خودتان جایگزین کنید. بخش بعد از آخرین / مسیر پوشهٔ اختصاصی شماست و برای هر همکار متفاوت است.",
+    ].join("\n\n"),
+    slug: "اتصال-به-پوشه-اختصاصی-فایل-سرور",
+    parentId: infrastructureCategory.id,
+    sortOrder: 0,
+    title: "دسترسی به دیتادیود",
   });
 }
 

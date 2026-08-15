@@ -91,6 +91,19 @@
     @apply rounded bg-slate-100 px-1.5 py-0.5 text-sm text-slate-900;
   }
 
+  .wiki-content pre,
+  .wiki-editor.tiptap pre {
+    direction: ltr;
+    text-align: left;
+    unicode-bidi: plaintext;
+    @apply overflow-x-auto rounded-md bg-slate-100 px-3 py-2 font-mono text-sm leading-6 text-slate-900;
+  }
+
+  .wiki-content pre code,
+  .wiki-editor.tiptap pre code {
+    @apply bg-transparent p-0;
+  }
+
   .wiki-content hr {
     @apply border-slate-200;
   }
