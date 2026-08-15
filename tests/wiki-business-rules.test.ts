@@ -37,6 +37,7 @@ registerBusinessRuleTestHooks();
 
 const adminActor: CurrentUser = {
   active: true,
+  canCreateSurveys: false,
   canViewLunchReport: false,
   email: "admin@example.test",
   id: adminId,
@@ -46,6 +47,7 @@ const adminActor: CurrentUser = {
 
 const managerActor: CurrentUser = {
   active: true,
+  canCreateSurveys: false,
   canViewLunchReport: false,
   email: "manager@example.test",
   id: managerId,
@@ -55,6 +57,7 @@ const managerActor: CurrentUser = {
 
 const userActor: CurrentUser = {
   active: true,
+  canCreateSurveys: false,
   canViewLunchReport: false,
   email: "user@example.test",
   id: userId,

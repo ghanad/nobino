@@ -31,6 +31,7 @@ const updateUserSchema = z.object({
   role: z.nativeEnum(UserRole),
   active: z.coerce.boolean(),
   canViewLunchReport: z.coerce.boolean(),
+  canCreateSurveys: z.coerce.boolean(),
 });
 
 const resetPasswordSchema = z.object({
@@ -89,6 +90,7 @@ export async function updateUserAction(formData: FormData): Promise<void> {
     role: formData.get("role"),
     active: checkboxToBoolean(formData.get("active")),
     canViewLunchReport: checkboxToBoolean(formData.get("canViewLunchReport")),
+    canCreateSurveys: checkboxToBoolean(formData.get("canCreateSurveys")),
   });
 
   if (!parsed.success) {

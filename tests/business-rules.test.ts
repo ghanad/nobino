@@ -9,5 +9,6 @@ import "./reservation-auto-accept-business-rules.test";
 import "./schedule-business-rules.test";
 import "./team-reservation-report-service.test";
 import "./user-management-business-rules.test";
+import "./permissions.test";
 import "./wiki-business-rules.test";
 import "./wiki-ai-settings.test";

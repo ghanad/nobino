@@ -81,6 +81,7 @@ export default async function UserDetailPage({
         role: true,
         active: true,
         canViewLunchReport: true,
+        canCreateSurveys: true,
         deletedAt: true,
         createdAt: true,
         teamMemberships: {
@@ -282,6 +283,23 @@ export default async function UserDetailPage({
                     </span>
                     <span className="text-xs font-normal leading-5 text-muted-foreground">
                       نمایش گزارش روزانه غذا برای این کاربر
+                    </span>
+                  </span>
+                </label>
+
+                <label className="flex min-h-14 items-start gap-3 rounded-md border bg-background p-3 text-sm transition-colors hover:border-slate-300">
+                  <input
+                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-input outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    defaultChecked={user.canCreateSurveys}
+                    name="canCreateSurveys"
+                    type="checkbox"
+                  />
+                  <span className="grid gap-1">
+                    <span className="font-medium text-slate-900">
+                      امکان ساخت نظرسنجی
+                    </span>
+                    <span className="text-xs font-normal leading-5 text-muted-foreground">
+                      اجازه ایجاد و انتشار نظرسنجی‌های داخلی
                     </span>
                   </span>
                 </label>
