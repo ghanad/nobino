@@ -290,7 +290,7 @@ export function WikiEditorForm({
         </label>
       </div>
 
-      <div className="w-full overflow-visible rounded-2xl border border-slate-200 bg-white">
+      <div className="-mx-4 w-[calc(100%+2rem)] overflow-visible rounded-2xl border border-slate-200 bg-white">
         <div className="sticky top-0 z-10 flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-slate-200 bg-slate-50 px-3 py-2.5">
           <label className="sr-only" htmlFor="wiki-block-format">
             سبک متن
@@ -492,7 +492,7 @@ export function WikiEditorForm({
           </div>
         </div>
 
-        <div className="px-5 py-4 sm:px-8">
+        <div className="py-4">
           <EditorContent editor={editor} />
         </div>
       </div>
