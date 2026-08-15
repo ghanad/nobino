@@ -252,7 +252,7 @@ export function WikiEditorForm({
           </select>
         </label>
 
-        <label className="flex items-center gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2.5">
+        <label className="inline-flex h-10 w-fit self-end items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 whitespace-nowrap">
           <input
             checked={isHidden}
             className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"

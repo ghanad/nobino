@@ -2,7 +2,7 @@ import Link from "next/link";
 import { UserRole } from "@prisma/client";
 import { notFound } from "next/navigation";
 import type { JSONContent } from "@tiptap/core";
-import { ArrowLeft, History, Plus } from "lucide-react";
+import { ArrowLeft, ChevronDown, History, Plus } from "lucide-react";
 
 import { AppShell } from "@/components/app/app-shell";
 import { PageHeader } from "@/components/app/page-header";
@@ -100,46 +100,56 @@ export default async function WikiEditPage({
             submitLabel="ذخیره صفحه"
           />
 
-          <div className="grid gap-4 rounded-2xl border bg-white p-4">
+          <section className="grid gap-5 rounded-2xl border bg-white p-5">
             <div className="grid gap-1">
               <h2 className="text-base font-semibold text-slate-950">
-                جابه‌جایی و حذف
+                مدیریت صفحه
               </h2>
               <p className="text-sm leading-6 text-muted-foreground">
-                ترتیب را در میان خواهر/برادرها تغییر دهید یا صفحه را با حذف نرم از درخت خارج کنید.
+                ترتیب صفحه را تنظیم کنید یا در صورت نیاز، آن را از دانشنامه خارج کنید.
               </p>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2">
-              <form action={moveWikiPageAction} className="grid gap-3 rounded-xl border border-slate-200 p-4">
-                <input name="pageId" type="hidden" value={page.id} />
-                <input name="slug" type="hidden" value={page.slug} />
-                <p className="text-sm font-medium text-slate-700">جابه‌جایی ترتیب</p>
-                <div className="flex flex-wrap gap-2">
-                  <SubmitButton
-                    className="flex-1"
-                    name="direction"
-                    pendingLabel="در حال جابه‌جایی..."
-                    value="up"
-                    variant="outline"
-                  >
-                    به بالا
-                  </SubmitButton>
-                  <SubmitButton
-                    className="flex-1"
-                    name="direction"
-                    pendingLabel="در حال جابه‌جایی..."
-                    value="down"
-                    variant="outline"
-                  >
-                    به پایین
-                  </SubmitButton>
-                </div>
-              </form>
+            <form
+              action={moveWikiPageAction}
+              className="flex flex-col gap-3 border-t border-slate-200 pt-5 md:flex-row md:items-center md:justify-between"
+            >
+              <input name="pageId" type="hidden" value={page.id} />
+              <input name="slug" type="hidden" value={page.slug} />
+              <div className="grid gap-1">
+                <p className="text-sm font-medium text-slate-800">ترتیب در فهرست</p>
+                <p className="text-sm text-muted-foreground">جایگاه صفحه را میان صفحه‌های هم‌سطح تغییر دهید.</p>
+              </div>
+              <div className="flex gap-2">
+                <SubmitButton
+                  className="flex-1 md:flex-none"
+                  name="direction"
+                  pendingLabel="در حال جابه‌جایی..."
+                  value="up"
+                  variant="outline"
+                >
+                  به بالا
+                </SubmitButton>
+                <SubmitButton
+                  className="flex-1 md:flex-none"
+                  name="direction"
+                  pendingLabel="در حال جابه‌جایی..."
+                  value="down"
+                  variant="outline"
+                >
+                  به پایین
+                </SubmitButton>
+              </div>
+            </form>
 
+            <details className="group border-t border-slate-200 pt-5">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-medium text-slate-700 [&::-webkit-details-marker]:hidden">
+                <span>حذف صفحه</span>
+                <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
+              </summary>
               <form
                 action={deleteWikiPageAction}
-                className="grid gap-3 rounded-xl border border-red-200 bg-red-50/40 p-4"
+                className="mt-4 grid gap-3 rounded-xl border border-red-200 bg-red-50/50 p-4"
               >
                 <input name="pageId" type="hidden" value={page.id} />
                 <input name="slug" type="hidden" value={page.slug} />
@@ -155,9 +165,9 @@ export default async function WikiEditPage({
                   حذف صفحه
                 </SubmitButton>
               </form>
-            </div>
+            </details>
 
-            <div className="grid gap-2 border-t border-slate-200 pt-4 text-sm text-muted-foreground md:grid-cols-2">
+            <div className="grid gap-2 border-t border-slate-200 pt-5 text-sm text-muted-foreground md:grid-cols-2">
               <p>
                 ایجاد شده در{" "}
                 <span dir="rtl" className="font-medium text-slate-700">
@@ -171,7 +181,7 @@ export default async function WikiEditPage({
                 </span>
               </p>
             </div>
-          </div>
+          </section>
         </div>
       </WikiWorkspace>
     </AppShell>
