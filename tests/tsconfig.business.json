@@ -36,6 +36,8 @@
     "../lib/notification-service.ts",
     "../lib/reservation-service.ts",
     "../lib/schedule.ts",
+    "../lib/survey-permissions.ts",
+    "../lib/survey-status.ts",
     "../lib/user-management-service.ts",
     "../lib/utils.ts",
     "../types/pholiday.d.ts"
