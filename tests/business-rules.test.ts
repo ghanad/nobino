@@ -12,3 +12,4 @@ import "./user-management-business-rules.test";
 import "./permissions.test";
 import "./wiki-business-rules.test";
 import "./wiki-ai-settings.test";
+import "./survey-business-rules.test";
