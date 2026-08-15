@@ -13,7 +13,9 @@ import { canManageWiki } from "@/lib/permissions";
 import { getWikiPagePath, getWikiPageSlug } from "@/lib/wiki-route";
 import { getWikiPageViewBySlug } from "@/lib/wiki-service";
 import { renderWikiContentHtml } from "@/lib/wiki-render.server";
+import { WikiRenderedContent } from "@/app/wiki/_components/wiki-rendered-content";
 import { WikiWorkspace } from "@/app/wiki/_components/wiki-workspace";
+import { WikiCopyContentButton } from "@/app/wiki/_components/wiki-copy-content-button";
 import { getWikiToast } from "@/app/wiki/wiki-toast";
 
 type WikiPageProps = {
@@ -66,6 +68,9 @@ export default async function WikiPage({ params, searchParams }: WikiPageProps) 
             <div className="flex flex-wrap justify-start gap-2">
               {isAdmin ? (
                 <>
+                  {page.contentText.trim() ? (
+                    <WikiCopyContentButton contentHtml={html} contentText={page.contentText} />
+                  ) : null}
                   <Button asChild variant="outline">
                     <Link href={`${getWikiPagePath(page.slug)}/edit`}>ویرایش</Link>
                   </Button>
@@ -105,10 +110,7 @@ export default async function WikiPage({ params, searchParams }: WikiPageProps) 
             ) : null}
 
             {page.contentText.trim() ? (
-              <article
-                className="wiki-content"
-                dangerouslySetInnerHTML={{ __html: html }}
-              />
+              <WikiRenderedContent html={html} />
             ) : (
               <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm leading-7 text-muted-foreground">
                 این صفحه هنوز محتوای متنی ندارد.

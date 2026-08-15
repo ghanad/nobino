@@ -99,6 +99,14 @@
     @apply overflow-x-auto rounded-md bg-slate-100 px-3 py-2 font-mono text-sm leading-6 text-slate-900;
   }
 
+  .wiki-content pre.wiki-code-block {
+    @apply relative pr-12;
+  }
+
+  .wiki-code-copy-button {
+    @apply absolute right-1 top-1 inline-flex size-8 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-white hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  }
+
   .wiki-content pre code,
   .wiki-editor.tiptap pre code {
     @apply bg-transparent p-0;
