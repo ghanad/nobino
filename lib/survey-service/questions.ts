@@ -633,6 +633,38 @@ export async function reorderQuestions(input: {
       );
     }
 
+    const proposedSortOrder = new Map(
+      input.questionIds.map((questionId, index) => [questionId, index]),
+    );
+    const conditions = await tx.surveyQuestionCondition.findMany({
+      where: {
+        targetQuestion: { surveyId: input.surveyId },
+      },
+      select: {
+        sourceQuestionId: true,
+        targetQuestionId: true,
+      },
+    });
+
+    for (const condition of conditions) {
+      const sourceSortOrder = proposedSortOrder.get(
+        condition.sourceQuestionId,
+      );
+      const targetSortOrder = proposedSortOrder.get(
+        condition.targetQuestionId,
+      );
+
+      if (
+        sourceSortOrder === undefined ||
+        targetSortOrder === undefined ||
+        sourceSortOrder >= targetSortOrder
+      ) {
+        throw new SurveyServiceError(
+          "Question order must keep each condition source before its target.",
+        );
+      }
+    }
+
     for (let i = 0; i < input.questionIds.length; i++) {
       await tx.surveyQuestion.update({
         where: { id: input.questionIds[i] },
@@ -1014,4 +1046,177 @@ export async function assertSurveyQuestionsReadyForPublish(
       );
     }
   }
+}
+
+// ──────────────────────────────────────────────
+// Condition operations
+// ──────────────────────────────────────────────
+
+/**
+ * Set (create or replace) the single visibility condition for a target question.
+ * The source question must be a single/multiple choice question, must belong to
+ * the same survey, must appear earlier than the target, and must reference one
+ * of its own options. Self-reference and cross-survey references are rejected.
+ * Because the source must be earlier, cycles are impossible.
+ */
+export async function setQuestionCondition(input: {
+  actorUserId: string;
+  surveyId: string;
+  targetQuestionId: string;
+  sourceQuestionId: string;
+  sourceOptionId: string;
+  operator: "IS_SELECTED" | "IS_NOT_SELECTED";
+}) {
+  return db.$transaction(async (tx) => {
+    await authEditDraft(
+      { actorUserId: input.actorUserId, surveyId: input.surveyId },
+      tx,
+    );
+
+    if (input.targetQuestionId === input.sourceQuestionId) {
+      throw new SurveyServiceError(
+        "A question cannot be conditioned on itself.",
+      );
+    }
+
+    const questions = await tx.surveyQuestion.findMany({
+      where: { surveyId: input.surveyId },
+      select: { id: true, sortOrder: true, type: true },
+    });
+
+    const targetQuestion = questions.find(
+      (question) => question.id === input.targetQuestionId,
+    );
+    if (!targetQuestion) {
+      throw new SurveyServiceError(
+        "Target question was not found in this survey.",
+      );
+    }
+
+    const sourceQuestion = questions.find(
+      (question) => question.id === input.sourceQuestionId,
+    );
+    if (!sourceQuestion) {
+      throw new SurveyServiceError(
+        "Source question was not found in this survey.",
+      );
+    }
+
+    if (sourceQuestion.sortOrder >= targetQuestion.sortOrder) {
+      throw new SurveyServiceError(
+        "The source question must appear before the target question.",
+      );
+    }
+
+    if (
+      sourceQuestion.type !== SurveyQuestionType.SINGLE_CHOICE &&
+      sourceQuestion.type !== SurveyQuestionType.MULTIPLE_CHOICE
+    ) {
+      throw new SurveyServiceError(
+        "Only single-choice and multiple-choice questions can be condition sources.",
+      );
+    }
+
+    const option = await tx.surveyOption.findUnique({
+      where: { id: input.sourceOptionId },
+      select: { id: true, questionId: true },
+    });
+
+    if (!option) {
+      throw new SurveyServiceError("Source option was not found.");
+    }
+
+    if (option.questionId !== input.sourceQuestionId) {
+      throw new SurveyServiceError(
+        "The source option does not belong to the source question.",
+      );
+    }
+
+    await tx.surveyQuestionCondition.deleteMany({
+      where: { targetQuestionId: input.targetQuestionId },
+    });
+
+    await tx.surveyQuestionCondition.create({
+      data: {
+        targetQuestionId: input.targetQuestionId,
+        sourceQuestionId: input.sourceQuestionId,
+        sourceOptionId: input.sourceOptionId,
+        operator: input.operator,
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorUserId: input.actorUserId,
+        entityType: "Survey",
+        entityId: input.surveyId,
+        action: "SURVEY_CONDITION_SET",
+        newValue: {
+          targetQuestionId: input.targetQuestionId,
+          sourceQuestionId: input.sourceQuestionId,
+          sourceOptionId: input.sourceOptionId,
+          operator: input.operator,
+        },
+      },
+    });
+  });
+}
+
+/**
+ * Remove the visibility condition for a target question.
+ */
+export async function removeQuestionCondition(input: {
+  actorUserId: string;
+  surveyId: string;
+  targetQuestionId: string;
+}) {
+  return db.$transaction(async (tx) => {
+    await authEditDraft(
+      { actorUserId: input.actorUserId, surveyId: input.surveyId },
+      tx,
+    );
+
+    const question = await tx.surveyQuestion.findUnique({
+      where: { id: input.targetQuestionId },
+      select: { id: true, surveyId: true },
+    });
+
+    if (!question) {
+      throw new SurveyServiceError("Question was not found.");
+    }
+
+    if (question.surveyId !== input.surveyId) {
+      throw new SurveyServiceError(
+        "Cross-survey question ID is not allowed.",
+      );
+    }
+
+    const existing = await tx.surveyQuestionCondition.findUnique({
+      where: { targetQuestionId: input.targetQuestionId },
+    });
+
+    if (!existing) {
+      throw new SurveyServiceError(
+        "No condition exists for this question.",
+      );
+    }
+
+    await tx.surveyQuestionCondition.delete({
+      where: { id: existing.id },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorUserId: input.actorUserId,
+        entityType: "Survey",
+        entityId: input.surveyId,
+        action: "SURVEY_CONDITION_REMOVED",
+        oldValue: {
+          targetQuestionId: input.targetQuestionId,
+          sourceQuestionId: existing.sourceQuestionId,
+          sourceOptionId: existing.sourceOptionId,
+        },
+      },
+    });
+  });
 }
