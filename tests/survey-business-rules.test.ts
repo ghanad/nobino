@@ -15,10 +15,21 @@ import {
 import {
   adminId,
   db,
+  managerId,
   registerBusinessRuleTestHooks,
   secondUserId,
   userId,
 } from "./business-rules-helpers";
+import {
+  createSurveyDraft,
+  deleteSurveyDraft,
+  listAuthoringSurveys,
+  listRespondentSurveys,
+  SURVEY_DESCRIPTION_MAX_LENGTH,
+  SURVEY_TITLE_MAX_LENGTH,
+  updateSurveyMetadata,
+} from "@/lib/survey-service/metadata";
+import { SurveyServiceError } from "@/lib/survey-service/shared";
 import { deleteTeam } from "@/lib/team-service";
 import {
   canCreateSurvey,
@@ -600,6 +611,387 @@ test("reminders require a manager and an active survey", () => {
   assert.equal(canSendSurveyReminder(collaborator, "ACTIVE"), false);
 });
 
+test("only users with the creator permission can create a survey draft", async () => {
+  await db.user.update({
+    where: { id: secondUserId },
+    data: { canCreateSurveys: true },
+  });
+
+  await assert.rejects(
+    createSurveyDraft({
+      actorUserId: userId,
+      title: "Forbidden",
+      kind: SurveyKind.SATISFACTION,
+      identityMode: SurveyIdentityMode.NAMED,
+    }),
+    SurveyServiceError,
+  );
+  await assert.rejects(
+    createSurveyDraft({
+      actorUserId: managerId,
+      title: "Manager without flag",
+      kind: SurveyKind.SATISFACTION,
+      identityMode: SurveyIdentityMode.NAMED,
+    }),
+    SurveyServiceError,
+  );
+
+  const created = await createSurveyDraft({
+    actorUserId: secondUserId,
+    title: "  Permitted   ",
+    description: "  A description  ",
+    kind: SurveyKind.VOTE,
+    identityMode: SurveyIdentityMode.ANONYMOUS,
+  });
+  assert.equal(created.state, SurveyState.DRAFT);
+  assert.equal(created.title, "Permitted");
+  assert.equal(created.description, "A description");
+  assert.equal(created.kind, SurveyKind.VOTE);
+  assert.equal(created.identityMode, SurveyIdentityMode.ANONYMOUS);
+  assert.equal(created.audienceMode, SurveyAudienceMode.ALL_ACTIVE);
+  assert.equal(created.startsAt, null);
+  assert.equal(created.endsAt, null);
+
+  const adminCreated = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Admin created",
+    kind: SurveyKind.DATA_COLLECTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+  assert.equal(adminCreated.state, SurveyState.DRAFT);
+});
+
+test("an inactive or missing user cannot create a survey draft", async () => {
+  await db.user.update({
+    where: { id: secondUserId },
+    data: { canCreateSurveys: true, active: false },
+  });
+
+  await assert.rejects(
+    createSurveyDraft({
+      actorUserId: secondUserId,
+      title: "Inactive",
+      kind: SurveyKind.SATISFACTION,
+      identityMode: SurveyIdentityMode.NAMED,
+    }),
+    SurveyServiceError,
+  );
+
+  await assert.rejects(
+    createSurveyDraft({
+      actorUserId: "missing-user",
+      title: "Ghost",
+      kind: SurveyKind.SATISFACTION,
+      identityMode: SurveyIdentityMode.NAMED,
+    }),
+    SurveyServiceError,
+  );
+});
+
+test("metadata update and delete reject unknown surveys and inactive actors", async () => {
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Draft",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+
+  await assert.rejects(
+    updateSurveyMetadata({
+      actorUserId: adminId,
+      surveyId: "missing-survey",
+      title: "Ghost",
+    }),
+    SurveyServiceError,
+  );
+  await assert.rejects(
+    deleteSurveyDraft({ actorUserId: adminId, surveyId: "missing-survey" }),
+    SurveyServiceError,
+  );
+
+  await db.user.update({
+    where: { id: adminId },
+    data: { active: false },
+  });
+
+  await assert.rejects(
+    updateSurveyMetadata({
+      actorUserId: adminId,
+      surveyId: survey.id,
+      title: "Inactive",
+    }),
+    SurveyServiceError,
+  );
+  await assert.rejects(
+    deleteSurveyDraft({ actorUserId: adminId, surveyId: survey.id }),
+    SurveyServiceError,
+  );
+});
+
+test("survey metadata update validates title, description, and the time window", async () => {
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Draft",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+
+  await assert.rejects(
+    updateSurveyMetadata({ actorUserId: adminId, surveyId: survey.id, title: "   " }),
+    SurveyServiceError,
+  );
+  await assert.rejects(
+    updateSurveyMetadata({
+      actorUserId: adminId,
+      surveyId: survey.id,
+      title: "x".repeat(SURVEY_TITLE_MAX_LENGTH + 1),
+    }),
+    SurveyServiceError,
+  );
+  await assert.rejects(
+    updateSurveyMetadata({
+      actorUserId: adminId,
+      surveyId: survey.id,
+      title: "Ok",
+      description: "y".repeat(SURVEY_DESCRIPTION_MAX_LENGTH + 1),
+    }),
+    SurveyServiceError,
+  );
+
+  const startsAt = new Date("2026-08-16T10:00:00.000Z");
+  await assert.rejects(
+    updateSurveyMetadata({
+      actorUserId: adminId,
+      surveyId: survey.id,
+      title: "Ok",
+      startsAt,
+      endsAt: startsAt,
+    }),
+    SurveyServiceError,
+  );
+  await assert.rejects(
+    updateSurveyMetadata({
+      actorUserId: adminId,
+      surveyId: survey.id,
+      title: "Ok",
+      startsAt: new Date(startsAt.getTime() + 1000),
+      endsAt: startsAt,
+    }),
+    SurveyServiceError,
+  );
+
+  const updated = await updateSurveyMetadata({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    title: "Updated",
+    startsAt,
+    endsAt: new Date(startsAt.getTime() + 3600_000),
+  });
+  assert.equal(updated.title, "Updated");
+  assert.equal(updated.startsAt?.getTime(), startsAt.getTime());
+});
+
+test("a collaborator can edit title, description, and schedule but not kind or identity mode", async () => {
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Draft",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+  await db.surveyCollaborator.create({
+    data: { surveyId: survey.id, userId: secondUserId },
+  });
+
+  const updated = await updateSurveyMetadata({
+    actorUserId: secondUserId,
+    surveyId: survey.id,
+    title: "Edited by collaborator",
+    description: "Updated description",
+    startsAt: new Date("2026-08-16T10:00:00.000Z"),
+    endsAt: new Date("2026-08-16T11:00:00.000Z"),
+  });
+  assert.equal(updated.title, "Edited by collaborator");
+  assert.equal(updated.description, "Updated description");
+
+  await assert.rejects(
+    updateSurveyMetadata({
+      actorUserId: secondUserId,
+      surveyId: survey.id,
+      title: "Still",
+      kind: SurveyKind.VOTE,
+    }),
+    SurveyServiceError,
+  );
+  await assert.rejects(
+    updateSurveyMetadata({
+      actorUserId: secondUserId,
+      surveyId: survey.id,
+      title: "Still",
+      identityMode: SurveyIdentityMode.ANONYMOUS,
+    }),
+    SurveyServiceError,
+  );
+});
+
+test("the owner or an admin can change kind and identity mode while the survey is a draft", async () => {
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Draft",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+
+  const updated = await updateSurveyMetadata({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    title: "Draft",
+    kind: SurveyKind.VOTE,
+    identityMode: SurveyIdentityMode.ANONYMOUS,
+  });
+  assert.equal(updated.kind, SurveyKind.VOTE);
+  assert.equal(updated.identityMode, SurveyIdentityMode.ANONYMOUS);
+});
+
+test("published survey content cannot be edited through the metadata service", async () => {
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Draft",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+  await db.survey.update({
+    where: { id: survey.id },
+    data: { state: SurveyState.PUBLISHED },
+  });
+
+  await assert.rejects(
+    updateSurveyMetadata({ actorUserId: adminId, surveyId: survey.id, title: "Changed" }),
+    SurveyServiceError,
+  );
+});
+
+test("only the owner or an admin can delete a draft and non-drafts cannot be deleted", async () => {
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "To delete",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+  await db.surveyCollaborator.create({
+    data: { surveyId: survey.id, userId: secondUserId },
+  });
+
+  await assert.rejects(
+    deleteSurveyDraft({ actorUserId: secondUserId, surveyId: survey.id }),
+    SurveyServiceError,
+  );
+  await assert.rejects(
+    deleteSurveyDraft({ actorUserId: userId, surveyId: survey.id }),
+    SurveyServiceError,
+  );
+
+  await db.survey.update({
+    where: { id: survey.id },
+    data: { state: SurveyState.PUBLISHED },
+  });
+  await assert.rejects(
+    deleteSurveyDraft({ actorUserId: adminId, surveyId: survey.id }),
+    SurveyServiceError,
+  );
+
+  const draft = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Deletable",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+  await deleteSurveyDraft({ actorUserId: adminId, surveyId: draft.id });
+  assert.equal(await db.survey.findUnique({ where: { id: draft.id } }), null);
+});
+
+test("metadata create, update, and delete are audited without answer data", async () => {
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Audited",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+
+  await updateSurveyMetadata({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    title: "Audited 2",
+  });
+
+  await deleteSurveyDraft({ actorUserId: adminId, surveyId: survey.id });
+
+  const logs = await db.auditLog.findMany({
+    where: { entityType: "Survey", entityId: survey.id },
+    orderBy: { createdAt: "asc" },
+  });
+
+  assert.deepEqual(
+    logs.map((log) => log.action),
+    ["SURVEY_CREATED", "SURVEY_UPDATED", "SURVEY_DELETED"],
+  );
+  for (const log of logs) {
+    const raw = JSON.stringify(log);
+    assert.ok(!raw.includes("answers"));
+    assert.ok(!raw.includes("response"));
+  }
+});
+
+test("list functions distinguish authoring and respondent surveys", async () => {
+  const owned = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Owned by admin",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+  const collab = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Collaborated",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+  await db.surveyCollaborator.create({
+    data: { surveyId: collab.id, userId: secondUserId },
+  });
+
+  const published = await db.survey.create({
+    data: {
+      title: "For recipients",
+      kind: SurveyKind.SATISFACTION,
+      state: SurveyState.PUBLISHED,
+      identityMode: SurveyIdentityMode.NAMED,
+      audienceMode: SurveyAudienceMode.ALL_ACTIVE,
+      ownerId: adminId,
+    },
+  });
+  await db.surveyRecipient.create({
+    data: { surveyId: published.id, userId, hasSubmitted: false },
+  });
+
+  const adminList = await listAuthoringSurveys({ actorUserId: adminId });
+  assert.equal(adminList.length, 3);
+
+  const collabList = await listAuthoringSurveys({ actorUserId: secondUserId });
+  assert.deepEqual(
+    collabList.map((survey) => survey.id),
+    [collab.id],
+  );
+
+  const regularList = await listAuthoringSurveys({ actorUserId: userId });
+  assert.equal(regularList.length, 0);
+
+  const respondentList = await listRespondentSurveys({ actorUserId: userId });
+  assert.equal(respondentList.length, 1);
+  assert.equal(respondentList[0].id, published.id);
+  assert.equal(respondentList[0].recipients[0].hasSubmitted, false);
+
+  assert.ok(owned.id);
+});
+
 test("participation requires an active recipient and an active survey", () => {
   const recipient = makeActor({ isRecipient: true });
   const inactiveRecipient = makeActor({ isRecipient: true, active: false });
@@ -618,4 +1010,368 @@ test("participation requires an active recipient and an active survey", () => {
   assert.equal(canParticipate(adminNonRecipient, "ACTIVE"), false);
   assert.equal(canParticipate(collaboratorNonRecipient, "ACTIVE"), false);
   assert.equal(canParticipate(ownerNonRecipient, "ACTIVE"), false);
+});
+
+// ── S06: Collaborator service ──
+
+test("collaboratorCRUD: add, reject owner/duplicate/inactive, remove, cross-survey", async (t) => {
+  const { addCollaborator, removeCollaborator } = await import(
+    "@/lib/survey-service/collaborator"
+  );
+
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Collab test",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+
+  // Owner cannot be added as collaborator.
+  await assert.rejects(
+    addCollaborator({ actorUserId: adminId, surveyId: survey.id, targetUserId: adminId }),
+    SurveyServiceError,
+  );
+
+  // Add a valid collaborator.
+  await addCollaborator({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    targetUserId: secondUserId,
+  });
+
+  // Duplicate is rejected.
+  await assert.rejects(
+    addCollaborator({ actorUserId: adminId, surveyId: survey.id, targetUserId: secondUserId }),
+    SurveyServiceError,
+  );
+
+  // Verify collaborator exists.
+  const collab = await db.surveyCollaborator.findUnique({
+    where: { surveyId_userId: { surveyId: survey.id, userId: secondUserId } },
+  });
+  assert.ok(collab);
+
+  // Collaborator passes permission checks.
+  const actor = await (await import("@/lib/survey-service/shared")).resolveSurveyActor(db, {
+    actorUserId: secondUserId,
+    surveyId: survey.id,
+    ownerId: survey.ownerId,
+    user: await (await import("@/lib/survey-service/shared")).loadActiveActorUser(secondUserId, db),
+  });
+  assert.equal(actor.isCollaborator, true);
+  assert.equal(canEditSurveyDraft(actor, SurveyState.DRAFT), true);
+  assert.equal(canViewSurveyResults(actor), true);
+
+  // Remove collaborator.
+  await removeCollaborator({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    targetUserId: secondUserId,
+  });
+
+  // Verify collaborator is removed.
+  assert.equal(
+    await db.surveyCollaborator.findUnique({
+      where: { surveyId_userId: { surveyId: survey.id, userId: secondUserId } },
+    }),
+    null,
+  );
+
+  // Removed collaborator immediately loses access.
+  const actorAfter = await (await import("@/lib/survey-service/shared")).resolveSurveyActor(db, {
+    actorUserId: secondUserId,
+    surveyId: survey.id,
+    ownerId: survey.ownerId,
+    user: await (await import("@/lib/survey-service/shared")).loadActiveActorUser(secondUserId, db),
+  });
+  assert.equal(actorAfter.isCollaborator, false);
+  assert.equal(canEditSurveyDraft(actorAfter, SurveyState.DRAFT), false);
+  assert.equal(canViewSurveyResults(actorAfter), false);
+
+  // Remove non-collaborator is rejected.
+  await assert.rejects(
+    removeCollaborator({ actorUserId: adminId, surveyId: survey.id, targetUserId: userId }),
+    SurveyServiceError,
+  );
+});
+
+test("collaborator auth: non-admin/owner cannot manage collaborators", async () => {
+  const { addCollaborator, removeCollaborator } = await import(
+    "@/lib/survey-service/collaborator"
+  );
+
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Auth test",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+
+  // Regular user cannot add.
+  await assert.rejects(
+    addCollaborator({ actorUserId: userId, surveyId: survey.id, targetUserId: secondUserId }),
+    SurveyServiceError,
+  );
+
+  // Add as admin, then collaborator cannot remove others.
+  await addCollaborator({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    targetUserId: secondUserId,
+  });
+
+  // Collaborator cannot remove themselves or anyone else.
+  await assert.rejects(
+    removeCollaborator({ actorUserId: secondUserId, surveyId: survey.id, targetUserId: secondUserId }),
+    SurveyServiceError,
+  );
+  await assert.rejects(
+    removeCollaborator({ actorUserId: secondUserId, surveyId: survey.id, targetUserId: userId }),
+    SurveyServiceError,
+  );
+
+  // Manager who is not owner cannot manage.
+  await assert.rejects(
+    addCollaborator({ actorUserId: managerId, surveyId: survey.id, targetUserId: userId }),
+    SurveyServiceError,
+  );
+});
+
+test("a soft-deleted actor cannot manage collaborators", async () => {
+  const { addCollaborator, removeCollaborator } = await import(
+    "@/lib/survey-service/collaborator"
+  );
+
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Deleted actor",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+  await addCollaborator({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    targetUserId: secondUserId,
+  });
+  await db.user.update({
+    where: { id: adminId },
+    data: { active: true, deletedAt: new Date() },
+  });
+
+  await assert.rejects(
+    addCollaborator({
+      actorUserId: adminId,
+      surveyId: survey.id,
+      targetUserId: userId,
+    }),
+    SurveyServiceError,
+  );
+  await assert.rejects(
+    removeCollaborator({
+      actorUserId: adminId,
+      surveyId: survey.id,
+      targetUserId: secondUserId,
+    }),
+    SurveyServiceError,
+  );
+});
+
+test("collaborators are audited with target user identity", async () => {
+  const { addCollaborator, removeCollaborator } = await import(
+    "@/lib/survey-service/collaborator"
+  );
+
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Audit test",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+
+  await addCollaborator({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    targetUserId: secondUserId,
+  });
+
+  await removeCollaborator({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    targetUserId: secondUserId,
+  });
+
+  const logs = await db.auditLog.findMany({
+    where: {
+      entityType: "Survey",
+      entityId: survey.id,
+      action: { in: ["SURVEY_COLLABORATOR_ADDED", "SURVEY_COLLABORATOR_REMOVED"] },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+
+  assert.equal(logs.length, 2);
+  assert.deepEqual(
+    logs.map((l) => l.action),
+    ["SURVEY_COLLABORATOR_ADDED", "SURVEY_COLLABORATOR_REMOVED"],
+  );
+
+  const addedLog = logs[0];
+  const addedValue = addedLog.newValue as Record<string, unknown>;
+  assert.equal(addedValue.targetUserId, secondUserId);
+  assert.equal(addedValue.targetUserName, "Second User");
+  assert.equal(addedValue.targetUserEmail, "second@example.test");
+
+  const removedLog = logs[1];
+  const removedValue = removedLog.oldValue as Record<string, unknown>;
+  assert.equal(removedValue.targetUserId, secondUserId);
+  assert.equal(removedValue.targetUserName, "Second User");
+  assert.equal(removedValue.targetUserEmail, "second@example.test");
+});
+
+test("a collaborator relation cannot be removed through another survey ID", async () => {
+  const { addCollaborator, removeCollaborator } = await import(
+    "@/lib/survey-service/collaborator"
+  );
+
+  const firstSurvey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "First survey",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+  const secondSurvey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Second survey",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+  await addCollaborator({
+    actorUserId: adminId,
+    surveyId: firstSurvey.id,
+    targetUserId: secondUserId,
+  });
+
+  await assert.rejects(
+    removeCollaborator({
+      actorUserId: adminId,
+      surveyId: secondSurvey.id,
+      targetUserId: secondUserId,
+    }),
+    SurveyServiceError,
+  );
+  assert.ok(
+    await db.surveyCollaborator.findUnique({
+      where: {
+        surveyId_userId: {
+          surveyId: firstSurvey.id,
+          userId: secondUserId,
+        },
+      },
+    }),
+  );
+});
+
+test("collaborator changes work on published surveys", async () => {
+  const { addCollaborator, removeCollaborator } = await import(
+    "@/lib/survey-service/collaborator"
+  );
+
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Published collab",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+
+  await db.survey.update({
+    where: { id: survey.id },
+    data: { state: SurveyState.PUBLISHED },
+  });
+
+  await addCollaborator({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    targetUserId: secondUserId,
+  });
+
+  const collab = await db.surveyCollaborator.findUnique({
+    where: { surveyId_userId: { surveyId: survey.id, userId: secondUserId } },
+  });
+  assert.ok(collab);
+
+  await removeCollaborator({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    targetUserId: secondUserId,
+  });
+
+  assert.equal(
+    await db.surveyCollaborator.findUnique({
+      where: { surveyId_userId: { surveyId: survey.id, userId: secondUserId } },
+    }),
+    null,
+  );
+});
+
+test("collaborator: inactive/deleted user cannot be added", async () => {
+  const { addCollaborator } = await import(
+    "@/lib/survey-service/collaborator"
+  );
+
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Inactive test",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+
+  // Deactivate second user.
+  await db.user.update({
+    where: { id: secondUserId },
+    data: { active: false },
+  });
+
+  await assert.rejects(
+    addCollaborator({ actorUserId: adminId, surveyId: survey.id, targetUserId: secondUserId }),
+    SurveyServiceError,
+  );
+
+  // Re-activate and soft-delete.
+  await db.user.update({
+    where: { id: secondUserId },
+    data: { active: true, deletedAt: new Date() },
+  });
+
+  await assert.rejects(
+    addCollaborator({ actorUserId: adminId, surveyId: survey.id, targetUserId: secondUserId }),
+    SurveyServiceError,
+  );
+});
+
+test("collaborator: non-existent survey or target user is rejected", async () => {
+  const { addCollaborator, removeCollaborator } = await import(
+    "@/lib/survey-service/collaborator"
+  );
+
+  await assert.rejects(
+    addCollaborator({ actorUserId: adminId, surveyId: "nonexistent", targetUserId: secondUserId }),
+    SurveyServiceError,
+  );
+
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Missing user",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+
+  await assert.rejects(
+    addCollaborator({ actorUserId: adminId, surveyId: survey.id, targetUserId: "fake-user" }),
+    SurveyServiceError,
+  );
+
+  await assert.rejects(
+    removeCollaborator({ actorUserId: adminId, surveyId: "nonexistent", targetUserId: secondUserId }),
+    SurveyServiceError,
+  );
 });
