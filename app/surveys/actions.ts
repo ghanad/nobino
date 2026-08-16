@@ -7,9 +7,7 @@ import {
   createSurveyDraft,
   updateSurveyMetadata,
 } from "@/lib/survey-service/metadata";
-import {
-  buildLocalDateAtHourFromJalali,
-} from "@/lib/jalali-date";
+import { buildLocalDateAtHourFromJalali } from "@/lib/jalali-date";
 import {
   createSurveySchema,
   updateMetadataSchema,

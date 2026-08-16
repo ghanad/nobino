@@ -57,3 +57,44 @@ export const updateMetadataSchema = z.object({
     .optional()
     .or(z.literal("")),
 });
+
+// S13 Collaborator schemas
+
+export const addCollaboratorSchema = z.object({
+  surveyId: z.string().min(1, "شناسه نظرسنجی الزامی است."),
+  targetUserId: z.string().min(1, "شناسه کاربر الزامی است."),
+});
+
+export const removeCollaboratorSchema = z.object({
+  surveyId: z.string().min(1, "شناسه نظرسنجی الزامی است."),
+  targetUserId: z.string().min(1, "شناسه کاربر الزامی است."),
+});
+
+// S13 Audience schemas
+
+export const setAudienceModeSchema = z.object({
+  surveyId: z.string().min(1, "شناسه نظرسنجی الزامی است."),
+  audienceMode: z.enum(["ALL_ACTIVE", "TARGETED"], {
+    errorMap: () => ({ message: "حالت مخاطب نامعتبر است." }),
+  }),
+});
+
+export const addAudienceTeamSchema = z.object({
+  surveyId: z.string().min(1, "شناسه نظرسنجی الزامی است."),
+  teamId: z.string().min(1, "شناسه تیم الزامی است."),
+});
+
+export const removeAudienceTeamSchema = z.object({
+  surveyId: z.string().min(1, "شناسه نظرسنجی الزامی است."),
+  teamId: z.string().min(1, "شناسه تیم الزامی است."),
+});
+
+export const addAudienceUserSchema = z.object({
+  surveyId: z.string().min(1, "شناسه نظرسنجی الزامی است."),
+  targetUserId: z.string().min(1, "شناسه کاربر الزامی است."),
+});
+
+export const removeAudienceUserSchema = z.object({
+  surveyId: z.string().min(1, "شناسه نظرسنجی الزامی است."),
+  targetUserId: z.string().min(1, "شناسه کاربر الزامی است."),
+});
