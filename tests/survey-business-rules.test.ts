@@ -4173,3 +4173,1005 @@ test("option order: output contains all options exactly once", async () => {
   assert.equal(order.length, 3);
   assert.deepEqual(new Set(order), new Set(["x", "y", "z"]));
 });
+
+// ──────────────────────────────────────────────
+// Lifecycle: publish
+// ──────────────────────────────────────────────
+
+test("publishSurvey: owner can publish a valid draft with ALL_ACTIVE audience", async () => {
+  const { publishSurvey } = await import("@/lib/survey-service/lifecycle");
+
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Publish test",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+
+  await updateSurveyMetadata({
+    title: "Publish test",
+    actorUserId: adminId,
+    surveyId: survey.id,
+    startsAt: new Date("2026-09-01T06:00:00Z"),
+    endsAt: new Date("2026-09-01T14:00:00Z"),
+  });
+
+  const { addQuestion } = await import("@/lib/survey-service/questions");
+  await addQuestion({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    prompt: "How was your experience?",
+    type: SurveyQuestionType.SHORT_TEXT,
+  });
+
+  await publishSurvey({ actorUserId: adminId, surveyId: survey.id });
+
+  const updated = await db.survey.findUnique({
+    where: { id: survey.id },
+    select: {
+      state: true,
+      publishedAt: true,
+      _count: { select: { recipients: true } },
+    },
+  });
+
+  assert.equal(updated?.state, SurveyState.PUBLISHED);
+  assert.ok(updated?.publishedAt !== null);
+  assert.ok((updated?._count.recipients ?? 0) > 0);
+});
+
+test("publishSurvey: admin can publish a valid draft with TARGETED audience", async () => {
+  const { publishSurvey } = await import("@/lib/survey-service/lifecycle");
+  const { setAudienceMode, addAudienceTeam, addAudienceUser } = await import(
+    "@/lib/survey-service/audience"
+  );
+
+  const team = await db.team.create({ data: { name: "Publish Team" } });
+  await db.teamMembership.create({
+    data: { teamId: team.id, userId: secondUserId },
+  });
+
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Targeted publish",
+    kind: SurveyKind.DATA_COLLECTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+
+  await updateSurveyMetadata({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    title: "Targeted publish",
+    startsAt: new Date("2026-09-01T06:00:00Z"),
+    endsAt: new Date("2026-09-01T14:00:00Z"),
+  });
+
+  await setAudienceMode({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    audienceMode: SurveyAudienceMode.TARGETED,
+  });
+  await addAudienceTeam({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    teamId: team.id,
+  });
+  await addAudienceUser({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    targetUserId: userId,
+  });
+
+  const { addQuestion } = await import("@/lib/survey-service/questions");
+  await addQuestion({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    prompt: "Rate us",
+    type: SurveyQuestionType.RATING,
+    ratingMin: 1,
+    ratingMax: 5,
+  });
+
+  await publishSurvey({ actorUserId: adminId, surveyId: survey.id });
+
+  await db.teamMembership.create({
+    data: { teamId: team.id, userId: managerId },
+  });
+
+  const updated = await db.survey.findUnique({
+    where: { id: survey.id },
+    select: {
+      state: true,
+      publishedAt: true,
+      recipients: {
+        select: { userId: true },
+        orderBy: { userId: "asc" },
+      },
+    },
+  });
+  assert.equal(updated?.state, SurveyState.PUBLISHED);
+  assert.ok(updated?.publishedAt !== null);
+  assert.deepEqual(
+    updated?.recipients.map((recipient) => recipient.userId),
+    [secondUserId, userId].sort(),
+  );
+});
+
+test("publishSurvey: rejects non-owner without admin role", async () => {
+  const { publishSurvey } = await import("@/lib/survey-service/lifecycle");
+
+  const survey = await db.survey.create({
+    data: {
+      title: "Not mine",
+      kind: SurveyKind.SATISFACTION,
+      state: SurveyState.DRAFT,
+      identityMode: SurveyIdentityMode.NAMED,
+      audienceMode: SurveyAudienceMode.ALL_ACTIVE,
+      ownerId: adminId,
+    },
+  });
+
+  await assert.rejects(
+    publishSurvey({ actorUserId: secondUserId, surveyId: survey.id }),
+    SurveyServiceError,
+  );
+});
+
+test("publishSurvey: rejects draft without start/end dates", async () => {
+  const { publishSurvey } = await import("@/lib/survey-service/lifecycle");
+
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "No dates",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+
+  const { addQuestion } = await import("@/lib/survey-service/questions");
+  await addQuestion({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    prompt: "Q1",
+    type: SurveyQuestionType.SHORT_TEXT,
+  });
+
+  await assert.rejects(
+    publishSurvey({ actorUserId: adminId, surveyId: survey.id }),
+    SurveyServiceError,
+  );
+});
+
+test("publishSurvey: rejects draft without questions", async () => {
+  const { publishSurvey } = await import("@/lib/survey-service/lifecycle");
+
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "No questions",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+
+  await updateSurveyMetadata({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    title: "No questions",
+    startsAt: new Date("2026-09-01T06:00:00Z"),
+    endsAt: new Date("2026-09-01T14:00:00Z"),
+  });
+
+  await assert.rejects(
+    publishSurvey({ actorUserId: adminId, surveyId: survey.id }),
+    SurveyServiceError,
+  );
+});
+
+test("publishSurvey: rejects anonymous survey with fewer than 5 recipients", async () => {
+  const { publishSurvey } = await import("@/lib/survey-service/lifecycle");
+
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Anon too few",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.ANONYMOUS,
+  });
+
+  await updateSurveyMetadata({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    title: "Anon too few",
+    startsAt: new Date("2026-09-01T06:00:00Z"),
+    endsAt: new Date("2026-09-01T14:00:00Z"),
+  });
+
+  const { addQuestion } = await import("@/lib/survey-service/questions");
+  await addQuestion({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    prompt: "Q1",
+    type: SurveyQuestionType.SHORT_TEXT,
+  });
+
+  await assert.rejects(
+    publishSurvey({ actorUserId: adminId, surveyId: survey.id }),
+    SurveyServiceError,
+  );
+});
+
+test("publishSurvey: rejects already-published survey", async () => {
+  const { publishSurvey } = await import("@/lib/survey-service/lifecycle");
+
+  const survey = await db.survey.create({
+    data: {
+      title: "Already published",
+      kind: SurveyKind.SATISFACTION,
+      state: SurveyState.PUBLISHED,
+      identityMode: SurveyIdentityMode.NAMED,
+      audienceMode: SurveyAudienceMode.ALL_ACTIVE,
+      ownerId: adminId,
+      startsAt: new Date("2026-01-01T06:00:00Z"),
+      endsAt: new Date("2026-01-01T14:00:00Z"),
+    },
+  });
+
+  await assert.rejects(
+    publishSurvey({ actorUserId: adminId, surveyId: survey.id }),
+    SurveyServiceError,
+  );
+});
+
+test("publishSurvey: cross-survey ID is rejected", async () => {
+  const { publishSurvey } = await import("@/lib/survey-service/lifecycle");
+
+  const survey = await db.survey.create({
+    data: {
+      title: "Other survey",
+      kind: SurveyKind.SATISFACTION,
+      state: SurveyState.DRAFT,
+      identityMode: SurveyIdentityMode.NAMED,
+      audienceMode: SurveyAudienceMode.ALL_ACTIVE,
+      ownerId: secondUserId,
+    },
+  });
+
+  await assert.rejects(
+    publishSurvey({ actorUserId: adminId, surveyId: survey.id }),
+    SurveyServiceError,
+  );
+});
+
+test("publishSurvey: end time must be after start time", async () => {
+  const { publishSurvey } = await import("@/lib/survey-service/lifecycle");
+
+  const survey = await db.survey.create({
+    data: {
+      title: "Bad times",
+      kind: SurveyKind.SATISFACTION,
+      state: SurveyState.DRAFT,
+      identityMode: SurveyIdentityMode.NAMED,
+      audienceMode: SurveyAudienceMode.ALL_ACTIVE,
+      ownerId: adminId,
+      startsAt: new Date("2026-09-01T14:00:00Z"),
+      endsAt: new Date("2026-09-01T06:00:00Z"),
+    },
+  });
+
+  const { addQuestion } = await import("@/lib/survey-service/questions");
+  await addQuestion({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    prompt: "Q1",
+    type: SurveyQuestionType.SHORT_TEXT,
+  });
+
+  await assert.rejects(
+    publishSurvey({ actorUserId: adminId, surveyId: survey.id }),
+    SurveyServiceError,
+  );
+});
+
+test("publishSurvey: revalidates stored metadata before publishing", async () => {
+  const { publishSurvey } = await import("@/lib/survey-service/lifecycle");
+
+  const survey = await db.survey.create({
+    data: {
+      title: "   ",
+      kind: SurveyKind.SATISFACTION,
+      state: SurveyState.DRAFT,
+      identityMode: SurveyIdentityMode.NAMED,
+      audienceMode: SurveyAudienceMode.ALL_ACTIVE,
+      ownerId: adminId,
+      startsAt: new Date("2026-09-01T06:00:00Z"),
+      endsAt: new Date("2026-09-01T14:00:00Z"),
+      questions: {
+        create: {
+          prompt: "Q1",
+          type: SurveyQuestionType.SHORT_TEXT,
+        },
+      },
+    },
+  });
+
+  await assert.rejects(
+    publishSurvey({ actorUserId: adminId, surveyId: survey.id }),
+    SurveyServiceError,
+  );
+
+  const unchanged = await db.survey.findUnique({
+    where: { id: survey.id },
+    select: { state: true, recipients: true },
+  });
+  assert.equal(unchanged?.state, SurveyState.DRAFT);
+  assert.equal(unchanged?.recipients.length, 0);
+});
+
+test("publishSurvey: rejects invalid stored branching conditions atomically", async () => {
+  const { publishSurvey } = await import("@/lib/survey-service/lifecycle");
+
+  const otherSurvey = await db.survey.create({
+    data: {
+      title: "Other condition source",
+      kind: SurveyKind.SATISFACTION,
+      state: SurveyState.DRAFT,
+      identityMode: SurveyIdentityMode.NAMED,
+      audienceMode: SurveyAudienceMode.ALL_ACTIVE,
+      ownerId: adminId,
+    },
+  });
+  const sourceQuestion = await db.surveyQuestion.create({
+    data: {
+      surveyId: otherSurvey.id,
+      prompt: "Other source",
+      type: SurveyQuestionType.SINGLE_CHOICE,
+      sortOrder: 0,
+    },
+  });
+  const sourceOption = await db.surveyOption.create({
+    data: {
+      questionId: sourceQuestion.id,
+      label: "Yes",
+      sortOrder: 0,
+    },
+  });
+
+  const survey = await db.survey.create({
+    data: {
+      title: "Invalid condition",
+      kind: SurveyKind.SATISFACTION,
+      state: SurveyState.DRAFT,
+      identityMode: SurveyIdentityMode.NAMED,
+      audienceMode: SurveyAudienceMode.ALL_ACTIVE,
+      ownerId: adminId,
+      startsAt: new Date("2026-09-01T06:00:00Z"),
+      endsAt: new Date("2026-09-01T14:00:00Z"),
+    },
+  });
+  const targetQuestion = await db.surveyQuestion.create({
+    data: {
+      surveyId: survey.id,
+      prompt: "Target",
+      type: SurveyQuestionType.SHORT_TEXT,
+      sortOrder: 1,
+    },
+  });
+  await db.surveyQuestionCondition.create({
+    data: {
+      targetQuestionId: targetQuestion.id,
+      sourceQuestionId: sourceQuestion.id,
+      sourceOptionId: sourceOption.id,
+      operator: SurveyConditionOperator.IS_SELECTED,
+    },
+  });
+
+  await assert.rejects(
+    publishSurvey({ actorUserId: adminId, surveyId: survey.id }),
+    SurveyServiceError,
+  );
+
+  const unchanged = await db.survey.findUnique({
+    where: { id: survey.id },
+    select: { state: true, recipients: true },
+  });
+  assert.equal(unchanged?.state, SurveyState.DRAFT);
+  assert.equal(unchanged?.recipients.length, 0);
+  assert.equal(
+    await db.auditLog.count({
+      where: {
+        entityType: "Survey",
+        entityId: survey.id,
+        action: "SURVEY_PUBLISHED",
+      },
+    }),
+    0,
+  );
+});
+
+test("publishSurvey: concurrent double publish does not duplicate recipients", async () => {
+  const { publishSurvey } = await import("@/lib/survey-service/lifecycle");
+
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Concurrent",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+
+  await updateSurveyMetadata({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    title: "Concurrent",
+    startsAt: new Date("2026-09-01T06:00:00Z"),
+    endsAt: new Date("2026-09-01T14:00:00Z"),
+  });
+
+  const { addQuestion } = await import("@/lib/survey-service/questions");
+  await addQuestion({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    prompt: "Q1",
+    type: SurveyQuestionType.SHORT_TEXT,
+  });
+
+  const results = await Promise.allSettled([
+    publishSurvey({ actorUserId: adminId, surveyId: survey.id }),
+    publishSurvey({ actorUserId: adminId, surveyId: survey.id }),
+  ]);
+
+  assert.equal(
+    results.filter((result) => result.status === "fulfilled").length,
+    1,
+  );
+  assert.equal(
+    results.filter((result) => result.status === "rejected").length,
+    1,
+  );
+
+  const recipients = await db.surveyRecipient.findMany({
+    where: { surveyId: survey.id },
+  });
+  const userIds = recipients.map((r) => r.userId);
+  assert.equal(userIds.length, new Set(userIds).size);
+  assert.equal(
+    await db.auditLog.count({
+      where: {
+        entityType: "Survey",
+        entityId: survey.id,
+        action: "SURVEY_PUBLISHED",
+      },
+    }),
+    1,
+  );
+});
+
+// ──────────────────────────────────────────────
+// Lifecycle: extend end time
+// ──────────────────────────────────────────────
+
+test("extendSurveyEndTime: owner can extend active survey", async () => {
+  const { publishSurvey, extendSurveyEndTime } = await import(
+    "@/lib/survey-service/lifecycle"
+  );
+
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Extend test",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+
+  const startsAt = new Date(Date.now() - 2 * 60 * 60 * 1000);
+  const endsAt = new Date(Date.now() + 2 * 60 * 60 * 1000);
+
+  await updateSurveyMetadata({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    title: "Extend test",
+    startsAt,
+    endsAt,
+  });
+
+  const { addQuestion } = await import("@/lib/survey-service/questions");
+  await addQuestion({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    prompt: "Q1",
+    type: SurveyQuestionType.SHORT_TEXT,
+  });
+
+  await publishSurvey({ actorUserId: adminId, surveyId: survey.id });
+
+  const newEnd = new Date(endsAt.getTime() + 24 * 60 * 60 * 1000);
+  await extendSurveyEndTime({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    newEndsAt: newEnd,
+  });
+
+  const updated = await db.survey.findUnique({
+    where: { id: survey.id },
+    select: { endsAt: true },
+  });
+  assert.equal(updated?.endsAt?.getTime(), newEnd.getTime());
+});
+
+test("extendSurveyEndTime: rejects non-owner", async () => {
+  const { publishSurvey, extendSurveyEndTime } = await import(
+    "@/lib/survey-service/lifecycle"
+  );
+
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Extend not mine",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+
+  const startsAt = new Date(Date.now() - 2 * 60 * 60 * 1000);
+  const endsAt = new Date(Date.now() + 2 * 60 * 60 * 1000);
+
+  await updateSurveyMetadata({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    title: "Extend not mine",
+    startsAt,
+    endsAt,
+  });
+
+  const { addQuestion } = await import("@/lib/survey-service/questions");
+  await addQuestion({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    prompt: "Q1",
+    type: SurveyQuestionType.SHORT_TEXT,
+  });
+
+  await publishSurvey({ actorUserId: adminId, surveyId: survey.id });
+
+  await assert.rejects(
+    extendSurveyEndTime({
+      actorUserId: secondUserId,
+      surveyId: survey.id,
+      newEndsAt: new Date(endsAt.getTime() + 24 * 60 * 60 * 1000),
+    }),
+    SurveyServiceError,
+  );
+});
+
+test("extendSurveyEndTime: rejects draft survey", async () => {
+  const { extendSurveyEndTime } = await import("@/lib/survey-service/lifecycle");
+
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Draft extend",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+
+  await assert.rejects(
+    extendSurveyEndTime({
+      actorUserId: adminId,
+      surveyId: survey.id,
+      newEndsAt: new Date(),
+    }),
+    SurveyServiceError,
+  );
+});
+
+test("extendSurveyEndTime: rejects a scheduled survey", async () => {
+  const { publishSurvey, extendSurveyEndTime } = await import(
+    "@/lib/survey-service/lifecycle"
+  );
+
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Scheduled extend",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+
+  const startsAt = new Date(Date.now() + 2 * 60 * 60 * 1000);
+  const endsAt = new Date(Date.now() + 4 * 60 * 60 * 1000);
+
+  await updateSurveyMetadata({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    title: "Scheduled extend",
+    startsAt,
+    endsAt,
+  });
+
+  const { addQuestion } = await import("@/lib/survey-service/questions");
+  await addQuestion({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    prompt: "Q1",
+    type: SurveyQuestionType.SHORT_TEXT,
+  });
+  await publishSurvey({ actorUserId: adminId, surveyId: survey.id });
+
+  await assert.rejects(
+    extendSurveyEndTime({
+      actorUserId: adminId,
+      surveyId: survey.id,
+      newEndsAt: new Date(endsAt.getTime() + 60 * 60 * 1000),
+    }),
+    SurveyServiceError,
+  );
+
+  assert.equal(
+    (
+      await db.survey.findUnique({
+        where: { id: survey.id },
+        select: { endsAt: true },
+      })
+    )?.endsAt?.getTime(),
+    endsAt.getTime(),
+  );
+});
+
+test("extendSurveyEndTime: rejects new end time not after current", async () => {
+  const { publishSurvey, extendSurveyEndTime } = await import(
+    "@/lib/survey-service/lifecycle"
+  );
+
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Bad extend",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+
+  const startsAt = new Date(Date.now() - 2 * 60 * 60 * 1000);
+  const endsAt = new Date(Date.now() + 2 * 60 * 60 * 1000);
+
+  await updateSurveyMetadata({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    title: "Bad extend",
+    startsAt,
+    endsAt,
+  });
+
+  const { addQuestion } = await import("@/lib/survey-service/questions");
+  await addQuestion({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    prompt: "Q1",
+    type: SurveyQuestionType.SHORT_TEXT,
+  });
+
+  await publishSurvey({ actorUserId: adminId, surveyId: survey.id });
+
+  await assert.rejects(
+    extendSurveyEndTime({
+      actorUserId: adminId,
+      surveyId: survey.id,
+      newEndsAt: endsAt,
+    }),
+    SurveyServiceError,
+  );
+});
+
+// ──────────────────────────────────────────────
+// Lifecycle: close
+// ──────────────────────────────────────────────
+
+test("closeSurvey: owner can close published survey", async () => {
+  const { publishSurvey, closeSurvey } = await import(
+    "@/lib/survey-service/lifecycle"
+  );
+
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Close test",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+
+  const startsAt = new Date(Date.now() - 2 * 60 * 60 * 1000);
+  const endsAt = new Date(Date.now() + 2 * 60 * 60 * 1000);
+
+  await updateSurveyMetadata({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    title: "Close test",
+    startsAt,
+    endsAt,
+  });
+
+  const { addQuestion } = await import("@/lib/survey-service/questions");
+  await addQuestion({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    prompt: "Q1",
+    type: SurveyQuestionType.SHORT_TEXT,
+  });
+
+  await publishSurvey({ actorUserId: adminId, surveyId: survey.id });
+  await closeSurvey({ actorUserId: adminId, surveyId: survey.id });
+
+  const updated = await db.survey.findUnique({
+    where: { id: survey.id },
+    select: { state: true, closedAt: true },
+  });
+  assert.equal(updated?.state, SurveyState.CLOSED);
+  assert.ok(updated?.closedAt !== null);
+});
+
+test("closeSurvey: rejects non-owner", async () => {
+  const { publishSurvey, closeSurvey } = await import(
+    "@/lib/survey-service/lifecycle"
+  );
+
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Close not mine",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+
+  const startsAt = new Date(Date.now() - 2 * 60 * 60 * 1000);
+  const endsAt = new Date(Date.now() + 2 * 60 * 60 * 1000);
+
+  await updateSurveyMetadata({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    title: "Close not mine",
+    startsAt,
+    endsAt,
+  });
+
+  const { addQuestion } = await import("@/lib/survey-service/questions");
+  await addQuestion({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    prompt: "Q1",
+    type: SurveyQuestionType.SHORT_TEXT,
+  });
+
+  await publishSurvey({ actorUserId: adminId, surveyId: survey.id });
+
+  await assert.rejects(
+    closeSurvey({ actorUserId: secondUserId, surveyId: survey.id }),
+    SurveyServiceError,
+  );
+});
+
+test("closeSurvey: rejects draft survey", async () => {
+  const { closeSurvey } = await import("@/lib/survey-service/lifecycle");
+
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Close draft",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+
+  await assert.rejects(
+    closeSurvey({ actorUserId: adminId, surveyId: survey.id }),
+    SurveyServiceError,
+  );
+});
+
+test("closeSurvey: rejects already closed survey", async () => {
+  const { closeSurvey } = await import("@/lib/survey-service/lifecycle");
+
+  const survey = await db.survey.create({
+    data: {
+      title: "Already closed",
+      kind: SurveyKind.SATISFACTION,
+      state: SurveyState.CLOSED,
+      identityMode: SurveyIdentityMode.NAMED,
+      audienceMode: SurveyAudienceMode.ALL_ACTIVE,
+      ownerId: adminId,
+    },
+  });
+
+  await assert.rejects(
+    closeSurvey({ actorUserId: adminId, surveyId: survey.id }),
+    SurveyServiceError,
+  );
+});
+
+// ──────────────────────────────────────────────
+// Lifecycle: archive
+// ──────────────────────────────────────────────
+
+test("archiveSurvey: owner can archive closed survey", async () => {
+  const { publishSurvey, closeSurvey, archiveSurvey } = await import(
+    "@/lib/survey-service/lifecycle"
+  );
+
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Archive test",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+
+  const startsAt = new Date(Date.now() - 2 * 60 * 60 * 1000);
+  const endsAt = new Date(Date.now() + 2 * 60 * 60 * 1000);
+
+  await updateSurveyMetadata({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    title: "Archive test",
+    startsAt,
+    endsAt,
+  });
+
+  const { addQuestion } = await import("@/lib/survey-service/questions");
+  await addQuestion({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    prompt: "Q1",
+    type: SurveyQuestionType.SHORT_TEXT,
+  });
+
+  await publishSurvey({ actorUserId: adminId, surveyId: survey.id });
+  await closeSurvey({ actorUserId: adminId, surveyId: survey.id });
+  await archiveSurvey({ actorUserId: adminId, surveyId: survey.id });
+
+  const updated = await db.survey.findUnique({
+    where: { id: survey.id },
+    select: { state: true, archivedAt: true },
+  });
+  assert.equal(updated?.state, SurveyState.ARCHIVED);
+  assert.ok(updated?.archivedAt !== null);
+});
+
+test("archiveSurvey: can archive ended published survey", async () => {
+  const { publishSurvey, archiveSurvey } = await import(
+    "@/lib/survey-service/lifecycle"
+  );
+
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Ended archive",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+
+  const startsAt = new Date(Date.now() - 48 * 60 * 60 * 1000);
+  const endsAt = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+  await updateSurveyMetadata({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    title: "Ended archive",
+    startsAt,
+    endsAt,
+  });
+
+  const { addQuestion } = await import("@/lib/survey-service/questions");
+  await addQuestion({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    prompt: "Q1",
+    type: SurveyQuestionType.SHORT_TEXT,
+  });
+
+  await publishSurvey({ actorUserId: adminId, surveyId: survey.id });
+  await archiveSurvey({ actorUserId: adminId, surveyId: survey.id });
+
+  const updated = await db.survey.findUnique({
+    where: { id: survey.id },
+    select: { state: true, archivedAt: true },
+  });
+  assert.equal(updated?.state, SurveyState.ARCHIVED);
+  assert.ok(updated?.archivedAt !== null);
+});
+
+test("archiveSurvey: rejects draft survey", async () => {
+  const { archiveSurvey } = await import("@/lib/survey-service/lifecycle");
+
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Archive draft",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+
+  await assert.rejects(
+    archiveSurvey({ actorUserId: adminId, surveyId: survey.id }),
+    SurveyServiceError,
+  );
+});
+
+test("archiveSurvey: rejects active published survey", async () => {
+  const { publishSurvey, archiveSurvey } = await import(
+    "@/lib/survey-service/lifecycle"
+  );
+
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Active archive",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+
+  const startsAt = new Date(Date.now() - 2 * 60 * 60 * 1000);
+  const endsAt = new Date(Date.now() + 2 * 60 * 60 * 1000);
+
+  await updateSurveyMetadata({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    title: "Active archive",
+    startsAt,
+    endsAt,
+  });
+
+  const { addQuestion } = await import("@/lib/survey-service/questions");
+  await addQuestion({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    prompt: "Q1",
+    type: SurveyQuestionType.SHORT_TEXT,
+  });
+
+  await publishSurvey({ actorUserId: adminId, surveyId: survey.id });
+
+  await assert.rejects(
+    archiveSurvey({ actorUserId: adminId, surveyId: survey.id }),
+    SurveyServiceError,
+  );
+});
+
+test("archiveSurvey: rejects non-owner", async () => {
+  const { publishSurvey, closeSurvey, archiveSurvey } = await import(
+    "@/lib/survey-service/lifecycle"
+  );
+
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Archive not mine",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+
+  const startsAt = new Date(Date.now() - 2 * 60 * 60 * 1000);
+  const endsAt = new Date(Date.now() + 2 * 60 * 60 * 1000);
+
+  await updateSurveyMetadata({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    title: "Archive not mine",
+    startsAt,
+    endsAt,
+  });
+
+  const { addQuestion } = await import("@/lib/survey-service/questions");
+  await addQuestion({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    prompt: "Q1",
+    type: SurveyQuestionType.SHORT_TEXT,
+  });
+
+  await publishSurvey({ actorUserId: adminId, surveyId: survey.id });
+  await closeSurvey({ actorUserId: adminId, surveyId: survey.id });
+
+  await assert.rejects(
+    archiveSurvey({ actorUserId: secondUserId, surveyId: survey.id }),
+    SurveyServiceError,
+  );
+});
+
+test("archiveSurvey: rejects archived survey", async () => {
+  const { archiveSurvey } = await import("@/lib/survey-service/lifecycle");
+
+  const survey = await db.survey.create({
+    data: {
+      title: "Already archived",
+      kind: SurveyKind.SATISFACTION,
+      state: SurveyState.ARCHIVED,
+      identityMode: SurveyIdentityMode.NAMED,
+      audienceMode: SurveyAudienceMode.ALL_ACTIVE,
+      ownerId: adminId,
+    },
+  });
+
+  await assert.rejects(
+    archiveSurvey({ actorUserId: adminId, surveyId: survey.id }),
+    SurveyServiceError,
+  );
+});

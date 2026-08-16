@@ -1000,6 +1000,9 @@ export async function assertSurveyQuestionsReadyForPublish(
   const questions = await tx.surveyQuestion.findMany({
     where: { surveyId },
     select: {
+      id: true,
+      prompt: true,
+      sortOrder: true,
       type: true,
       randomizeOptions: true,
       ratingMin: true,
@@ -1010,10 +1013,28 @@ export async function assertSurveyQuestionsReadyForPublish(
       options: {
         select: { label: true },
       },
+      targetCondition: {
+        select: {
+          sourceQuestionId: true,
+          sourceOption: {
+            select: { questionId: true },
+          },
+        },
+      },
     },
   });
 
+  const questionsById = new Map(
+    questions.map((question) => [question.id, question]),
+  );
+
   for (const question of questions) {
+    if (!question.prompt.trim()) {
+      throw new SurveyServiceError(
+        "Question prompt is required before publishing.",
+      );
+    }
+
     assertQuestionTypeConfig(question.type, question);
 
     if (isChoiceQuestionType(question.type)) {
@@ -1044,6 +1065,23 @@ export async function assertSurveyQuestionsReadyForPublish(
       throw new SurveyServiceError(
         "Non-choice questions cannot retain options.",
       );
+    }
+
+    if (question.targetCondition) {
+      const sourceQuestion = questionsById.get(
+        question.targetCondition.sourceQuestionId,
+      );
+
+      if (
+        !sourceQuestion ||
+        !isChoiceQuestionType(sourceQuestion.type) ||
+        sourceQuestion.sortOrder >= question.sortOrder ||
+        question.targetCondition.sourceOption.questionId !== sourceQuestion.id
+      ) {
+        throw new SurveyServiceError(
+          "Survey branching conditions are invalid.",
+        );
+      }
     }
   }
 }

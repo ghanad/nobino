@@ -79,6 +79,16 @@ function assertMetadata(
   }
 }
 
+export function assertSurveyMetadataReadyForPublish(input: {
+  title: string;
+  description: string | null;
+}): void {
+  assertMetadata(
+    normalizeTitle(input.title),
+    normalizeDescription(input.description),
+  );
+}
+
 function assertValidWindow(
   startsAt: Date | null | undefined,
   endsAt: Date | null | undefined,
