@@ -5493,3 +5493,103 @@ test("survey list page: non-admin non-creator user sees only respondent surveys"
   const respondentList = await listRespondentSurveys({ actorUserId: userId });
   assert.ok(respondentList.some((s) => s.id === survey.id));
 });
+
+test("survey metadata editor validation rejects empty title and invalid kind", async () => {
+  const { createSurveySchema } = await import("@/lib/survey-validators");
+  const { SurveyKind } = await import("@prisma/client");
+
+  // Empty title
+  const result1 = createSurveySchema.safeParse({
+    title: "",
+    description: "",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: "NAMED",
+  });
+  assert.equal(result1.success, false);
+  if (!result1.success) {
+    assert.ok(result1.error.flatten().fieldErrors.title);
+  }
+
+  // Valid
+  const result2 = createSurveySchema.safeParse({
+    title: "Valid survey",
+    description: "A description",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: "NAMED",
+  });
+  assert.equal(result2.success, true);
+
+  // Very long title
+  const result3 = createSurveySchema.safeParse({
+    title: "x".repeat(201),
+    description: "",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: "NAMED",
+  });
+  assert.equal(result3.success, false);
+});
+
+test("survey metadata editor validation rejects invalid kind and identity mode", async () => {
+  const { createSurveySchema } = await import("@/lib/survey-validators");
+
+  // Invalid kind
+  const result1 = createSurveySchema.safeParse({
+    title: "Test",
+    description: "",
+    kind: "INVALID_KIND",
+    identityMode: "NAMED",
+  });
+  assert.equal(result1.success, false);
+
+  // Invalid identity mode
+  const result2 = createSurveySchema.safeParse({
+    title: "Test",
+    description: "",
+    kind: "SATISFACTION",
+    identityMode: "INVALID_MODE",
+  });
+  assert.equal(result2.success, false);
+});
+
+test("survey metadata editor update schema validates dates and times", async () => {
+  const { updateMetadataSchema } = await import("@/lib/survey-validators");
+
+  // Valid update with all fields
+  const result1 = updateMetadataSchema.safeParse({
+    surveyId: "test-id",
+    title: "Updated survey",
+    kind: "SATISFACTION",
+    identityMode: "NAMED",
+  });
+  assert.equal(result1.success, true);
+
+  // Invalid time format
+  const result2 = updateMetadataSchema.safeParse({
+    surveyId: "test-id",
+    title: "Test",
+    startTime: "09:30",
+  });
+  assert.equal(result2.success, false);
+
+  // Valid time format
+  const result3 = updateMetadataSchema.safeParse({
+    surveyId: "test-id",
+    title: "Test",
+    startTime: "09:00",
+  });
+  assert.equal(result3.success, true);
+
+  // Empty title
+  const result4 = updateMetadataSchema.safeParse({
+    surveyId: "test-id",
+    title: "",
+  });
+  assert.equal(result4.success, false);
+
+  // Title too long
+  const result5 = updateMetadataSchema.safeParse({
+    surveyId: "test-id",
+    title: "x".repeat(201),
+  });
+  assert.equal(result5.success, false);
+});

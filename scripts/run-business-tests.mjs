@@ -45,6 +45,11 @@ if (!existsSync(componentsAliasPath)) {
   symlinkSync("../../components", componentsAliasPath, "dir");
 }
 
+const appAliasPath = path.join(scopedAliasDir, "app");
+if (!existsSync(appAliasPath)) {
+  symlinkSync("../../app", appAliasPath, "dir");
+}
+
 run("npx", ["prisma", "db", "push", "--skip-generate"]);
 run(process.execPath, [
   "--test",

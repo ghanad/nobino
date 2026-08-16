@@ -43,6 +43,7 @@
     "../lib/survey-service/collaborator.ts",
     "../lib/user-management-service.ts",
     "../lib/utils.ts",
+    "../lib/survey-validators.ts",
     "../types/pholiday.d.ts"
   ]
 }
