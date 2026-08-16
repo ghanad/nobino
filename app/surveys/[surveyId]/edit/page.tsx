@@ -13,6 +13,7 @@ import { PageHeader } from "@/components/app/page-header";
 import { SurveyMetadataForm } from "@/components/surveys/survey-metadata-form";
 import { SurveyCollaboratorEditor } from "@/components/surveys/survey-collaborator-editor";
 import { SurveyAudienceEditor } from "@/components/surveys/survey-audience-editor";
+import { SurveyQuestionBuilder } from "@/components/surveys/survey-question-builder";
 import { updateSurveyMetadataAction } from "@/app/surveys/actions";
 
 type EditSurveyPageProps = {
@@ -62,37 +63,52 @@ export default async function EditSurveyPage({ params }: EditSurveyPageProps) {
     user: actorUser,
   });
 
-  if (!canEditSurveyDraft(actor, survey.state)) {
+  const canEdit = canEditSurveyDraft(actor, survey.state);
+
+  if (!canEdit) {
     redirect("/surveys");
   }
 
   const canChangeKindIdentity = isSurveyManager(actor);
   const canManage = isSurveyManager(actor);
 
-  const [collaborators, audienceUsers, preview, teams] = await Promise.all([
-    db.surveyCollaborator.findMany({
-      where: { surveyId },
-      select: {
-        user: {
-          select: { id: true, name: true, email: true },
+  const [collaborators, audienceUsers, preview, teams, questions] =
+    await Promise.all([
+      db.surveyCollaborator.findMany({
+        where: { surveyId },
+        select: {
+          user: {
+            select: { id: true, name: true, email: true },
+          },
         },
-      },
-    }),
-    db.surveyAudienceUser.findMany({
-      where: { surveyId },
-      select: {
-        userId: true,
-        user: {
-          select: { id: true, name: true, email: true },
+      }),
+      db.surveyAudienceUser.findMany({
+        where: { surveyId },
+        select: {
+          userId: true,
+          user: {
+            select: { id: true, name: true, email: true },
+          },
         },
-      },
-    }),
-    previewAudience({ actorUserId: user.id, surveyId }),
-    db.team.findMany({
-      select: { id: true, name: true },
-      orderBy: { name: "asc" },
-    }),
-  ]);
+      }),
+      previewAudience({ actorUserId: user.id, surveyId }),
+      db.team.findMany({
+        select: { id: true, name: true },
+        orderBy: { name: "asc" },
+      }),
+      db.surveyQuestion.findMany({
+        where: { surveyId },
+        select: {
+          id: true,
+          prompt: true,
+          helpText: true,
+          type: true,
+          required: true,
+          sortOrder: true,
+        },
+        orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+      }),
+    ]);
 
   return (
     <div className="space-y-8" dir="rtl">
@@ -148,6 +164,14 @@ export default async function EditSurveyPage({ params }: EditSurveyPageProps) {
           }}
           teams={teams}
           identityMode={survey.identityMode}
+        />
+      </div>
+
+      <div className="mx-auto max-w-2xl">
+        <SurveyQuestionBuilder
+          surveyId={survey.id}
+          canEdit={canEdit}
+          questions={questions}
         />
       </div>
     </div>

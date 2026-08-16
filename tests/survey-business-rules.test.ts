@@ -5593,3 +5593,75 @@ test("survey metadata editor update schema validates dates and times", async () 
   });
   assert.equal(result5.success, false);
 });
+
+// S14 — Basic question builder validation schemas
+
+test("survey question builder schemas validate prompt, type, and required", async () => {
+  const { addQuestionSchema, updateQuestionSchema, deleteQuestionSchema } =
+    await import("@/lib/survey-validators");
+
+  // Valid add
+  const add1 = addQuestionSchema.safeParse({
+    surveyId: "survey-1",
+    prompt: "How was your experience?",
+    type: "SHORT_TEXT",
+    required: false,
+  });
+  assert.equal(add1.success, true);
+
+  // Empty prompt is rejected
+  const add2 = addQuestionSchema.safeParse({
+    surveyId: "survey-1",
+    prompt: "   ",
+    type: "SHORT_TEXT",
+    required: true,
+  });
+  assert.equal(add2.success, false);
+  if (!add2.success) {
+    assert.ok(add2.error.flatten().fieldErrors.prompt);
+  }
+
+  // Invalid type is rejected
+  const add3 = addQuestionSchema.safeParse({
+    surveyId: "survey-1",
+    prompt: "Question",
+    type: "INVALID_TYPE",
+    required: false,
+  });
+  assert.equal(add3.success, false);
+
+  // Valid update with help text
+  const update1 = updateQuestionSchema.safeParse({
+    surveyId: "survey-1",
+    questionId: "question-1",
+    prompt: "Updated prompt",
+    helpText: "Some help",
+    type: "MULTIPLE_CHOICE",
+    required: true,
+  });
+  assert.equal(update1.success, true);
+
+  // Missing question id is rejected
+  const update2 = updateQuestionSchema.safeParse({
+    surveyId: "survey-1",
+    questionId: "",
+    prompt: "Updated prompt",
+    type: "SHORT_TEXT",
+    required: false,
+  });
+  assert.equal(update2.success, false);
+
+  // Valid delete
+  const delete1 = deleteQuestionSchema.safeParse({
+    surveyId: "survey-1",
+    questionId: "question-1",
+  });
+  assert.equal(delete1.success, true);
+
+  // Missing survey id is rejected
+  const delete2 = deleteQuestionSchema.safeParse({
+    surveyId: "",
+    questionId: "question-1",
+  });
+  assert.equal(delete2.success, false);
+});

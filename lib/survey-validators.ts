@@ -1,4 +1,8 @@
-import { SurveyIdentityMode, SurveyKind } from "@prisma/client";
+import {
+  SurveyIdentityMode,
+  SurveyKind,
+  SurveyQuestionType,
+} from "@prisma/client";
 import { z } from "zod";
 
 import { isValidJalaliDateParam } from "@/lib/jalali-date";
@@ -97,4 +101,56 @@ export const addAudienceUserSchema = z.object({
 export const removeAudienceUserSchema = z.object({
   surveyId: z.string().min(1, "شناسه نظرسنجی الزامی است."),
   targetUserId: z.string().min(1, "شناسه کاربر الزامی است."),
+});
+
+// S14 Question schemas
+
+export const SURVEY_QUESTION_PROMPT_MAX_LENGTH = 2000;
+export const SURVEY_QUESTION_HELP_TEXT_MAX_LENGTH = 1000;
+
+export const addQuestionSchema = z.object({
+  surveyId: z.string().min(1, "شناسه نظرسنجی الزامی است."),
+  prompt: z
+    .string()
+    .trim()
+    .min(1, "متن سوال الزامی است.")
+    .max(
+      SURVEY_QUESTION_PROMPT_MAX_LENGTH,
+      "متن سوال نمی‌تواند بیش از ۲۰۰۰ کاراکتر باشد.",
+    ),
+  type: z.nativeEnum(SurveyQuestionType, {
+    errorMap: () => ({ message: "نوع سوال نامعتبر است." }),
+  }),
+  required: z.boolean(),
+});
+
+export const updateQuestionSchema = z.object({
+  surveyId: z.string().min(1, "شناسه نظرسنجی الزامی است."),
+  questionId: z.string().min(1, "شناسه سوال الزامی است."),
+  prompt: z
+    .string()
+    .trim()
+    .min(1, "متن سوال الزامی است.")
+    .max(
+      SURVEY_QUESTION_PROMPT_MAX_LENGTH,
+      "متن سوال نمی‌تواند بیش از ۲۰۰۰ کاراکتر باشد.",
+    ),
+  helpText: z
+    .string()
+    .trim()
+    .max(
+      SURVEY_QUESTION_HELP_TEXT_MAX_LENGTH,
+      "متن راهنما نمی‌تواند بیش از ۱۰۰۰ کاراکتر باشد.",
+    )
+    .optional()
+    .or(z.literal("")),
+  type: z.nativeEnum(SurveyQuestionType, {
+    errorMap: () => ({ message: "نوع سوال نامعتبر است." }),
+  }),
+  required: z.boolean(),
+});
+
+export const deleteQuestionSchema = z.object({
+  surveyId: z.string().min(1, "شناسه نظرسنجی الزامی است."),
+  questionId: z.string().min(1, "شناسه سوال الزامی است."),
 });
