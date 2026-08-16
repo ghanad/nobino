@@ -60,6 +60,7 @@ function getMobileNavSections(navItems: GlobalNavItem[]): MobileNavSection[] {
   const reservationsItem = navItems.find((item) => item.href === "/reservations");
   const meetingRoomsItem = navItems.find((item) => item.href === "/meeting-rooms");
   const desksItem = navItems.find((item) => item.href === "/desks");
+  const surveysItem = navItems.find((item) => item.href === "/surveys");
   const lunchItem = navItems.find((item) => item.href === "/lunch");
   const wikiItem = navItems.find((item) => item.href === "/wiki");
   const managerItem = navItems.find((item) => item.href === "/manager");
@@ -82,6 +83,10 @@ function getMobileNavSections(navItems: GlobalNavItem[]): MobileNavSection[] {
 
   if (desksItem) {
     sections.push({ entries: [{ item: desksItem }], id: "desks" });
+  }
+
+  if (surveysItem) {
+    sections.push({ entries: [{ item: surveysItem }], id: "surveys" });
   }
 
   if (lunchItem?.children?.length) {

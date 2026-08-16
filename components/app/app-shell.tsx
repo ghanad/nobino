@@ -28,6 +28,7 @@ function getNavItems(user: CurrentUser): GlobalNavItem[] {
     { href: "/reservations", label: "رزروها", match: "prefix" },
     { href: "/desks", label: "میز کار", match: "prefix" },
     { href: "/meeting-rooms", label: "اتاق جلسه", match: "prefix" },
+    { href: "/surveys", label: "نظرسنجی‌ها", match: "prefix" },
     {
       href: "/lunch",
       label: "غذا",

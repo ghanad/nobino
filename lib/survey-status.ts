@@ -1,6 +1,43 @@
 import { SurveyState } from "@prisma/client";
 import type { Survey } from "@prisma/client";
 
+import { SurveyKind, SurveyIdentityMode } from "@prisma/client";
+
+export function getSurveyDisplayStateLabel(state: SurveyDisplayState): string {
+  switch (state) {
+    case "DRAFT":
+      return "پیش‌نویس";
+    case "SCHEDULED":
+      return "زمان‌بندی‌شده";
+    case "ACTIVE":
+      return "فعال";
+    case "ENDED":
+      return "پایان‌یافته";
+    case "ARCHIVED":
+      return "بایگانی‌شده";
+  }
+}
+
+export function getSurveyKindLabel(kind: SurveyKind): string {
+  switch (kind) {
+    case SurveyKind.SATISFACTION:
+      return "رضایت‌سنجی";
+    case SurveyKind.DATA_COLLECTION:
+      return "جمع‌آوری اطلاعات";
+    case SurveyKind.VOTE:
+      return "رای‌گیری";
+  }
+}
+
+export function getSurveyIdentityLabel(mode: SurveyIdentityMode): string {
+  switch (mode) {
+    case SurveyIdentityMode.NAMED:
+      return "مشخص";
+    case SurveyIdentityMode.ANONYMOUS:
+      return "ناشناس";
+  }
+}
+
 export type SurveyDisplayState =
   | "DRAFT"
   | "SCHEDULED"
