@@ -154,3 +154,88 @@ export const deleteQuestionSchema = z.object({
   surveyId: z.string().min(1, "شناسه نظرسنجی الزامی است."),
   questionId: z.string().min(1, "شناسه سوال الزامی است."),
 });
+
+// S15 Option schemas
+
+export const SURVEY_OPTION_LABEL_MAX_LENGTH = 500;
+
+export const addOptionSchema = z.object({
+  surveyId: z.string().min(1, "شناسه نظرسنجی الزامی است."),
+  questionId: z.string().min(1, "شناسه سوال الزامی است."),
+  label: z
+    .string()
+    .trim()
+    .min(1, "متن گزینه الزامی است.")
+    .max(
+      SURVEY_OPTION_LABEL_MAX_LENGTH,
+      "متن گزینه نمی‌تواند بیش از ۵۰۰ کاراکتر باشد.",
+    ),
+});
+
+export const updateOptionSchema = z.object({
+  surveyId: z.string().min(1, "شناسه نظرسنجی الزامی است."),
+  questionId: z.string().min(1, "شناسه سوال الزامی است."),
+  optionId: z.string().min(1, "شناسه گزینه الزامی است."),
+  label: z
+    .string()
+    .trim()
+    .min(1, "متن گزینه الزامی است.")
+    .max(
+      SURVEY_OPTION_LABEL_MAX_LENGTH,
+      "متن گزینه نمی‌تواند بیش از ۵۰۰ کاراکتر باشد.",
+    ),
+});
+
+export const deleteOptionSchema = z.object({
+  surveyId: z.string().min(1, "شناسه نظرسنجی الزامی است."),
+  questionId: z.string().min(1, "شناسه سوال الزامی است."),
+  optionId: z.string().min(1, "شناسه گزینه الزامی است."),
+});
+
+export const reorderOptionsSchema = z.object({
+  surveyId: z.string().min(1, "شناسه نظرسنجی الزامی است."),
+  questionId: z.string().min(1, "شناسه سوال الزامی است."),
+  optionIds: z
+    .array(z.string().min(1))
+    .min(1, "حداقل یک گزینه الزامی است."),
+});
+
+export const reorderQuestionsSchema = z.object({
+  surveyId: z.string().min(1, "شناسه نظرسنجی الزامی است."),
+  questionIds: z
+    .array(z.string().min(1))
+    .min(1, "حداقل یک سوال الزامی است."),
+});
+
+// S15 Extended question update schema with rating/maxSelections
+
+export const updateQuestionWithConfigSchema = z.object({
+  surveyId: z.string().min(1, "شناسه نظرسنجی الزامی است."),
+  questionId: z.string().min(1, "شناسه سوال الزامی است."),
+  prompt: z
+    .string()
+    .trim()
+    .min(1, "متن سوال الزامی است.")
+    .max(
+      SURVEY_QUESTION_PROMPT_MAX_LENGTH,
+      "متن سوال نمی‌تواند بیش از ۲۰۰۰ کاراکتر باشد.",
+    ),
+  helpText: z
+    .string()
+    .trim()
+    .max(
+      SURVEY_QUESTION_HELP_TEXT_MAX_LENGTH,
+      "متن راهنما نمی‌تواند بیش از ۱۰۰۰ کاراکتر باشد.",
+    )
+    .optional()
+    .or(z.literal("")),
+  type: z.nativeEnum(SurveyQuestionType, {
+    errorMap: () => ({ message: "نوع سوال نامعتبر است." }),
+  }),
+  required: z.boolean(),
+  ratingMin: z.coerce.number().int().min(0).max(10).optional().nullable(),
+  ratingMax: z.coerce.number().int().min(0).max(10).optional().nullable(),
+  ratingMinLabel: z.string().trim().max(200).optional().or(z.literal("")),
+  ratingMaxLabel: z.string().trim().max(200).optional().or(z.literal("")),
+  maxSelections: z.coerce.number().int().min(1).optional().nullable(),
+});

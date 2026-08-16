@@ -5665,3 +5665,166 @@ test("survey question builder schemas validate prompt, type, and required", asyn
   });
   assert.equal(delete2.success, false);
 });
+
+// S15 option and reorder schema tests
+
+test("survey option schemas validate label, questionId, and surveyId", async () => {
+  const {
+    addOptionSchema,
+    updateOptionSchema,
+    deleteOptionSchema,
+  } = await import("@/lib/survey-validators");
+
+  // Valid add
+  const add1 = addOptionSchema.safeParse({
+    surveyId: "survey-1",
+    questionId: "question-1",
+    label: "گزینه ۱",
+  });
+  assert.equal(add1.success, true);
+
+  // Empty label is rejected
+  const add2 = addOptionSchema.safeParse({
+    surveyId: "survey-1",
+    questionId: "question-1",
+    label: "   ",
+  });
+  assert.equal(add2.success, false);
+
+  // Missing questionId is rejected
+  const add3 = addOptionSchema.safeParse({
+    surveyId: "survey-1",
+    questionId: "",
+    label: "Option",
+  });
+  assert.equal(add3.success, false);
+
+  // Valid update
+  const update1 = updateOptionSchema.safeParse({
+    surveyId: "survey-1",
+    questionId: "question-1",
+    optionId: "option-1",
+    label: "Updated",
+  });
+  assert.equal(update1.success, true);
+
+  // Missing optionId is rejected
+  const update2 = updateOptionSchema.safeParse({
+    surveyId: "survey-1",
+    questionId: "question-1",
+    optionId: "",
+    label: "Option",
+  });
+  assert.equal(update2.success, false);
+
+  // Valid delete
+  const delete1 = deleteOptionSchema.safeParse({
+    surveyId: "survey-1",
+    questionId: "question-1",
+    optionId: "option-1",
+  });
+  assert.equal(delete1.success, true);
+});
+
+test("survey reorder schemas validate arrays", async () => {
+  const { reorderOptionsSchema, reorderQuestionsSchema } = await import(
+    "@/lib/survey-validators"
+  );
+
+  // Valid option reorder
+  const opts1 = reorderOptionsSchema.safeParse({
+    surveyId: "survey-1",
+    questionId: "question-1",
+    optionIds: ["opt-1", "opt-2", "opt-3"],
+  });
+  assert.equal(opts1.success, true);
+
+  // Empty optionIds array is rejected
+  const opts2 = reorderOptionsSchema.safeParse({
+    surveyId: "survey-1",
+    questionId: "question-1",
+    optionIds: [],
+  });
+  assert.equal(opts2.success, false);
+
+  // Valid question reorder
+  const qs1 = reorderQuestionsSchema.safeParse({
+    surveyId: "survey-1",
+    questionIds: ["q-1", "q-2"],
+  });
+  assert.equal(qs1.success, true);
+
+  // Empty questionIds array is rejected
+  const qs2 = reorderQuestionsSchema.safeParse({
+    surveyId: "survey-1",
+    questionIds: [],
+  });
+  assert.equal(qs2.success, false);
+});
+
+test("survey update question with config schema validates rating and maxSelections", async () => {
+  const { updateQuestionWithConfigSchema } = await import(
+    "@/lib/survey-validators"
+  );
+
+  // Valid update with rating config
+  const u1 = updateQuestionWithConfigSchema.safeParse({
+    surveyId: "survey-1",
+    questionId: "question-1",
+    prompt: "Rate us",
+    type: "RATING",
+    required: true,
+    ratingMin: 0,
+    ratingMax: 10,
+    ratingMinLabel: "Bad",
+    ratingMaxLabel: "Good",
+    maxSelections: null,
+  });
+  assert.equal(u1.success, true);
+
+  // Valid update with maxSelections
+  const u2 = updateQuestionWithConfigSchema.safeParse({
+    surveyId: "survey-1",
+    questionId: "question-1",
+    prompt: "Pick some",
+    type: "MULTIPLE_CHOICE",
+    required: false,
+    maxSelections: 3,
+  });
+  assert.equal(u2.success, true);
+
+  // Rating min >= max is rejected by service, not schema (schema allows 0-10 range)
+  const u3 = updateQuestionWithConfigSchema.safeParse({
+    surveyId: "survey-1",
+    questionId: "question-1",
+    prompt: "Rate us",
+    type: "RATING",
+    required: true,
+    ratingMin: 5,
+    ratingMax: 5,
+  });
+  assert.equal(u3.success, true);
+
+  // Rating out of range is rejected
+  const u4 = updateQuestionWithConfigSchema.safeParse({
+    surveyId: "survey-1",
+    questionId: "question-1",
+    prompt: "Rate us",
+    type: "RATING",
+    required: true,
+    ratingMin: -1,
+    ratingMax: 5,
+  });
+  assert.equal(u4.success, false);
+
+  // maxSelections 0 is rejected
+  const u5 = updateQuestionWithConfigSchema.safeParse({
+    surveyId: "survey-1",
+    questionId: "question-1",
+    prompt: "Pick some",
+    type: "MULTIPLE_CHOICE",
+    required: false,
+    maxSelections: 0,
+  });
+  assert.equal(u5.success, false);
+});

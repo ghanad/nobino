@@ -15,6 +15,7 @@ import {
   addQuestionSchema,
   deleteQuestionSchema,
   updateQuestionSchema,
+  updateQuestionWithConfigSchema,
 } from "@/lib/survey-validators";
 
 export type SurveyQuestionData = {
@@ -24,6 +25,11 @@ export type SurveyQuestionData = {
   type: SurveyQuestionType;
   required: boolean;
   sortOrder: number;
+  ratingMin: number | null;
+  ratingMax: number | null;
+  ratingMinLabel: string | null;
+  ratingMaxLabel: string | null;
+  maxSelections: number | null;
 };
 
 export type QuestionActionState = {
@@ -40,6 +46,11 @@ function toQuestionData(question: {
   type: SurveyQuestionType;
   required: boolean;
   sortOrder: number;
+  ratingMin: number | null;
+  ratingMax: number | null;
+  ratingMinLabel: string | null;
+  ratingMaxLabel: string | null;
+  maxSelections: number | null;
 }): SurveyQuestionData {
   return {
     id: question.id,
@@ -48,6 +59,11 @@ function toQuestionData(question: {
     type: question.type,
     required: question.required,
     sortOrder: question.sortOrder,
+    ratingMin: question.ratingMin,
+    ratingMax: question.ratingMax,
+    ratingMinLabel: question.ratingMinLabel,
+    ratingMaxLabel: question.ratingMaxLabel,
+    maxSelections: question.maxSelections,
   };
 }
 
@@ -101,13 +117,18 @@ export async function updateQuestionAction(
 ): Promise<QuestionActionState> {
   const user = await requireCurrentUser();
 
-  const parsed = updateQuestionSchema.safeParse({
+  const parsed = updateQuestionWithConfigSchema.safeParse({
     surveyId: formData.get("surveyId"),
     questionId: formData.get("questionId"),
     prompt: formData.get("prompt"),
     helpText: formData.get("helpText") || "",
     type: formData.get("type"),
     required: formData.get("required") === "on",
+    ratingMin: formData.get("ratingMin"),
+    ratingMax: formData.get("ratingMax"),
+    ratingMinLabel: formData.get("ratingMinLabel"),
+    ratingMaxLabel: formData.get("ratingMaxLabel"),
+    maxSelections: formData.get("maxSelections"),
   });
 
   if (!parsed.success) {
@@ -126,6 +147,11 @@ export async function updateQuestionAction(
       helpText: parsed.data.helpText || null,
       type: parsed.data.type,
       required: parsed.data.required,
+      ratingMin: parsed.data.ratingMin ?? undefined,
+      ratingMax: parsed.data.ratingMax ?? undefined,
+      ratingMinLabel: parsed.data.ratingMinLabel || undefined,
+      ratingMaxLabel: parsed.data.ratingMaxLabel || undefined,
+      maxSelections: parsed.data.maxSelections ?? undefined,
     });
 
     revalidatePath(`/surveys/${parsed.data.surveyId}/edit`);
