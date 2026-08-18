@@ -1,4 +1,5 @@
 import {
+  SurveyConditionOperator,
   SurveyIdentityMode,
   SurveyKind,
   SurveyQuestionType,
@@ -233,9 +234,42 @@ export const updateQuestionWithConfigSchema = z.object({
     errorMap: () => ({ message: "نوع سوال نامعتبر است." }),
   }),
   required: z.boolean(),
+  randomizeOptions: z.boolean().optional(),
   ratingMin: z.coerce.number().int().min(0).max(10).optional().nullable(),
   ratingMax: z.coerce.number().int().min(0).max(10).optional().nullable(),
   ratingMinLabel: z.string().trim().max(200).optional().or(z.literal("")),
   ratingMaxLabel: z.string().trim().max(200).optional().or(z.literal("")),
   maxSelections: z.coerce.number().int().min(1).optional().nullable(),
+});
+
+// S16 Branching schemas
+export const setQuestionConditionSchema = z.object({
+  surveyId: z.string().min(1, "شناسه نظرسنجی الزامی است."),
+  targetQuestionId: z
+    .string()
+    .min(1, "شناسه سوال هدف الزامی است."),
+  sourceQuestionId: z
+    .string()
+    .min(1, "شناسه سوال منبع الزامی است."),
+  sourceOptionId: z
+    .string()
+    .min(1, "شناسه گزینه منبع الزامی است."),
+  operator: z.nativeEnum(SurveyConditionOperator, {
+    errorMap: () => ({ message: "عملگر شرط نامعتبر است." }),
+  }),
+});
+
+export const removeQuestionConditionSchema = z.object({
+  surveyId: z.string().min(1, "شناسه نظرسنجی الزامی است."),
+  targetQuestionId: z
+    .string()
+    .min(1, "شناسه سوال هدف الزامی است."),
+});
+
+export const updateQuestionRandomizeSchema = z.object({
+  surveyId: z.string().min(1, "شناسه نظرسنجی الزامی است."),
+  questionId: z.string().min(1, "شناسه سوال الزامی است."),
+  randomizeOptions: z.boolean({
+    errorMap: () => ({ message: "مقدار نمایش تصادفی نامعتبر است." }),
+  }),
 });

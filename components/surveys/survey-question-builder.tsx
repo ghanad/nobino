@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
-import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
-import type { SurveyQuestionType } from "@prisma/client";
+import { ArrowDown, ArrowUp, GitBranch, Plus, Shuffle, Trash2 } from "lucide-react";
+import type { SurveyConditionOperator, SurveyQuestionType } from "@prisma/client";
 
 import { FieldLabel } from "@/app/admin/_components/admin-form-fields";
 import {
@@ -20,6 +20,13 @@ import {
   reorderQuestionsAction,
   type OptionData,
 } from "@/app/surveys/survey-option-actions";
+import {
+  removeQuestionConditionAction,
+  setQuestionConditionAction,
+  updateQuestionRandomizeAction,
+  type QuestionConditionData,
+  type RandomizeActionState,
+} from "@/app/surveys/survey-branching-actions";
 import { Button } from "@/components/ui/button";
 
 const QUESTION_TYPE_OPTIONS: {
@@ -45,6 +52,7 @@ function isChoiceType(type: SurveyQuestionType): boolean {
 
 type QuestionWithOptions = SurveyQuestionData & {
   options: { id: string; label: string; sortOrder: number }[];
+  targetCondition: QuestionConditionData | null;
 };
 
 type SurveyQuestionBuilderProps = {
@@ -64,15 +72,32 @@ export function SurveyQuestionBuilder({
   function handleAdded(question: SurveyQuestionData) {
     setQuestions((prev) => [
       ...prev,
-      { ...question, options: [] },
+      { ...question, options: [], targetCondition: null },
     ]);
   }
 
   function handleUpdated(question: SurveyQuestionData) {
     setQuestions((prev) =>
+      prev.map((item) => {
+        if (item.id !== question.id) return item;
+        return {
+          ...item,
+          ...question,
+          options: item.options,
+          targetCondition: item.targetCondition,
+        };
+      }),
+    );
+  }
+
+  function handleConditionUpdated(
+    questionId: string,
+    condition: QuestionConditionData | null,
+  ) {
+    setQuestions((prev) =>
       prev.map((item) =>
-        item.id === question.id
-          ? { ...item, ...question, options: item.options }
+        item.id === questionId
+          ? { ...item, targetCondition: condition }
           : item,
       ),
     );
@@ -80,6 +105,36 @@ export function SurveyQuestionBuilder({
 
   function handleDeleted(questionId: string) {
     setQuestions((prev) => prev.filter((item) => item.id !== questionId));
+  }
+
+  function handleRandomizeToggle(
+    questionId: string,
+    enabled: boolean,
+  ) {
+    setQuestions((prev) =>
+      prev.map((item) =>
+        item.id === questionId
+          ? { ...item, randomizeOptions: enabled }
+          : item,
+      ),
+    );
+
+    const form = new FormData();
+    form.set("surveyId", surveyId);
+    form.set("questionId", questionId);
+    form.set("randomizeOptions", String(enabled));
+
+    updateQuestionRandomizeAction({ message: undefined, status: "idle" }, form).then((result: RandomizeActionState) => {
+      if (result.status === "error") {
+        setQuestions((prev) =>
+          prev.map((item) =>
+            item.id === questionId
+              ? { ...item, randomizeOptions: !enabled }
+              : item,
+          ),
+        );
+      }
+    });
   }
 
   function handleOptionAdded(questionId: string, option: OptionData) {
@@ -250,6 +305,11 @@ export function SurveyQuestionBuilder({
                   handleOptionUpdated(question.id, option)
                 }
                 onUpdated={handleUpdated}
+                onRandomizeToggle={handleRandomizeToggle}
+                onConditionUpdated={(condition) =>
+                  handleConditionUpdated(question.id, condition)
+                }
+                questions={questions}
                 question={question}
                 surveyId={surveyId}
               />
@@ -376,6 +436,7 @@ function AddQuestionForm({ surveyId, onAdded }: AddQuestionFormProps) {
 
 type SurveyQuestionCardProps = {
   canEdit: boolean;
+  questions: QuestionWithOptions[];
   index: number;
   isFirst: boolean;
   isLast: boolean;
@@ -385,13 +446,16 @@ type SurveyQuestionCardProps = {
   onOptionAdded: (option: OptionData) => void;
   onOptionDeleted: (optionId: string) => void;
   onOptionUpdated: (option: OptionData) => void;
+  onConditionUpdated: (condition: QuestionConditionData | null) => void;
   onUpdated: (question: SurveyQuestionData) => void;
+  onRandomizeToggle: (questionId: string, enabled: boolean) => void;
   question: QuestionWithOptions;
   surveyId: string;
 };
 
 function SurveyQuestionCard({
   canEdit,
+  questions,
   index,
   isFirst,
   isLast,
@@ -401,7 +465,9 @@ function SurveyQuestionCard({
   onOptionAdded,
   onOptionDeleted,
   onOptionUpdated,
+  onConditionUpdated,
   onUpdated,
+  onRandomizeToggle,
   question,
   surveyId,
 }: SurveyQuestionCardProps) {
@@ -720,11 +786,25 @@ function SurveyQuestionCard({
         {isChoiceType(type) ? (
           <OptionEditor
             canEdit={canEdit}
+            canRandomize={canEdit}
             onAdded={onOptionAdded}
             onDeleted={onOptionDeleted}
-            onUpdated={onOptionUpdated}
+            onOptionUpdated={onOptionUpdated}
             options={question.options}
             questionId={question.id}
+            randomizeOptions={question.randomizeOptions}
+            surveyId={surveyId}
+            onRandomizeToggle={(enabled) => onRandomizeToggle(question.id, enabled)}
+          />
+        ) : null}
+
+        {/* Branching control */}
+        {canEdit ? (
+          <BranchingSection
+            canEdit={canEdit}
+            allQuestions={questions}
+            currentQuestion={question}
+            onConditionUpdated={onConditionUpdated}
             surveyId={surveyId}
           />
         ) : null}
@@ -777,28 +857,49 @@ function SurveyQuestionCard({
 
 type OptionEditorProps = {
   canEdit: boolean;
-  onAdded: (option: OptionData) => void;
-  onDeleted: (optionId: string) => void;
-  onUpdated: (option: OptionData) => void;
+  canRandomize: boolean;
   options: { id: string; label: string; sortOrder: number }[];
   questionId: string;
+  randomizeOptions: boolean;
   surveyId: string;
+  onAdded: (option: OptionData) => void;
+  onDeleted: (optionId: string) => void;
+  onOptionUpdated: (option: OptionData) => void;
+  onRandomizeToggle: (enabled: boolean) => void;
 };
 
 function OptionEditor({
   canEdit,
-  onAdded,
-  onDeleted,
-  onUpdated,
+  canRandomize,
   options,
   questionId,
+  randomizeOptions,
   surveyId,
+  onAdded,
+  onDeleted,
+  onOptionUpdated,
+  onRandomizeToggle,
 }: OptionEditorProps) {
   return (
     <div className="grid gap-3 rounded-md border border-dashed p-3">
-      <p className="text-xs font-medium text-muted-foreground">
-        گزینه‌ها
-      </p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs font-medium text-muted-foreground">
+          گزینه‌ها
+        </p>
+        {canRandomize ? (
+          <label className="flex items-center gap-2 text-xs">
+            <input
+              checked={randomizeOptions}
+              className="h-3.5 w-3.5"
+              onChange={(event) =>
+                onRandomizeToggle(event.target.checked)
+              }
+              type="checkbox"
+            />
+            <span>نمایش تصادفی گزینه‌ها</span>
+          </label>
+        ) : null}
+      </div>
 
       {options.length === 0 ? (
         <p className="text-xs text-muted-foreground">
@@ -813,7 +914,7 @@ function OptionEditor({
               isLast={optIndex === options.length - 1}
               key={option.id}
               onDeleted={onDeleted}
-              onUpdated={onUpdated}
+              onUpdated={onOptionUpdated}
               option={option}
               options={options}
               questionId={questionId}
@@ -1105,5 +1206,272 @@ function AddOptionForm({
         <p className="text-xs text-destructive">{message}</p>
       ) : null}
     </form>
+  );
+}
+
+// ──────────────────────────────────────────────
+// Branching section
+// ──────────────────────────────────────────────
+
+type BranchingSectionProps = {
+  canEdit: boolean;
+  allQuestions: QuestionWithOptions[];
+  currentQuestion: QuestionWithOptions;
+  onConditionUpdated: (condition: QuestionConditionData | null) => void;
+  surveyId: string;
+};
+
+const CONDITION_OPERATOR_LABELS = new Map<SurveyConditionOperator, string>([
+  ["IS_SELECTED", "گزینه انتخاب شده باشد"],
+  ["IS_NOT_SELECTED", "گزینه انتخاب نشده باشد"],
+]);
+
+function BranchingSection({
+  allQuestions,
+  currentQuestion,
+  onConditionUpdated,
+  surveyId,
+}: BranchingSectionProps) {
+  const [showForm, setShowForm] = useState(
+    currentQuestion.targetCondition === null,
+  );
+  const [sourceQuestionId, setSourceQuestionId] = useState("");
+  const [sourceOptionId, setSourceOptionId] = useState("");
+  const [operator, setOperator] = useState<SurveyConditionOperator>(
+    currentQuestion.targetCondition?.operator ?? "IS_SELECTED",
+  );
+  const [pending, setPending] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const sourceOptions = useMemo(() => {
+    if (!sourceQuestionId) return [];
+    const src = allQuestions.find((q) => q.id === sourceQuestionId);
+    return src?.options ?? [];
+  }, [sourceQuestionId, allQuestions]);
+
+  const earlierChoiceQuestions = useMemo(() => {
+    const currentIdx = allQuestions.findIndex(
+      (q) => q.id === currentQuestion.id,
+    );
+    return allQuestions
+      .filter(
+        (q) =>
+          q.id !== currentQuestion.id &&
+          isChoiceType(q.type) &&
+          q.sortOrder < currentQuestion.sortOrder,
+      )
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+  }, [allQuestions, currentQuestion]);
+
+  const staleCondition =
+    currentQuestion.targetCondition !== null &&
+    earlierChoiceQuestions.every(
+      (q) => q.id !== currentQuestion.targetCondition?.sourceQuestionId,
+    );
+
+  const currentOptions = staleCondition ? [] : sourceOptions;
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!sourceQuestionId || !sourceOptionId) return;
+    setPending(true);
+    setMessage(null);
+
+    const form = new FormData();
+    form.set("surveyId", surveyId);
+    form.set("targetQuestionId", currentQuestion.id);
+    form.set("sourceQuestionId", sourceQuestionId);
+    form.set("sourceOptionId", sourceOptionId);
+    form.set("operator", operator);
+
+    try {
+      const result = await setQuestionConditionAction({}, form);
+      if (result.status === "success") {
+        setShowForm(false);
+        setMessage("شرط نمایش با موفقیت ذخیره شد.");
+        onConditionUpdated(result.condition ?? null);
+        setSourceQuestionId("");
+        setSourceOptionId("");
+      } else {
+        setMessage(result.message ?? "ذخیره شرط ناموفق بود.");
+      }
+    } catch {
+      setMessage("خطای غیرمنتظره‌ای رخ داد.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function handleRemove() {
+    setPending(true);
+    setMessage(null);
+    setShowForm(false);
+
+    const form = new FormData();
+    form.set("surveyId", surveyId);
+    form.set("targetQuestionId", currentQuestion.id);
+
+    try {
+      const result = await removeQuestionConditionAction({}, form);
+      if (result.status === "success") {
+        setMessage("شرط نمایش حذف شد.");
+        onConditionUpdated(null);
+      } else {
+        setMessage(result.message ?? "حذف شرط ناموفق بود.");
+        if (result.status === "error") setShowForm(true);
+      }
+    } catch {
+      setMessage("خطای غیرمنتظره‌ای رخ داد.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <div className="grid gap-3 rounded-md border border-dashed p-3">
+      <div className="flex items-center gap-2">
+        <GitBranch className="h-3.5 w-3.5 text-muted-foreground" />
+        <p className="text-xs font-medium text-muted-foreground">
+          شرایط نمایش
+        </p>
+      </div>
+
+      <p className="text-xs text-muted-foreground">
+        تعیین کنید این سوال تحت چه شرطی نشان داده شود. تصادفی‌سازی فقط
+        ترتیب گزینه‌ها برای پاسخ‌دهنده تغییر می‌دهد و بر ترتیب طراح یا
+        ستون نتایج تأثیری ندارد.
+      </p>
+
+      {staleCondition ? (
+        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2">
+          <p className="text-xs text-red-700">
+            شرط فعلی نامعتبر است: سوال مرجع حذف یا جابه‌جا شده است. لطفاً
+            شرط را بازبینی کنید.
+          </p>
+        </div>
+      ) : null}
+
+      {currentQuestion.targetCondition && !showForm ? (
+        <div className="rounded-md border bg-muted px-3 py-2">
+          <p className="text-xs">
+            اگر در سوال{" "}
+            <span className="font-medium">
+              {currentQuestion.targetCondition.sourceQuestionPrompt}
+            </span>{" "}
+            گزینه{` `}
+            <span className="font-medium">
+              {currentQuestion.targetCondition.sourceOptionLabel}
+            </span>{" "}
+            {CONDITION_OPERATOR_LABELS.get(
+              currentQuestion.targetCondition.operator,
+            )}{" "}
+            باشد، این سوال نشان داده شود.
+          </p>
+          {!pending ? (
+            <Button
+              className="mt-2 h-7 gap-1 text-[10px]"
+              disabled={pending}
+              onClick={handleRemove}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              <GitBranch className="h-3 w-3" />
+              حذف شرط
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {showForm ? (
+        <form className="grid gap-2" onSubmit={handleSubmit}>
+          <div className="grid gap-1">
+            <label className="text-xs text-muted-foreground">
+              سوال مرجع (باید قبلاً ساخته شده باشد)
+            </label>
+            <select
+              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+              disabled={pending}
+              onChange={(e) => {
+                setSourceQuestionId(e.target.value);
+                setSourceOptionId("");
+              }}
+              value={sourceQuestionId}
+              required
+            >
+              <option value="">— انتخاب کنید —</option>
+              {earlierChoiceQuestions.map((q) => (
+                <option key={q.id} value={q.id}>
+                  {q.prompt}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid gap-1">
+            <label className="text-xs text-muted-foreground">
+              گزینه مرجع
+            </label>
+            <select
+              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+              disabled={pending || !sourceQuestionId}
+              onChange={(e) => setSourceOptionId(e.target.value)}
+              value={sourceOptionId}
+              required
+            >
+              <option value="">— انتخاب کنید —</option>
+              {currentOptions.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid gap-1">
+            <label className="text-xs text-muted-foreground">عملگر</label>
+            <select
+              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+              disabled={pending}
+              onChange={(e) =>
+                setOperator(e.target.value as SurveyConditionOperator)
+              }
+              value={operator}
+            >
+              <option value="IS_SELECTED">انتخاب شده باشد</option>
+              <option value="IS_NOT_SELECTED">انتخاب نشده باشد</option>
+            </select>
+          </div>
+
+          {message ? (
+            <p className="text-xs text-destructive">{message}</p>
+          ) : null}
+
+          <div className="flex items-center gap-2">
+            <Button
+              disabled={pending}
+              size="sm"
+              type="submit"
+            >
+              ذخیره شرط
+            </Button>
+            <Button
+              disabled={pending}
+              onClick={() => {
+                setShowForm(false);
+                setMessage(null);
+                setSourceQuestionId("");
+                setSourceOptionId("");
+              }}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              انصراف
+            </Button>
+          </div>
+        </form>
+      ) : null}
+    </div>
   );
 }

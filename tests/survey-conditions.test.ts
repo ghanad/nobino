@@ -549,7 +549,3 @@ test("conditions: cross-survey target question is rejected on remove", async () 
   );
 });
 
-// ──────────────────────────────────────────────
-// Deterministic option ordering
-// ──────────────────────────────────────────────
-

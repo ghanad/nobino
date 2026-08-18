@@ -1,5 +1,10 @@
 import { notFound, redirect } from "next/navigation";
 
+import type {
+  SurveyConditionOperator,
+  SurveyQuestionType,
+} from "@prisma/client";
+
 import { requireCurrentUser } from "@/lib/auth";
 import {
   canEditSurveyDraft,
@@ -15,6 +20,7 @@ import { SurveyCollaboratorEditor } from "@/components/surveys/survey-collaborat
 import { SurveyAudienceEditor } from "@/components/surveys/survey-audience-editor";
 import { SurveyQuestionBuilder } from "@/components/surveys/survey-question-builder";
 import { updateSurveyMetadataAction } from "@/app/surveys/actions";
+import type { QuestionConditionData } from "@/app/surveys/survey-branching-actions";
 
 type EditSurveyPageProps = {
   params: Promise<{ surveyId: string }>;
@@ -105,6 +111,7 @@ export default async function EditSurveyPage({ params }: EditSurveyPageProps) {
           type: true,
           required: true,
           sortOrder: true,
+          randomizeOptions: true,
           ratingMin: true,
           ratingMax: true,
           ratingMinLabel: true,
@@ -118,9 +125,38 @@ export default async function EditSurveyPage({ params }: EditSurveyPageProps) {
             },
             orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
           },
+          targetCondition: {
+            select: {
+              id: true,
+              sourceQuestionId: true,
+              sourceQuestion: {
+                select: { prompt: true, type: true },
+              },
+              sourceOption: {
+                select: { id: true, label: true },
+              },
+              operator: true,
+            },
+          },
         },
         orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
-      }),
+      }).then((rawQuestions) =>
+        rawQuestions.map((q) => ({
+          ...q,
+          targetCondition: q.targetCondition
+            ? {
+                id: q.targetCondition.id,
+                sourceQuestionId: q.targetCondition.sourceQuestionId,
+                sourceQuestionPrompt:
+                  q.targetCondition.sourceQuestion.prompt,
+                sourceQuestionType: q.targetCondition.sourceQuestion.type,
+                sourceOptionId: q.targetCondition.sourceOption.id,
+                sourceOptionLabel: q.targetCondition.sourceOption.label,
+                operator: q.targetCondition.operator,
+              }
+            : null,
+        })),
+      ),
     ]);
 
   return (

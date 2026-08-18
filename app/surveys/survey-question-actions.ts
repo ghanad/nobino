@@ -25,6 +25,7 @@ export type SurveyQuestionData = {
   type: SurveyQuestionType;
   required: boolean;
   sortOrder: number;
+  randomizeOptions: boolean;
   ratingMin: number | null;
   ratingMax: number | null;
   ratingMinLabel: string | null;
@@ -46,6 +47,7 @@ function toQuestionData(question: {
   type: SurveyQuestionType;
   required: boolean;
   sortOrder: number;
+  randomizeOptions: boolean;
   ratingMin: number | null;
   ratingMax: number | null;
   ratingMinLabel: string | null;
@@ -59,6 +61,7 @@ function toQuestionData(question: {
     type: question.type,
     required: question.required,
     sortOrder: question.sortOrder,
+    randomizeOptions: question.randomizeOptions,
     ratingMin: question.ratingMin,
     ratingMax: question.ratingMax,
     ratingMinLabel: question.ratingMinLabel,
@@ -124,6 +127,8 @@ export async function updateQuestionAction(
     helpText: formData.get("helpText") || "",
     type: formData.get("type"),
     required: formData.get("required") === "on",
+    randomizeOptions:
+      formData.get("randomizeOptions") === "true" ? true : undefined,
     ratingMin: formData.get("ratingMin"),
     ratingMax: formData.get("ratingMax"),
     ratingMinLabel: formData.get("ratingMinLabel"),
@@ -147,6 +152,7 @@ export async function updateQuestionAction(
       helpText: parsed.data.helpText || null,
       type: parsed.data.type,
       required: parsed.data.required,
+      randomizeOptions: parsed.data.randomizeOptions,
       ratingMin: parsed.data.ratingMin ?? undefined,
       ratingMax: parsed.data.ratingMax ?? undefined,
       ratingMinLabel: parsed.data.ratingMinLabel || undefined,
