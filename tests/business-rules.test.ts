@@ -25,3 +25,4 @@ import "./survey-publish.test";
 import "./survey-lifecycle.test";
 import "./survey-list-page.test";
 import "./survey-validation-schemas.test";
+import "./survey-readiness.test";

@@ -273,3 +273,34 @@ export const updateQuestionRandomizeSchema = z.object({
     errorMap: () => ({ message: "مقدار نمایش تصادفی نامعتبر است." }),
   }),
 });
+
+// S17 Lifecycle action schemas
+
+export const publishSurveySchema = z.object({
+  surveyId: z.string().min(1, "شناسه نظرسنجی نامعتبر است."),
+});
+
+export const extendSurveyEndTimeSchema = z.object({
+  surveyId: z.string().min(1, "شناسه نظرسنجی نامعتبر است."),
+  newEndDate: z
+    .string()
+    .min(1, "تاریخ پایان جدید الزامی است.")
+    .refine(isValidJalaliDateParam, {
+      message: "تاریخ پایان جدید نامعتبر است.",
+    }),
+  newEndTime: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):00$/, "ساعت پایان جدید باید در قالب HH:00 باشد."),
+});
+
+export const closeSurveySchema = z.object({
+  surveyId: z.string().min(1, "شناسه نظرسنجی نامعتبر است."),
+});
+
+export const archiveSurveySchema = z.object({
+  surveyId: z.string().min(1, "شناسه نظرسنجی نامعتبر است."),
+});
+
+export const deleteSurveyDraftSchema = z.object({
+  surveyId: z.string().min(1, "شناسه نظرسنجی نامعتبر است."),
+});
