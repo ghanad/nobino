@@ -1,21 +1,20 @@
 import { notFound } from "next/navigation";
 
 import { requireCurrentUser } from "@/lib/auth";
-import { getSurveyForRecipient, type RecipientSurveyData } from "@/lib/survey-service/recipient";
 import { isSurveyManager } from "@/lib/survey-permissions";
-import { resolveSurveyActor } from "@/lib/survey-service/shared";
+import { getSurveyForRecipient, type RecipientSurveyData } from "@/lib/survey-service/recipient";
 import { getSurveyDisplayStateLabel, getSurveyKindLabel, getSurveyIdentityLabel } from "@/lib/survey-status";
 import { formatJalaliDateTime } from "@/lib/jalali-date";
-import { db } from "@/lib/db";
 import { PageHeader } from "@/components/app/page-header";
 import { SurveyDetailDisplay } from "@/components/surveys/survey-detail-display";
+import { SurveyResponseForm } from "@/components/surveys/survey-response-form";
 import { SurveyServiceError } from "@/lib/survey-service/shared";
 
-type SurveyDetailPageProps = {
+type Props = {
   params: Promise<{ surveyId: string }>;
 };
 
-export default async function SurveyDetailPage({ params }: SurveyDetailPageProps) {
+export default async function SurveyDetailPage({ params }: Props) {
   const { surveyId } = await params;
   const user = await requireCurrentUser();
 
@@ -29,18 +28,14 @@ export default async function SurveyDetailPage({ params }: SurveyDetailPageProps
     throw error;
   }
 
-  const surveyCore = await db.survey.findUnique({
-    where: { id: surveyId },
-    select: { ownerId: true },
-  });
-
+  // Re-construct actor from user data for permission checks
   const actorUser = { role: user.role, active: user.active, canCreateSurveys: user.canCreateSurveys };
-  const actor = await resolveSurveyActor(db, {
-    actorUserId: user.id,
-    surveyId,
-    ownerId: surveyCore?.ownerId ?? "",
+  const actor = {
     user: actorUser,
-  });
+    isOwner: data.ownerId === user.id,
+    isCollaborator: data.isCollaborator,
+    isRecipient: data.isRecipient,
+  };
 
   const showParticipationCount = isSurveyManager(actor);
   const showManagementLink = isSurveyManager(actor);
@@ -96,8 +91,15 @@ export default async function SurveyDetailPage({ params }: SurveyDetailPageProps
         </div>
       ) : null}
 
-      {/* Questions display */}
-      {data.questions.length > 0 ? (
+      {/* Response form or read-only display */}
+      {data.canParticipate && !data.hasSubmitted ? (
+        <SurveyResponseForm
+          questions={data.questions}
+          surveyId={data.id}
+          userId={user.id}
+          identityMode={data.identityMode}
+        />
+      ) : data.questions.length > 0 ? (
         <SurveyDetailDisplay
           questions={data.questions}
           hasSubmitted={data.hasSubmitted}
