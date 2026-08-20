@@ -28,3 +28,5 @@ import "./survey-validation-schemas.test";
 import "./survey-readiness.test";
 import "./survey-recipient.test";
 import "./survey-response-utils.test";
+import "./survey-draft.test";
+import "./survey-submit.test";

@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { loadDraftAction, saveDraftAction, type SaveDraftActionState } from "@/app/surveys/survey-draft-actions";
 import { getDeterministicOptionOrder } from "@/lib/survey-service/option-order";
 import {
   getVisibleQuestionIds,
@@ -47,6 +48,13 @@ export function SurveyResponseForm({
   identityMode,
 }: SurveyResponseFormProps) {
   const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
+  const [saveState, setSaveState] = useState<SaveDraftActionState>({ status: "idle" });
+  const [initialLoaded, setInitialLoaded] = useState(false);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestAnswersRef = useRef<Record<string, AnswerValue>>(answers);
+
+  // Keep ref in sync
+  latestAnswersRef.current = answers;
 
   // Build a flat list of QuestionWithCondition for the visibility engine
   const visibilityQuestions: QuestionWithCondition[] = useMemo(
@@ -91,6 +99,53 @@ export function SurveyResponseForm({
     return changed ? visibleAnswers : answers;
   }, [answers, visibleAnswers]);
 
+  // Load draft on mount
+  useEffect(() => {
+    let cancelled = false;
+    loadDraftAction(surveyId).then(({ answers: draftAnswers }) => {
+      if (cancelled) return;
+      if (draftAnswers) {
+        setAnswers(draftAnswers as Record<string, AnswerValue>);
+      }
+      setInitialLoaded(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [surveyId]);
+
+  // Autosave with debounce when answers change
+  useEffect(() => {
+    if (!initialLoaded) return;
+
+    const timer = autoSaveTimerRef;
+    let cancelled = false;
+
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+
+    autoSaveTimerRef.current = setTimeout(async () => {
+      setSaveState({ status: "saving" });
+      const result = await saveDraftAction(
+        { status: "saving" },
+        {
+          surveyId,
+          answers: latestAnswersRef.current as Record<string, unknown>,
+        },
+      );
+      if (cancelled) return;
+      setSaveState(result);
+    }, 2000);
+
+    return () => {
+      cancelled = true;
+      if (timer.current) {
+        clearTimeout(timer.current);
+      }
+    };
+  }, [answers, surveyId, initialLoaded]);
+
   const handleAnswer = useCallback(
     (questionId: string, value: AnswerValue) => {
       setAnswers((prev) => {
@@ -134,7 +189,7 @@ export function SurveyResponseForm({
   );
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-4" dir="rtl">
       <h2 className="text-lg font-semibold">پاسخ به نظرسنجی</h2>
 
       {identityMode === "ANONYMOUS" ? (
@@ -143,6 +198,22 @@ export function SurveyResponseForm({
           متن پاسخ‌های آزاد ممکن است هویت شما را فاش کنند.
         </div>
       ) : null}
+
+      {/* Save state indicator */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+        {saveState.status === "saving" ? (
+          <span className="text-muted-foreground">در حال ذخیره...</span>
+        ) : saveState.status === "saved" ? (
+          <span className="text-green-600">ذخیره شد</span>
+        ) : saveState.status === "error" ? (
+          <span className="text-destructive">{saveState.message ?? "خطا در ذخیره"}</span>
+        ) : null}
+        {identityMode === "ANONYMOUS" && initialLoaded ? (
+          <span className="text-muted-foreground">
+            پاسخ‌های پیش‌نویس هنوز ناشناس نیستند. ناشناس‌سازی پس از ثبت نهایی انجام می‌شود.
+          </span>
+        ) : null}
+      </div>
 
       {questions.map((question, index) => {
         const isVisible = visibleQuestionIds.has(question.id);
@@ -159,22 +230,19 @@ export function SurveyResponseForm({
               <p className="text-sm font-medium">
                 {index + 1}. {question.prompt}
                 {showRequired ? (
-                  <span className="mr-1 text-red-500">*</span>
+                  <span className="text-destructive mr-1">*</span>
                 ) : null}
               </p>
               {question.helpText ? (
-                <p className="text-xs text-muted-foreground">
-                  {question.helpText}
-                </p>
+                <p className="text-xs text-muted-foreground">{question.helpText}</p>
               ) : null}
             </div>
 
             {/* SHORT_TEXT */}
             {question.type === "SHORT_TEXT" ? (
               <input
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                className="w-full rounded-md border border-input bg-background p-2 text-sm"
                 placeholder="پاسخ خود را وارد کنید..."
-                type="text"
                 value={typeof syncedAnswers[question.id] === "string" ? (syncedAnswers[question.id] as string) : ""}
                 onChange={(e) => handleAnswer(question.id, e.target.value || null)}
               />
