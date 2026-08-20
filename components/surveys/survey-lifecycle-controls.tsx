@@ -11,9 +11,10 @@ import {
   closeSurveyAction,
   archiveSurveyAction,
   deleteSurveyDraftAction,
+  sendSurveyReminderAction,
   type LifecycleActionState,
 } from "@/app/surveys/survey-lifecycle-actions";
-import { formatJalaliDateParam } from "@/lib/jalali-date";
+import { formatJalaliDateParam, formatJalaliDateTime } from "@/lib/jalali-date";
 import type { SurveyDisplayState } from "@/lib/survey-status";
 
 type SurveyLifecycleControlsProps = {
@@ -22,6 +23,7 @@ type SurveyLifecycleControlsProps = {
   displayState: SurveyDisplayState;
   isOwnerOrAdmin: boolean;
   endsAt: Date | null;
+  lastReminderAt: Date | null;
   kind: string;
   isAnonymous: boolean;
   ready: boolean;
@@ -34,6 +36,7 @@ export function SurveyLifecycleControls({
   displayState,
   isOwnerOrAdmin,
   endsAt,
+  lastReminderAt,
   kind,
   isAnonymous,
   ready,
@@ -49,6 +52,7 @@ export function SurveyLifecycleControls({
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [showExtendForm, setShowExtendForm] = useState(false);
+  const [showReminderConfirm, setShowReminderConfirm] = useState(false);
 
   const [newEndDate, setNewEndDate] = useState(
     endsAt ? formatJalaliDateParam(endsAt) : "",
@@ -73,6 +77,10 @@ export function SurveyLifecycleControls({
     LifecycleActionState,
     FormData
   >(deleteSurveyDraftAction, { status: "idle" });
+  const [reminderState, reminderFormAction] = useActionState<
+    LifecycleActionState,
+    FormData
+  >(sendSurveyReminderAction, { status: "idle" });
 
   const isVote = kind === "VOTE";
 
@@ -131,6 +139,14 @@ export function SurveyLifecycleControls({
           role="alert"
         >
           {archiveState.message}
+        </div>
+      ) : null}
+      {reminderState.message ? (
+        <div
+          className={`rounded-md border px-4 py-3 text-sm ${reminderState.status === "success" ? "border-green-200 bg-green-50 text-green-800" : "border-red-200 bg-red-50 text-red-800"}`}
+          role="alert"
+        >
+          {reminderState.message}
         </div>
       ) : null}
 
@@ -277,6 +293,32 @@ export function SurveyLifecycleControls({
       {/* ── Active survey controls ── */}
       {displayState === "ACTIVE" ? (
         <div className="space-y-3">
+          <div className="space-y-2 rounded-md border bg-muted p-3">
+            <p className="text-sm font-medium">یادآوری پاسخ به نظرسنجی</p>
+            <p className="text-xs text-muted-foreground">
+              فقط برای دریافت‌کنندگانی که هنوز پاسخ نداده‌اند، اعلان ثبت می‌شود.
+              {lastReminderAt
+                ? ` آخرین یادآوری: ${formatJalaliDateTime(lastReminderAt)}`
+                : " هنوز یادآوری ارسال نشده است."}
+            </p>
+            {!showReminderConfirm ? (
+              <Button onClick={() => setShowReminderConfirm(true)} size="sm" variant="outline">
+                ارسال یادآوری
+              </Button>
+            ) : (
+              <form action={reminderFormAction} className="flex flex-wrap items-center gap-2">
+                <input type="hidden" name="surveyId" value={surveyId} />
+                <p className="w-full text-xs">یادآوری فقط برای پاسخ‌نداده‌ها ارسال شود؟</p>
+                <SubmitButton pendingLabel="در حال ثبت یادآوری" size="sm">
+                  تایید ارسال
+                </SubmitButton>
+                <Button onClick={() => setShowReminderConfirm(false)} size="sm" type="button" variant="outline">
+                  انصراف
+                </Button>
+              </form>
+            )}
+          </div>
+
           {/* Extend end time */}
           {!showExtendForm ? (
             <Button

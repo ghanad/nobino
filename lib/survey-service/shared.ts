@@ -7,10 +7,21 @@ import type { SurveyActor, SurveyActorUser } from "@/lib/survey-permissions";
 
 export type DbClient = typeof db | Prisma.TransactionClient;
 
+export type SurveyServiceErrorCode =
+  | "ACCESS_DENIED"
+  | "ALREADY_SUBMITTED"
+  | "INVALID_SUBMISSION";
+
 export class SurveyServiceError extends Error {
-  constructor(message: string) {
+  readonly code: SurveyServiceErrorCode;
+
+  constructor(
+    message: string,
+    code: SurveyServiceErrorCode = "INVALID_SUBMISSION",
+  ) {
     super(message);
     this.name = "SurveyServiceError";
+    this.code = code;
   }
 }
 
@@ -29,11 +40,11 @@ export async function loadActiveActorUser(
   });
 
   if (!user) {
-    throw new SurveyServiceError("User was not found.");
+    throw new SurveyServiceError("Survey access was denied.", "ACCESS_DENIED");
   }
 
   if (!user.active || user.deletedAt !== null) {
-    throw new SurveyServiceError("The acting user is inactive.");
+    throw new SurveyServiceError("Survey access was denied.", "ACCESS_DENIED");
   }
 
   return {
@@ -64,17 +75,17 @@ export async function resolveSurveyActor(
         },
         select: { id: true },
       })) !== null;
-  const isRecipient = isOwner
-    ? false
-    : (await client.surveyRecipient.findUnique({
-        where: {
-          surveyId_userId: {
-            surveyId: input.surveyId,
-            userId: input.actorUserId,
-          },
-        },
-        select: { id: true },
-      })) !== null;
+  // Ownership grants management access, but it must not hide a recipient
+  // snapshot created for the owner by an ALL_ACTIVE or targeted audience.
+  const isRecipient = (await client.surveyRecipient.findUnique({
+    where: {
+      surveyId_userId: {
+        surveyId: input.surveyId,
+        userId: input.actorUserId,
+      },
+    },
+    select: { id: true },
+  })) !== null;
 
   return { user: input.user, isOwner, isCollaborator, isRecipient };
 }

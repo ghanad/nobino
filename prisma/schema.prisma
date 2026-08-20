@@ -806,6 +806,7 @@ model Survey {
   publishedAt  DateTime?
   closedAt     DateTime?
   archivedAt   DateTime?
+  lastReminderAt DateTime?
   ownerId      String
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt

@@ -23,6 +23,7 @@ type GlobalNavProps = {
 };
 
 type NavNotification = {
+  actionHref: string | null;
   body: string;
   createdAtLabel: string;
   id: string;
@@ -354,7 +355,7 @@ function NotificationLink({
               {recentNotifications.map((notification) => (
                 <Link
                   className="block rounded-md px-3 py-2.5 transition-colors hover:bg-slate-50"
-                  href="/notifications"
+                  href={notification.actionHref ?? "/notifications"}
                   key={notification.id}
                   onClick={() => setIsOpen(false)}
                 >

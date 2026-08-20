@@ -68,7 +68,7 @@ export async function upsertDraft(input: {
 }): Promise<void> {
   // Size-limit before touching the database
   const rawJson = JSON.stringify(input.answers);
-  if (rawJson.length > MAX_DRAFT_SIZE_BYTES) {
+  if (Buffer.byteLength(rawJson, "utf8") > MAX_DRAFT_SIZE_BYTES) {
     throw new SurveyServiceError("پاسخ پیش‌نویس بیش از حد بزرگ است.");
   }
 

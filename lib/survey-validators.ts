@@ -304,3 +304,7 @@ export const archiveSurveySchema = z.object({
 export const deleteSurveyDraftSchema = z.object({
   surveyId: z.string().min(1, "شناسه نظرسنجی نامعتبر است."),
 });
+
+export const sendSurveyReminderSchema = z.object({
+  surveyId: z.string().min(1, "شناسه نظرسنجی نامعتبر است."),
+});

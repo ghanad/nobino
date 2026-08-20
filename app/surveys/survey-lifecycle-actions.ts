@@ -11,6 +11,7 @@ import {
   closeSurveySchema,
   archiveSurveySchema,
   deleteSurveyDraftSchema,
+  sendSurveyReminderSchema,
 } from "@/lib/survey-validators";
 import { buildLocalDateAtHourFromJalali } from "@/lib/jalali-date";
 import {
@@ -20,6 +21,7 @@ import {
   archiveSurvey,
 } from "@/lib/survey-service/lifecycle";
 import { deleteSurveyDraft } from "@/lib/survey-service/metadata";
+import { sendSurveyReminder } from "@/lib/survey-service/reminder";
 
 export type LifecycleActionState = {
   message?: string;
@@ -184,6 +186,38 @@ export async function deleteSurveyDraftAction(
   try {
     await deleteSurveyDraft({ actorUserId: user.id, surveyId });
     redirect("/surveys");
+  } catch (error) {
+    if (error instanceof SurveyServiceError) {
+      return { message: error.message, status: "error" };
+    }
+    throw error;
+  }
+}
+
+export async function sendSurveyReminderAction(
+  prevState: LifecycleActionState,
+  formData: FormData,
+): Promise<LifecycleActionState> {
+  const user = await requireCurrentUser();
+  const parsed = sendSurveyReminderSchema.safeParse({
+    surveyId: formData.get("surveyId"),
+  });
+
+  if (!parsed.success) {
+    return {
+      message: parsed.error.errors[0]?.message ?? "شناسه نظرسنجی نامعتبر است.",
+      status: "error",
+    };
+  }
+
+  const { surveyId } = parsed.data;
+  try {
+    const result = await sendSurveyReminder({ actorUserId: user.id, surveyId });
+    revalidatePath(`/surveys/${surveyId}/edit`);
+    return {
+      message: `${result.createdCount} یادآوری برای ${result.eligibleCount} دریافت‌کننده ثبت شد.${result.withoutActiveBaleLinkCount > 0 ? ` ${result.withoutActiveBaleLinkCount} نفر اتصال فعال بله ندارند.` : ""}`,
+      status: "success",
+    };
   } catch (error) {
     if (error instanceof SurveyServiceError) {
       return { message: error.message, status: "error" };

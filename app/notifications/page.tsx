@@ -47,6 +47,7 @@ type NotificationFilter = (typeof NOTIFICATION_FILTERS)[number];
 
 type NotificationItem = {
   id: string;
+  surveyId: string | null;
   type: string;
   body: string;
   readAt: Date | null;
@@ -283,6 +284,19 @@ function getTypeBadge(notification: NotificationItem): {
   }
 
   if (
+    notification.type === "SURVEY_INVITATION" ||
+    notification.type === "SURVEY_REMINDER"
+  ) {
+    return {
+      className: "bg-violet-50 text-violet-800 ring-violet-200",
+      label:
+        notification.type === "SURVEY_REMINDER"
+          ? "یادآوری نظرسنجی"
+          : "دعوت به نظرسنجی",
+    };
+  }
+
+  if (
     notification.type === "ALTERNATIVE_PROPOSED" ||
     notification.type === "ALTERNATIVE_ACCEPTED" ||
     notification.type === "ALTERNATIVE_REJECTED"
@@ -426,6 +440,18 @@ function getNotificationAction(
   notification: NotificationItem,
   role: UserRole,
 ): { href: string; label: string; variant: "default" | "outline" } | null {
+  if (
+    (notification.type === "SURVEY_INVITATION" ||
+      notification.type === "SURVEY_REMINDER") &&
+    notification.surveyId
+  ) {
+    return {
+      href: `/surveys/${encodeURIComponent(notification.surveyId)}`,
+      label: "مشاهده نظرسنجی",
+      variant: "default",
+    };
+  }
+
   if (!notification.reservation) {
     return null;
   }
@@ -593,6 +619,7 @@ export default async function NotificationsPage({
     take: NOTIFICATIONS_PAGE_SIZE,
     select: {
       id: true,
+      surveyId: true,
       type: true,
       body: true,
       readAt: true,

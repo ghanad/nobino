@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { z } from "zod";
 
 import { requireCurrentUser } from "@/lib/auth";
 import { isSurveyManager } from "@/lib/survey-permissions";
@@ -9,13 +10,18 @@ import { PageHeader } from "@/components/app/page-header";
 import { SurveyDetailDisplay } from "@/components/surveys/survey-detail-display";
 import { SurveyResponseForm } from "@/components/surveys/survey-response-form";
 import { SurveyServiceError } from "@/lib/survey-service/shared";
+import Link from "next/link";
 
 type Props = {
   params: Promise<{ surveyId: string }>;
 };
 
 export default async function SurveyDetailPage({ params }: Props) {
-  const { surveyId } = await params;
+  const parsedParams = z.object({ surveyId: z.string().min(1).max(128) }).safeParse(await params);
+  if (!parsedParams.success) {
+    notFound();
+  }
+  const { surveyId } = parsedParams.data;
   const user = await requireCurrentUser();
 
   let data: RecipientSurveyData;
@@ -50,12 +56,20 @@ export default async function SurveyDetailPage({ params }: Props) {
         subtitle={data.description ?? ""}
         actions={
           showManagementLink ? (
-            <a
-              href={`/surveys/${data.id}/edit`}
-              className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-            >
-              مدیریت نظرسنجی
-            </a>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href={`/surveys/${data.id}/results`}
+                className="inline-flex min-h-10 items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                نتایج
+              </Link>
+              <Link
+                href={`/surveys/${data.id}/edit`}
+                className="inline-flex min-h-10 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                مدیریت نظرسنجی
+              </Link>
+            </div>
           ) : undefined
         }
       />
@@ -86,8 +100,9 @@ export default async function SurveyDetailPage({ params }: Props) {
       {/* Anonymous free-text warning */}
       {data.identityMode === "ANONYMOUS" ? (
         <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          پاسخ‌ها به صورت ناشناس ثبت می‌شوند. پاسخ شما قابل ردیابی نیست.
-          متن پاسخ‌های آزاد ممکن است هویت شما را فاش کنند.
+          Nobino پاسخ نهایی ناشناس را به حساب کاربری شما پیوند نمی‌دهد؛ با این
+          حال ناشناسی در سطح برنامه است و متن پاسخ‌های آزاد ممکن است هویت شما
+          را فاش کند.
         </div>
       ) : null}
 

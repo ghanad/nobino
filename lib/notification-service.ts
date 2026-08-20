@@ -20,6 +20,11 @@ type NotificationTextInput = {
   body: string;
 };
 
+type NotificationActionInput = {
+  surveyId: string | null;
+  type: string;
+};
+
 const NOTIFICATION_TITLE_LABELS: Record<string, string> = {
   ALTERNATIVE_ACCEPTED: "زمان پیشنهادی پذیرفته شد",
   ALTERNATIVE_PROPOSED: "زمان جایگزین پیشنهاد شد",
@@ -36,6 +41,8 @@ const NOTIFICATION_TITLE_LABELS: Record<string, string> = {
   RESERVATION_CANCELLED: "رزرو لغو شد",
   RESERVATION_REJECTED: "رزرو رد شد",
   RESERVATION_TIME_UPDATED: "زمان رزرو تغییر کرد",
+  SURVEY_INVITATION: "دعوت به نظرسنجی",
+  SURVEY_REMINDER: "یادآوری نظرسنجی",
 };
 
 const NOTIFICATION_BODY_LABELS: Record<string, string> = {
@@ -79,6 +86,20 @@ export function getNotificationDisplayText(notification: NotificationTextInput) 
   };
 }
 
+export function getNotificationActionHref(
+  notification: NotificationActionInput,
+): string | null {
+  if (
+    (notification.type === "SURVEY_INVITATION" ||
+      notification.type === "SURVEY_REMINDER") &&
+    notification.surveyId
+  ) {
+    return `/surveys/${encodeURIComponent(notification.surveyId)}`;
+  }
+
+  return null;
+}
+
 export async function getUnreadNotificationCount(
   userId: string,
   client: DbClient = db,
@@ -107,6 +128,7 @@ export async function getLatestUnreadNotification(
       type: true,
       title: true,
       body: true,
+      surveyId: true,
     },
   });
 
@@ -116,6 +138,7 @@ export async function getLatestUnreadNotification(
 
   return {
     id: notification.id,
+    actionHref: getNotificationActionHref(notification),
     ...getNotificationDisplayText(notification),
   };
 }
@@ -133,6 +156,7 @@ export async function getRecentNotificationsForNav(
       type: true,
       title: true,
       body: true,
+      surveyId: true,
       readAt: true,
       createdAt: true,
     },
@@ -142,6 +166,7 @@ export async function getRecentNotificationsForNav(
     id: notification.id,
     createdAtLabel: formatJalaliDateTime(notification.createdAt),
     isUnread: !notification.readAt,
+    actionHref: getNotificationActionHref(notification),
     ...getNotificationDisplayText(notification),
   }));
 }

@@ -1,9 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import { loadDraftAction, saveDraftAction, type SaveDraftActionState } from "@/app/surveys/survey-draft-actions";
+import {
+  submitAnonymousResponseAction,
+  submitResponseAction,
+  type SubmitActionState,
+} from "@/app/surveys/survey-submit-actions";
 import { getDeterministicOptionOrder } from "@/lib/survey-service/option-order";
+import {
+  SURVEY_LONG_TEXT_MAX_LENGTH,
+  SURVEY_SHORT_TEXT_MAX_LENGTH,
+} from "@/lib/survey-response-limits";
 import {
   getVisibleQuestionIds,
   clearHiddenAnswers,
@@ -50,6 +59,9 @@ export function SurveyResponseForm({
   const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
   const [saveState, setSaveState] = useState<SaveDraftActionState>({ status: "idle" });
   const [initialLoaded, setInitialLoaded] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [submitState, setSubmitState] = useState<SubmitActionState>({ status: "idle" });
+  const [isSubmitting, startSubmitTransition] = useTransition();
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestAnswersRef = useRef<Record<string, AnswerValue>>(answers);
 
@@ -102,13 +114,19 @@ export function SurveyResponseForm({
   // Load draft on mount
   useEffect(() => {
     let cancelled = false;
-    loadDraftAction(surveyId).then(({ answers: draftAnswers }) => {
-      if (cancelled) return;
-      if (draftAnswers) {
-        setAnswers(draftAnswers as Record<string, AnswerValue>);
-      }
-      setInitialLoaded(true);
-    });
+    loadDraftAction(surveyId)
+      .then(({ answers: draftAnswers }) => {
+        if (cancelled) return;
+        if (draftAnswers) {
+          setAnswers(draftAnswers as Record<string, AnswerValue>);
+        }
+        setInitialLoaded(true);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setSaveState({ status: "error", message: "امکان بارگذاری پیش‌نویس وجود ندارد. صفحه را تازه کنید." });
+        setInitialLoaded(true);
+      });
     return () => {
       cancelled = true;
     };
@@ -188,14 +206,53 @@ export function SurveyResponseForm({
     [handleAnswer, syncedAnswers],
   );
 
+  const handleFinalSubmit = useCallback(() => {
+    if (isSubmitting) return;
+
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+    }
+
+    const action = identityMode === "ANONYMOUS"
+      ? submitAnonymousResponseAction
+      : submitResponseAction;
+    const finalAnswers = clearHiddenAnswers(visibilityQuestions, latestAnswersRef.current);
+
+    startSubmitTransition(async () => {
+      const result = await action(
+        { status: "idle" },
+        { surveyId, answers: finalAnswers },
+      );
+      setSubmitState(result);
+      if (result.status !== "success") {
+        setShowConfirmation(true);
+      }
+    });
+  }, [identityMode, isSubmitting, surveyId, visibilityQuestions]);
+
+  if (submitState.status === "success") {
+    return (
+      <section
+        aria-live="polite"
+        className="rounded-md border border-green-200 bg-green-50 p-5 text-green-900"
+        dir="rtl"
+      >
+        <h2 className="text-lg font-semibold">پاسخ شما ثبت شد</h2>
+        <p className="mt-2 text-sm">سپاس از مشارکت شما. پاسخ نهایی قابل ویرایش نیست.</p>
+      </section>
+    );
+  }
+
   return (
     <div className="space-y-4" dir="rtl">
       <h2 className="text-lg font-semibold">پاسخ به نظرسنجی</h2>
 
       {identityMode === "ANONYMOUS" ? (
         <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          پاسخ‌ها به صورت ناشناس ثبت می‌شوند. پاسخ شما قابل ردیابی نیست.
-          متن پاسخ‌های آزاد ممکن است هویت شما را فاش کنند.
+          Nobino پاسخ نهایی ناشناس را به حساب شما پیوند نمی‌دهد؛ با این حال
+          ناشناسی در سطح برنامه است و متن پاسخ‌های آزاد ممکن است هویت شما را
+          فاش کند.
         </div>
       ) : null}
 
@@ -242,6 +299,7 @@ export function SurveyResponseForm({
             {question.type === "SHORT_TEXT" ? (
               <input
                 className="w-full rounded-md border border-input bg-background p-2 text-sm"
+                maxLength={SURVEY_SHORT_TEXT_MAX_LENGTH}
                 placeholder="پاسخ خود را وارد کنید..."
                 value={typeof syncedAnswers[question.id] === "string" ? (syncedAnswers[question.id] as string) : ""}
                 onChange={(e) => handleAnswer(question.id, e.target.value || null)}
@@ -252,6 +310,7 @@ export function SurveyResponseForm({
             {question.type === "LONG_TEXT" ? (
               <textarea
                 className="min-h-[80px] w-full rounded-md border border-input bg-background p-3 text-sm"
+                maxLength={SURVEY_LONG_TEXT_MAX_LENGTH}
                 placeholder="پاسخ خود را وارد کنید..."
                 value={typeof syncedAnswers[question.id] === "string" ? (syncedAnswers[question.id] as string) : ""}
                 onChange={(e) => handleAnswer(question.id, e.target.value || null)}
@@ -355,6 +414,55 @@ export function SurveyResponseForm({
           </div>
         );
       })}
+
+      <section className="rounded-md border bg-card p-4" aria-live="polite">
+        {showConfirmation ? (
+          <div className="space-y-3">
+            <div>
+              <h3 className="text-sm font-semibold">ثبت نهایی پاسخ‌ها</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                پس از ثبت نهایی، پاسخ‌ها قابل ویرایش یا ارسال دوباره نیستند.
+              </p>
+            </div>
+            {submitState.status === "error" || submitState.status === "conflict" ? (
+              <p className="text-sm text-destructive" role="alert">{submitState.message}</p>
+            ) : null}
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={isSubmitting || !initialLoaded}
+                onClick={handleFinalSubmit}
+              >
+                {isSubmitting ? "در حال ثبت..." : "تأیید و ثبت نهایی"}
+              </button>
+              <button
+                type="button"
+                className="rounded-md border px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={isSubmitting}
+                onClick={() => setShowConfirmation(false)}
+              >
+                بازگشت و ویرایش
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-muted-foreground">برای ثبت غیرقابل‌ویرایش پاسخ‌ها آماده‌اید؟</p>
+            <button
+              type="button"
+              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={!initialLoaded || isSubmitting}
+              onClick={() => {
+                setSubmitState({ status: "idle" });
+                setShowConfirmation(true);
+              }}
+            >
+              ثبت نهایی پاسخ‌ها
+            </button>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

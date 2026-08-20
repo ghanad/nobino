@@ -168,6 +168,36 @@ test("S18 recipient: admin can view any survey even when not a recipient", async
   assert.equal(data.title, "Admin survey");
 });
 
+test("S18 recipient: survey owner remains a recipient when included in the audience", async () => {
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Owner response survey",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+
+  await updateSurveyMetadata({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    title: "Owner response survey",
+    startsAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
+    endsAt: new Date(Date.now() + 2 * 60 * 60 * 1000),
+  });
+
+  await addQuestion({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    prompt: "Q1",
+    type: SurveyQuestionType.SHORT_TEXT,
+  });
+
+  await publishSurvey({ actorUserId: adminId, surveyId: survey.id });
+
+  const data = await getSurveyForRecipient(survey.id, adminId);
+  assert.equal(data.isRecipient, true);
+  assert.equal(data.canParticipate, true);
+});
+
 test("S18 recipient: participation count is only visible to managers", async () => {
   const survey = await createSurveyDraft({
     actorUserId: adminId,

@@ -15,6 +15,12 @@ export type SaveDraftActionState = {
   status: "idle" | "saving" | "saved" | "error";
 };
 
+const surveyIdSchema = z.string().min(1).max(128);
+const draftInputSchema = z.object({
+  surveyId: surveyIdSchema,
+  answers: z.record(z.unknown()),
+});
+
 /**
  * Save (upsert) a draft for the current user.
  *
@@ -26,12 +32,7 @@ export async function saveDraftAction(
 ): Promise<SaveDraftActionState> {
   const user = await requireCurrentUser();
 
-  const parsed = z
-    .object({
-      surveyId: z.string().min(1, "شناسه نظرسنجی نامعتبر است."),
-      answers: z.record(z.unknown()),
-    })
-    .safeParse(data);
+  const parsed = draftInputSchema.safeParse(data);
 
   if (!parsed.success) {
     return { message: "داده‌های ورودی نامعتبر است.", status: "error" };
@@ -61,9 +62,14 @@ export async function loadDraftAction(
 ): Promise<{ answers: Record<string, unknown> | null }> {
   const user = await requireCurrentUser();
 
+  const parsed = surveyIdSchema.safeParse(surveyId);
+  if (!parsed.success) {
+    return { answers: null };
+  }
+
   const answers = await loadDraft({
     actorUserId: user.id,
-    surveyId,
+    surveyId: parsed.data,
   });
 
   return { answers };
@@ -77,10 +83,15 @@ export async function deleteDraftAction(
 ): Promise<SaveDraftActionState> {
   const user = await requireCurrentUser();
 
+  const parsed = surveyIdSchema.safeParse(surveyId);
+  if (!parsed.success) {
+    return { message: "داده‌های ورودی نامعتبر است.", status: "error" };
+  }
+
   try {
     await deleteDraft({
       actorUserId: user.id,
-      surveyId,
+      surveyId: parsed.data,
     });
 
     return { status: "idle" };

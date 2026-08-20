@@ -2,9 +2,15 @@ import "server-only";
 
 import {
   SurveyQuestionType,
+  SurveyIdentityMode,
 } from "@prisma/client";
 
 import { db } from "@/lib/db";
+import {
+  SURVEY_FINAL_RESPONSE_MAX_SIZE_BYTES,
+  SURVEY_LONG_TEXT_MAX_LENGTH,
+  SURVEY_SHORT_TEXT_MAX_LENGTH,
+} from "@/lib/survey-response-limits";
 import { canParticipate } from "@/lib/survey-permissions";
 import { getSurveyDisplayState } from "@/lib/survey-status";
 import {
@@ -74,18 +80,95 @@ export async function submitNamedResponse(input: {
   surveyId: string;
   answers: Record<string, unknown>;
 }): Promise<void> {
+  return submitResponseInternal(input.actorUserId, input.surveyId, input.answers, {
+    identityMode: "NAMED",
+  });
+}
+
+/**
+ * Atomically validate and store an immutable anonymous response.
+ *
+ * Authorization:
+ * - Actor must be an active recipient of the survey.
+ * - Survey display state must be ACTIVE.
+ * - Recipient must not have already submitted.
+ *
+ * Transaction guarantees:
+ * - Conditional claim on SurveyRecipient.hasSubmitted = false prevents
+ *   double submission.
+ * - All writes (response, answers, draft deletion) happen in one
+ *   transaction so validation failure rolls back the claim.
+ *
+ * Privacy:
+ * - No audit event is created for anonymous submission.
+ * - Response row has userId = null.
+ * - Recipient stores only hasSubmitted = true; no completion timestamp.
+ */
+export async function submitAnonymousResponse(input: {
+  actorUserId: string;
+  surveyId: string;
+  answers: Record<string, unknown>;
+}): Promise<void> {
+  return submitResponseInternal(input.actorUserId, input.surveyId, input.answers, {
+    identityMode: "ANONYMOUS",
+  });
+}
+
+// ──────────────────────────────────────────────
+// Internal helpers
+// ──────────────────────────────────────────────
+
+type SubmitMode = {
+  identityMode: "NAMED" | "ANONYMOUS";
+};
+
+/**
+ * Shared submission pipeline for both named and anonymous responses.
+ *
+ * Named mode:
+ * - Stores userId on the response row.
+ * - Creates a content-free audit event.
+ *
+ * Anonymous mode:
+ * - Stores userId = null on the response row.
+ * - Does NOT create an audit event.
+ */
+async function submitResponseInternal(
+  actorUserId: string,
+  surveyId: string,
+  rawAnswers: Record<string, unknown>,
+  mode: SubmitMode,
+): Promise<void> {
+  let serializedAnswers: string;
+  try {
+    serializedAnswers = JSON.stringify(rawAnswers);
+  } catch {
+    throw new SurveyServiceError("داده‌های پاسخ نامعتبر است.");
+  }
+
+  if (
+    Buffer.byteLength(serializedAnswers, "utf8") >
+    SURVEY_FINAL_RESPONSE_MAX_SIZE_BYTES
+  ) {
+    throw new SurveyServiceError(
+      "پاسخ نهایی بیش از حد بزرگ است.",
+    );
+  }
+
   return db.$transaction(async (tx) => {
     // 1. Load and authorize
     const { survey, recipient } = await loadAndAuthorize(
       tx,
-      input.actorUserId,
-      input.surveyId,
+      actorUserId,
+      surveyId,
     );
 
-    // 2. Guard: only named surveys can use this path
-    if (survey.identityMode !== "NAMED") {
+    // 2. Guard: correct identity mode
+    if (survey.identityMode !== mode.identityMode) {
       throw new SurveyServiceError(
-        "This survey requires anonymous submission.",
+        mode.identityMode === "NAMED"
+          ? "این نظرسنجی نیاز به ارسال ناشناس دارد."
+          : "این نظرسنجی نیاز به ارسال با نام دارد.",
       );
     }
 
@@ -110,7 +193,7 @@ export async function submitNamedResponse(input: {
         : null,
     }));
 
-    const answers = input.answers as Record<string, AnswerValue>;
+    const answers = rawAnswers as Record<string, AnswerValue>;
     const visibleIds = getVisibleQuestionIds(visibilityQuestions, answers);
 
     // 4. Validate answers
@@ -129,6 +212,7 @@ export async function submitNamedResponse(input: {
     if (claimResult.count !== 1) {
       throw new SurveyServiceError(
         "You have already submitted this survey.",
+        "ALREADY_SUBMITTED",
       );
     }
 
@@ -136,7 +220,7 @@ export async function submitNamedResponse(input: {
     const response = await tx.surveyResponse.create({
       data: {
         surveyId: survey.id,
-        userId: input.actorUserId,
+        userId: mode.identityMode === "NAMED" ? actorUserId : null,
       },
     });
 
@@ -194,33 +278,39 @@ export async function submitNamedResponse(input: {
       }
     }
 
-    // 8. Delete the draft
+    // 8. Delete the linked draft
     await tx.surveyDraft.deleteMany({
       where: {
         surveyId: survey.id,
-        userId: input.actorUserId,
+        userId: actorUserId,
       },
     });
 
-    // 9. Create content-free audit event
-    await tx.auditLog.create({
-      data: {
-        actorUserId: input.actorUserId,
-        entityType: "Survey",
-        entityId: survey.id,
-        action: "SURVEY_RESPONSE_SUBMITTED",
-        newValue: {
-          responseId: response.id,
+    // 9. Create content-free audit event (named only)
+    if (mode.identityMode === "NAMED") {
+      await tx.auditLog.create({
+        data: {
+          action: "SURVEY_RESPONSE_SUBMITTED",
+          entityType: "Survey",
+          entityId: survey.id,
+          actorUserId,
+          newValue: { responseId: response.id },
         },
-      },
-    });
+      });
+    }
   });
 }
 
-// ──────────────────────────────────────────────
-// Internal helpers
-// ──────────────────────────────────────────────
-
+/**
+ * Load the survey and recipient, validating authorization.
+ *
+ * Authorization:
+ * - Actor must be an active user.
+ * - Survey must exist.
+ * - Survey display state must be ACTIVE.
+ * - Actor must be a recipient of the survey.
+ * - Recipient must not have already submitted.
+ */
 async function loadAndAuthorize(
   tx: DbClient,
   actorUserId: string,
@@ -257,17 +347,14 @@ async function loadAndAuthorize(
               operator: true,
             },
           },
-          options: {
-            select: { id: true },
-          },
+          options: { select: { id: true } },
         },
-        orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
       },
     },
   });
 
   if (!survey) {
-    throw new SurveyServiceError("Survey was not found.");
+    throw new SurveyServiceError("Survey access was denied.", "ACCESS_DENIED");
   }
 
   const actor = await resolveSurveyActor(tx, {
@@ -281,26 +368,32 @@ async function loadAndAuthorize(
 
   if (!canParticipate(actor, displayState)) {
     throw new SurveyServiceError(
-      "You cannot submit responses for this survey.",
+      "Survey access was denied.",
+      "ACCESS_DENIED",
     );
   }
 
   const recipient = await tx.surveyRecipient.findUnique({
     where: {
-      surveyId_userId: { surveyId: survey.id, userId: actorUserId },
+      surveyId_userId: {
+        surveyId: survey.id,
+        userId: actorUserId,
+      },
     },
     select: { userId: true, hasSubmitted: true },
   });
 
   if (!recipient) {
     throw new SurveyServiceError(
-      "You are not a recipient of this survey.",
+      "Survey access was denied.",
+      "ACCESS_DENIED",
     );
   }
 
   if (recipient.hasSubmitted) {
     throw new SurveyServiceError(
       "You have already submitted this survey.",
+      "ALREADY_SUBMITTED",
     );
   }
 
@@ -376,6 +469,14 @@ function validateAnswerValue(
           `پاسخ به سوال "${question.id}" نمی‌تواند خالی باشد.`,
         );
       }
+      const maximumLength = question.type === SurveyQuestionType.SHORT_TEXT
+        ? SURVEY_SHORT_TEXT_MAX_LENGTH
+        : SURVEY_LONG_TEXT_MAX_LENGTH;
+      if (value.length > maximumLength) {
+        throw new SurveyServiceError(
+          `پاسخ سوال "${question.id}" بیش از حد مجاز است.`,
+        );
+      }
       break;
     }
 
@@ -401,6 +502,11 @@ function validateAnswerValue(
         );
       }
       const validOptionIds = new Set(question.options.map((o) => o.id));
+      if (new Set(value).size !== value.length) {
+        throw new SurveyServiceError(
+          `گزینه‌های سوال "${question.id}" نباید تکراری باشند.`,
+        );
+      }
       for (const optionId of value) {
         if (typeof optionId !== "string" || !validOptionIds.has(optionId)) {
           throw new SurveyServiceError(

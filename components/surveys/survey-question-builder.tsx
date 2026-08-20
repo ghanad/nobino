@@ -500,8 +500,7 @@ function SurveyQuestionCard({
   const droppingOptions =
     isChoiceType(question.type) && !isChoiceType(type);
 
-  async function handleSave(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function handleSave() {
     setSaving(true);
     setMessage(null);
     setPromptError(null);
@@ -612,7 +611,7 @@ function SurveyQuestionCard({
         </p>
       ) : null}
 
-      <form className="grid gap-3" onSubmit={handleSave}>
+      <div className="grid gap-3">
         <div className="grid gap-2">
           <FieldLabel htmlFor={`question-prompt-${question.id}`}>
             متن سوال
@@ -811,7 +810,7 @@ function SurveyQuestionCard({
 
         {canEdit ? (
           <div className="flex items-center gap-2 border-t pt-3">
-            <Button disabled={saving} size="sm" type="submit">
+            <Button disabled={saving} onClick={handleSave} size="sm" type="button">
               ذخیره
             </Button>
 
@@ -850,7 +849,7 @@ function SurveyQuestionCard({
             )}
           </div>
         ) : null}
-      </form>
+      </div>
     </div>
   );
 }
@@ -1369,7 +1368,7 @@ function BranchingSection({
           </p>
           {!pending ? (
             <Button
-              className="mt-2 h-7 gap-1 text-[10px]"
+              className="mt-2 h-7 gap-1 text-sm"
               disabled={pending}
               onClick={handleRemove}
               size="sm"

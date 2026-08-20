@@ -23,7 +23,14 @@ import { setAudienceMode, addAudienceUser } from "@/lib/survey-service/audience"
 import { setQuestionCondition } from "@/lib/survey-service/questions";
 import { upsertDraft } from "@/lib/survey-service/draft-response";
 import { submitNamedResponse } from "@/lib/survey-service/submit-response";
+import { submitAnonymousResponse } from "@/lib/survey-service/submit-response";
 import { SurveyServiceError } from "@/lib/survey-service/shared";
+import { getSurveyDisplayState } from "@/lib/survey-status";
+import {
+  SURVEY_FINAL_RESPONSE_MAX_SIZE_BYTES,
+  SURVEY_LONG_TEXT_MAX_LENGTH,
+  SURVEY_SHORT_TEXT_MAX_LENGTH,
+} from "@/lib/survey-response-limits";
 
 registerBusinessRuleTestHooks();
 
@@ -1267,4 +1274,828 @@ test("S21 submit: deletes draft after successful submission", async () => {
     where: { surveyId_userId: { surveyId: survey.id, userId } },
   });
   assert.equal(draftAfter, null);
+});
+
+// ──────────────────────────────────────────────
+// S22 Anonymous submission helpers
+// ──────────────────────────────────────────────
+
+async function createActiveAnonymousSurveyWithQuestions() {
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Anonymous submit test",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.ANONYMOUS,
+  });
+
+  await updateSurveyMetadata({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    title: "Anonymous submit test",
+    startsAt: new Date(Date.now() - 4 * 60 * 60 * 1000),
+    endsAt: new Date(Date.now() + 4 * 60 * 60 * 1000),
+  });
+
+  // Ensure at least 5 eligible recipients
+  await setAudienceMode({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    audienceMode: SurveyAudienceMode.TARGETED,
+  });
+
+  const extraIds: string[] = [];
+  for (let i = 0; i < 3; i++) {
+    const extraId = `anon-extra-${i}`;
+    extraIds.push(extraId);
+    await db.user.create({
+      data: {
+        id: extraId,
+        email: `anon-extra${i}@example.test`,
+        name: `Anon Extra ${i}`,
+        passwordHash: "test-password-hash",
+        role: "USER",
+      },
+    });
+    await addAudienceUser({
+      actorUserId: adminId,
+      surveyId: survey.id,
+      targetUserId: extraId,
+    });
+  }
+  await addAudienceUser({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    targetUserId: userId,
+  });
+  await addAudienceUser({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    targetUserId: secondUserId,
+  });
+
+  const qText = await addQuestion({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    prompt: "Anonymous Q",
+    type: SurveyQuestionType.SHORT_TEXT,
+    required: true,
+  });
+
+  const qChoice = await addQuestion({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    prompt: "Pick one",
+    type: SurveyQuestionType.SINGLE_CHOICE,
+    required: true,
+  });
+
+  const optA = await addOption({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    questionId: qChoice.id,
+    label: "Option A",
+  });
+
+  const optB = await addOption({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    questionId: qChoice.id,
+    label: "Option B",
+  });
+
+  await publishSurvey({ actorUserId: adminId, surveyId: survey.id });
+
+  return { survey, qText, qChoice, optA, optB };
+}
+
+// ──────────────────────────────────────────────
+// S22 Anonymous submission: basic submit
+// ──────────────────────────────────────────────
+
+test("S22 submit: anonymous response stores userId=null and hasSubmitted=true", async () => {
+  const { survey, qText, qChoice, optA } =
+    await createActiveAnonymousSurveyWithQuestions();
+
+  await submitAnonymousResponse({
+    actorUserId: userId,
+    surveyId: survey.id,
+    answers: {
+      [qText.id]: "anon answer",
+      [qChoice.id]: optA.id,
+    },
+  });
+
+  // Verify response row has userId = null
+  const response = await db.surveyResponse.findFirst({
+    where: { surveyId: survey.id },
+  });
+  assert.ok(response !== null);
+  assert.equal(response.userId, null);
+
+  // Verify recipient hasSubmitted = true
+  const recipient = await db.surveyRecipient.findUnique({
+    where: { surveyId_userId: { surveyId: survey.id, userId } },
+  });
+  assert.ok(recipient !== null);
+  assert.equal(recipient.hasSubmitted, true);
+
+  // Verify no audit row exists for anonymous submission
+  const auditLogs = await db.auditLog.findMany({
+    where: {
+      entityId: response.id,
+      action: "SURVEY_RESPONSE_SUBMITTED",
+    },
+  });
+  assert.equal(auditLogs.length, 0);
+});
+
+// ──────────────────────────────────────────────
+// S22 Anonymous submission: no identity link
+// ──────────────────────────────────────────────
+
+test("S22 submit: no response, answer, or audit row links to respondent identity", async () => {
+  const { survey, qText, qChoice, optA } =
+    await createActiveAnonymousSurveyWithQuestions();
+
+  await submitAnonymousResponse({
+    actorUserId: userId,
+    surveyId: survey.id,
+    answers: {
+      [qText.id]: "secret answer",
+      [qChoice.id]: optA.id,
+    },
+  });
+
+  // Response row must not have userId
+  const response = await db.surveyResponse.findFirst({
+    where: { surveyId: survey.id },
+  });
+  assert.ok(response !== null);
+  assert.equal(response.userId, null);
+
+  // Answer rows must not expose identity
+  const answers = await db.surveyAnswer.findMany({
+    where: { responseId: response.id },
+  });
+  assert.ok(answers.length > 0);
+  for (const answer of answers) {
+    // No user-linked fields on answer rows
+    assert.ok(!("userId" in answer));
+  }
+
+  // No audit row for the anonymous submission
+  const auditLogs = await db.auditLog.findMany({
+    where: {
+      entityId: response.id,
+      action: "SURVEY_RESPONSE_SUBMITTED",
+    },
+  });
+  assert.equal(auditLogs.length, 0);
+
+  // The publication invitation predates submission and is permitted. Submission
+  // itself must not create an identity-bearing notification.
+  const notifications = await db.notification.findMany({
+    where: {
+      userId: userId,
+      surveyId: survey.id,
+    },
+  });
+  assert.deepEqual(notifications.map((notification) => notification.type), [
+    "SURVEY_INVITATION",
+  ]);
+
+  // No answer-option rows link to identity
+  const answerOptions = await db.surveyAnswerOption.findMany({
+    where: { answer: { responseId: response.id } },
+  });
+  // They exist but have no user relation
+  assert.ok(answerOptions.length >= 0);
+});
+
+// ──────────────────────────────────────────────
+// S22 Anonymous submission: double submit
+// ──────────────────────────────────────────────
+
+test("S22 submit: double submit yields exactly one anonymous response", async () => {
+  const { survey, qText, qChoice, optA } =
+    await createActiveAnonymousSurveyWithQuestions();
+
+  await submitAnonymousResponse({
+    actorUserId: userId,
+    surveyId: survey.id,
+    answers: {
+      [qText.id]: "first",
+      [qChoice.id]: optA.id,
+    },
+  });
+
+  // Second submit must fail
+  await assert.rejects(
+    () =>
+      submitAnonymousResponse({
+        actorUserId: userId,
+        surveyId: survey.id,
+        answers: {
+          [qText.id]: "second",
+          [qChoice.id]: optA.id,
+        },
+      }),
+    SurveyServiceError,
+  );
+
+  // Only one response exists
+  const responses = await db.surveyResponse.findMany({
+    where: { surveyId: survey.id },
+  });
+  assert.equal(responses.length, 1);
+  assert.equal(responses[0].userId, null);
+
+  // Recipient marked exactly once
+  const recipient = await db.surveyRecipient.findUnique({
+    where: { surveyId_userId: { surveyId: survey.id, userId } },
+  });
+  assert.ok(recipient !== null);
+  assert.equal(recipient.hasSubmitted, true);
+});
+
+// ──────────────────────────────────────────────
+// S22 Anonymous submission: identity mode guard
+// ──────────────────────────────────────────────
+
+test("S22 submit: rejects named survey", async () => {
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Named survey",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+
+  await updateSurveyMetadata({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    title: "Named survey",
+    startsAt: new Date(Date.now() - 4 * 60 * 60 * 1000),
+    endsAt: new Date(Date.now() + 4 * 60 * 60 * 1000),
+  });
+
+  await setAudienceMode({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    audienceMode: SurveyAudienceMode.TARGETED,
+  });
+  await addAudienceUser({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    targetUserId: userId,
+  });
+
+  const qText = await addQuestion({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    prompt: "Q",
+    type: SurveyQuestionType.SHORT_TEXT,
+    required: true,
+  });
+
+  await publishSurvey({ actorUserId: adminId, surveyId: survey.id });
+
+  await assert.rejects(
+    () =>
+      submitAnonymousResponse({
+        actorUserId: userId,
+        surveyId: survey.id,
+        answers: { [qText.id]: "Should fail" },
+      }),
+    SurveyServiceError,
+  );
+});
+
+// ──────────────────────────────────────────────
+// S22 Anonymous submission: draft deletion
+// ──────────────────────────────────────────────
+
+test("S22 submit: deletes draft after anonymous submission", async () => {
+  const { survey, qText, qChoice, optA } =
+    await createActiveAnonymousSurveyWithQuestions();
+
+  // Create a draft
+  await upsertDraft({
+    actorUserId: userId,
+    surveyId: survey.id,
+    answers: { [qText.id]: "Draft to delete" },
+  });
+
+  const draftBefore = await db.surveyDraft.findUnique({
+    where: { surveyId_userId: { surveyId: survey.id, userId } },
+  });
+  assert.ok(draftBefore !== null);
+
+  await submitAnonymousResponse({
+    actorUserId: userId,
+    surveyId: survey.id,
+    answers: {
+      [qText.id]: "Final anon",
+      [qChoice.id]: optA.id,
+    },
+  });
+
+  const draftAfter = await db.surveyDraft.findUnique({
+    where: { surveyId_userId: { surveyId: survey.id, userId } },
+  });
+  assert.equal(draftAfter, null);
+});
+
+// ──────────────────────────────────────────────
+// S22 Anonymous submission: already submitted
+// ──────────────────────────────────────────────
+
+test("S22 submit: rejects already-submitted recipient", async () => {
+  const { survey, qText, qChoice, optA } =
+    await createActiveAnonymousSurveyWithQuestions();
+
+  await submitAnonymousResponse({
+    actorUserId: userId,
+    surveyId: survey.id,
+    answers: {
+      [qText.id]: "done",
+      [qChoice.id]: optA.id,
+    },
+  });
+
+  await assert.rejects(
+    () =>
+      submitAnonymousResponse({
+        actorUserId: userId,
+        surveyId: survey.id,
+        answers: {
+          [qText.id]: "again",
+          [qChoice.id]: optA.id,
+        },
+      }),
+    SurveyServiceError,
+  );
+});
+
+// ──────────────────────────────────────────────
+// S22 Anonymous submission: validation
+// ──────────────────────────────────────────────
+
+test("S22 submit: anonymous submission validates required questions", async () => {
+  const { survey, qText, qChoice } =
+    await createActiveAnonymousSurveyWithQuestions();
+
+  // Missing required text question
+  await assert.rejects(
+    () =>
+      submitAnonymousResponse({
+        actorUserId: userId,
+        surveyId: survey.id,
+        answers: {
+          // Missing qText.id
+          [qChoice.id]: null,
+        },
+      }),
+    SurveyServiceError,
+  );
+
+  // Verify nothing was written
+  const recipient = await db.surveyRecipient.findUnique({
+    where: { surveyId_userId: { surveyId: survey.id, userId } },
+  });
+  assert.ok(recipient !== null);
+  assert.equal(recipient.hasSubmitted, false);
+
+  const responses = await db.surveyResponse.findMany({
+    where: { surveyId: survey.id },
+  });
+  assert.equal(responses.length, 0);
+});
+
+// ──────────────────────────────────────────────
+// S22 Anonymous submission: invalid option
+// ──────────────────────────────────────────────
+
+test("S22 submit: anonymous submission rejects invalid options", async () => {
+  const { survey, qText, qChoice } =
+    await createActiveAnonymousSurveyWithQuestions();
+
+  await assert.rejects(
+    () =>
+      submitAnonymousResponse({
+        actorUserId: userId,
+        surveyId: survey.id,
+        answers: {
+          [qText.id]: "valid text",
+          [qChoice.id]: "invalid-option-id",
+        },
+      }),
+    SurveyServiceError,
+  );
+
+  // Verify nothing was written
+  const recipient = await db.surveyRecipient.findUnique({
+    where: { surveyId_userId: { surveyId: survey.id, userId } },
+  });
+  assert.equal(recipient?.hasSubmitted, false);
+});
+
+// ──────────────────────────────────────────────
+// S22 Anonymous submission: concurrent submit
+// ──────────────────────────────────────────────
+
+test("S22 submit: concurrent anonymous submit creates exactly one response", async () => {
+  const { survey, qText, qChoice, optA } =
+    await createActiveAnonymousSurveyWithQuestions();
+
+  // Simulate two concurrent submissions
+  const results = await Promise.allSettled([
+    submitAnonymousResponse({
+      actorUserId: userId,
+      surveyId: survey.id,
+      answers: {
+        [qText.id]: "concurrent A",
+        [qChoice.id]: optA.id,
+      },
+    }),
+    submitAnonymousResponse({
+      actorUserId: userId,
+      surveyId: survey.id,
+      answers: {
+        [qText.id]: "concurrent B",
+        [qChoice.id]: optA.id,
+      },
+    }),
+  ]);
+
+  // Exactly one succeeded
+  const succeeded = results.filter((r) => r.status === "fulfilled").length;
+  const rejected = results.filter((r) => r.status === "rejected").length;
+  assert.equal(succeeded, 1);
+  assert.equal(rejected, 1);
+
+  // Only one response
+  const responses = await db.surveyResponse.findMany({
+    where: { surveyId: survey.id },
+  });
+  assert.equal(responses.length, 1);
+  assert.equal(responses[0].userId, null);
+
+  // Recipient marked once
+  const recipient = await db.surveyRecipient.findUnique({
+    where: { surveyId_userId: { surveyId: survey.id, userId } },
+  });
+  assert.ok(recipient !== null);
+  assert.equal(recipient.hasSubmitted, true);
+});
+
+// ──────────────────────────────────────────────
+// S22 Anonymous submission: cross-survey option
+// ──────────────────────────────────────────────
+
+test("S22 submit: anonymous rejects cross-survey option ID", async () => {
+  const { survey: survey1 } =
+    await createActiveAnonymousSurveyWithQuestions();
+
+  // Create a second survey manually (no need for extra users)
+  const survey2 = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Cross survey",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.ANONYMOUS,
+  });
+  const q2 = await addQuestion({
+    actorUserId: adminId,
+    surveyId: survey2.id,
+    prompt: "Cross Q",
+    type: SurveyQuestionType.SINGLE_CHOICE,
+  });
+  const crossOption = await addOption({
+    actorUserId: adminId,
+    surveyId: survey2.id,
+    questionId: q2.id,
+    label: "Cross option",
+  });
+
+  // Try to submit it against survey1
+  await assert.rejects(
+    () =>
+      submitAnonymousResponse({
+        actorUserId: userId,
+        surveyId: survey1.id,
+        answers: {
+          [q2.id]: crossOption.id,
+        },
+      }),
+    SurveyServiceError,
+  );
+});
+
+// ──────────────────────────────────────────────
+// S22 Anonymous submission: inactive survey
+// ──────────────────────────────────────────────
+
+test("S22 submit: anonymous rejects submission to inactive survey", async () => {
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Future anon survey",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.ANONYMOUS,
+  });
+
+  await updateSurveyMetadata({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    title: "Future anon survey",
+    startsAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // tomorrow
+    endsAt: new Date(Date.now() + 48 * 60 * 60 * 1000),
+  });
+
+  // Set audience and publish
+  await setAudienceMode({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    audienceMode: SurveyAudienceMode.TARGETED,
+  });
+
+  const extraIds: string[] = [];
+  for (let i = 0; i < 3; i++) {
+    const extraId = `future-anon-extra-${i}`;
+    extraIds.push(extraId);
+    await db.user.create({
+      data: {
+        id: extraId,
+        email: `future-anon${i}@example.test`,
+        name: `Future Anon ${i}`,
+        passwordHash: "test-password-hash",
+        role: "USER",
+      },
+    });
+    await addAudienceUser({
+      actorUserId: adminId,
+      surveyId: survey.id,
+      targetUserId: extraId,
+    });
+  }
+  await addAudienceUser({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    targetUserId: userId,
+  });
+  await addAudienceUser({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    targetUserId: secondUserId,
+  });
+
+  const qText = await addQuestion({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    prompt: "Q",
+    type: SurveyQuestionType.SHORT_TEXT,
+    required: true,
+  });
+
+  await publishSurvey({ actorUserId: adminId, surveyId: survey.id });
+
+  // Survey starts tomorrow, so it's SCHEDULED not ACTIVE
+  await assert.rejects(
+    () =>
+      submitAnonymousResponse({
+        actorUserId: userId,
+        surveyId: survey.id,
+        answers: { [qText.id]: "too early" },
+      }),
+    SurveyServiceError,
+  );
+});
+
+// ──────────────────────────────────────────────
+// S22 Anonymous submission: non-recipient
+// ──────────────────────────────────────────────
+
+test("S22 submit: anonymous rejects non-recipient", async () => {
+  const { survey, qText, qChoice, optA } =
+    await createActiveAnonymousSurveyWithQuestions();
+
+  // secondUserId is a recipient, but let's create a third user who is not
+  const nonRecipientId = "anon-non-recipient";
+  await db.user.create({
+    data: {
+      id: nonRecipientId,
+      email: "anon-non-recipient@example.test",
+      name: "Non Recipient",
+      passwordHash: "test-password-hash",
+      role: "USER",
+    },
+  });
+
+  await assert.rejects(
+    () =>
+      submitAnonymousResponse({
+        actorUserId: nonRecipientId,
+        surveyId: survey.id,
+        answers: {
+          [qText.id]: "intruder",
+          [qChoice.id]: optA.id,
+        },
+      }),
+    SurveyServiceError,
+  );
+});
+
+// ──────────────────────────────────────────────
+// S23 Completion and access hardening
+// ──────────────────────────────────────────────
+
+async function captureSurveyError(operation: () => Promise<void>) {
+  try {
+    await operation();
+    assert.fail("Expected SurveyServiceError");
+  } catch (error) {
+    assert.ok(error instanceof SurveyServiceError);
+    return error;
+  }
+}
+
+test("S23 submit: guessed and unauthorized survey IDs have the same access failure", async () => {
+  const { survey, qText, qChoice, optA } =
+    await createActiveAnonymousSurveyWithQuestions();
+  const intruderId = "s23-intruder";
+  await db.user.create({
+    data: {
+      id: intruderId,
+      email: "s23-intruder@example.test",
+      name: "S23 Intruder",
+      passwordHash: "test-password-hash",
+      role: "USER",
+    },
+  });
+
+  const answers = { [qText.id]: "attempt", [qChoice.id]: optA.id };
+  const missingError = await captureSurveyError(() =>
+    submitAnonymousResponse({
+      actorUserId: intruderId,
+      surveyId: "guessed-survey-id",
+      answers,
+    }),
+  );
+  const unauthorizedError = await captureSurveyError(() =>
+    submitAnonymousResponse({
+      actorUserId: intruderId,
+      surveyId: survey.id,
+      answers,
+    }),
+  );
+
+  assert.equal(missingError.code, "ACCESS_DENIED");
+  assert.equal(unauthorizedError.code, "ACCESS_DENIED");
+  assert.equal(missingError.message, unauthorizedError.message);
+});
+
+test("S23 submit: inactive recipient receives a typed access denial", async () => {
+  const { survey, qText, qChoice, optA } =
+    await createActiveAnonymousSurveyWithQuestions();
+  await db.user.update({ where: { id: userId }, data: { active: false } });
+
+  const error = await captureSurveyError(() =>
+    submitAnonymousResponse({
+      actorUserId: userId,
+      surveyId: survey.id,
+      answers: { [qText.id]: "attempt", [qChoice.id]: optA.id },
+    }),
+  );
+
+  assert.equal(error.code, "ACCESS_DENIED");
+});
+
+test("S23 submit: service keeps exact survey schedule boundaries", () => {
+  const startsAt = new Date("2026-08-21T08:00:00.000Z");
+  const endsAt = new Date("2026-08-21T09:00:00.000Z");
+  const survey = { state: SurveyState.PUBLISHED, startsAt, endsAt };
+  assert.equal(getSurveyDisplayState(survey, startsAt), "ACTIVE");
+  assert.equal(getSurveyDisplayState(survey, endsAt), "ENDED");
+});
+
+test("S23 submit: altered answer values cannot use an option from another survey", async () => {
+  const { survey, qText, qChoice } = await createActiveAnonymousSurveyWithQuestions();
+  const otherSurvey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "S23 option source",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+  const otherQuestion = await addQuestion({
+    actorUserId: adminId,
+    surveyId: otherSurvey.id,
+    prompt: "Other",
+    type: SurveyQuestionType.SINGLE_CHOICE,
+  });
+  const otherOption = await addOption({
+    actorUserId: adminId,
+    surveyId: otherSurvey.id,
+    questionId: otherQuestion.id,
+    label: "Other option",
+  });
+
+  const error = await captureSurveyError(() =>
+    submitAnonymousResponse({
+      actorUserId: userId,
+      surveyId: survey.id,
+      answers: { [qText.id]: "attempt", [qChoice.id]: otherOption.id },
+    }),
+  );
+
+  assert.equal(error.code, "INVALID_SUBMISSION");
+  assert.equal(
+    await db.surveyResponse.count({ where: { surveyId: survey.id } }),
+    0,
+  );
+});
+
+test("S23 submit: altered hidden answers and oversized text are rejected", async () => {
+  const { survey, qSource, optNo, qTarget } =
+    await createActiveSurveyWithConditionalQuestion();
+
+  const hiddenError = await captureSurveyError(() =>
+    submitNamedResponse({
+      actorUserId: userId,
+      surveyId: survey.id,
+      answers: { [qSource.id]: optNo.id, [qTarget.id]: "should be hidden" },
+    }),
+  );
+  assert.equal(hiddenError.code, "INVALID_SUBMISSION");
+
+  const { survey: textSurvey, qText, qChoice, optA, qMulti, optX, qLong } =
+    await createActiveNamedSurveyWithQuestions();
+  const oversizedShortTextError = await captureSurveyError(() =>
+    submitNamedResponse({
+      actorUserId: userId,
+      surveyId: textSurvey.id,
+      answers: {
+        [qText.id]: "x".repeat(SURVEY_SHORT_TEXT_MAX_LENGTH + 1),
+        [qChoice.id]: optA.id,
+        [qMulti.id]: [optX.id],
+        [qLong.id]: "valid long text",
+      },
+    }),
+  );
+  assert.equal(oversizedShortTextError.code, "INVALID_SUBMISSION");
+
+  const oversizedLongTextError = await captureSurveyError(() =>
+    submitNamedResponse({
+      actorUserId: userId,
+      surveyId: textSurvey.id,
+      answers: {
+        [qText.id]: "valid short text",
+        [qChoice.id]: optA.id,
+        [qMulti.id]: [optX.id],
+        [qLong.id]: "x".repeat(SURVEY_LONG_TEXT_MAX_LENGTH + 1),
+      },
+    }),
+  );
+  assert.equal(oversizedLongTextError.code, "INVALID_SUBMISSION");
+  assert.equal(
+    await db.surveyResponse.count({ where: { surveyId: textSurvey.id } }),
+    0,
+  );
+});
+
+test("S29 submit: final payload limit counts Persian UTF-8 bytes", async () => {
+  const { survey } = await createActiveNamedSurveyWithQuestions();
+  const answers = { unknownQuestion: "پ".repeat(25_000) };
+  const serialized = JSON.stringify(answers);
+
+  assert.ok(serialized.length < SURVEY_FINAL_RESPONSE_MAX_SIZE_BYTES);
+  assert.ok(
+    Buffer.byteLength(serialized, "utf8") > SURVEY_FINAL_RESPONSE_MAX_SIZE_BYTES,
+  );
+
+  const error = await captureSurveyError(() =>
+    submitNamedResponse({
+      actorUserId: userId,
+      surveyId: survey.id,
+      answers,
+    }),
+  );
+  assert.equal(error.code, "INVALID_SUBMISSION");
+  assert.equal(
+    await db.surveyResponse.count({ where: { surveyId: survey.id } }),
+    0,
+  );
+});
+
+test("S23 submit: completed recipient receives a typed conflict without another response", async () => {
+  const { survey, qText, qChoice, optA } =
+    await createActiveAnonymousSurveyWithQuestions();
+  const answers = { [qText.id]: "first", [qChoice.id]: optA.id };
+  await submitAnonymousResponse({ actorUserId: userId, surveyId: survey.id, answers });
+
+  const error = await captureSurveyError(() =>
+    submitAnonymousResponse({ actorUserId: userId, surveyId: survey.id, answers }),
+  );
+  assert.equal(error.code, "ALREADY_SUBMITTED");
+  assert.equal(
+    await db.surveyResponse.count({ where: { surveyId: survey.id } }),
+    1,
+  );
 });

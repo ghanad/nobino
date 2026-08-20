@@ -6,14 +6,111 @@ import { SurveyAudienceMode, SurveyIdentityMode, SurveyKind, SurveyQuestionType,
 import {
   adminId,
   db,
+  managerId,
   registerBusinessRuleTestHooks,
   secondUserId,
   userId,
 } from "./business-rules-helpers";
 import { createSurveyDraft, updateSurveyMetadata } from "@/lib/survey-service/metadata";
 import { SurveyServiceError } from "@/lib/survey-service/shared";
+import { sendSurveyReminder } from "@/lib/survey-service/reminder";
 
 registerBusinessRuleTestHooks();
+
+async function createActiveSurveyForReminder() {
+  const { publishSurvey } = await import("@/lib/survey-service/lifecycle");
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "Reminder test",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+  await updateSurveyMetadata({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    title: "Reminder test",
+    startsAt: new Date(Date.now() - 60 * 60 * 1000),
+    endsAt: new Date(Date.now() + 60 * 60 * 1000),
+  });
+  const { addQuestion } = await import("@/lib/survey-service/questions");
+  await addQuestion({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    prompt: "Q1",
+    type: SurveyQuestionType.SHORT_TEXT,
+  });
+  await publishSurvey({ actorUserId: adminId, surveyId: survey.id });
+  return survey;
+}
+
+test("S28 reminder: excludes submitted recipients and audits aggregate data only", async () => {
+  const survey = await createActiveSurveyForReminder();
+  await db.surveyRecipient.update({
+    where: { surveyId_userId: { surveyId: survey.id, userId } },
+    data: { hasSubmitted: true },
+  });
+
+  const result = await sendSurveyReminder({ actorUserId: adminId, surveyId: survey.id });
+  assert.equal(result.eligibleCount, 3);
+  assert.equal(result.createdCount, 3);
+  assert.equal(result.withoutActiveBaleLinkCount, 3);
+  assert.equal(
+    await db.notification.count({
+      where: { surveyId: survey.id, userId, type: "SURVEY_REMINDER" },
+    }),
+    0,
+  );
+  assert.equal(
+    await db.notification.count({
+      where: { surveyId: survey.id, type: "SURVEY_REMINDER" },
+    }),
+    3,
+  );
+
+  const audit = await db.auditLog.findFirstOrThrow({
+    where: { entityId: survey.id, action: "SURVEY_REMINDERS_SENT" },
+  });
+  assert.equal((audit.newValue as { createdCount?: number }).createdCount, 3);
+  assert.equal(JSON.stringify(audit.newValue).includes(userId), false);
+});
+
+test("S28 reminder: collaborators cannot send a batch", async () => {
+  const survey = await createActiveSurveyForReminder();
+  await db.surveyCollaborator.create({
+    data: { surveyId: survey.id, userId: managerId },
+  });
+
+  await assert.rejects(
+    sendSurveyReminder({ actorUserId: managerId, surveyId: survey.id }),
+    SurveyServiceError,
+  );
+  assert.equal(
+    await db.notification.count({
+      where: { surveyId: survey.id, type: "SURVEY_REMINDER" },
+    }),
+    0,
+  );
+});
+
+test("S28 reminder: concurrent and repeat attempts create one batch", async () => {
+  const survey = await createActiveSurveyForReminder();
+  const attempts = await Promise.allSettled([
+    sendSurveyReminder({ actorUserId: adminId, surveyId: survey.id }),
+    sendSurveyReminder({ actorUserId: adminId, surveyId: survey.id }),
+  ]);
+
+  assert.equal(attempts.filter((attempt) => attempt.status === "fulfilled").length, 1);
+  assert.equal(
+    await db.notification.count({
+      where: { surveyId: survey.id, type: "SURVEY_REMINDER" },
+    }),
+    4,
+  );
+  await assert.rejects(
+    sendSurveyReminder({ actorUserId: adminId, surveyId: survey.id }),
+    SurveyServiceError,
+  );
+});
 
 test("extendSurveyEndTime: owner can extend active survey", async () => {
   const { publishSurvey, extendSurveyEndTime } = await import(
@@ -544,4 +641,3 @@ test("archiveSurvey: rejects archived survey", async () => {
     SurveyServiceError,
   );
 });
-

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { db } from "@/lib/db";
+import { formatJalaliDateTime } from "@/lib/jalali-date";
 import { SurveyAudienceMode, SurveyState } from "@prisma/client";
 
 import { canPerformLifecycleAction } from "@/lib/survey-permissions";
@@ -177,6 +178,17 @@ export async function publishSurvey(input: {
       });
     }
 
+    const invitationBody = `برای شرکت در نظرسنجی «${survey.title}» دعوت شده‌اید. زمان شروع: ${formatJalaliDateTime(survey.startsAt)}. زمان پایان: ${formatJalaliDateTime(survey.endsAt)}.`;
+    await tx.notification.createMany({
+      data: recipientUserIds.map((userId) => ({
+        userId,
+        surveyId: survey.id,
+        type: "SURVEY_INVITATION",
+        title: "دعوت به نظرسنجی",
+        body: invitationBody,
+      })),
+    });
+
     // Update state
     const now = new Date();
     await tx.survey.update({
@@ -199,6 +211,7 @@ export async function publishSurvey(input: {
           kind: survey.kind,
           identityMode: survey.identityMode,
           recipientCount: recipientUserIds.length,
+          invitationCount: recipientUserIds.length,
           startsAt: survey.startsAt.toISOString(),
           endsAt: survey.endsAt.toISOString(),
         },

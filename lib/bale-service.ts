@@ -248,19 +248,64 @@ export async function recordBaleSyncFailed(error: unknown): Promise<void> {
   });
 }
 
-function buildNotificationMessage(notification: {
+function getValidatedAppBaseUrl(): URL {
+  const value = process.env.APP_BASE_URL?.trim();
+
+  if (!value) {
+    throw new BaleConnectionError("APP_BASE_URL is not configured");
+  }
+
+  let url: URL;
+
+  try {
+    url = new URL(value);
+  } catch {
+    throw new BaleConnectionError("APP_BASE_URL is invalid");
+  }
+
+  if (
+    (url.protocol !== "http:" && url.protocol !== "https:") ||
+    !url.hostname ||
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash
+  ) {
+    throw new BaleConnectionError("APP_BASE_URL is invalid");
+  }
+
+  return new URL(url.pathname.endsWith("/") ? url.href : `${url.href}/`);
+}
+
+export function buildNotificationMessage(notification: {
   type: string;
   title: string;
   body: string;
+  surveyId?: string | null;
 }): string {
   const display = getNotificationDisplayText(notification);
-  return display.body || display.title;
+  const message = display.body || display.title;
+
+  if (
+    (notification.type !== "SURVEY_INVITATION" &&
+      notification.type !== "SURVEY_REMINDER") ||
+    !notification.surveyId
+  ) {
+    return message;
+  }
+
+  const surveyUrl = new URL(
+    `surveys/${encodeURIComponent(notification.surveyId)}`,
+    getValidatedAppBaseUrl(),
+  );
+
+  return `${message}\n${surveyUrl.href}`;
 }
 
 async function sendClaimedDelivery(input: {
   deliveryId: string;
   chatId: string;
-  notification: { type: string; title: string; body: string };
+  notification: { type: string; title: string; body: string; surveyId?: string | null };
 }): Promise<boolean> {
   try {
     await sendBaleMessage(
@@ -308,7 +353,7 @@ export async function deliverPendingBaleNotifications() {
     },
     orderBy: { createdAt: "asc" },
     take: DELIVERY_BATCH_SIZE,
-    select: { id: true, userId: true, type: true, title: true, body: true },
+    select: { id: true, userId: true, type: true, title: true, body: true, surveyId: true },
   });
   const failedDeliveries = await db.baleNotificationDelivery.findMany({
     where: {
@@ -319,7 +364,9 @@ export async function deliverPendingBaleNotifications() {
     orderBy: { updatedAt: "asc" },
     take: Math.max(0, DELIVERY_BATCH_SIZE - freshNotifications.length),
     include: {
-      notification: { select: { userId: true, type: true, title: true, body: true } },
+      notification: {
+        select: { userId: true, type: true, title: true, body: true, surveyId: true },
+      },
     },
   });
   let sent = 0;

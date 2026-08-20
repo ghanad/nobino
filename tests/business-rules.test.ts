@@ -30,3 +30,6 @@ import "./survey-recipient.test";
 import "./survey-response-utils.test";
 import "./survey-draft.test";
 import "./survey-submit.test";
+import "./survey-results.test";
+import "./survey-export.test";
+import "./survey-end-to-end.test";

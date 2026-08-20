@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { z } from "zod";
 
 import type {
   SurveyConditionOperator,
@@ -32,7 +33,11 @@ type EditSurveyPageProps = {
 };
 
 export default async function EditSurveyPage({ params }: EditSurveyPageProps) {
-  const { surveyId } = await params;
+  const parsedParams = z.object({ surveyId: z.string().min(1).max(128) }).safeParse(await params);
+  if (!parsedParams.success) {
+    notFound();
+  }
+  const { surveyId } = parsedParams.data;
   const user = await requireCurrentUser();
 
   const survey = await db.survey.findUnique({
@@ -46,6 +51,7 @@ export default async function EditSurveyPage({ params }: EditSurveyPageProps) {
       identityMode: true,
       startsAt: true,
       endsAt: true,
+      lastReminderAt: true,
       ownerId: true,
       audienceMode: true,
       audienceTeams: {
@@ -351,6 +357,7 @@ export default async function EditSurveyPage({ params }: EditSurveyPageProps) {
           displayState={displayState}
           isOwnerOrAdmin={isOwnerOrAdmin}
           endsAt={survey.endsAt}
+          lastReminderAt={survey.lastReminderAt}
           kind={survey.kind}
           isAnonymous={survey.identityMode === "ANONYMOUS"}
           ready={readinessReport?.ready ?? false}

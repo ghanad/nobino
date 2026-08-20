@@ -10,6 +10,7 @@ import { SwipeDismissToast } from "@/components/ui/swipe-dismiss-toast";
 type UnreadNotificationToastProps = {
   notification: {
     id: string;
+    actionHref: string | null;
     title: string;
     body: string;
   } | null;
@@ -70,9 +71,9 @@ export function UnreadNotificationToast({
           </p>
           <Link
             className="mt-3 inline-flex text-sm font-medium text-primary hover:underline"
-            href="/notifications"
+            href={notification.actionHref ?? "/notifications"}
           >
-            مشاهده اعلان‌ها
+            {notification.actionHref ? "مشاهده نظرسنجی" : "مشاهده اعلان‌ها"}
           </Link>
         </div>
       </div>

@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { Prisma, SurveyAudienceMode, SurveyConditionOperator, SurveyIdentityMode, SurveyKind, SurveyQuestionType, SurveyState } from "@prisma/client";
+import { Prisma, SurveyAudienceMode, SurveyConditionOperator, SurveyIdentityMode, SurveyKind, SurveyQuestionType, SurveyState, UserRole } from "@prisma/client";
 
 import {
   adminId,
   db,
   managerId,
+  passwordHash,
   registerBusinessRuleTestHooks,
   secondUserId,
   userId,
@@ -56,6 +57,64 @@ test("publishSurvey: owner can publish a valid draft with ALL_ACTIVE audience", 
   assert.equal(updated?.state, SurveyState.PUBLISHED);
   assert.ok(updated?.publishedAt !== null);
   assert.ok((updated?._count.recipients ?? 0) > 0);
+  assert.equal(
+    await db.notification.count({
+      where: { surveyId: survey.id, type: "SURVEY_INVITATION" },
+    }),
+    updated?._count.recipients,
+  );
+
+  const publicationAudit = await db.auditLog.findFirstOrThrow({
+    where: { action: "SURVEY_PUBLISHED", entityId: survey.id },
+  });
+  assert.equal(
+    (publicationAudit.newValue as { invitationCount?: number }).invitationCount,
+    updated?._count.recipients,
+  );
+});
+
+test("publishSurvey: 50 frozen recipients receive exactly one Jalali invitation each", async () => {
+  const { publishSurvey } = await import("@/lib/survey-service/lifecycle");
+  const additionalUsers = Array.from({ length: 46 }, (_, index) => ({
+    id: `survey-recipient-${index}`,
+    email: `survey-recipient-${index}@example.test`,
+    name: `Survey Recipient ${index}`,
+    passwordHash,
+    role: UserRole.USER,
+  }));
+  await db.user.createMany({ data: additionalUsers });
+
+  const survey = await createSurveyDraft({
+    actorUserId: adminId,
+    title: "دعوت شهریور",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+  await updateSurveyMetadata({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    title: "دعوت شهریور",
+    startsAt: new Date("2026-09-01T06:00:00Z"),
+    endsAt: new Date("2026-09-01T14:00:00Z"),
+  });
+  const { addQuestion } = await import("@/lib/survey-service/questions");
+  await addQuestion({
+    actorUserId: adminId,
+    surveyId: survey.id,
+    prompt: "Q1",
+    type: SurveyQuestionType.SHORT_TEXT,
+  });
+
+  await publishSurvey({ actorUserId: adminId, surveyId: survey.id });
+
+  const invitations = await db.notification.findMany({
+    where: { surveyId: survey.id, type: "SURVEY_INVITATION" },
+    select: { body: true, userId: true },
+  });
+  assert.equal(invitations.length, 50);
+  assert.equal(new Set(invitations.map((invitation) => invitation.userId)).size, 50);
+  assert.match(invitations[0]?.body ?? "", /شروع:.*پایان:/);
+  assert.match(invitations[0]?.body ?? "", /[۰-۹]/);
 });
 
 test("publishSurvey: admin can publish a valid draft with TARGETED audience", async () => {
@@ -469,6 +528,12 @@ test("publishSurvey: concurrent double publish does not duplicate recipients", a
   const userIds = recipients.map((r) => r.userId);
   assert.equal(userIds.length, new Set(userIds).size);
   assert.equal(
+    await db.notification.count({
+      where: { surveyId: survey.id, type: "SURVEY_INVITATION" },
+    }),
+    recipients.length,
+  );
+  assert.equal(
     await db.auditLog.count({
       where: {
         entityType: "Survey",
@@ -483,4 +548,3 @@ test("publishSurvey: concurrent double publish does not duplicate recipients", a
 // ──────────────────────────────────────────────
 // Lifecycle: extend end time
 // ──────────────────────────────────────────────
-
