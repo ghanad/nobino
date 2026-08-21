@@ -47,6 +47,7 @@
     "../lib/survey-service/submit-response.ts",
     "../lib/survey-service/reminder.ts",
     "../lib/survey-validators.ts",
+    "../lib/survey-ai-service.ts",
     "../types/pholiday.d.ts"
   ]
 }

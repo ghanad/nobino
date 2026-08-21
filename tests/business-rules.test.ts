@@ -33,3 +33,4 @@ import "./survey-submit.test";
 import "./survey-results.test";
 import "./survey-export.test";
 import "./survey-end-to-end.test";
+import "./survey-ai.test";
