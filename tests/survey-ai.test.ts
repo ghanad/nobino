@@ -3,6 +3,7 @@ import test from "node:test";
 
 import { SurveyQuestionType } from "@prisma/client";
 import { applySurveyAiRequestSchema, signedSurveyAiProposalSchema } from "../lib/survey-ai-service";
+import { rejectCrossSiteWrite } from "../lib/csrf";
 
 const base = {
   surveyId: "survey-1",
@@ -28,4 +29,10 @@ test("survey AI apply schema rejects forbidden or malformed transport fields", (
 test("survey AI signed proposal schema remains strict about proposal fields", () => {
   assert.equal(signedSurveyAiProposalSchema.safeParse({ ...base, modelOutput: "do this" }).success, false);
   assert.equal(signedSurveyAiProposalSchema.safeParse({ ...base, operations: [{ op: "remove", questionId: "q1", before: { prompt: "حذف" }, extra: true }] }).success, false);
+});
+
+test("survey AI write CSRF guard rejects cross-site browser metadata", () => {
+  assert.equal(rejectCrossSiteWrite(new Request("https://nobino.test/api/survey-ai", { method: "POST", headers: { "sec-fetch-site": "cross-site" } }))?.status, 403);
+  assert.equal(rejectCrossSiteWrite(new Request("https://nobino.test/api/survey-ai", { method: "POST", headers: { origin: "https://evil.test" } }))?.status, 403);
+  assert.equal(rejectCrossSiteWrite(new Request("https://nobino.test/api/survey-ai", { method: "POST", headers: { origin: "https://nobino.test" } })), null);
 });
