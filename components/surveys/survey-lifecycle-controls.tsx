@@ -10,7 +10,7 @@ import {
   extendSurveyEndTimeAction,
   closeSurveyAction,
   archiveSurveyAction,
-  deleteSurveyDraftAction,
+  deleteSurveyAction,
   sendSurveyReminderAction,
   type LifecycleActionState,
 } from "@/app/surveys/survey-lifecycle-actions";
@@ -22,6 +22,7 @@ type SurveyLifecycleControlsProps = {
   surveyTitle: string;
   displayState: SurveyDisplayState;
   isOwnerOrAdmin: boolean;
+  isAdmin: boolean;
   endsAt: Date | null;
   lastReminderAt: Date | null;
   kind: string;
@@ -35,6 +36,7 @@ export function SurveyLifecycleControls({
   surveyTitle,
   displayState,
   isOwnerOrAdmin,
+  isAdmin,
   endsAt,
   lastReminderAt,
   kind,
@@ -76,7 +78,7 @@ export function SurveyLifecycleControls({
   const [deleteState, deleteFormAction, deletePending] = useActionState<
     LifecycleActionState,
     FormData
-  >(deleteSurveyDraftAction, { status: "idle" });
+  >(deleteSurveyAction, { status: "idle" });
   const [reminderState, reminderFormAction] = useActionState<
     LifecycleActionState,
     FormData
@@ -196,44 +198,6 @@ export function SurveyLifecycleControls({
                 </SubmitButton>
                 <Button
                   onClick={() => setShowPublishConfirm(false)}
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  انصراف
-                </Button>
-              </form>
-            </div>
-          )}
-
-          {/* Delete draft */}
-          {!showDeleteConfirm ? (
-            <Button
-              onClick={() => setShowDeleteConfirm(true)}
-              size="sm"
-              variant="destructive"
-            >
-              حذف پیش‌نویس
-            </Button>
-          ) : (
-            <div className="space-y-2 rounded-md border border-red-200 bg-red-50 p-3">
-              <p className="text-sm font-medium text-red-800">
-                آیا از حذف این پیش‌نویس اطمینان دارید؟
-              </p>
-              <p className="text-xs text-red-600">
-                این عملیات قابل بازگشت نیست. تمام اطلاعات نظرسنجی حذف می‌شود.
-              </p>
-              <form action={deleteFormAction} className="flex gap-2">
-                <input type="hidden" name="surveyId" value={surveyId} />
-                <SubmitButton
-                  pendingLabel="در حال حذف"
-                  size="sm"
-                  variant="destructive"
-                >
-                  حذف
-                </SubmitButton>
-                <Button
-                  onClick={() => setShowDeleteConfirm(false)}
                   size="sm"
                   type="button"
                   variant="outline"
@@ -452,6 +416,58 @@ export function SurveyLifecycleControls({
                 </SubmitButton>
                 <Button
                   onClick={() => setShowArchiveConfirm(false)}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  انصراف
+                </Button>
+              </form>
+            </div>
+          )}
+        </div>
+      ) : null}
+
+      {/* ── Delete survey ── */}
+      {isAdmin || displayState === "DRAFT" ? (
+        <div className="space-y-3 border-t pt-4">
+          {deleteState.status === "error" && deleteState.message ? (
+            <div
+              className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+              role="alert"
+            >
+              {deleteState.message}
+            </div>
+          ) : null}
+          {!showDeleteConfirm ? (
+            <Button
+              onClick={() => setShowDeleteConfirm(true)}
+              size="sm"
+              variant="destructive"
+            >
+              {displayState === "DRAFT" ? "حذف پیش‌نویس" : "حذف نظرسنجی"}
+            </Button>
+          ) : (
+            <div className="space-y-2 rounded-md border border-red-200 bg-red-50 p-3">
+              <p className="text-sm font-medium text-red-800">
+                آیا از حذف این نظرسنجی اطمینان دارید؟
+              </p>
+              <p className="text-xs text-red-600">
+                این عملیات قابل بازگشت نیست. تمام اطلاعات نظرسنجی
+                {displayState === "DRAFT" ? "" : " از جمله پاسخ‌های ثبت‌شده"}{" "}
+                حذف می‌شود.
+              </p>
+              <form action={deleteFormAction} className="flex gap-2">
+                <input type="hidden" name="surveyId" value={surveyId} />
+                <SubmitButton
+                  pendingLabel="در حال حذف"
+                  size="sm"
+                  variant="destructive"
+                >
+                  حذف
+                </SubmitButton>
+                <Button
+                  onClick={() => setShowDeleteConfirm(false)}
                   size="sm"
                   type="button"
                   variant="outline"

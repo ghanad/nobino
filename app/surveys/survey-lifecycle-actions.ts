@@ -10,7 +10,7 @@ import {
   extendSurveyEndTimeSchema,
   closeSurveySchema,
   archiveSurveySchema,
-  deleteSurveyDraftSchema,
+  deleteSurveySchema,
   sendSurveyReminderSchema,
 } from "@/lib/survey-validators";
 import { buildLocalDateAtHourFromJalali } from "@/lib/jalali-date";
@@ -20,7 +20,7 @@ import {
   closeSurvey,
   archiveSurvey,
 } from "@/lib/survey-service/lifecycle";
-import { deleteSurveyDraft } from "@/lib/survey-service/metadata";
+import { deleteSurvey } from "@/lib/survey-service/metadata";
 import { sendSurveyReminder } from "@/lib/survey-service/reminder";
 
 export type LifecycleActionState = {
@@ -164,13 +164,13 @@ export async function archiveSurveyAction(
   }
 }
 
-export async function deleteSurveyDraftAction(
+export async function deleteSurveyAction(
   prevState: LifecycleActionState,
   formData: FormData,
 ): Promise<LifecycleActionState> {
   const user = await requireCurrentUser();
 
-  const parsed = deleteSurveyDraftSchema.safeParse({
+  const parsed = deleteSurveySchema.safeParse({
     surveyId: formData.get("surveyId"),
   });
 
@@ -184,7 +184,7 @@ export async function deleteSurveyDraftAction(
   const { surveyId } = parsed.data;
 
   try {
-    await deleteSurveyDraft({ actorUserId: user.id, surveyId });
+    await deleteSurvey({ actorUserId: user.id, surveyId });
     redirect("/surveys");
   } catch (error) {
     if (error instanceof SurveyServiceError) {

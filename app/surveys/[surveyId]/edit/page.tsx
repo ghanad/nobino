@@ -356,6 +356,7 @@ export default async function EditSurveyPage({ params }: EditSurveyPageProps) {
           surveyTitle={survey.title}
           displayState={displayState}
           isOwnerOrAdmin={isOwnerOrAdmin}
+          isAdmin={user.role === "ADMIN" && user.active}
           endsAt={survey.endsAt}
           lastReminderAt={survey.lastReminderAt}
           kind={survey.kind}

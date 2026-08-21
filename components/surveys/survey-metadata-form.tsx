@@ -87,22 +87,23 @@ export function SurveyMetadataForm({
     status: "idle",
   });
 
-  const [startDate, setStartDate] = useState(
-    initial?.startsAt ? formatJalaliDateParam(initial.startsAt) : "",
-  );
-  const [startTime, setStartTime] = useState(
-    initial?.startsAt
-      ? `${initial.startsAt.getHours().toString().padStart(2, "0")}:00`
-      : "",
-  );
-  const [endDate, setEndDate] = useState(
-    initial?.endsAt ? formatJalaliDateParam(initial.endsAt) : "",
-  );
-  const [endTime, setEndTime] = useState(
-    initial?.endsAt
-      ? `${initial.endsAt.getHours().toString().padStart(2, "0")}:00`
-      : "",
-  );
+  const savedStartDate = initial?.startsAt
+    ? formatJalaliDateParam(initial.startsAt)
+    : "";
+  const savedStartTime = initial?.startsAt
+    ? `${initial.startsAt.getHours().toString().padStart(2, "0")}:00`
+    : "";
+  const savedEndDate = initial?.endsAt
+    ? formatJalaliDateParam(initial.endsAt)
+    : "";
+  const savedEndTime = initial?.endsAt
+    ? `${initial.endsAt.getHours().toString().padStart(2, "0")}:00`
+    : "";
+
+  const [startDate, setStartDate] = useState(savedStartDate);
+  const [startTime, setStartTime] = useState(savedStartTime);
+  const [endDate, setEndDate] = useState(savedEndDate);
+  const [endTime, setEndTime] = useState(savedEndTime);
 
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -113,6 +114,13 @@ export function SurveyMetadataForm({
       return () => clearTimeout(timer);
     }
   }, [state]);
+
+  useEffect(() => {
+    setStartDate(savedStartDate);
+    setStartTime(savedStartTime);
+    setEndDate(savedEndDate);
+    setEndTime(savedEndTime);
+  }, [savedEndDate, savedEndTime, savedStartDate, savedStartTime]);
 
   return (
     <form action={formAction} className="space-y-6" dir="rtl">
@@ -306,8 +314,10 @@ export function SurveyMetadataForm({
               <FieldLabel htmlFor="startTime">ساعت شروع</FieldLabel>
               <select
                 className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-                defaultValue={startTime}
+                id="startTime"
                 name="startTime"
+                onChange={(event) => setStartTime(event.target.value)}
+                value={startTime}
               >
                 <option value="">انتخاب کنید</option>
                 {HOUR_OPTIONS.map((opt) => (
@@ -342,8 +352,10 @@ export function SurveyMetadataForm({
               <FieldLabel htmlFor="endTime">ساعت پایان</FieldLabel>
               <select
                 className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-                defaultValue={endTime}
+                id="endTime"
                 name="endTime"
+                onChange={(event) => setEndTime(event.target.value)}
+                value={endTime}
               >
                 <option value="">انتخاب کنید</option>
                 {HOUR_OPTIONS.map((opt) => (

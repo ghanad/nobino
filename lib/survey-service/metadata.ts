@@ -12,6 +12,7 @@ import {
 import { db } from "@/lib/db";
 import { canCreateSurvey } from "@/lib/permissions";
 import {
+  canDeleteSurvey,
   canEditSurveyDraft,
   isSurveyManager,
 } from "@/lib/survey-permissions";
@@ -295,7 +296,7 @@ export async function updateSurveyMetadata(input: {
   });
 }
 
-export async function deleteSurveyDraft(input: {
+export async function deleteSurvey(input: {
   actorUserId: string;
   surveyId: string;
 }) {
@@ -318,14 +319,12 @@ export async function deleteSurveyDraft(input: {
       user,
     });
 
-    if (!isSurveyManager(actor)) {
+    if (!canDeleteSurvey(actor, survey.state)) {
       throw new SurveyServiceError(
-        "Only the survey owner or an admin can delete a survey.",
+        survey.state === SurveyState.DRAFT
+          ? "Only the survey owner or an admin can delete a draft survey."
+          : "Only an admin can delete a published survey.",
       );
-    }
-
-    if (survey.state !== SurveyState.DRAFT) {
-      throw new SurveyServiceError("Only draft surveys can be deleted.");
     }
 
     await tx.survey.delete({ where: { id: survey.id } });

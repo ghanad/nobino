@@ -18,7 +18,7 @@ import {
 } from "./business-rules-helpers";
 import {
   createSurveyDraft,
-  deleteSurveyDraft,
+  deleteSurvey,
   listAuthoringSurveys,
   listRespondentSurveys,
   SURVEY_DESCRIPTION_MAX_LENGTH,
@@ -123,7 +123,7 @@ test("metadata update and delete reject unknown surveys and inactive actors", as
     SurveyServiceError,
   );
   await assert.rejects(
-    deleteSurveyDraft({ actorUserId: adminId, surveyId: "missing-survey" }),
+    deleteSurvey({ actorUserId: adminId, surveyId: "missing-survey" }),
     SurveyServiceError,
   );
 
@@ -141,7 +141,7 @@ test("metadata update and delete reject unknown surveys and inactive actors", as
     SurveyServiceError,
   );
   await assert.rejects(
-    deleteSurveyDraft({ actorUserId: adminId, surveyId: survey.id }),
+    deleteSurvey({ actorUserId: adminId, surveyId: survey.id }),
     SurveyServiceError,
   );
 });
@@ -288,7 +288,7 @@ test("published survey content cannot be edited through the metadata service", a
   );
 });
 
-test("only the owner or an admin can delete a draft and non-drafts cannot be deleted", async () => {
+test("drafts can be deleted by their owner or an admin, other states only by an admin", async () => {
   const survey = await createSurveyDraft({
     actorUserId: adminId,
     title: "To delete",
@@ -300,11 +300,11 @@ test("only the owner or an admin can delete a draft and non-drafts cannot be del
   });
 
   await assert.rejects(
-    deleteSurveyDraft({ actorUserId: secondUserId, surveyId: survey.id }),
+    deleteSurvey({ actorUserId: secondUserId, surveyId: survey.id }),
     SurveyServiceError,
   );
   await assert.rejects(
-    deleteSurveyDraft({ actorUserId: userId, surveyId: survey.id }),
+    deleteSurvey({ actorUserId: userId, surveyId: survey.id }),
     SurveyServiceError,
   );
 
@@ -312,10 +312,32 @@ test("only the owner or an admin can delete a draft and non-drafts cannot be del
     where: { id: survey.id },
     data: { state: SurveyState.PUBLISHED },
   });
+
+  await db.user.update({
+    where: { id: secondUserId },
+    data: { canCreateSurveys: true },
+  });
+  const ownedPublished = await createSurveyDraft({
+    actorUserId: secondUserId,
+    title: "Owner published",
+    kind: SurveyKind.SATISFACTION,
+    identityMode: SurveyIdentityMode.NAMED,
+  });
+  await db.survey.update({
+    where: { id: ownedPublished.id },
+    data: { state: SurveyState.PUBLISHED },
+  });
+
   await assert.rejects(
-    deleteSurveyDraft({ actorUserId: adminId, surveyId: survey.id }),
+    deleteSurvey({ actorUserId: secondUserId, surveyId: ownedPublished.id }),
     SurveyServiceError,
   );
+  assert.ok(
+    await db.survey.findUnique({ where: { id: ownedPublished.id } }),
+  );
+
+  await deleteSurvey({ actorUserId: adminId, surveyId: survey.id });
+  assert.equal(await db.survey.findUnique({ where: { id: survey.id } }), null);
 
   const draft = await createSurveyDraft({
     actorUserId: adminId,
@@ -323,7 +345,7 @@ test("only the owner or an admin can delete a draft and non-drafts cannot be del
     kind: SurveyKind.SATISFACTION,
     identityMode: SurveyIdentityMode.NAMED,
   });
-  await deleteSurveyDraft({ actorUserId: adminId, surveyId: draft.id });
+  await deleteSurvey({ actorUserId: adminId, surveyId: draft.id });
   assert.equal(await db.survey.findUnique({ where: { id: draft.id } }), null);
 });
 
@@ -341,7 +363,7 @@ test("metadata create, update, and delete are audited without answer data", asyn
     title: "Audited 2",
   });
 
-  await deleteSurveyDraft({ actorUserId: adminId, surveyId: survey.id });
+  await deleteSurvey({ actorUserId: adminId, surveyId: survey.id });
 
   const logs = await db.auditLog.findMany({
     where: { entityType: "Survey", entityId: survey.id },

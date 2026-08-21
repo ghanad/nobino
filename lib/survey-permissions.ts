@@ -43,6 +43,22 @@ export function canPerformLifecycleAction(actor: SurveyActor): boolean {
   return isSurveyManager(actor);
 }
 
+/**
+ * Drafts may be deleted by any survey manager (owner or admin). Surveys that
+ * were published carry respondent data, so deleting them is reserved for
+ * active admins.
+ */
+export function canDeleteSurvey(
+  actor: SurveyActor,
+  state: SurveyState,
+): boolean {
+  if (state === SurveyState.DRAFT) {
+    return isSurveyManager(actor);
+  }
+
+  return isActiveAdmin(actor);
+}
+
 export function canEditSurveyDraft(
   actor: SurveyActor,
   state: SurveyState,

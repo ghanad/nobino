@@ -301,7 +301,7 @@ export const archiveSurveySchema = z.object({
   surveyId: z.string().min(1, "شناسه نظرسنجی نامعتبر است."),
 });
 
-export const deleteSurveyDraftSchema = z.object({
+export const deleteSurveySchema = z.object({
   surveyId: z.string().min(1, "شناسه نظرسنجی نامعتبر است."),
 });
 

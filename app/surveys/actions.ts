@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 
 import { requireCurrentUser } from "@/lib/auth";
 import {
@@ -115,6 +116,8 @@ export async function updateSurveyMetadataAction(
       startsAt,
       endsAt,
     });
+
+    revalidatePath(`/surveys/${parsed.data.surveyId}/edit`);
 
     return { message: "تغییرات با موفقیت ذخیره شد.", status: "success" };
   } catch (error) {
