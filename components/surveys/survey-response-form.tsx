@@ -48,6 +48,7 @@ type SurveyResponseFormProps = {
   surveyId: string;
   userId: string;
   identityMode: string;
+  surveyKind: string;
 };
 
 export function SurveyResponseForm({
@@ -55,6 +56,7 @@ export function SurveyResponseForm({
   surveyId,
   userId,
   identityMode,
+  surveyKind,
 }: SurveyResponseFormProps) {
   const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
   const [saveState, setSaveState] = useState<SaveDraftActionState>({ status: "idle" });
@@ -315,17 +317,15 @@ export function SurveyResponseForm({
 
   return (
     <div className="mx-auto w-full max-w-[52rem] space-y-4" dir="rtl">
-      {identityMode === "ANONYMOUS" ? (
-        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-800">
-          Nobino پاسخ نهایی ناشناس را به حساب شما پیوند نمی‌دهد؛ با این حال
-          ناشناسی در سطح برنامه است و متن پاسخ‌های آزاد ممکن است هویت شما را
-          فاش کند.
-        </div>
-      ) : null}
-
       {currentQuestion ? [currentQuestion].map((question) => {
         const isVisible = visibleQuestionIds.has(question.id);
         const showRequired = question.required && isVisible;
+        const ratingMinLabel = question.ratingMinLabel ?? (
+          surveyKind === "SATISFACTION" ? "خیلی ناراضی" : "کمترین امتیاز"
+        );
+        const ratingMaxLabel = question.ratingMaxLabel ?? (
+          surveyKind === "SATISFACTION" ? "خیلی راضی" : "بیشترین امتیاز"
+        );
 
         return (
           <div
@@ -340,11 +340,17 @@ export function SurveyResponseForm({
                   <p className="font-medium">
                     سؤال {currentQuestionIndex + 1} از {visibleQuestions.length}
                   </p>
-                  <p aria-live="polite" role="status">
-                    {saveState.status === "saving" ? "در حال ذخیره…" : null}
-                    {saveState.status === "saved" ? "ذخیره شد" : null}
-                    {saveState.status === "error" ? saveState.message ?? "خطا در ذخیره" : null}
-                  </p>
+                  {saveState.status !== "idle" ? (
+                    <p
+                      aria-live="polite"
+                      className={saveState.status === "error" ? "text-destructive" : undefined}
+                      role="status"
+                    >
+                      {saveState.status === "saving" ? "در حال ذخیره…" : null}
+                      {saveState.status === "saved" ? "ذخیره شد" : null}
+                      {saveState.status === "error" ? saveState.message ?? "خطا در ذخیره" : null}
+                    </p>
+                  ) : null}
                 </div>
                 <div
                   aria-hidden="true"
@@ -359,7 +365,10 @@ export function SurveyResponseForm({
               <p ref={questionHeadingRef} tabIndex={-1} className="text-base font-semibold leading-7 text-slate-950">
                 {question.prompt}
                 {showRequired ? (
-                  <span aria-label="الزامی" className="mr-1 text-destructive">*</span>
+                  <>
+                    <span aria-hidden="true" className="mr-1 text-destructive">*</span>
+                    <span className="sr-only"> (الزامی)</span>
+                  </>
                 ) : null}
               </p>
               {question.helpText ? (
@@ -444,38 +453,36 @@ export function SurveyResponseForm({
             {/* RATING */}
             {question.type === "RATING" ? (
               <div className="space-y-2" role="group" aria-label={`امتیاز برای ${question.prompt}`}>
-                {(question.ratingMinLabel || question.ratingMaxLabel) ? (
-                  <div className="flex items-start justify-between gap-4 text-xs leading-5 text-muted-foreground">
-                    <span className="max-w-[45%] text-right">{question.ratingMinLabel}</span>
-                    <span className="max-w-[45%] text-left">{question.ratingMaxLabel}</span>
-                  </div>
-                ) : null}
+                <div className="flex items-start justify-between gap-4 text-xs leading-5 text-muted-foreground">
+                  <span className="max-w-[45%] text-right">{ratingMinLabel}</span>
+                  <span className="max-w-[45%] text-left">{ratingMaxLabel}</span>
+                </div>
                 <div className="flex flex-wrap gap-2" aria-label="مقیاس امتیازدهی">
-                    {Array.from(
-                      {
-                        length:
-                          (question.ratingMax ?? 5) - (question.ratingMin ?? 1) + 1,
-                      },
-                      (_, i) => (question.ratingMin ?? 1) + i,
-                    ).map((val) => {
-                      const isSelected = syncedAnswers[question.id] === val;
-                      return (
-                        <button
-                          key={val}
-                          type="button"
-                          aria-label={`${val}${question.ratingMinLabel || question.ratingMaxLabel ? " از مقیاس امتیاز" : ""}`}
-                          aria-pressed={isSelected}
-                          className={`flex h-11 w-11 items-center justify-center rounded-md border text-sm font-medium transition-colors hover:border-primary hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-                            isSelected
-                              ? "border-primary bg-primary text-primary-foreground"
-                              : ""
-                          }`}
-                          onClick={() => handleRating(question.id, val)}
-                        >
-                          {val}
-                        </button>
-                      );
-                    })}
+                  {Array.from(
+                    {
+                      length:
+                        (question.ratingMax ?? 5) - (question.ratingMin ?? 1) + 1,
+                    },
+                    (_, i) => (question.ratingMin ?? 1) + i,
+                  ).map((val) => {
+                    const isSelected = syncedAnswers[question.id] === val;
+                    return (
+                      <button
+                        key={val}
+                        type="button"
+                        aria-label={`${val} از مقیاس ${ratingMinLabel} تا ${ratingMaxLabel}`}
+                        aria-pressed={isSelected}
+                        className={`flex h-11 w-11 items-center justify-center rounded-md border text-sm font-medium transition-colors hover:border-primary hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                          isSelected
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : ""
+                        }`}
+                        onClick={() => handleRating(question.id, val)}
+                      >
+                        {val}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             ) : null}

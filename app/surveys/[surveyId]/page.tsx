@@ -108,6 +108,7 @@ export default async function SurveyDetailPage({ params }: Props) {
           surveyId={data.id}
           userId={user.id}
           identityMode={data.identityMode}
+          surveyKind={data.kind}
         />
       ) : data.questions.length > 0 ? (
         <SurveyDetailDisplay
