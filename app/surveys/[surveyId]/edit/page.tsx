@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
+import { Eye } from "lucide-react";
 
 import type {
   SurveyConditionOperator,
@@ -22,10 +24,8 @@ import { SurveyMetadataForm } from "@/components/surveys/survey-metadata-form";
 import { SurveyCollaboratorEditor } from "@/components/surveys/survey-collaborator-editor";
 import { SurveyAudienceEditor } from "@/components/surveys/survey-audience-editor";
 import { SurveyQuestionBuilder } from "@/components/surveys/survey-question-builder";
-import { SurveyPreview } from "@/components/surveys/survey-preview";
 import { SurveyReadinessSummary } from "@/components/surveys/survey-readiness-summary";
 import { SurveyLifecycleControls } from "@/components/surveys/survey-lifecycle-controls";
-import { SurveyPreviewDialog } from "@/components/surveys/survey-preview-dialog";
 import { updateSurveyMetadataAction } from "@/app/surveys/actions";
 import type { QuestionConditionData } from "@/app/surveys/survey-branching-actions";
 
@@ -101,70 +101,6 @@ export default async function EditSurveyPage({ params }: EditSurveyPageProps) {
   );
 
   const isDraft = survey.state === "DRAFT";
-
-  // Always load preview data
-  const questions = await db.surveyQuestion.findMany({
-    where: { surveyId },
-    select: {
-      id: true,
-      prompt: true,
-      helpText: true,
-      type: true,
-      required: true,
-      sortOrder: true,
-      randomizeOptions: true,
-      ratingMin: true,
-      ratingMax: true,
-      ratingMinLabel: true,
-      ratingMaxLabel: true,
-      maxSelections: true,
-      options: {
-        select: {
-          id: true,
-          label: true,
-          sortOrder: true,
-        },
-        orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
-      },
-      targetCondition: {
-        select: {
-          id: true,
-          sourceQuestionId: true,
-          sourceQuestion: {
-            select: { prompt: true, type: true },
-          },
-          sourceOption: {
-            select: { id: true, label: true },
-          },
-          operator: true,
-        },
-      },
-    },
-    orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
-  }).then((rawQuestions) =>
-    rawQuestions.map((q) => ({
-      id: q.id,
-      prompt: q.prompt,
-      helpText: q.helpText,
-      type: q.type,
-      required: q.required,
-      sortOrder: q.sortOrder,
-      randomizeOptions: q.randomizeOptions,
-      ratingMin: q.ratingMin,
-      ratingMax: q.ratingMax,
-      ratingMinLabel: q.ratingMinLabel,
-      ratingMaxLabel: q.ratingMaxLabel,
-      maxSelections: q.maxSelections,
-      options: q.options,
-      condition: q.targetCondition
-        ? {
-            sourceQuestionPrompt: q.targetCondition.sourceQuestion.prompt,
-            sourceOptionLabel: q.targetCondition.sourceOption.label,
-            operator: q.targetCondition.operator,
-          }
-        : null,
-    })),
-  );
 
   // Load readiness report for drafts
   const readinessReport = isDraft
@@ -266,7 +202,12 @@ export default async function EditSurveyPage({ params }: EditSurveyPageProps) {
           <p className="text-sm text-muted-foreground">{isDraft ? "سوال‌ها را بسازید و تنظیمات انتشار را در ستون کناری تکمیل کنید." : "نظرسنجی منتشر شده - اطلاعات قابل ویرایش نیست"}</p>
         </div>
         <div className="flex items-center gap-2">
-          <SurveyPreviewDialog><SurveyPreview title={survey.title} description={survey.description} questions={questions} identityMode={survey.identityMode} isAnonymous={survey.identityMode === "ANONYMOUS"} /></SurveyPreviewDialog>
+          <Button asChild size="sm" type="button" variant="outline">
+            <Link href={`/surveys/${survey.id}/preview`}>
+              <Eye className="h-4 w-4" />
+              پیش‌نمایش
+            </Link>
+          </Button>
           {isDraft ? <Button form="survey-metadata-form" size="sm" type="submit">ذخیره تغییرات</Button> : null}
         </div>
       </header>
