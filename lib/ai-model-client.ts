@@ -23,6 +23,7 @@ export async function requestAiJson(input: {
         max_tokens: input.maxOutputTokens ?? Math.min(settings.maxOutputTokens, 3000),
         temperature: 0.1,
         model: settings.model,
+        response_format: { type: "json_object" },
         stream: false,
         messages: [
           { role: "system", content: input.systemPrompt },

@@ -13,18 +13,17 @@ import { cn } from "@/lib/utils";
 
 const KIND_OPTIONS = [
   {
-    description: "دیدن نتایج در حین فعال بودن نظرسنجی",
+    description: "نتایج در زمان فعال بودن قابل مشاهده است.",
     label: "رضایت‌سنجی",
     value: SurveyKind.SATISFACTION,
   },
   {
-    description: "دیدن نتایج در حین فعال بودن نظرسنجی",
+    description: "برای جمع‌آوری پاسخ و نمایش نتایج در طول اجرا.",
     label: "جمع‌آوری اطلاعات",
     value: SurveyKind.DATA_COLLECTION,
   },
   {
-    description:
-      "هیچ‌کس تا پایان نظرسنجی یا بسته شدن آن نمی‌تواند نتایج را ببیند",
+    description: "نتایج پس از بسته شدن نظرسنجی نمایش داده می‌شوند.",
     label: "رای‌گیری",
     value: SurveyKind.VOTE,
   },
@@ -32,13 +31,12 @@ const KIND_OPTIONS = [
 
 const IDENTITY_OPTIONS = [
   {
-    description: "پاسخ هر کاربر با نام او ثبت می‌شود",
+    description: "پاسخ هر کاربر با نام او ثبت می‌شود.",
     label: "مشخص",
     value: SurveyIdentityMode.NAMED,
   },
   {
-    description:
-      "پاسخ‌ها بدون ارتباط با کاربر ثبت می‌شوند. حداقل ۵ دریافت‌کننده نیاز است و نتایج تا ۵ پاسخ نمایش داده نمی‌شوند",
+    description: "پاسخ‌ها به نام پاسخ‌دهنده ثبت نمی‌شوند.",
     label: "ناشناس",
     value: SurveyIdentityMode.ANONYMOUS,
   },
@@ -110,6 +108,8 @@ export function SurveyMetadataForm({
   const [endTime, setEndTime] = useState(savedEndTime);
 
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const selectedKind = initial?.kind ?? SurveyKind.SATISFACTION;
+  const selectedIdentityMode = initial?.identityMode ?? SurveyIdentityMode.NAMED;
 
   useEffect(() => {
     if (state.status === "success" && state.message) {
@@ -127,7 +127,12 @@ export function SurveyMetadataForm({
   }, [savedEndDate, savedEndTime, savedStartDate, savedStartTime]);
 
   return (
-    <form action={formAction} className="space-y-6" dir="rtl" id={formId}>
+    <form
+      action={formAction}
+      className={cn("space-y-6", !isEditing && "space-y-5")}
+      dir="rtl"
+      id={formId}
+    >
       {isEditing && initial ? (
         <input name="surveyId" type="hidden" value={initial.surveyId} />
       ) : null}
@@ -150,146 +155,146 @@ export function SurveyMetadataForm({
         </div>
       ) : null}
 
-      {/* Title */}
-      <div className="grid gap-2 border-b pb-5">
+      <section className="grid gap-3 border-b pb-5">
         <h2 className="text-base font-semibold">اطلاعات پایه</h2>
-        <FieldLabel htmlFor="title">عنوان نظرسنجی</FieldLabel>
-        <input
-          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-          defaultValue={initial?.title ?? ""}
-          id="title"
-          maxLength={200}
-          name="title"
-          placeholder="عنوان نظرسنجی را وارد کنید"
-          required
-          type="text"
-        />
-        {state.errors?.title ? (
-          <p className="text-xs text-red-600">{state.errors.title[0]}</p>
-        ) : null}
-      </div>
+        <div className="grid gap-2">
+          <FieldLabel htmlFor="title">عنوان نظرسنجی</FieldLabel>
+          <input
+            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+            defaultValue={initial?.title ?? ""}
+            id="title"
+            maxLength={200}
+            name="title"
+            placeholder="عنوان نظرسنجی را وارد کنید"
+            required
+            type="text"
+          />
+          {state.errors?.title ? (
+            <p className="text-xs text-red-600">{state.errors.title[0]}</p>
+          ) : null}
+        </div>
+        <div className="grid gap-2">
+          <FieldLabel htmlFor="description">
+            توضیحات <span className="font-normal text-muted-foreground">(اختیاری)</span>
+          </FieldLabel>
+          <textarea
+            className="min-h-20 w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+            defaultValue={initial?.description ?? ""}
+            id="description"
+            maxLength={4000}
+            name="description"
+            placeholder="توضیح کوتاه برای مخاطبان بنویسید"
+          />
+          {state.errors?.description ? (
+            <p className="text-xs text-red-600">{state.errors.description[0]}</p>
+          ) : null}
+        </div>
+      </section>
 
-      {/* Description */}
-      <div className="grid gap-2 border-b pb-5">
-        <FieldLabel htmlFor="description">توضیحات</FieldLabel>
-        <textarea
-          className="min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-          defaultValue={initial?.description ?? ""}
-          id="description"
-          maxLength={4000}
-          name="description"
-          placeholder="توضیحات اختیاری نظرسنجی"
-        />
-        {state.errors?.description ? (
-          <p className="text-xs text-red-600">{state.errors.description[0]}</p>
-        ) : null}
-      </div>
-
-      {/* Kind */}
-      <div className="grid gap-2 border-t pt-6">
-        <h2 className="text-base font-semibold">رفتار پاسخ‌ها</h2>
-        <span className="text-sm font-medium">نوع نظرسنجی</span>
-        {canChangeKindIdentity ? (
-          <>
-            <div className="grid gap-2">
-              {KIND_OPTIONS.map((option) => (
-                <label
-                  className={cn(
-                    "flex cursor-pointer items-start gap-3 rounded-md border px-3 py-2.5 text-sm transition-colors hover:bg-muted/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5",
-                  )}
-                  key={option.value}
-                >
-                  <input
-                    className="mt-0.5"
-                    defaultChecked={initial?.kind === option.value}
-                    name="kind"
-                    type="radio"
-                    value={option.value}
-                  />
-                  <span className="grid gap-1">
-                    <span className="font-medium">{option.label}</span>
-                    <span className="text-xs leading-5 text-muted-foreground">
-                      {option.description}
+      <section className="grid gap-4">
+        <h2 className="text-base font-semibold">تنظیمات پاسخ</h2>
+        <div className="grid gap-2">
+          <span className="text-sm font-medium">نوع نظرسنجی</span>
+          {canChangeKindIdentity ? (
+            <>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {KIND_OPTIONS.map((option) => (
+                  <label
+                    className="flex min-h-16 cursor-pointer items-start gap-2.5 rounded-md border px-3 py-2 text-sm transition-colors hover:bg-muted/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5"
+                    key={option.value}
+                  >
+                    <input
+                      className="mt-0.5"
+                      defaultChecked={selectedKind === option.value}
+                      name="kind"
+                      type="radio"
+                      value={option.value}
+                    />
+                    <span className="grid gap-0.5">
+                      <span className="font-medium">{option.label}</span>
+                      <span className="text-xs leading-4 text-muted-foreground">
+                        {option.description}
+                      </span>
                     </span>
-                  </span>
-                </label>
-              ))}
+                  </label>
+                ))}
+              </div>
+              {state.errors?.kind ? (
+                <p className="text-xs text-red-600">{state.errors.kind[0]}</p>
+              ) : null}
+            </>
+          ) : (
+            <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+              {KIND_OPTIONS.find((o) => o.value === initial?.kind)?.label ??
+                "نوع نظرسنجی"}
             </div>
-            {state.errors?.kind ? (
-              <p className="text-xs text-red-600">{state.errors.kind[0]}</p>
-            ) : null}
-          </>
-        ) : (
-          <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
-            {KIND_OPTIONS.find((o) => o.value === initial?.kind)?.label ??
-              "نوع نظرسنجی"}
-          </div>
-        )}
-      </div>
+          )}
+        </div>
 
-      {/* Identity mode */}
-      <div className="grid gap-2">
-        <span className="text-sm font-medium">حالت هویت پاسخ‌دهندگان</span>
-        {canChangeKindIdentity ? (
-          <>
-            <div className="grid gap-2">
-              {IDENTITY_OPTIONS.map((option) => (
-                <label
-                  className={cn(
-                    "flex cursor-pointer items-start gap-3 rounded-md border px-3 py-2.5 text-sm transition-colors hover:bg-muted/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5",
-                  )}
-                  key={option.value}
-                >
-                  <input
-                    className="mt-0.5"
-                    defaultChecked={initial?.identityMode === option.value}
-                    name="identityMode"
-                    type="radio"
-                    value={option.value}
-                  />
-                  <span className="grid gap-1">
-                    <span className="font-medium">{option.label}</span>
-                    <span className="text-xs leading-5 text-muted-foreground">
-                      {option.description}
+        <div className="grid gap-2">
+          <span className="text-sm font-medium">حالت هویت پاسخ‌دهندگان</span>
+          {canChangeKindIdentity ? (
+            <>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {IDENTITY_OPTIONS.map((option) => (
+                  <label
+                    className="flex min-h-16 cursor-pointer items-start gap-2.5 rounded-md border px-3 py-2 text-sm transition-colors hover:bg-muted/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5"
+                    key={option.value}
+                  >
+                    <input
+                      className="mt-0.5"
+                      defaultChecked={selectedIdentityMode === option.value}
+                      name="identityMode"
+                      type="radio"
+                      value={option.value}
+                    />
+                    <span className="grid gap-0.5">
+                      <span className="font-medium">{option.label}</span>
+                      <span className="text-xs leading-4 text-muted-foreground">
+                        {option.description}
+                      </span>
                     </span>
-                  </span>
-                </label>
-              ))}
+                  </label>
+                ))}
+              </div>
+              {state.errors?.identityMode ? (
+                <p className="text-xs text-red-600">
+                  {state.errors.identityMode[0]}
+                </p>
+              ) : null}
+            </>
+          ) : (
+            <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+              {IDENTITY_OPTIONS.find((o) => o.value === initial?.identityMode)
+                ?.label ?? "حالت هویت"}
             </div>
-            {state.errors?.identityMode ? (
-              <p className="text-xs text-red-600">
-                {state.errors.identityMode[0]}
-              </p>
-            ) : null}
-          </>
-        ) : (
-          <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
-            {IDENTITY_OPTIONS.find((o) => o.value === initial?.identityMode)
-              ?.label ?? "حالت هویت"}
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      </section>
 
-      {/* Behavioral explanation */}
-      <div className="border-r border-blue-200 pr-3 text-xs leading-6 text-muted-foreground">
-        <p className="font-medium">تفاوت حالت‌های نظرسنجی:</p>
-        <ul className="mt-1 list-inside list-disc space-y-1">
-          <li>
-            <strong>مشخص:</strong> پاسخ هر کاربر با نام او ثبت می‌شود. نتایج در
-            حین فعال بودن نظرسنجی قابل مشاهده است.
-          </li>
-          <li>
-            <strong>ناشناس:</strong> پاسخ‌ها بدون ارتباط با کاربر ثبت می‌شوند.
-            برای انتشار حداقل ۵ دریافت‌کننده نیاز است و نتایج تا جمع‌آوری ۵ پاسخ
-            نمایش داده نمی‌شوند.
-          </li>
-          <li>
-            <strong>رای‌گیری:</strong> هیچ‌کس (حتی مدیر) تا پایان نظرسنجی یا
-            بسته شدن آن نمی‌تواند نتایج را ببیند. فقط تعداد شرکت‌کنندگان قابل
-            مشاهده است.
-          </li>
-        </ul>
-      </div>
+      {!isEditing ? (
+        <details className="text-xs leading-6 text-muted-foreground">
+          <summary className="w-fit cursor-pointer rounded-sm font-medium text-foreground marker:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            تفاوت حالت‌ها چیست؟
+          </summary>
+          <ul className="mt-2 list-inside list-disc space-y-1 border-r pr-3">
+            <li>
+              <strong>مشخص:</strong> پاسخ هر کاربر با نام او ثبت می‌شود. نتایج در
+              حین فعال بودن نظرسنجی قابل مشاهده است.
+            </li>
+            <li>
+              <strong>ناشناس:</strong> پاسخ‌ها بدون ارتباط با کاربر ثبت می‌شوند.
+              برای انتشار حداقل ۵ دریافت‌کننده نیاز است و نتایج تا جمع‌آوری ۵ پاسخ
+              نمایش داده نمی‌شوند.
+            </li>
+            <li>
+              <strong>رای‌گیری:</strong> هیچ‌کس (حتی مدیر) تا پایان نظرسنجی یا
+              بسته شدن آن نمی‌تواند نتایج را ببیند. فقط تعداد شرکت‌کنندگان قابل
+              مشاهده است.
+            </li>
+          </ul>
+        </details>
+      ) : null}
 
       {/* Schedule (only visible when editing) */}
       {isEditing ? (
@@ -381,20 +386,27 @@ export function SurveyMetadataForm({
       ) : null}
 
       {/* Submit */}
-      {!hideSubmit ? <div className="flex items-center gap-3 border-t pt-4">
-        <SubmitButton pendingLabel="در حال ذخیره">
-          {isEditing ? "ذخیره تغییرات" : "ایجاد نظرسنجی"}
-        </SubmitButton>
-        {isEditing && initial ? (
-          <Button
-            onClick={() => window.history.back()}
-            type="button"
-            variant="outline"
-          >
-            انصراف
-          </Button>
-        ) : null}
-      </div> : null}
+      {!hideSubmit ? (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 pt-1">
+          <SubmitButton pendingLabel="در حال ذخیره">
+            {isEditing ? "ذخیره تغییرات" : "ایجاد نظرسنجی"}
+          </SubmitButton>
+          {!isEditing ? (
+            <p className="text-xs text-muted-foreground">
+              پس از ایجاد، وارد ویرایشگر سوال‌ها می‌شوید.
+            </p>
+          ) : null}
+          {isEditing && initial ? (
+            <Button
+              onClick={() => window.history.back()}
+              type="button"
+              variant="outline"
+            >
+              انصراف
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
     </form>
   );
 }

@@ -14,10 +14,10 @@ export default async function NewSurveyPage() {
   }
 
   return (
-    <div className="space-y-8" dir="rtl">
+    <div className="space-y-6" dir="rtl">
       <PageHeader
         title="نظرسنجی جدید"
-        subtitle="ایجاد یک نظرسنجی جدید با تنظیمات اولیه"
+        subtitle="اطلاعات اولیه را وارد کنید؛ سوال‌ها را در مرحله بعد اضافه می‌کنید."
       />
 
       <div className="mx-auto max-w-2xl">

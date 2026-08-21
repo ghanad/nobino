@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ArrowDown, ArrowUp, ChevronDown, GitBranch, Plus, Shuffle, Trash2 } from "lucide-react";
 import type { SurveyConditionOperator, SurveyQuestionType } from "@prisma/client";
@@ -28,7 +28,12 @@ import {
   type RandomizeActionState,
 } from "@/app/surveys/survey-branching-actions";
 import { Button } from "@/components/ui/button";
-import { SurveyAiPanel } from "@/components/surveys/survey-ai-panel";
+import {
+  SurveyAiPanel,
+  SurveyAiQuestionReview,
+  SurveyAiQuestionReviewTrigger,
+  type SurveyAiQuestionPayload,
+} from "@/components/surveys/survey-ai-panel";
 
 const QUESTION_TYPE_OPTIONS: {
   value: SurveyQuestionType;
@@ -55,6 +60,47 @@ type QuestionWithOptions = SurveyQuestionData & {
   options: { id: string; label: string; sortOrder: number }[];
   targetCondition: QuestionConditionData | null;
 };
+
+type EditableQuestionFields = {
+  prompt: string;
+  helpText: string;
+  type: SurveyQuestionType;
+  required: boolean;
+  ratingMin: string;
+  ratingMax: string;
+  ratingMinLabel: string;
+  ratingMaxLabel: string;
+  maxSelections: string;
+};
+
+function editableFieldsFromQuestion(question: Pick<SurveyQuestionData, "prompt" | "helpText" | "type" | "required" | "ratingMin" | "ratingMax" | "ratingMinLabel" | "ratingMaxLabel" | "maxSelections">): EditableQuestionFields {
+  return {
+    prompt: question.prompt,
+    helpText: question.helpText ?? "",
+    type: question.type,
+    required: question.required,
+    ratingMin: question.ratingMin?.toString() ?? "1",
+    ratingMax: question.ratingMax?.toString() ?? "5",
+    ratingMinLabel: question.ratingMinLabel ?? "",
+    ratingMaxLabel: question.ratingMaxLabel ?? "",
+    maxSelections: question.maxSelections?.toString() ?? "",
+  };
+}
+
+function editableFieldsFromAiQuestion(question: SurveyAiQuestionPayload): EditableQuestionFields | null {
+  if (!question.type) return null;
+  return {
+    prompt: question.prompt,
+    helpText: question.helpText ?? "",
+    type: question.type as SurveyQuestionType,
+    required: question.required ?? false,
+    ratingMin: question.ratingMin?.toString() ?? "1",
+    ratingMax: question.ratingMax?.toString() ?? "5",
+    ratingMinLabel: question.ratingMinLabel ?? "",
+    ratingMaxLabel: question.ratingMaxLabel ?? "",
+    maxSelections: question.maxSelections?.toString() ?? "",
+  };
+}
 
 type SurveyQuestionBuilderProps = {
   surveyId: string;
@@ -90,6 +136,34 @@ export function SurveyQuestionBuilder({
           ...question,
           options: item.options,
           targetCondition: item.targetCondition,
+        };
+      }),
+    );
+  }
+
+  function handleAiApplied(questionId: string, next: SurveyAiQuestionPayload) {
+    setQuestions((prev) =>
+      prev.map((item) => {
+        if (item.id !== questionId || !next.type) return item;
+        return {
+          ...item,
+          prompt: next.prompt,
+          helpText: next.helpText ?? null,
+          type: next.type as SurveyQuestionType,
+          required: next.required ?? false,
+          randomizeOptions: next.randomizeOptions ?? false,
+          ratingMin: next.ratingMin ?? null,
+          ratingMax: next.ratingMax ?? null,
+          ratingMinLabel: next.ratingMinLabel ?? null,
+          ratingMaxLabel: next.ratingMaxLabel ?? null,
+          maxSelections: next.maxSelections ?? null,
+          options: next.options
+            ? next.options.map((option, index) => ({
+                id: option.id ?? item.options[index]?.id ?? `${questionId}-option-${index}`,
+                label: option.label,
+                sortOrder: index,
+              }))
+            : item.options,
         };
       }),
     );
@@ -270,7 +344,7 @@ export function SurveyQuestionBuilder({
         </div>
       ) : null}
 
-      <SurveyAiPanel surveyId={surveyId} questionId={activeQuestionId ?? undefined} disabled={!canEdit} />
+      <SurveyAiPanel surveyId={surveyId} disabled={!canEdit} />
 
       {questions.length > 0 && validationMessages.length > 0 ? (
         <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3">
@@ -314,6 +388,7 @@ export function SurveyQuestionBuilder({
                   handleOptionUpdated(question.id, option)
                 }
                 onUpdated={handleUpdated}
+                onAiApplied={(next) => handleAiApplied(question.id, next)}
                 onSelect={() => setActiveQuestionId(question.id)}
                 onRandomizeToggle={handleRandomizeToggle}
                 onConditionUpdated={(condition) =>
@@ -483,6 +558,7 @@ type SurveyQuestionCardProps = {
   onOptionUpdated: (option: OptionData) => void;
   onConditionUpdated: (condition: QuestionConditionData | null) => void;
   onUpdated: (question: SurveyQuestionData) => void;
+  onAiApplied: (question: SurveyAiQuestionPayload) => void;
   onSelect: () => void;
   onRandomizeToggle: (questionId: string, enabled: boolean) => void;
   question: QuestionWithOptions;
@@ -504,6 +580,7 @@ function SurveyQuestionCard({
   onOptionUpdated,
   onConditionUpdated,
   onUpdated,
+  onAiApplied,
   onSelect,
   onRandomizeToggle,
   question,
@@ -528,6 +605,9 @@ function SurveyQuestionCard({
   const [maxSelections, setMaxSelections] = useState(
     question.maxSelections?.toString() ?? "",
   );
+  const [savedFields, setSavedFields] = useState<EditableQuestionFields>(() => editableFieldsFromQuestion(question));
+  const [dirtyOptionIds, setDirtyOptionIds] = useState<Set<string>>(() => new Set());
+  const [aiReviewOpen, setAiReviewOpen] = useState(false);
 
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -537,6 +617,24 @@ function SurveyQuestionCard({
 
   const droppingOptions =
     isChoiceType(question.type) && !isChoiceType(type);
+  const currentFields: EditableQuestionFields = {
+    prompt,
+    helpText,
+    type,
+    required,
+    ratingMin,
+    ratingMax,
+    ratingMinLabel,
+    ratingMaxLabel,
+    maxSelections,
+  };
+  const isDirty = JSON.stringify(currentFields) !== JSON.stringify(savedFields) || dirtyOptionIds.size > 0;
+  const questionRevision = question.options.map((option) => `${option.id}:${option.label}`).join("|");
+  const closeAiReview = useCallback(() => setAiReviewOpen(false), []);
+
+  useEffect(() => {
+    if (isDirty) setAiReviewOpen(false);
+  }, [isDirty]);
 
   async function handleSave() {
     setSaving(true);
@@ -566,6 +664,17 @@ function SurveyQuestionCard({
       const result = await updateQuestionAction({}, form);
       if (result.status === "success" && result.question) {
         onUpdated(result.question);
+        const nextFields = editableFieldsFromQuestion(result.question);
+        setPrompt(nextFields.prompt);
+        setHelpText(nextFields.helpText);
+        setType(nextFields.type);
+        setRequired(nextFields.required);
+        setRatingMin(nextFields.ratingMin);
+        setRatingMax(nextFields.ratingMax);
+        setRatingMinLabel(nextFields.ratingMinLabel);
+        setRatingMaxLabel(nextFields.ratingMaxLabel);
+        setMaxSelections(nextFields.maxSelections);
+        setSavedFields(nextFields);
         setMessage("تغییرات این سؤال اعمال شد.");
       } else {
         setMessage(result.message ?? "ذخیره سوال ناموفق بود.");
@@ -576,6 +685,31 @@ function SurveyQuestionCard({
     } finally {
       setSaving(false);
     }
+  }
+
+  function handleAiApplied(next: SurveyAiQuestionPayload) {
+    const nextFields = editableFieldsFromAiQuestion(next);
+    if (!nextFields) return;
+    setPrompt(nextFields.prompt);
+    setHelpText(nextFields.helpText);
+    setType(nextFields.type);
+    setRequired(nextFields.required);
+    setRatingMin(nextFields.ratingMin);
+    setRatingMax(nextFields.ratingMax);
+    setRatingMinLabel(nextFields.ratingMinLabel);
+    setRatingMaxLabel(nextFields.ratingMaxLabel);
+    setMaxSelections(nextFields.maxSelections);
+    setSavedFields(nextFields);
+    onAiApplied(next);
+  }
+
+  function handleOptionDirtyChange(optionId: string, dirty: boolean) {
+    setDirtyOptionIds((current) => {
+      const next = new Set(current);
+      if (dirty) next.add(optionId);
+      else next.delete(optionId);
+      return next;
+    });
   }
 
   async function handleDelete() {
@@ -621,8 +755,16 @@ function SurveyQuestionCard({
         </div>
       </button>
         <div className="flex shrink-0 items-center gap-1 pl-2">
-        {canEdit ? (
-          <div className="flex items-center gap-1">
+          {canEdit ? (
+            <SurveyAiQuestionReviewTrigger
+              disabled={isDirty}
+              onToggle={() => setAiReviewOpen((current) => !current)}
+              open={aiReviewOpen}
+              questionId={question.id}
+            />
+          ) : null}
+          {canEdit ? (
+            <div className="flex items-center gap-1">
             <Button
               disabled={isFirst}
               onClick={onMoveUp}
@@ -645,13 +787,25 @@ function SurveyQuestionCard({
             >
               <ArrowDown className="h-3.5 w-3.5" />
             </Button>
-          </div>
-        ) : null}
+            </div>
+          ) : null}
           <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isActive ? "rotate-180" : ""}`} />
         </div>
       </div>
 
+      <SurveyAiQuestionReview
+        disabled={isDirty}
+        onApplied={handleAiApplied}
+        onClose={closeAiReview}
+        open={aiReviewOpen}
+        questionId={question.id}
+        revision={questionRevision}
+        surveyId={surveyId}
+      />
+
       {!isActive ? <p className="truncate px-4 pb-4 text-sm text-muted-foreground">{prompt || "بدون متن سوال"}</p> : null}
+
+      {isActive && isDirty ? <p className="px-4 text-xs text-amber-800">ابتدا تغییرات سؤال را ذخیره کنید تا بررسی نسخهٔ فعلی ممکن شود.</p> : null}
 
       {isActive && message ? (
         <p
@@ -838,6 +992,7 @@ function SurveyQuestionCard({
             canRandomize={canEdit}
             onAdded={onOptionAdded}
             onDeleted={onOptionDeleted}
+            onOptionDirtyChange={handleOptionDirtyChange}
             onOptionUpdated={onOptionUpdated}
             options={question.options}
             questionId={question.id}
@@ -913,6 +1068,7 @@ type OptionEditorProps = {
   surveyId: string;
   onAdded: (option: OptionData) => void;
   onDeleted: (optionId: string) => void;
+  onOptionDirtyChange: (optionId: string, dirty: boolean) => void;
   onOptionUpdated: (option: OptionData) => void;
   onRandomizeToggle: (enabled: boolean) => void;
 };
@@ -926,6 +1082,7 @@ function OptionEditor({
   surveyId,
   onAdded,
   onDeleted,
+  onOptionDirtyChange,
   onOptionUpdated,
   onRandomizeToggle,
 }: OptionEditorProps) {
@@ -963,6 +1120,7 @@ function OptionEditor({
               isLast={optIndex === options.length - 1}
               key={option.id}
               onDeleted={onDeleted}
+              onDirtyChange={onOptionDirtyChange}
               onUpdated={onOptionUpdated}
               option={option}
               options={options}
@@ -975,6 +1133,7 @@ function OptionEditor({
 
       {canEdit ? (
         <AddOptionForm
+          onDirtyChange={onOptionDirtyChange}
           onAdded={onAdded}
           questionId={questionId}
           surveyId={surveyId}
@@ -989,6 +1148,7 @@ type OptionRowProps = {
   isFirst: boolean;
   isLast: boolean;
   onDeleted: (optionId: string) => void;
+  onDirtyChange: (optionId: string, dirty: boolean) => void;
   onUpdated: (option: OptionData) => void;
   option: { id: string; label: string; sortOrder: number };
   options: { id: string; label: string; sortOrder: number }[];
@@ -1001,6 +1161,7 @@ function OptionRow({
   isFirst,
   isLast,
   onDeleted,
+  onDirtyChange,
   onUpdated,
   option,
   options,
@@ -1027,6 +1188,7 @@ function OptionRow({
       const result = await updateOptionAction({}, form);
       if (result.status === "success" && result.option) {
         onUpdated(result.option);
+        onDirtyChange(option.id, false);
         setMessage("ذخیره شد");
       } else {
         setMessage(result.message ?? "ذخیره گزینه ناموفق بود.");
@@ -1050,6 +1212,7 @@ function OptionRow({
     try {
       const result = await deleteOptionAction({}, form);
       if (result.status === "success") {
+        onDirtyChange(option.id, false);
         onDeleted(option.id);
       } else {
         setMessage(result.message ?? "حذف گزینه ناموفق بود.");
@@ -1106,7 +1269,11 @@ function OptionRow({
           className="h-10 flex-1 rounded-md border border-input bg-background px-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
           disabled={!canEdit}
           maxLength={500}
-          onChange={(event) => setLabel(event.target.value)}
+          onChange={(event) => {
+            const nextLabel = event.target.value;
+            setLabel(nextLabel);
+            onDirtyChange(option.id, nextLabel !== option.label);
+          }}
           type="text"
           value={label}
         />
@@ -1192,12 +1359,14 @@ function OptionRow({
 }
 
 type AddOptionFormProps = {
+  onDirtyChange: (optionId: string, dirty: boolean) => void;
   onAdded: (option: OptionData) => void;
   questionId: string;
   surveyId: string;
 };
 
 function AddOptionForm({
+  onDirtyChange,
   onAdded,
   questionId,
   surveyId,
@@ -1221,6 +1390,7 @@ function AddOptionForm({
       if (result.status === "success" && result.option) {
         onAdded(result.option);
         setLabel("");
+        onDirtyChange("new", false);
       } else {
         setMessage(result.message ?? "افزودن گزینه ناموفق بود.");
       }
@@ -1241,7 +1411,11 @@ function AddOptionForm({
           className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
           id={`add-option-${questionId}`}
           maxLength={500}
-          onChange={(event) => setLabel(event.target.value)}
+          onChange={(event) => {
+            const nextLabel = event.target.value;
+            setLabel(nextLabel);
+            onDirtyChange("new", nextLabel.trim().length > 0);
+          }}
           required
           type="text"
           value={label}
