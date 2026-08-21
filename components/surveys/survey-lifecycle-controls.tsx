@@ -178,13 +178,17 @@ export function SurveyLifecycleControls({
 
           {/* Publish */}
           {!showPublishConfirm ? (
+            <div className="grid gap-2">
+              {!ready ? <p className="text-xs leading-5 text-muted-foreground">برای انتشار، ابتدا موارد بخش «آمادگی انتشار» را کامل کنید.</p> : null}
             <Button
               disabled={!ready}
               onClick={() => setShowPublishConfirm(true)}
               size="sm"
+              variant={ready ? "default" : "outline"}
             >
               انتشار نظرسنجی
             </Button>
+            </div>
           ) : (
             <div className="space-y-2 rounded-md border bg-muted p-3">
               <p className="text-sm font-medium">آیا برای انتشار اطمینان دارید؟</p>

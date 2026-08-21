@@ -423,7 +423,7 @@ function AddQuestionForm({ surveyId, onAdded }: AddQuestionFormProps) {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="grid gap-2">
+        <div className="grid gap-1.5">
           <FieldLabel htmlFor="add-question-type">نوع سوال</FieldLabel>
           <select
             className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
@@ -563,7 +563,7 @@ function SurveyQuestionCard({
       const result = await updateQuestionAction({}, form);
       if (result.status === "success" && result.question) {
         onUpdated(result.question);
-        setMessage("ذخیره شد");
+        setMessage("تغییرات این سؤال اعمال شد.");
       } else {
         setMessage(result.message ?? "ذخیره سوال ناموفق بود.");
         setPromptError(result.errors?.prompt?.[0] ?? null);
@@ -600,22 +600,21 @@ function SurveyQuestionCard({
   }
 
   return (
-    <div className={`grid rounded-lg border transition-colors ${isActive ? "gap-4 border-primary/50 bg-card p-4" : "gap-0 bg-background"}`}>
+    <div className={`grid rounded-lg border transition-colors ${isActive ? "gap-3 border-border bg-primary/[0.025]" : "gap-0 bg-background"}`}>
       <div className="flex items-center justify-between gap-3">
       <button
         aria-expanded={isActive}
-        className="flex min-w-0 flex-1 items-center gap-2 p-4 text-right hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex min-w-0 flex-1 items-center p-4 text-right hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         onClick={onSelect}
         type="button"
       >
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">
+        <div className="grid gap-0.5">
+          <span className="text-sm font-semibold">
             سوال {persianNumber.format(index + 1)}
           </span>
-          <span className="text-xs text-muted-foreground">·
-            {QUESTION_TYPE_LABELS.get(type)}
+          <span className="text-xs text-muted-foreground">
+            {QUESTION_TYPE_LABELS.get(type)} · {required ? "الزامی" : "اختیاری"}
           </span>
-          <span className="text-xs text-muted-foreground">· {required ? "الزامی" : "اختیاری"}</span>
         </div>
       </button>
         <div className="flex shrink-0 items-center gap-1 pl-2">
@@ -653,14 +652,14 @@ function SurveyQuestionCard({
 
       {isActive && message ? (
         <p
-          className={`text-xs ${message === "ذخیره شد" ? "text-green-600" : "text-destructive"}`}
+          className={`px-4 text-xs ${message === "تغییرات این سؤال اعمال شد." ? "text-green-700" : "text-destructive"}`}
         >
           {message}
         </p>
       ) : null}
 
-      {isActive ? <div className="grid gap-4">
-        <div className="grid gap-2">
+      {isActive ? <div className="grid gap-3 px-4 pb-4">
+        <div className="grid gap-1.5">
           <FieldLabel htmlFor={`question-prompt-${question.id}`}>
             متن سوال
           </FieldLabel>
@@ -678,7 +677,7 @@ function SurveyQuestionCard({
           ) : null}
         </div>
 
-        <div className="grid gap-2">
+        <div className="grid gap-1.5">
           <FieldLabel htmlFor={`question-help-${question.id}`}>
             متن راهنما (اختیاری)
           </FieldLabel>
@@ -694,8 +693,8 @@ function SurveyQuestionCard({
           />
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="grid gap-2">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-1.5">
             <FieldLabel htmlFor={`question-type-${question.id}`}>
               نوع سوال
             </FieldLabel>
@@ -735,12 +734,12 @@ function SurveyQuestionCard({
 
         {/* Rating configuration */}
         {type === "RATING" ? (
-          <div className="grid gap-3 bg-muted/30 p-3">
+          <div className="grid gap-2.5 bg-muted/30 p-3">
             <p className="text-xs font-medium text-muted-foreground">
               تنظیمات امتیازدهی
             </p>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-2">
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid gap-1.5">
                 <FieldLabel htmlFor={`rating-min-${question.id}`}>
                   حداقل امتیاز
                 </FieldLabel>
@@ -755,7 +754,7 @@ function SurveyQuestionCard({
                   value={ratingMin}
                 />
               </div>
-              <div className="grid gap-2">
+              <div className="grid gap-1.5">
                 <FieldLabel htmlFor={`rating-max-${question.id}`}>
                   حداکثر امتیاز
                 </FieldLabel>
@@ -771,8 +770,8 @@ function SurveyQuestionCard({
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-2">
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid gap-1.5">
                 <FieldLabel htmlFor={`rating-min-label-${question.id}`}>
                   برچسب حداقل (اختیاری)
                 </FieldLabel>
@@ -789,7 +788,7 @@ function SurveyQuestionCard({
                   value={ratingMinLabel}
                 />
               </div>
-              <div className="grid gap-2">
+              <div className="grid gap-1.5">
                 <FieldLabel htmlFor={`rating-max-label-${question.id}`}>
                   برچسب حداکثر (اختیاری)
                 </FieldLabel>
@@ -812,7 +811,7 @@ function SurveyQuestionCard({
 
         {/* Max selections for multiple choice */}
         {type === "MULTIPLE_CHOICE" ? (
-          <div className="grid gap-2">
+          <div className="grid gap-1.5">
             <FieldLabel htmlFor={`max-selections-${question.id}`}>
               حداکثر تعداد انتخاب (اختیاری)
             </FieldLabel>
@@ -1386,7 +1385,7 @@ function BranchingSection({
         </p>
         </div>
         {!showForm ? (
-          <Button className="h-7 px-2 text-xs" disabled={pending} onClick={() => setShowForm(true)} size="sm" type="button" variant="ghost">
+          <Button className="h-8 px-2.5 text-xs" disabled={pending} onClick={() => setShowForm(true)} size="sm" type="button" variant="outline">
             {currentQuestion.targetCondition ? "ویرایش شرط" : "تنظیم شرط"}
           </Button>
         ) : null}
