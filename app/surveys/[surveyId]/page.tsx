@@ -4,9 +4,8 @@ import { z } from "zod";
 import { requireCurrentUser } from "@/lib/auth";
 import { isSurveyManager } from "@/lib/survey-permissions";
 import { getSurveyForRecipient, type RecipientSurveyData } from "@/lib/survey-service/recipient";
-import { getSurveyDisplayStateLabel, getSurveyKindLabel, getSurveyIdentityLabel } from "@/lib/survey-status";
+import { getSurveyDisplayStateLabel } from "@/lib/survey-status";
 import { formatJalaliDateTime } from "@/lib/jalali-date";
-import { PageHeader } from "@/components/app/page-header";
 import { SurveyDetailDisplay } from "@/components/surveys/survey-detail-display";
 import { SurveyResponseForm } from "@/components/surveys/survey-response-form";
 import { SurveyServiceError } from "@/lib/survey-service/shared";
@@ -50,13 +49,16 @@ export default async function SurveyDetailPage({ params }: Props) {
   const stateMessage = getStateMessage(data.displayState, data.hasSubmitted);
 
   return (
-    <div className="space-y-6" dir="rtl">
-      <PageHeader
-        title={data.title}
-        subtitle={data.description ?? ""}
-        actions={
-          showManagementLink ? (
-            <div className="flex flex-wrap gap-2">
+    <div className="mx-auto w-full max-w-3xl space-y-4" dir="rtl">
+      <header className="flex flex-col gap-3 text-right sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0 space-y-1">
+          <h1 className="text-xl font-semibold leading-8 text-slate-950">{data.title}</h1>
+          {data.description ? (
+            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{data.description}</p>
+          ) : null}
+        </div>
+        {showManagementLink ? (
+          <div className="flex flex-wrap gap-2">
               <Link
                 href={`/surveys/${data.id}/results`}
                 className="inline-flex min-h-10 items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -69,21 +71,14 @@ export default async function SurveyDetailPage({ params }: Props) {
               >
                 مدیریت نظرسنجی
               </Link>
-            </div>
-          ) : undefined
-        }
-      />
-
-      {/* Survey metadata row */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-        <span>{getSurveyKindLabel(data.kind)}</span>
-        <span>{getSurveyIdentityLabel(data.identityMode)}</span>
-        <span>{getSurveyDisplayStateLabel(data.displayState)}</span>
-        {data.startsAt ? (
-          <span>شروع: {formatJalaliDateTime(data.startsAt)}</span>
+          </div>
         ) : null}
+      </header>
+
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+        <span>{getSurveyDisplayStateLabel(data.displayState)}</span>
         {data.endsAt ? (
-          <span>پایان: {formatJalaliDateTime(data.endsAt)}</span>
+          <span>مهلت پاسخ‌گویی: {formatJalaliDateTime(data.endsAt)}</span>
         ) : null}
         {showParticipationCount && data.participationCount !== null ? (
           <span>تعداد پاسخ‌ها: {data.participationCount}</span>

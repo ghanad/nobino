@@ -60,10 +60,15 @@ export function SurveyResponseForm({
   const [saveState, setSaveState] = useState<SaveDraftActionState>({ status: "idle" });
   const [initialLoaded, setInitialLoaded] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [stepError, setStepError] = useState<string | null>(null);
   const [submitState, setSubmitState] = useState<SubmitActionState>({ status: "idle" });
   const [isSubmitting, startSubmitTransition] = useTransition();
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestAnswersRef = useRef<Record<string, AnswerValue>>(answers);
+  const hasUnsavedAnswersRef = useRef(false);
+  const questionHeadingRef = useRef<HTMLParagraphElement>(null);
 
   // Keep ref in sync
   latestAnswersRef.current = answers;
@@ -85,6 +90,40 @@ export function SurveyResponseForm({
     () => getVisibleQuestionIds(visibilityQuestions, answers),
     [visibilityQuestions, answers],
   );
+
+  const visibleQuestions = useMemo(
+    () => questions.filter((question) => visibleQuestionIds.has(question.id)),
+    [questions, visibleQuestionIds],
+  );
+  const currentQuestion = visibleQuestions[Math.min(currentStep, Math.max(visibleQuestions.length - 1, 0))];
+  const currentQuestionIndex = currentQuestion
+    ? visibleQuestions.findIndex((question) => question.id === currentQuestion.id)
+    : -1;
+  const isLastQuestion = currentQuestionIndex === visibleQuestions.length - 1;
+
+  useEffect(() => {
+    setCurrentStep((step) => Math.min(step, Math.max(visibleQuestions.length - 1, 0)));
+  }, [visibleQuestions.length]);
+
+  useEffect(() => {
+    if (initialLoaded && currentQuestion) {
+      questionHeadingRef.current?.focus();
+    }
+  }, [currentQuestion?.id, initialLoaded]);
+
+  useEffect(() => {
+    if (saveState.status !== "saved") return;
+
+    saveFeedbackTimerRef.current = setTimeout(() => {
+      setSaveState((state) => (state.status === "saved" ? { status: "idle" } : state));
+    }, 3000);
+
+    return () => {
+      if (saveFeedbackTimerRef.current) {
+        clearTimeout(saveFeedbackTimerRef.current);
+      }
+    };
+  }, [saveState.status]);
 
   // Clear hidden answers whenever visibility changes
   const visibleAnswers = useMemo(
@@ -134,7 +173,7 @@ export function SurveyResponseForm({
 
   // Autosave with debounce when answers change
   useEffect(() => {
-    if (!initialLoaded) return;
+    if (!initialLoaded || !hasUnsavedAnswersRef.current) return;
 
     const timer = autoSaveTimerRef;
     let cancelled = false;
@@ -145,14 +184,18 @@ export function SurveyResponseForm({
 
     autoSaveTimerRef.current = setTimeout(async () => {
       setSaveState({ status: "saving" });
+      const answersToSave = latestAnswersRef.current;
       const result = await saveDraftAction(
         { status: "saving" },
         {
           surveyId,
-          answers: latestAnswersRef.current as Record<string, unknown>,
+          answers: answersToSave as Record<string, unknown>,
         },
       );
       if (cancelled) return;
+      if (result.status === "saved" && latestAnswersRef.current === answersToSave) {
+        hasUnsavedAnswersRef.current = false;
+      }
       setSaveState(result);
     }, 2000);
 
@@ -166,6 +209,9 @@ export function SurveyResponseForm({
 
   const handleAnswer = useCallback(
     (questionId: string, value: AnswerValue) => {
+      setStepError(null);
+      setSaveState({ status: "idle" });
+      hasUnsavedAnswersRef.current = true;
       setAnswers((prev) => {
         const next = { ...prev, [questionId]: value };
         // Immediately recompute visible and clear hidden
@@ -206,6 +252,29 @@ export function SurveyResponseForm({
     [handleAnswer, syncedAnswers],
   );
 
+  const goToNextQuestion = useCallback(() => {
+    if (!currentQuestion) return;
+
+    if (currentQuestion.required && !hasAnswer(syncedAnswers[currentQuestion.id])) {
+      setStepError("پاسخ به این سؤال الزامی است.");
+      return;
+    }
+
+    setStepError(null);
+    if (isLastQuestion) {
+      setSubmitState({ status: "idle" });
+      setShowConfirmation(true);
+      return;
+    }
+    setCurrentStep((step) => Math.min(step + 1, visibleQuestions.length - 1));
+  }, [currentQuestion, isLastQuestion, syncedAnswers, visibleQuestions.length]);
+
+  const goToPreviousQuestion = useCallback(() => {
+    setStepError(null);
+    setShowConfirmation(false);
+    setCurrentStep((step) => Math.max(step - 1, 0));
+  }, []);
+
   const handleFinalSubmit = useCallback(() => {
     if (isSubmitting) return;
 
@@ -245,60 +314,63 @@ export function SurveyResponseForm({
   }
 
   return (
-    <div className="space-y-4" dir="rtl">
-      <h2 className="text-lg font-semibold">پاسخ به نظرسنجی</h2>
-
+    <div className="mx-auto w-full max-w-[52rem] space-y-4" dir="rtl">
       {identityMode === "ANONYMOUS" ? (
-        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-800">
           Nobino پاسخ نهایی ناشناس را به حساب شما پیوند نمی‌دهد؛ با این حال
           ناشناسی در سطح برنامه است و متن پاسخ‌های آزاد ممکن است هویت شما را
           فاش کند.
         </div>
       ) : null}
 
-      {/* Save state indicator */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-        {saveState.status === "saving" ? (
-          <span className="text-muted-foreground">در حال ذخیره...</span>
-        ) : saveState.status === "saved" ? (
-          <span className="text-green-600">ذخیره شد</span>
-        ) : saveState.status === "error" ? (
-          <span className="text-destructive">{saveState.message ?? "خطا در ذخیره"}</span>
-        ) : null}
-        {identityMode === "ANONYMOUS" && initialLoaded ? (
-          <span className="text-muted-foreground">
-            پاسخ‌های پیش‌نویس هنوز ناشناس نیستند. ناشناس‌سازی پس از ثبت نهایی انجام می‌شود.
-          </span>
-        ) : null}
-      </div>
-
-      {questions.map((question, index) => {
+      {currentQuestion ? [currentQuestion].map((question) => {
         const isVisible = visibleQuestionIds.has(question.id);
         const showRequired = question.required && isVisible;
 
         return (
           <div
             key={question.id}
-            className={`space-y-3 rounded-md border bg-card p-4 ${
+            className={`space-y-5 rounded-lg border bg-card p-4 sm:p-6 ${
               isVisible ? "" : "hidden"
             }`}
           >
-            <div className="space-y-1">
-              <p className="text-sm font-medium">
-                {index + 1}. {question.prompt}
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                  <p className="font-medium">
+                    سؤال {currentQuestionIndex + 1} از {visibleQuestions.length}
+                  </p>
+                  <p aria-live="polite" role="status">
+                    {saveState.status === "saving" ? "در حال ذخیره…" : null}
+                    {saveState.status === "saved" ? "ذخیره شد" : null}
+                    {saveState.status === "error" ? saveState.message ?? "خطا در ذخیره" : null}
+                  </p>
+                </div>
+                <div
+                  aria-hidden="true"
+                  className="h-1 overflow-hidden rounded-full bg-muted"
+                >
+                  <div
+                    className="h-full rounded-full bg-primary transition-[width] duration-200 ease-out"
+                    style={{ width: `${((currentQuestionIndex + 1) / visibleQuestions.length) * 100}%` }}
+                  />
+                </div>
+              </div>
+              <p ref={questionHeadingRef} tabIndex={-1} className="text-base font-semibold leading-7 text-slate-950">
+                {question.prompt}
                 {showRequired ? (
-                  <span className="text-destructive mr-1">*</span>
+                  <span aria-label="الزامی" className="mr-1 text-destructive">*</span>
                 ) : null}
               </p>
               {question.helpText ? (
-                <p className="text-xs text-muted-foreground">{question.helpText}</p>
+                <p className="text-sm leading-6 text-muted-foreground">{question.helpText}</p>
               ) : null}
             </div>
 
             {/* SHORT_TEXT */}
             {question.type === "SHORT_TEXT" ? (
               <input
-                className="w-full rounded-md border border-input bg-background p-2 text-sm"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-base"
                 maxLength={SURVEY_SHORT_TEXT_MAX_LENGTH}
                 placeholder="پاسخ خود را وارد کنید..."
                 value={typeof syncedAnswers[question.id] === "string" ? (syncedAnswers[question.id] as string) : ""}
@@ -309,7 +381,7 @@ export function SurveyResponseForm({
             {/* LONG_TEXT */}
             {question.type === "LONG_TEXT" ? (
               <textarea
-                className="min-h-[80px] w-full rounded-md border border-input bg-background p-3 text-sm"
+                className="min-h-28 w-full rounded-md border border-input bg-background px-3 py-2 text-base"
                 maxLength={SURVEY_LONG_TEXT_MAX_LENGTH}
                 placeholder="پاسخ خود را وارد کنید..."
                 value={typeof syncedAnswers[question.id] === "string" ? (syncedAnswers[question.id] as string) : ""}
@@ -342,7 +414,7 @@ export function SurveyResponseForm({
                   return (
                     <label
                       key={option.id}
-                      className={`flex cursor-pointer items-center gap-2 rounded-md border p-3 text-sm transition-colors hover:bg-accent ${
+                      className={`flex min-h-11 cursor-pointer items-center gap-3 rounded-md border px-3 py-2 text-sm transition-colors hover:bg-accent ${
                         isSelected ? "border-primary bg-primary/5" : ""
                       }`}
                     >
@@ -371,14 +443,14 @@ export function SurveyResponseForm({
 
             {/* RATING */}
             {question.type === "RATING" ? (
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  {question.ratingMinLabel ? (
-                    <span className="text-xs text-muted-foreground">
-                      {question.ratingMinLabel}
-                    </span>
-                  ) : null}
-                  <div className="flex flex-wrap gap-1">
+              <div className="space-y-2" role="group" aria-label={`امتیاز برای ${question.prompt}`}>
+                {(question.ratingMinLabel || question.ratingMaxLabel) ? (
+                  <div className="flex items-start justify-between gap-4 text-xs leading-5 text-muted-foreground">
+                    <span className="max-w-[45%] text-right">{question.ratingMinLabel}</span>
+                    <span className="max-w-[45%] text-left">{question.ratingMaxLabel}</span>
+                  </div>
+                ) : null}
+                <div className="flex flex-wrap gap-2" aria-label="مقیاس امتیازدهی">
                     {Array.from(
                       {
                         length:
@@ -391,7 +463,9 @@ export function SurveyResponseForm({
                         <button
                           key={val}
                           type="button"
-                          className={`flex h-9 w-9 items-center justify-center rounded-md border text-sm transition-colors hover:bg-accent ${
+                          aria-label={`${val}${question.ratingMinLabel || question.ratingMaxLabel ? " از مقیاس امتیاز" : ""}`}
+                          aria-pressed={isSelected}
+                          className={`flex h-11 w-11 items-center justify-center rounded-md border text-sm font-medium transition-colors hover:border-primary hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                             isSelected
                               ? "border-primary bg-primary text-primary-foreground"
                               : ""
@@ -402,20 +476,40 @@ export function SurveyResponseForm({
                         </button>
                       );
                     })}
-                  </div>
-                  {question.ratingMaxLabel ? (
-                    <span className="text-xs text-muted-foreground">
-                      {question.ratingMaxLabel}
-                    </span>
-                  ) : null}
                 </div>
               </div>
             ) : null}
           </div>
         );
-      })}
+      }) : null}
 
-      <section className="rounded-md border bg-card p-4" aria-live="polite">
+      {!showConfirmation && currentQuestion ? (
+        <section className="space-y-3 border-t pt-4" aria-label="پیمایش سؤال‌ها">
+          {stepError ? (
+            <p className="text-sm text-destructive" role="alert">{stepError}</p>
+          ) : null}
+          <div className="flex items-center justify-start gap-3">
+            <button
+              type="button"
+              className="min-h-11 rounded-md border px-4 py-2 text-sm font-medium transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={currentQuestionIndex === 0 || isSubmitting}
+              onClick={goToPreviousQuestion}
+            >
+              سؤال قبلی
+            </button>
+            <button
+              type="button"
+              className="min-h-11 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={!initialLoaded || isSubmitting}
+              onClick={goToNextQuestion}
+            >
+              {isLastQuestion ? "ادامه و بازبینی پاسخ‌ها" : "سؤال بعدی"}
+            </button>
+          </div>
+        </section>
+      ) : null}
+
+      <section className={showConfirmation ? "rounded-lg border bg-card p-5 sm:p-6" : "hidden"} aria-live="polite">
         {showConfirmation ? (
           <div className="space-y-3">
             <div>
@@ -427,10 +521,10 @@ export function SurveyResponseForm({
             {submitState.status === "error" || submitState.status === "conflict" ? (
               <p className="text-sm text-destructive" role="alert">{submitState.message}</p>
             ) : null}
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                className="min-h-11 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={isSubmitting || !initialLoaded}
                 onClick={handleFinalSubmit}
               >
@@ -438,7 +532,7 @@ export function SurveyResponseForm({
               </button>
               <button
                 type="button"
-                className="rounded-md border px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
+                className="min-h-11 rounded-md border px-4 py-2 text-sm font-medium transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={isSubmitting}
                 onClick={() => setShowConfirmation(false)}
               >
@@ -446,23 +540,14 @@ export function SurveyResponseForm({
               </button>
             </div>
           </div>
-        ) : (
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-muted-foreground">برای ثبت غیرقابل‌ویرایش پاسخ‌ها آماده‌اید؟</p>
-            <button
-              type="button"
-              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={!initialLoaded || isSubmitting}
-              onClick={() => {
-                setSubmitState({ status: "idle" });
-                setShowConfirmation(true);
-              }}
-            >
-              ثبت نهایی پاسخ‌ها
-            </button>
-          </div>
-        )}
+        ) : null}
       </section>
     </div>
   );
+}
+
+function hasAnswer(answer: AnswerValue | undefined): boolean {
+  if (typeof answer === "string") return answer.trim().length > 0;
+  if (Array.isArray(answer)) return answer.length > 0;
+  return typeof answer === "number";
 }
