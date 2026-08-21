@@ -452,37 +452,37 @@ export function SurveyResponseForm({
 
             {/* RATING */}
             {question.type === "RATING" ? (
-              <div className="space-y-2" role="group" aria-label={`امتیاز برای ${question.prompt}`}>
-                <div className="flex items-start justify-between gap-4 text-xs leading-5 text-muted-foreground">
-                  <span className="max-w-[45%] text-right">{ratingMinLabel}</span>
-                  <span className="max-w-[45%] text-left">{ratingMaxLabel}</span>
-                </div>
-                <div className="flex flex-wrap gap-2" aria-label="مقیاس امتیازدهی">
-                  {Array.from(
-                    {
-                      length:
-                        (question.ratingMax ?? 5) - (question.ratingMin ?? 1) + 1,
-                    },
-                    (_, i) => (question.ratingMin ?? 1) + i,
-                  ).map((val) => {
-                    const isSelected = syncedAnswers[question.id] === val;
-                    return (
-                      <button
-                        key={val}
-                        type="button"
-                        aria-label={`${val} از مقیاس ${ratingMinLabel} تا ${ratingMaxLabel}`}
-                        aria-pressed={isSelected}
-                        className={`flex h-11 w-11 items-center justify-center rounded-md border text-sm font-medium transition-colors hover:border-primary hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-                          isSelected
-                            ? "border-primary bg-primary text-primary-foreground"
-                            : ""
-                        }`}
-                        onClick={() => handleRating(question.id, val)}
-                      >
-                        {val}
-                      </button>
-                    );
-                  })}
+              <div className="flex justify-center" role="group" aria-label={`امتیاز برای ${question.prompt}`}>
+                <div className="inline-flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-2 text-muted-foreground">
+                  <span className="max-w-full text-xs leading-5">{ratingMinLabel}</span>
+                  <div className="flex flex-wrap justify-center gap-2" aria-label="مقیاس امتیازدهی">
+                    {Array.from(
+                      {
+                        length:
+                          (question.ratingMax ?? 5) - (question.ratingMin ?? 1) + 1,
+                      },
+                      (_, i) => (question.ratingMin ?? 1) + i,
+                    ).map((val) => {
+                      const isSelected = syncedAnswers[question.id] === val;
+                      return (
+                        <button
+                          key={val}
+                          type="button"
+                          aria-label={`${val} از مقیاس ${ratingMinLabel} تا ${ratingMaxLabel}`}
+                          aria-pressed={isSelected}
+                          className={`flex h-11 w-11 items-center justify-center rounded-md border text-sm font-medium transition-colors hover:border-primary hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                            isSelected
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : ""
+                          }`}
+                          onClick={() => handleRating(question.id, val)}
+                        >
+                          {val}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <span className="max-w-full text-xs leading-5">{ratingMaxLabel}</span>
                 </div>
               </div>
             ) : null}
@@ -495,7 +495,7 @@ export function SurveyResponseForm({
           {stepError ? (
             <p className="text-sm text-destructive" role="alert">{stepError}</p>
           ) : null}
-          <div className="flex items-center justify-start gap-3">
+          <div className="flex w-full items-center justify-between gap-3">
             <button
               type="button"
               className="min-h-11 rounded-md border px-4 py-2 text-sm font-medium transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"

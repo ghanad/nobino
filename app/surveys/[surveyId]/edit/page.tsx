@@ -17,7 +17,7 @@ import { previewAudience } from "@/lib/survey-service/audience";
 import { checkPublishReadiness } from "@/lib/survey-service/publish-readiness";
 import { getSurveyDisplayState } from "@/lib/survey-status";
 import { db } from "@/lib/db";
-import { PageHeader } from "@/components/app/page-header";
+import { Button } from "@/components/ui/button";
 import { SurveyMetadataForm } from "@/components/surveys/survey-metadata-form";
 import { SurveyCollaboratorEditor } from "@/components/surveys/survey-collaborator-editor";
 import { SurveyAudienceEditor } from "@/components/surveys/survey-audience-editor";
@@ -25,6 +25,7 @@ import { SurveyQuestionBuilder } from "@/components/surveys/survey-question-buil
 import { SurveyPreview } from "@/components/surveys/survey-preview";
 import { SurveyReadinessSummary } from "@/components/surveys/survey-readiness-summary";
 import { SurveyLifecycleControls } from "@/components/surveys/survey-lifecycle-controls";
+import { SurveyPreviewDialog } from "@/components/surveys/survey-preview-dialog";
 import { updateSurveyMetadataAction } from "@/app/surveys/actions";
 import type { QuestionConditionData } from "@/app/surveys/survey-branching-actions";
 
@@ -255,19 +256,24 @@ export default async function EditSurveyPage({ params }: EditSurveyPageProps) {
       : [null, null, null, null, null];
 
   return (
-    <div className="space-y-8" dir="rtl">
-      <PageHeader
-        title={isDraft ? `ویرایش ${survey.title}` : survey.title}
-        subtitle={
-          isDraft
-            ? "مشخصات و زمان‌بندی نظرسنجی"
-            : "نظرسنجی منتشر شده - اطلاعات قابل ویرایش نیست"
-        }
-      />
+    <div className="mx-auto max-w-7xl space-y-6" dir="rtl">
+      <header className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-4 border-b bg-background/95 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/85">
+        <div className="min-w-0 space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="truncate text-xl font-semibold sm:text-2xl">{isDraft ? `ویرایش ${survey.title}` : survey.title}</h1>
+            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${displayState === "DRAFT" ? "bg-amber-50 text-amber-800" : displayState === "ACTIVE" ? "bg-green-50 text-green-800" : displayState === "SCHEDULED" ? "bg-blue-50 text-blue-800" : "bg-muted text-muted-foreground"}`}>{displayState === "DRAFT" ? "پیش‌نویس" : displayState === "ACTIVE" ? "فعال" : displayState === "SCHEDULED" ? "زمان‌بندی‌شده" : "پایان‌یافته"}</span>
+          </div>
+          <p className="text-sm text-muted-foreground">{isDraft ? "سوال‌ها را بسازید و تنظیمات انتشار را در ستون کناری تکمیل کنید." : "نظرسنجی منتشر شده - اطلاعات قابل ویرایش نیست"}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <SurveyPreviewDialog><SurveyPreview title={survey.title} description={survey.description} questions={questions} identityMode={survey.identityMode} isAnonymous={survey.identityMode === "ANONYMOUS"} /></SurveyPreviewDialog>
+          {isDraft ? <Button form="survey-metadata-form" size="sm" type="submit">ذخیره تغییرات</Button> : null}
+        </div>
+      </header>
 
       {/* Immutable-after-publish warning */}
       {!isDraft ? (
-        <div className="mx-auto max-w-2xl">
+        <div>
           <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             این نظرسنجی قبلاً منتشر شده است. سوالات، گزینه‌ها، شرط‌ها، نوع،
             حالت هویت و مخاطبان قابل ویرایش نیستند.
@@ -276,9 +282,9 @@ export default async function EditSurveyPage({ params }: EditSurveyPageProps) {
       ) : null}
 
       {isDraft ? (
-        <>
-          {/* Draft editor sections */}
-          <div className="mx-auto max-w-2xl">
+        <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,7fr)_minmax(18rem,3fr)]">
+          <main className="min-w-0 space-y-8">
+          <div className="border-b pb-8">
             <SurveyMetadataForm
               action={updateSurveyMetadataAction}
               initial={{
@@ -291,19 +297,29 @@ export default async function EditSurveyPage({ params }: EditSurveyPageProps) {
                 endsAt: survey.endsAt,
               }}
               canChangeKindIdentity={canChangeKindIdentity}
+              formId="survey-metadata-form"
+              hideSubmit={true}
               isEditing={true}
             />
           </div>
 
-          <div className="mx-auto max-w-2xl">
+          <SurveyQuestionBuilder
+            surveyId={survey.id}
+            canEdit={canEdit}
+            questions={questionBuilderQuestions!}
+          />
+          </main>
+
+          <aside className="grid gap-6 [&>div]:rounded-none [&>div]:border-x-0 [&>div]:p-0 [&>fieldset]:rounded-none [&>fieldset]:border-x-0 [&>fieldset]:p-0 lg:sticky lg:top-24">
+            <section className="grid gap-2 border-b pb-5">
+              <h2 className="text-sm font-semibold">تنظیمات و انتشار</h2>
+              <p className="text-xs leading-5 text-muted-foreground">زمان‌بندی، دسترسی و وضعیت انتشار را از اینجا مدیریت کنید.</p>
+            </section>
             <SurveyCollaboratorEditor
               surveyId={survey.id}
               canManage={canManage}
               collaborators={collaborators!.map((c) => c.user)}
             />
-          </div>
-
-          <div className="mx-auto max-w-2xl">
             <SurveyAudienceEditor
               surveyId={survey.id}
               canManage={canManage}
@@ -326,20 +342,20 @@ export default async function EditSurveyPage({ params }: EditSurveyPageProps) {
               teams={teams!}
               identityMode={survey.identityMode}
             />
-          </div>
-
-          <div className="mx-auto max-w-2xl">
-            <SurveyQuestionBuilder
-              surveyId={survey.id}
-              canEdit={canEdit}
-              questions={questionBuilderQuestions!}
+            {readinessReport ? <SurveyReadinessSummary report={readinessReport} surveyTitle={survey.title} hasSchedule={survey.startsAt !== null && survey.endsAt !== null} /> : null}
+            <SurveyLifecycleControls
+              surveyId={survey.id} surveyTitle={survey.title} displayState={displayState}
+              isOwnerOrAdmin={isOwnerOrAdmin} isAdmin={user.role === "ADMIN" && user.active}
+              endsAt={survey.endsAt} lastReminderAt={survey.lastReminderAt} kind={survey.kind}
+              isAnonymous={survey.identityMode === "ANONYMOUS"} ready={readinessReport?.ready ?? false}
+              hasAnonymousThreshold={readinessReport?.hasAnonymousThreshold ?? false}
             />
-          </div>
-        </>
+          </aside>
+        </div>
       ) : null}
 
       {/* Readiness summary (drafts only) */}
-      {isDraft && readinessReport ? (
+      {!isDraft && readinessReport ? (
         <div className="mx-auto max-w-2xl">
           <SurveyReadinessSummary
             report={readinessReport}
@@ -350,7 +366,7 @@ export default async function EditSurveyPage({ params }: EditSurveyPageProps) {
       ) : null}
 
       {/* Lifecycle controls */}
-      <div className="mx-auto max-w-2xl">
+      {!isDraft ? <div className="mx-auto max-w-2xl">
         <SurveyLifecycleControls
           surveyId={survey.id}
           surveyTitle={survey.title}
@@ -364,23 +380,9 @@ export default async function EditSurveyPage({ params }: EditSurveyPageProps) {
           ready={readinessReport?.ready ?? false}
           hasAnonymousThreshold={readinessReport?.hasAnonymousThreshold ?? false}
         />
-      </div>
+      </div> : null}
 
       {/* Preview (always visible for drafts, optionally for published) */}
-      {isDraft || displayState === "ACTIVE" || displayState === "SCHEDULED" ? (
-        <div className="mx-auto max-w-2xl">
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold">پیش‌نمایش نظرسنجی</h2>
-            <SurveyPreview
-              title={survey.title}
-              description={survey.description}
-              questions={questions}
-              identityMode={survey.identityMode}
-              isAnonymous={survey.identityMode === "ANONYMOUS"}
-            />
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }

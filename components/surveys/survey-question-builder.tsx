@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-import { ArrowDown, ArrowUp, GitBranch, Plus, Shuffle, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, GitBranch, Plus, Shuffle, Trash2 } from "lucide-react";
 import type { SurveyConditionOperator, SurveyQuestionType } from "@prisma/client";
 
 import { FieldLabel } from "@/app/admin/_components/admin-form-fields";
@@ -68,12 +68,16 @@ export function SurveyQuestionBuilder({
 }: SurveyQuestionBuilderProps) {
   const [questions, setQuestions] =
     useState<QuestionWithOptions[]>(initialQuestions);
+  const [activeQuestionId, setActiveQuestionId] = useState<string | null>(
+    initialQuestions[0]?.id ?? null,
+  );
 
   function handleAdded(question: SurveyQuestionData) {
     setQuestions((prev) => [
       ...prev,
       { ...question, options: [], targetCondition: null },
     ]);
+    setActiveQuestionId(question.id);
   }
 
   function handleUpdated(question: SurveyQuestionData) {
@@ -105,6 +109,7 @@ export function SurveyQuestionBuilder({
 
   function handleDeleted(questionId: string) {
     setQuestions((prev) => prev.filter((item) => item.id !== questionId));
+    setActiveQuestionId((current) => (current === questionId ? null : current));
   }
 
   function handleRandomizeToggle(
@@ -248,9 +253,9 @@ export function SurveyQuestionBuilder({
   }
 
   return (
-    <section className="grid gap-4 rounded-lg border p-4" dir="rtl">
+    <section className="grid gap-5" dir="rtl">
       <div className="grid gap-1">
-        <h2 className="text-sm font-medium">سوالات نظرسنجی</h2>
+        <h2 className="text-lg font-semibold">سوالات نظرسنجی</h2>
         <p className="text-xs text-muted-foreground">
           سوالات با انواع پاسخ کوتاه، پاسخ بلند، تک‌گزینه‌ای، چندگزینه‌ای و
           امتیازدهی طراحی می‌شوند.
@@ -284,12 +289,13 @@ export function SurveyQuestionBuilder({
           هنوز هیچ سوالی اضافه نشده است.
         </p>
       ) : (
-        <ol className="grid gap-4">
+        <ol className="grid gap-3">
           {questions.map((question, index) => (
             <li key={question.id}>
               <SurveyQuestionCard
                 canEdit={canEdit}
                 index={index}
+                isActive={activeQuestionId === question.id}
                 isFirst={index === 0}
                 isLast={index === questions.length - 1}
                 onDeleted={handleDeleted}
@@ -305,6 +311,7 @@ export function SurveyQuestionBuilder({
                   handleOptionUpdated(question.id, option)
                 }
                 onUpdated={handleUpdated}
+                onSelect={() => setActiveQuestionId(question.id)}
                 onRandomizeToggle={handleRandomizeToggle}
                 onConditionUpdated={(condition) =>
                   handleConditionUpdated(question.id, condition)
@@ -331,12 +338,18 @@ type AddQuestionFormProps = {
 };
 
 function AddQuestionForm({ surveyId, onAdded }: AddQuestionFormProps) {
+  const [isAdding, setIsAdding] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [type, setType] = useState<SurveyQuestionType>("SHORT_TEXT");
   const [required, setRequired] = useState(false);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [promptError, setPromptError] = useState<string | null>(null);
+  const promptInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isAdding) promptInputRef.current?.focus();
+  }, [isAdding]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -358,6 +371,7 @@ function AddQuestionForm({ surveyId, onAdded }: AddQuestionFormProps) {
         onAdded(result.question);
         setPrompt("");
         setRequired(false);
+        setIsAdding(false);
       } else {
         setMessage(result.message ?? "افزودن سوال ناموفق بود.");
         setPromptError(result.errors?.prompt?.[0] ?? null);
@@ -369,12 +383,23 @@ function AddQuestionForm({ surveyId, onAdded }: AddQuestionFormProps) {
     }
   }
 
+  if (!isAdding) {
+    return (
+      <div className="border-t border-dashed pt-5">
+        <Button onClick={() => setIsAdding(true)} size="sm" type="button" variant="outline">
+          <Plus className="h-3.5 w-3.5" />
+          افزودن سؤال
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <form
-      className="grid gap-3 rounded-lg border border-dashed p-4"
+      className="grid gap-3 border-t border-dashed pt-5"
       onSubmit={handleSubmit}
     >
-      <h3 className="text-xs font-medium">افزودن سوال جدید</h3>
+      <h3 className="text-sm font-medium">افزودن سوال جدید</h3>
 
       {message ? (
         <p className="text-xs text-destructive">{message}</p>
@@ -385,6 +410,7 @@ function AddQuestionForm({ surveyId, onAdded }: AddQuestionFormProps) {
         <input
           className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
           id="add-question-prompt"
+          ref={promptInputRef}
           maxLength={2000}
           onChange={(event) => setPrompt(event.target.value)}
           required
@@ -426,10 +452,15 @@ function AddQuestionForm({ surveyId, onAdded }: AddQuestionFormProps) {
         </label>
       </div>
 
+      <div className="flex items-center gap-2">
       <Button disabled={pending} size="sm" type="submit">
         <Plus className="h-3.5 w-3.5" />
         افزودن
       </Button>
+      <Button disabled={pending} onClick={() => setIsAdding(false)} size="sm" type="button" variant="ghost">
+        انصراف
+      </Button>
+      </div>
     </form>
   );
 }
@@ -438,6 +469,7 @@ type SurveyQuestionCardProps = {
   canEdit: boolean;
   questions: QuestionWithOptions[];
   index: number;
+  isActive: boolean;
   isFirst: boolean;
   isLast: boolean;
   onDeleted: (questionId: string) => void;
@@ -448,6 +480,7 @@ type SurveyQuestionCardProps = {
   onOptionUpdated: (option: OptionData) => void;
   onConditionUpdated: (condition: QuestionConditionData | null) => void;
   onUpdated: (question: SurveyQuestionData) => void;
+  onSelect: () => void;
   onRandomizeToggle: (questionId: string, enabled: boolean) => void;
   question: QuestionWithOptions;
   surveyId: string;
@@ -457,6 +490,7 @@ function SurveyQuestionCard({
   canEdit,
   questions,
   index,
+  isActive,
   isFirst,
   isLast,
   onDeleted,
@@ -467,6 +501,7 @@ function SurveyQuestionCard({
   onOptionUpdated,
   onConditionUpdated,
   onUpdated,
+  onSelect,
   onRandomizeToggle,
   question,
   surveyId,
@@ -565,16 +600,25 @@ function SurveyQuestionCard({
   }
 
   return (
-    <div className="grid gap-3 rounded-lg border p-4">
-      <div className="flex items-center justify-between gap-2">
+    <div className={`grid rounded-lg border transition-colors ${isActive ? "gap-4 border-primary/50 bg-card p-4" : "gap-0 bg-background"}`}>
+      <div className="flex items-center justify-between gap-3">
+      <button
+        aria-expanded={isActive}
+        className="flex min-w-0 flex-1 items-center gap-2 p-4 text-right hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        onClick={onSelect}
+        type="button"
+      >
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium">
             سوال {persianNumber.format(index + 1)}
           </span>
-          <span className="text-xs text-muted-foreground">
+          <span className="text-xs text-muted-foreground">·
             {QUESTION_TYPE_LABELS.get(type)}
           </span>
+          <span className="text-xs text-muted-foreground">· {required ? "الزامی" : "اختیاری"}</span>
         </div>
+      </button>
+        <div className="flex shrink-0 items-center gap-1 pl-2">
         {canEdit ? (
           <div className="flex items-center gap-1">
             <Button
@@ -601,9 +645,13 @@ function SurveyQuestionCard({
             </Button>
           </div>
         ) : null}
+          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isActive ? "rotate-180" : ""}`} />
+        </div>
       </div>
 
-      {message ? (
+      {!isActive ? <p className="truncate px-4 pb-4 text-sm text-muted-foreground">{prompt || "بدون متن سوال"}</p> : null}
+
+      {isActive && message ? (
         <p
           className={`text-xs ${message === "ذخیره شد" ? "text-green-600" : "text-destructive"}`}
         >
@@ -611,7 +659,7 @@ function SurveyQuestionCard({
         </p>
       ) : null}
 
-      <div className="grid gap-3">
+      {isActive ? <div className="grid gap-4">
         <div className="grid gap-2">
           <FieldLabel htmlFor={`question-prompt-${question.id}`}>
             متن سوال
@@ -687,7 +735,7 @@ function SurveyQuestionCard({
 
         {/* Rating configuration */}
         {type === "RATING" ? (
-          <div className="grid gap-3 rounded-md border border-dashed p-3">
+          <div className="grid gap-3 bg-muted/30 p-3">
             <p className="text-xs font-medium text-muted-foreground">
               تنظیمات امتیازدهی
             </p>
@@ -811,7 +859,7 @@ function SurveyQuestionCard({
         {canEdit ? (
           <div className="flex items-center gap-2 border-t pt-3">
             <Button disabled={saving} onClick={handleSave} size="sm" type="button">
-              ذخیره
+              اعمال تغییرات سؤال
             </Button>
 
             {confirmingDelete ? (
@@ -849,7 +897,7 @@ function SurveyQuestionCard({
             )}
           </div>
         ) : null}
-      </div>
+      </div> : null}
     </div>
   );
 }
@@ -1098,8 +1146,8 @@ function OptionRow({
 
       {canEdit ? (
         <div className="flex items-center gap-2">
-          <Button disabled={saving} onClick={handleSave} size="sm" type="button">
-            ذخیره
+            <Button disabled={saving} onClick={handleSave} size="sm" type="button">
+            ثبت گزینه
           </Button>
 
           {confirmingDelete ? (
@@ -1231,11 +1279,13 @@ function BranchingSection({
   onConditionUpdated,
   surveyId,
 }: BranchingSectionProps) {
-  const [showForm, setShowForm] = useState(
-    currentQuestion.targetCondition === null,
+  const [showForm, setShowForm] = useState(false);
+  const [sourceQuestionId, setSourceQuestionId] = useState(
+    currentQuestion.targetCondition?.sourceQuestionId ?? "",
   );
-  const [sourceQuestionId, setSourceQuestionId] = useState("");
-  const [sourceOptionId, setSourceOptionId] = useState("");
+  const [sourceOptionId, setSourceOptionId] = useState(
+    currentQuestion.targetCondition?.sourceOptionId ?? "",
+  );
   const [operator, setOperator] = useState<SurveyConditionOperator>(
     currentQuestion.targetCondition?.operator ?? "IS_SELECTED",
   );
@@ -1327,19 +1377,24 @@ function BranchingSection({
   }
 
   return (
-    <div className="grid gap-3 rounded-md border border-dashed p-3">
-      <div className="flex items-center gap-2">
+    <div className="grid gap-3 border-t pt-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
         <GitBranch className="h-3.5 w-3.5 text-muted-foreground" />
         <p className="text-xs font-medium text-muted-foreground">
-          شرایط نمایش
+          منطق نمایش
         </p>
+        </div>
+        {!showForm ? (
+          <Button className="h-7 px-2 text-xs" disabled={pending} onClick={() => setShowForm(true)} size="sm" type="button" variant="ghost">
+            {currentQuestion.targetCondition ? "ویرایش شرط" : "تنظیم شرط"}
+          </Button>
+        ) : null}
       </div>
 
-      <p className="text-xs text-muted-foreground">
-        تعیین کنید این سوال تحت چه شرطی نشان داده شود. تصادفی‌سازی فقط
-        ترتیب گزینه‌ها برای پاسخ‌دهنده تغییر می‌دهد و بر ترتیب طراح یا
-        ستون نتایج تأثیری ندارد.
-      </p>
+      {!showForm && !currentQuestion.targetCondition ? (
+        <p className="text-xs text-muted-foreground">این سؤال همیشه نمایش داده می‌شود.</p>
+      ) : null}
 
       {staleCondition ? (
         <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2">
@@ -1366,19 +1421,7 @@ function BranchingSection({
             )}{" "}
             باشد، این سوال نشان داده شود.
           </p>
-          {!pending ? (
-            <Button
-              className="mt-2 h-7 gap-1 text-sm"
-              disabled={pending}
-              onClick={handleRemove}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              <GitBranch className="h-3 w-3" />
-              حذف شرط
-            </Button>
-          ) : null}
+          {!pending ? <Button className="mt-2 h-7 gap-1 px-2 text-xs" onClick={handleRemove} size="sm" type="button" variant="ghost">حذف شرط</Button> : null}
         </div>
       ) : null}
 

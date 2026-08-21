@@ -91,8 +91,8 @@ export function SurveyLifecycleControls({
   }
 
   return (
-    <div className="space-y-4 rounded-lg border p-4" dir="rtl">
-      <h3 className="text-sm font-medium">مدیریت نظرسنجی</h3>
+    <div className="space-y-4 border-t pt-5" dir="rtl">
+      <h3 className="text-sm font-semibold">مدیریت و انتشار</h3>
 
       {/* Status messages */}
       {publishState.status === "success" && publishState.message ? (
@@ -430,7 +430,11 @@ export function SurveyLifecycleControls({
 
       {/* ── Delete survey ── */}
       {isAdmin || displayState === "DRAFT" ? (
-        <div className="space-y-3 border-t pt-4">
+        <div className="space-y-3 border-t pt-5">
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-destructive">حذف نظرسنجی</p>
+            <p className="text-xs leading-5 text-muted-foreground">این عملیات برگشت‌پذیر نیست و نباید با انتشار یا ذخیره تغییرات اشتباه گرفته شود.</p>
+          </div>
           {deleteState.status === "error" && deleteState.message ? (
             <div
               className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"

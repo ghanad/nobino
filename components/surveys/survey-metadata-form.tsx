@@ -73,6 +73,8 @@ type SurveyMetadataFormProps = {
   };
   canChangeKindIdentity: boolean;
   isEditing: boolean;
+  formId?: string;
+  hideSubmit?: boolean;
 };
 
 export function SurveyMetadataForm({
@@ -80,6 +82,8 @@ export function SurveyMetadataForm({
   initial,
   canChangeKindIdentity,
   isEditing,
+  formId,
+  hideSubmit = false,
 }: SurveyMetadataFormProps) {
   const [state, formAction] = useActionState(action, {
     errors: undefined,
@@ -123,7 +127,7 @@ export function SurveyMetadataForm({
   }, [savedEndDate, savedEndTime, savedStartDate, savedStartTime]);
 
   return (
-    <form action={formAction} className="space-y-6" dir="rtl">
+    <form action={formAction} className="space-y-6" dir="rtl" id={formId}>
       {isEditing && initial ? (
         <input name="surveyId" type="hidden" value={initial.surveyId} />
       ) : null}
@@ -147,7 +151,8 @@ export function SurveyMetadataForm({
       ) : null}
 
       {/* Title */}
-      <div className="grid gap-2">
+      <div className="grid gap-2 border-b pb-5">
+        <h2 className="text-base font-semibold">اطلاعات پایه</h2>
         <FieldLabel htmlFor="title">عنوان نظرسنجی</FieldLabel>
         <input
           className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
@@ -165,7 +170,7 @@ export function SurveyMetadataForm({
       </div>
 
       {/* Description */}
-      <div className="grid gap-2">
+      <div className="grid gap-2 border-b pb-5">
         <FieldLabel htmlFor="description">توضیحات</FieldLabel>
         <textarea
           className="min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
@@ -181,15 +186,16 @@ export function SurveyMetadataForm({
       </div>
 
       {/* Kind */}
-      <div className="grid gap-2">
+      <div className="grid gap-2 border-t pt-6">
+        <h2 className="text-base font-semibold">رفتار پاسخ‌ها</h2>
         <span className="text-sm font-medium">نوع نظرسنجی</span>
         {canChangeKindIdentity ? (
           <>
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-2">
               {KIND_OPTIONS.map((option) => (
                 <label
                   className={cn(
-                    "flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm transition-colors hover:bg-muted/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5",
+                    "flex cursor-pointer items-start gap-3 rounded-md border px-3 py-2.5 text-sm transition-colors hover:bg-muted/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5",
                   )}
                   key={option.value}
                 >
@@ -226,11 +232,11 @@ export function SurveyMetadataForm({
         <span className="text-sm font-medium">حالت هویت پاسخ‌دهندگان</span>
         {canChangeKindIdentity ? (
           <>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-2">
               {IDENTITY_OPTIONS.map((option) => (
                 <label
                   className={cn(
-                    "flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm transition-colors hover:bg-muted/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5",
+                    "flex cursor-pointer items-start gap-3 rounded-md border px-3 py-2.5 text-sm transition-colors hover:bg-muted/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5",
                   )}
                   key={option.value}
                 >
@@ -265,7 +271,7 @@ export function SurveyMetadataForm({
       </div>
 
       {/* Behavioral explanation */}
-      <div className="rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-900">
+      <div className="border-r border-blue-200 pr-3 text-xs leading-6 text-muted-foreground">
         <p className="font-medium">تفاوت حالت‌های نظرسنجی:</p>
         <ul className="mt-1 list-inside list-disc space-y-1">
           <li>
@@ -287,8 +293,8 @@ export function SurveyMetadataForm({
 
       {/* Schedule (only visible when editing) */}
       {isEditing ? (
-        <div className="grid gap-4 rounded-lg border p-4">
-          <h3 className="text-sm font-medium">زمان‌بندی نظرسنجی</h3>
+        <div className="grid gap-4 border-t pt-6">
+          <h2 className="text-base font-semibold">زمان‌بندی</h2>
           <p className="text-xs text-muted-foreground">
             در صورت تنظیم نکردن زمان شروع و پایان، نظرسنجی پس از انتشار فعال می‌شود
             و تا بسته شدن دستی ادامه می‌یابد.
@@ -375,7 +381,7 @@ export function SurveyMetadataForm({
       ) : null}
 
       {/* Submit */}
-      <div className="flex items-center gap-3 border-t pt-4">
+      {!hideSubmit ? <div className="flex items-center gap-3 border-t pt-4">
         <SubmitButton pendingLabel="در حال ذخیره">
           {isEditing ? "ذخیره تغییرات" : "ایجاد نظرسنجی"}
         </SubmitButton>
@@ -388,7 +394,7 @@ export function SurveyMetadataForm({
             انصراف
           </Button>
         ) : null}
-      </div>
+      </div> : null}
     </form>
   );
 }
