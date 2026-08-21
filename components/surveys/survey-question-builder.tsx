@@ -28,6 +28,7 @@ import {
   type RandomizeActionState,
 } from "@/app/surveys/survey-branching-actions";
 import { Button } from "@/components/ui/button";
+import { SurveyAiPanel } from "@/components/surveys/survey-ai-panel";
 
 const QUESTION_TYPE_OPTIONS: {
   value: SurveyQuestionType;
@@ -268,6 +269,8 @@ export function SurveyQuestionBuilder({
           نمی‌باشند.
         </div>
       ) : null}
+
+      <SurveyAiPanel surveyId={surveyId} questionId={activeQuestionId ?? undefined} disabled={!canEdit} />
 
       {questions.length > 0 && validationMessages.length > 0 ? (
         <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3">

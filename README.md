@@ -180,6 +180,14 @@ Server Actions retain Next.js origin-based CSRF protection and the framework's
 size limits; services re-check authentication, authorization, lifecycle,
 recipient eligibility, and disclosure rules rather than trusting UI state.
 
+## Survey AI
+
+در صفحه ویرایش پیش‌نویس نظرسنجی، «کمک با هوش مصنوعی» از همان تنظیمات مدل Wiki استفاده می‌کند و سه حالت ساخت سؤال از brief فارسی، بازنویسی سؤال فعال و review کل پیش‌نویس را ارائه می‌دهد. پاسخ مدل strict با Zod بررسی می‌شود؛ Wiki content وارد prompt نمی‌شود و تنظیمات حساس Survey هرگز در قرارداد پیشنهاد وجود ندارند.
+
+پیشنهادها ephemeral و با snapshot امضاشده هستند. هیچ تغییری پیش از پذیرش کاربر اعمال نمی‌شود، پذیرش عمومی حذف را اعمال نمی‌کند، و apply سمت سرور دوباره draft بودن، مجوز و تازگی snapshot را بررسی و تغییرات را در یک transaction اعمال می‌کند. محدودیت‌ها شامل brief حداکثر ۴۰۰۰ نویسه، دستور بازنویسی ۱۲۰۰ نویسه، حداکثر ۲۰ سؤال/۱۲ گزینه و ۶ درخواست در دقیقه برای هر کاربر است. برای محیط عملیاتی `SURVEY_AI_SECRET` را تنظیم کنید؛ در صورت نبودن آن `AUTH_SECRET` استفاده می‌شود.
+
+manual test: یک draft قابل ویرایش باز کنید، brief فارسی بدهید، diff را بررسی کنید، یک مورد را رد و بقیه را accept کنید؛ سپس سؤال را در تب دیگری تغییر دهید و apply را امتحان کنید تا پیام «پیش‌نویس تغییر کرده است» و refresh دیده شود. review باید فقط diagnostic بدهد و هرگز branching را تغییر ندهد.
+
 ## Auth Routes
 
 - `/login` accepts seeded user credentials.
