@@ -6,6 +6,9 @@ import type { SurveyQuestionType } from "@prisma/client";
 
 import { requireCurrentUser } from "@/lib/auth";
 import { SurveyServiceError } from "@/lib/survey-service/shared";
+import { db } from "@/lib/db";
+import { canEditSurveyDraft } from "@/lib/survey-permissions";
+import { resolveSurveyActor } from "@/lib/survey-service/shared";
 import {
   addQuestion,
   deleteQuestion,
@@ -112,6 +115,92 @@ export async function addQuestionAction(
     }
     throw error;
   }
+}
+
+export type SurveyQuestionWithRelations = SurveyQuestionData & {
+  options: { id: string; label: string; sortOrder: number }[];
+  targetCondition: {
+    id: string;
+    sourceQuestionId: string;
+    sourceQuestionPrompt: string;
+    sourceQuestionType: SurveyQuestionType;
+    sourceOptionId: string;
+    sourceOptionLabel: string;
+    operator: "IS_SELECTED" | "IS_NOT_SELECTED";
+  } | null;
+};
+
+export async function getSurveyQuestionsAction(surveyId: string): Promise<SurveyQuestionWithRelations[]> {
+  const user = await requireCurrentUser();
+
+  const survey = await db.survey.findUnique({
+    where: { id: surveyId },
+    select: { id: true, state: true, ownerId: true },
+  });
+
+  if (!survey) {
+    throw new SurveyServiceError("نظرسنجی پیدا نشد.");
+  }
+
+  const actor = await resolveSurveyActor(db, {
+    actorUserId: user.id,
+    surveyId: survey.id,
+    ownerId: survey.ownerId,
+    user: { role: user.role, active: user.active, canCreateSurveys: user.canCreateSurveys },
+  });
+
+  if (!canEditSurveyDraft(actor, survey.state)) {
+    throw new SurveyServiceError("مجوز مشاهده سوالات را ندارید.");
+  }
+
+  const questions = await db.surveyQuestion.findMany({
+    where: { surveyId },
+    select: {
+      id: true,
+      prompt: true,
+      helpText: true,
+      type: true,
+      required: true,
+      sortOrder: true,
+      randomizeOptions: true,
+      ratingMin: true,
+      ratingMax: true,
+      ratingMinLabel: true,
+      ratingMaxLabel: true,
+      maxSelections: true,
+      options: {
+        select: { id: true, label: true, sortOrder: true },
+        orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+      },
+      targetCondition: {
+        select: {
+          id: true,
+          sourceQuestionId: true,
+          sourceOptionId: true,
+          operator: true,
+          sourceQuestion: { select: { prompt: true, type: true } },
+          sourceOption: { select: { label: true } },
+        },
+      },
+    },
+    orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+  });
+
+  return questions.map((q) => ({
+    ...toQuestionData(q),
+    options: q.options,
+    targetCondition: q.targetCondition
+      ? {
+          id: q.targetCondition.id,
+          sourceQuestionId: q.targetCondition.sourceQuestionId,
+          sourceQuestionPrompt: q.targetCondition.sourceQuestion.prompt,
+          sourceQuestionType: q.targetCondition.sourceQuestion.type,
+          sourceOptionId: q.targetCondition.sourceOptionId,
+          sourceOptionLabel: q.targetCondition.sourceOption.label,
+          operator: q.targetCondition.operator,
+        }
+      : null,
+  }));
 }
 
 export async function updateQuestionAction(

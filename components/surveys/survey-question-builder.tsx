@@ -11,6 +11,7 @@ import {
   deleteQuestionAction,
   updateQuestionAction,
   type SurveyQuestionData,
+  getSurveyQuestionsAction,
 } from "@/app/surveys/survey-question-actions";
 import {
   addOptionAction,
@@ -103,6 +104,16 @@ export function SurveyQuestionBuilder({
     initialQuestions[0]?.id ?? null,
   );
 
+  // Scroll to active question when it changes (e.g. after AI adds questions)
+  useEffect(() => {
+    if (!activeQuestionId) return;
+    // Small delay to let the DOM update after state change
+    const timer = setTimeout(() => {
+      document.getElementById(`question-${activeQuestionId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [activeQuestionId]);
+
   function handleAdded(question: SurveyQuestionData) {
     setQuestions((prev) => [
       ...prev,
@@ -142,6 +153,16 @@ export function SurveyQuestionBuilder({
     setQuestions((prev) => prev.filter((item) => item.id !== questionId));
     setActiveQuestionId((current) => (current === questionId ? null : current));
   }
+
+  const handleAiApplied = useCallback(async () => {
+    try {
+      const fresh = await getSurveyQuestionsAction(surveyId);
+      setQuestions(fresh);
+      setActiveQuestionId(fresh[fresh.length - 1]?.id ?? null);
+    } catch {
+      // Refetch failed; user can still manually refresh the page.
+    }
+  }, [surveyId]);
 
   function handleRandomizeToggle(
     questionId: string,
@@ -300,7 +321,7 @@ export function SurveyQuestionBuilder({
         </div>
       ) : null}
 
-      <SurveyAiPanel surveyId={surveyId} disabled={!canEdit} />
+      <SurveyAiPanel surveyId={surveyId} disabled={!canEdit} onApplied={handleAiApplied} />
 
       {questions.length > 0 && validationMessages.length > 0 ? (
         <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3">
@@ -324,7 +345,7 @@ export function SurveyQuestionBuilder({
       ) : (
         <ol className="grid gap-3">
           {questions.map((question, index) => (
-            <li key={question.id}>
+            <li id={`question-${question.id}`} key={question.id}>
               <SurveyQuestionCard
                 canEdit={canEdit}
                 index={index}

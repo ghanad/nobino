@@ -202,7 +202,7 @@ function AdviceRewriteCard({ operation }: { operation: Operation }) {
   );
 }
 
-export function SurveyAiPanel({ surveyId, disabled }: { surveyId: string; disabled?: boolean }) {
+export function SurveyAiPanel({ surveyId, disabled, onApplied }: { surveyId: string; disabled?: boolean; onApplied?: () => void }) {
   const router = useRouter();
   const [mode, setMode] = useState<"suggest" | "review">("suggest");
   const [brief, setBrief] = useState("");
@@ -275,8 +275,10 @@ export function SurveyAiPanel({ surveyId, disabled }: { surveyId: string; disabl
       const applied = await addSuggestions(proposal, selected);
       setAddedCount(applied);
       clearResultState();
+      setBrief("");
       if (addedTimerRef.current) clearTimeout(addedTimerRef.current);
       addedTimerRef.current = setTimeout(() => setAddedCount(null), 6000);
+      onApplied?.();
       router.refresh();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : ADD_FAILED_MESSAGE);
