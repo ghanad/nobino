@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Sparkles } from "lucide-react";
+import { RefreshCw, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { surveyAiReplaceFieldKeys } from "@/lib/survey-ai-fields";
@@ -54,6 +54,12 @@ type AiRequest = {
   instruction?: string;
 };
 
+const persianNumber = new Intl.NumberFormat("fa-IR");
+
+const GENERATION_FAILED_MESSAGE = "نتوانستیم سؤال‌های پیشنهادی را بسازیم. لطفاً دوباره تلاش کنید.";
+const ADD_FAILED_MESSAGE = "افزودن سؤال‌ها ناموفق بود. لطفاً دوباره تلاش کنید.";
+const REVIEW_FAILED_MESSAGE = "بازبینی انجام نشد. لطفاً دوباره تلاش کنید.";
+
 async function requestProposal(request: AiRequest): Promise<Proposal> {
   const response = await fetch("/api/survey-ai", {
     method: "POST",
@@ -61,18 +67,43 @@ async function requestProposal(request: AiRequest): Promise<Proposal> {
     body: JSON.stringify(request),
   });
   const data = (await response.json()) as Proposal & { error?: string };
-  if (!response.ok) throw new Error(data.error ?? "دریافت نتیجه ناموفق بود.");
+  if (!response.ok) throw new Error(data.error ?? REVIEW_FAILED_MESSAGE);
   return data;
 }
 
-async function applyProposal(proposal: Proposal, acceptedOperations: number[], options?: { removeOperationIndexes?: number[]; confirmRemovals?: boolean }): Promise<void> {
+async function generateSuggestions(surveyId: string, brief: string): Promise<Proposal> {
+  let response: Response;
+  try {
+    response = await fetch("/api/survey-ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ surveyId, mode: "suggest", brief }),
+    });
+  } catch (error) {
+    console.error("Survey AI suggestion request failed:", error);
+    throw new Error(GENERATION_FAILED_MESSAGE);
+  }
+  const data = (await response.json().catch(() => null)) as (Proposal & { error?: string }) | null;
+  if (!response.ok) {
+    // Deliberate business-rule rejections (rate limit, permissions, draft state)
+    // arrive as 409 with a message written for the user; anything else stays generic.
+    if (response.status === 409 && typeof data?.error === "string") throw new Error(data.error);
+    console.error("Survey AI suggestion failed:", data?.error ?? response.status);
+    throw new Error(GENERATION_FAILED_MESSAGE);
+  }
+  if (!data || !Array.isArray(data.operations)) throw new Error(GENERATION_FAILED_MESSAGE);
+  return data;
+}
+
+async function addSuggestions(proposal: Proposal, acceptedOperations: number[]): Promise<number> {
   const response = await fetch("/api/survey-ai/apply", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ proposal, acceptedOperations, removeOperationIndexes: options?.removeOperationIndexes ?? [], confirmRemovals: options?.confirmRemovals ?? false, replaceFieldSelections: [] }),
+    body: JSON.stringify({ proposal, acceptedOperations, removeOperationIndexes: [], confirmRemovals: false, replaceFieldSelections: [] }),
   });
-  const data = (await response.json()) as { error?: string };
-  if (!response.ok) throw new Error(data.error ?? "اعمال پیشنهاد ناموفق بود.");
+  const data = (await response.json().catch(() => null)) as ({ applied?: number } & { error?: string }) | null;
+  if (!response.ok) throw new Error(typeof data?.error === "string" ? data.error : ADD_FAILED_MESSAGE);
+  return typeof data?.applied === "number" ? data.applied : acceptedOperations.length;
 }
 
 function DiagnosticList({ diagnostics }: { diagnostics: Diagnostic[] }) {
@@ -88,6 +119,49 @@ function DiagnosticList({ diagnostics }: { diagnostics: Diagnostic[] }) {
         </div>
       ))}
     </div>
+  );
+}
+
+function InlineError({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2" role="alert">
+      <p className="text-sm leading-6 text-destructive">{message}</p>
+      <Button onClick={onRetry} size="sm" type="button" variant="outline">تلاش دوباره</Button>
+    </div>
+  );
+}
+
+function suggestionMetadata(question: SurveyAiQuestionPayload): string | null {
+  const optionCount = question.options?.length ?? 0;
+  switch (question.type) {
+    case "RATING": {
+      const scale = `امتیازدهی ${persianNumber.format(question.ratingMin ?? 1)} تا ${persianNumber.format(question.ratingMax ?? 5)}`;
+      const labels = [question.ratingMinLabel?.trim(), question.ratingMaxLabel?.trim()].filter(Boolean) as string[];
+      return labels.length > 0 ? `${scale} · ${labels.join(" ↔ ")}` : scale;
+    }
+    case "SINGLE_CHOICE":
+      return optionCount > 0 ? `تک‌گزینه‌ای · ${persianNumber.format(optionCount)} گزینه` : "تک‌گزینه‌ای";
+    case "MULTIPLE_CHOICE":
+      return optionCount > 0 ? `چندگزینه‌ای · ${persianNumber.format(optionCount)} گزینه` : "چندگزینه‌ای";
+    case "LONG_TEXT":
+      return "پاسخ بلند";
+    default:
+      return "پاسخ کوتاه";
+  }
+}
+
+function SuggestionRow({ index, onToggle, question, selected }: { index: number; onToggle: (index: number, checked: boolean) => void; question: SurveyAiQuestionPayload; selected: boolean }) {
+  const metadata = suggestionMetadata(question);
+  return (
+    <li>
+      <label className="-mx-2 flex cursor-pointer items-start gap-3 rounded-md px-2 py-2 transition-colors hover:bg-accent/60" htmlFor={`survey-ai-suggestion-${index}`}>
+        <input checked={selected} className="mt-1.5 h-4 w-4 shrink-0" id={`survey-ai-suggestion-${index}`} onChange={(event) => onToggle(index, event.target.checked)} type="checkbox" />
+        <span className="grid min-w-0 gap-0.5">
+          <span className="break-words text-sm font-medium leading-6">{question.prompt}</span>
+          {metadata ? <span className="text-xs leading-5 text-muted-foreground">{metadata}</span> : null}
+        </span>
+      </label>
+    </li>
   );
 }
 
@@ -128,60 +202,199 @@ function AdviceRewriteCard({ operation }: { operation: Operation }) {
   );
 }
 
-function OperationsList({ operations, selected, onToggle }: { operations: Operation[]; selected: number[]; onToggle: (index: number, checked: boolean) => void }) {
-  return (
-    <div className="grid gap-2">
-      {operations.map((operation, index) => (
-        <label className="flex min-w-0 items-start gap-2 rounded-md border bg-background p-3 text-sm" key={index}>
-          <input checked={selected.includes(index)} className="mt-1 h-4 w-4 shrink-0" onChange={(event) => onToggle(index, event.target.checked)} type="checkbox" />
-          <span className="min-w-0 leading-6">{operation.op === "add" ? `افزودن: ${operation.question?.prompt ?? "سؤال جدید"}` : operation.op === "remove" ? `حذف: ${operation.before?.prompt ?? "سؤال"}` : `بازنویسی: ${operation.after?.prompt ?? "سؤال"}`}</span>
-        </label>
-      ))}
-    </div>
-  );
-}
-
 export function SurveyAiPanel({ surveyId, disabled }: { surveyId: string; disabled?: boolean }) {
   const router = useRouter();
   const [mode, setMode] = useState<"suggest" | "review">("suggest");
-  const [text, setText] = useState("");
+  const [brief, setBrief] = useState("");
+  const [phase, setPhase] = useState<"input" | "suggestions">("input");
   const [proposal, setProposal] = useState<Proposal | null>(null);
-  const [pending, setPending] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<SurveyAiQuestionPayload[]>([]);
   const [selected, setSelected] = useState<number[]>([]);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [addedCount, setAddedCount] = useState<number | null>(null);
+  const addedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  async function run() {
-    setPending(true); setMessage(null);
-    try {
-      const result = await requestProposal({ surveyId, mode, ...(mode === "suggest" ? { brief: text } : {}) });
-      setProposal(result); setSelected(result.operations.map((_, index) => index));
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "دریافت نتیجه ناموفق بود.");
-    } finally { setPending(false); }
+  useEffect(() => () => {
+    if (addedTimerRef.current) clearTimeout(addedTimerRef.current);
+  }, []);
+
+  function clearResultState() {
+    setProposal(null);
+    setSuggestions([]);
+    setSelected([]);
+    setError(null);
+    setPhase("input");
   }
 
-  async function apply() {
-    if (!proposal) return;
-    const removals = proposal.operations.map((operation, index) => operation.op === "remove" && selected.includes(index) ? index : -1).filter((index) => index >= 0);
-    if (removals.length > 0 && !window.confirm("حذف سؤال‌های انتخاب‌شده قطعی است؟ این عملیات قابل بازگشت نیست.")) return;
-    setPending(true); setMessage(null);
-    try { await applyProposal(proposal, selected, { removeOperationIndexes: removals, confirmRemovals: removals.length > 0 }); setProposal(null); router.refresh(); }
-    catch (error) { setMessage(error instanceof Error ? error.message : "اعمال پیشنهاد ناموفق بود."); }
-    finally { setPending(false); }
+  function switchMode(nextMode: "suggest" | "review") {
+    if (nextMode === mode || pending) return;
+    setMode(nextMode);
+    clearResultState();
+  }
+
+  async function generate() {
+    const trimmedBrief = brief.trim();
+    if (!trimmedBrief || pending) return;
+    setPending(true);
+    setError(null);
+    setAddedCount(null);
+    try {
+      const result = await generateSuggestions(surveyId, trimmedBrief);
+      const questions = result.operations.flatMap((operation) => (operation.op === "add" && operation.question ? [operation.question] : []));
+      setProposal(result);
+      setSuggestions(questions);
+      setSelected(result.operations.map((_, index) => index));
+      setPhase("suggestions");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : GENERATION_FAILED_MESSAGE);
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function startReview() {
+    if (pending) return;
+    setPending(true);
+    setError(null);
+    setProposal(null);
+    try {
+      setProposal(await requestProposal({ surveyId, mode: "review" }));
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : REVIEW_FAILED_MESSAGE);
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function addSelected() {
+    if (!proposal || selected.length === 0 || pending) return;
+    setPending(true);
+    setError(null);
+    try {
+      const applied = await addSuggestions(proposal, selected);
+      setAddedCount(applied);
+      clearResultState();
+      if (addedTimerRef.current) clearTimeout(addedTimerRef.current);
+      addedTimerRef.current = setTimeout(() => setAddedCount(null), 6000);
+      router.refresh();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : ADD_FAILED_MESSAGE);
+    } finally {
+      setPending(false);
+    }
+  }
+
+  function toggleSuggestion(index: number, checked: boolean) {
+    setSelected((current) => (checked ? [...current, index] : current.filter((item) => item !== index)));
   }
 
   if (disabled) return null;
+
   return (
-    <section className="grid gap-3 rounded-md border bg-muted/20 p-4" aria-labelledby="survey-ai-title">
-      <div><h3 className="font-semibold" id="survey-ai-title">کمک با هوش مصنوعی</h3><p className="text-xs text-muted-foreground">پیشنهادها تا وقتی شما نپذیرید روی پیش‌نویس اعمال نمی‌شوند.</p></div>
-      <div className="flex flex-wrap gap-2" role="group" aria-label="نوع کمک کلی نظرسنجی">
-        <Button onClick={() => { setMode("suggest"); setProposal(null); }} size="sm" type="button" variant={mode === "suggest" ? "default" : "outline"}>ساخت سؤال از خلاصه</Button>
-        <Button onClick={() => { setMode("review"); setProposal(null); }} size="sm" type="button" variant={mode === "review" ? "default" : "outline"}>بازبینی کل پیش‌نویس</Button>
+    <section aria-labelledby="survey-ai-title" className="grid gap-4 rounded-md border bg-muted/20 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <h3 className="font-semibold" id="survey-ai-title">کمک با هوش مصنوعی</h3>
+        <div aria-label="انتخاب حالت کمک هوش مصنوعی" className="flex rounded-md bg-muted p-0.5" role="group">
+          <button
+            aria-pressed={mode === "suggest"}
+            className={`rounded-sm px-3 py-1.5 text-xs font-medium transition-colors ${mode === "suggest" ? "bg-background text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            onClick={() => switchMode("suggest")}
+            type="button"
+          >
+            ساخت سؤال
+          </button>
+          <button
+            aria-pressed={mode === "review"}
+            className={`rounded-sm px-3 py-1.5 text-xs font-medium transition-colors ${mode === "review" ? "bg-background text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            onClick={() => switchMode("review")}
+            type="button"
+          >
+            بازبینی نظرسنجی
+          </button>
+        </div>
       </div>
-      {mode === "suggest" ? <div className="grid gap-1.5"><label className="text-sm font-medium" htmlFor="survey-ai-brief">توضیح کوتاه نظرسنجی</label><textarea aria-describedby="survey-ai-brief-hint" className="min-h-24 rounded-md border bg-background p-3 text-sm" id="survey-ai-brief" maxLength={4000} onChange={(event) => setText(event.target.value)} placeholder="مثال: می‌خواهیم میزان رضایت همکاران از جلسات هفتگی را بسنجیم؛ مخاطب این نظرسنجی همهٔ همکاران شرکت هستند." value={text} /><p className="text-xs text-muted-foreground" id="survey-ai-brief-hint">در دو سه جملهٔ فارسی بنویسید این نظرسنجی دربارهٔ چیست و مخاطبش چه کسانی هستند؛ سپس دکمهٔ ساخت سؤال را بزنید.</p></div> : <p className="text-sm text-muted-foreground">همهٔ سؤال‌های پیش‌نویس از نظر کیفیت سؤال و گزینه‌ها بررسی می‌شوند.</p>}
-      <Button disabled={pending || (mode === "suggest" && !text.trim())} onClick={run} type="button">{pending ? "در حال بررسی…" : mode === "review" ? "شروع بازبینی کل" : "ساخت سؤال‌های پیشنهادی"}</Button>
-      {message ? <p className="text-sm text-destructive" role="alert">{message}</p> : null}
-      {proposal ? <div className="grid gap-3 border-t pt-3"><div><h4 className="font-medium">نتیجهٔ قابل بررسی</h4><p className="text-xs text-muted-foreground">هیچ تغییری بدون پذیرش صریح شما اعمال نمی‌شود.</p></div><DiagnosticList diagnostics={proposal.diagnostics} />{proposal.operations.length > 0 ? <OperationsList operations={proposal.operations} selected={selected} onToggle={(index, checked) => setSelected((current) => checked ? [...current, index] : current.filter((item) => item !== index))} /> : null}{proposal.operations.length > 0 ? <Button disabled={pending || selected.length === 0} onClick={apply} type="button">پذیرش پیشنهادهای انتخاب‌شده</Button> : null}<p className="text-xs text-muted-foreground">{mode === "review" ? "بازبینی کل فقط نظر می‌دهد و هیچ تغییری پیشنهاد یا اعمال نمی‌کند." : "پیشنهادهای ساخت سؤال فقط پس از انتخاب و پذیرش شما اعمال می‌شوند."}</p></div> : null}
+
+      {addedCount !== null ? (
+        <p className="text-sm text-green-700" role="status">{persianNumber.format(addedCount)} سؤال به نظرسنجی اضافه شد.</p>
+      ) : null}
+
+      {mode === "suggest" ? (
+        phase === "suggestions" ? (
+          <div aria-live="polite" className="grid gap-1">
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 pb-1">
+              <h4 className="text-sm font-semibold">
+                سؤال‌های پیشنهادی
+                <span className="ms-2 text-xs font-normal text-muted-foreground">{persianNumber.format(suggestions.length)} سؤال</span>
+              </h4>
+              <Button className="h-8 px-2 text-xs" onClick={() => clearResultState()} size="sm" type="button" variant="ghost">ویرایش توضیحات</Button>
+            </div>
+
+            {suggestions.length > 0 ? (
+              <ul className="grid">
+                {suggestions.map((question, index) => (
+                  <SuggestionRow
+                    index={index}
+                    key={`${question.prompt}-${index}`}
+                    onToggle={toggleSuggestion}
+                    question={question}
+                    selected={selected.includes(index)}
+                  />
+                ))}
+              </ul>
+            ) : (
+              <p className="py-2 text-sm text-muted-foreground">چند سؤال پیشنهاد نشد. توضیح را کمی دقیق‌تر بنویسید یا دوباره تلاش کنید.</p>
+            )}
+
+            {error ? <InlineError message={error} onRetry={generate} /> : null}
+
+            <div className="mt-2 flex flex-col gap-2 border-t pt-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3">
+              <Button className="w-full sm:w-auto" disabled={pending || selected.length === 0} onClick={addSelected} type="button">
+                افزودن {persianNumber.format(selected.length)} سؤال انتخاب‌شده
+              </Button>
+              <Button className="w-full justify-center sm:w-auto" disabled={pending} onClick={generate} size="sm" type="button" variant="outline">
+                <RefreshCw aria-hidden="true" className="h-3.5 w-3.5" />
+                {pending ? "در حال ساخت…" : "ساخت پیشنهادهای جدید"}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid gap-2">
+            <label className="text-sm font-medium" htmlFor="survey-ai-brief">چه نظرسنجی‌ای می‌خواهید بسازید؟</label>
+            <textarea
+              className="min-h-24 w-full resize-y rounded-md border border-input bg-background p-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+              id="survey-ai-brief"
+              maxLength={4000}
+              onChange={(event) => setBrief(event.target.value)}
+              placeholder="مثلاً: می‌خواهیم میزان رضایت همکاران از نوبینو، سهولت پیدا کردن امکانات و تجربهٔ کلی رزرو را بسنجیم."
+              value={brief}
+            />
+            <p className="text-xs text-muted-foreground">در یکی دو جمله موضوع و مخاطب نظرسنجی را بنویسید.</p>
+            {error ? <InlineError message={error} onRetry={generate} /> : null}
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
+              <Button className="w-full sm:w-auto" disabled={pending || !brief.trim()} onClick={generate} type="button">
+                {pending ? "در حال ساخت…" : "ساخت پیشنهاد سؤال‌ها"}
+              </Button>
+            </div>
+          </div>
+        )
+      ) : (
+        <div className="grid gap-3">
+          <p className="text-sm leading-6 text-muted-foreground">کل پیش‌نویس از نظر وضوح، جهت‌داری و کامل‌بودن گزینه‌ها بررسی می‌شود؛ نتیجه فقط راهنماست و هیچ تغییری اعمال نمی‌شود.</p>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <Button className="w-full sm:w-auto" disabled={pending} onClick={startReview} type="button">
+              {pending ? "در حال بازبینی…" : "شروع بازبینی"}
+            </Button>
+          </div>
+          {error ? <InlineError message={error} onRetry={startReview} /> : null}
+          {proposal ? (
+            <div className="grid gap-2 pt-1">
+              <h4 className="text-sm font-semibold">نتیجهٔ بازبینی</h4>
+              <DiagnosticList diagnostics={proposal.diagnostics} />
+            </div>
+          ) : null}
+        </div>
+      )}
     </section>
   );
 }
