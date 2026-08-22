@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { db } from "@/lib/db";
 import { requestAiJson } from "@/lib/ai-model-client";
+import { mergeSurveyAiReplaceAfter, surveyAiReplaceFieldKeys } from "@/lib/survey-ai-fields";
 import { canEditSurveyDraft } from "@/lib/survey-permissions";
 import { resolveSurveyActor, loadActiveActorUser, SurveyServiceError } from "@/lib/survey-service/shared";
 import { SURVEY_OPTION_LABEL_MAX_LENGTH, SURVEY_QUESTION_HELP_TEXT_MAX_LENGTH, SURVEY_QUESTION_PROMPT_MAX_LENGTH } from "@/lib/survey-validators";
@@ -73,6 +74,10 @@ export const applySurveyAiRequestSchema = z.object({
   acceptedOperations: z.array(z.number().int().nonnegative()).max(MAX_QUESTIONS).refine((values) => new Set(values).size === values.length, "عملیات تکراری مجاز نیست.").optional(),
   removeOperationIndexes: z.array(z.number().int().nonnegative()).max(MAX_QUESTIONS).refine((values) => new Set(values).size === values.length, "عملیات تکراری مجاز نیست.").optional(),
   confirmRemovals: z.boolean().optional(),
+  replaceFieldSelections: z.array(z.object({
+    operationIndex: z.number().int().nonnegative(),
+    fields: z.array(z.string().regex(/^(prompt|helpText|option:[A-Za-z0-9_-]+)$/)).min(1).max(MAX_OPTIONS + 2).refine((fields) => new Set(fields).size === fields.length, "فیلدهای تکراری مجاز نیست."),
+  }).strict()).max(MAX_QUESTIONS).refine((selections) => new Set(selections.map((selection) => selection.operationIndex)).size === selections.length, "عملیات تکراری مجاز نیست.").optional(),
 }).strict();
 export type SurveyAiProposal = z.infer<typeof signedSurveyAiProposalSchema>;
 
@@ -263,7 +268,7 @@ export async function createSurveyAiProposal(input: { actorUserId: string; surve
   return { ...parsed.data, operations, surveyId: input.surveyId, snapshot: current, signature: sign(`${input.surveyId}:${current}`) };
 }
 
-export async function applySurveyAiProposal(input: { actorUserId: string; proposal: SurveyAiProposal; acceptedOperations?: number[]; removeOperationIndexes?: number[]; confirmRemovals?: boolean }) {
+export async function applySurveyAiProposal(input: { actorUserId: string; proposal: SurveyAiProposal; acceptedOperations?: number[]; removeOperationIndexes?: number[]; confirmRemovals?: boolean; replaceFieldSelections?: Array<{ operationIndex: number; fields: string[] }> }) {
   const proposal = input.proposal;
   const parsedProposal = signedSurveyAiProposalSchema.safeParse(proposal);
   if (!parsedProposal.success || typeof proposal.surveyId !== "string" || typeof proposal.snapshot !== "string" || typeof proposal.signature !== "string") throw new SurveyServiceError("پیشنهاد هوش مصنوعی معتبر نیست.");
@@ -271,11 +276,20 @@ export async function applySurveyAiProposal(input: { actorUserId: string; propos
   const accepted = new Set(input.acceptedOperations ?? proposal.operations.map((_, i) => i)); const removes = new Set(input.removeOperationIndexes ?? []);
   if ([...accepted].some((i) => i >= proposal.operations.length) || [...removes].some((i) => i >= proposal.operations.length)) throw new SurveyServiceError("شناسه عملیات پیشنهادی نامعتبر است.");
   if ([...removes].some((i) => !accepted.has(i) || proposal.operations[i].op !== "remove")) throw new SurveyServiceError("عملیات حذف پیشنهادی نامعتبر است.");
-  const operations = proposal.operations.filter((_, i) => accepted.has(i));
-  for (const operation of operations) {
+  // Per-field selections only choose between signed before/after values, so the
+  // HMAC-protected proposal payload never needs to be modified or re-signed.
+  const fieldSelectionByIndex = new Map<number, Set<string>>();
+  for (const selection of input.replaceFieldSelections ?? []) {
+    const operation = proposal.operations[selection.operationIndex];
+    const changeableKeys = operation?.op === "replace" && accepted.has(selection.operationIndex) ? surveyAiReplaceFieldKeys(operation.before, operation.after) : [];
+    if (!operation || operation.op !== "replace" || selection.fields.some((field) => !changeableKeys.includes(field))) throw new SurveyServiceError("انتخاب فیلدهای بازنویسی نامعتبر است.");
+    fieldSelectionByIndex.set(selection.operationIndex, new Set(selection.fields));
+  }
+  const operations = proposal.operations.map((operation, index) => ({ operation, index })).filter(({ index }) => accepted.has(index));
+  for (const { operation } of operations) {
     if (operation.op === "replace") validateSurveyAiReplaceScope(operation.before, operation.after);
   }
-  if (operations.some((op) => op.op === "remove") && !input.confirmRemovals) throw new SurveyServiceError("برای حذف باید تأیید جداگانه انجام شود.");
+  if (operations.some(({ operation }) => operation.op === "remove") && !input.confirmRemovals) throw new SurveyServiceError("برای حذف باید تأیید جداگانه انجام شود.");
   return db.$transaction(async (tx) => {
     const fresh = await tx.survey.findUnique({ where: { id: proposal.surveyId }, select: { state: true, ownerId: true, questions: { select: { id: true, prompt: true, helpText: true, type: true, required: true, randomizeOptions: true, ratingMin: true, ratingMax: true, ratingMinLabel: true, ratingMaxLabel: true, maxSelections: true, options: { select: { id: true, label: true, sortOrder: true }, orderBy: [{ sortOrder: "asc" }, { id: "asc" }] } }, orderBy: [{ sortOrder: "asc" }, { id: "asc" }] } } });
     if (!fresh || fresh.state !== SurveyState.DRAFT) throw new SurveyServiceError("هوش مصنوعی فقط روی پیش‌نویس کار می‌کند.");
@@ -283,7 +297,7 @@ export async function applySurveyAiProposal(input: { actorUserId: string; propos
     const actor = await resolveSurveyActor(tx, { actorUserId: input.actorUserId, surveyId: proposal.surveyId, ownerId: fresh.ownerId, user: actorUser });
     if (!canEditSurveyDraft(actor, fresh.state)) throw new SurveyServiceError("مجوز ویرایش این پیش‌نویس را ندارید.");
     if (snapshotOf(fresh.questions) !== proposal.snapshot) throw new SurveyServiceError("پیش‌نویس تغییر کرده است؛ لطفاً صفحه را تازه کنید.");
-    for (const op of operations) {
+    for (const { operation: op, index } of operations) {
       if (op.op === "add") {
         const sortOrder = await tx.surveyQuestion.count({ where: { surveyId: proposal.surveyId } });
         const created = await tx.surveyQuestion.create({ data: { surveyId: proposal.surveyId, prompt: op.question.prompt, helpText: op.question.helpText ?? null, type: op.question.type, required: op.question.required ?? false, sortOrder, randomizeOptions: op.question.randomizeOptions ?? false, ratingMin: op.question.type === SurveyQuestionType.RATING ? op.question.ratingMin : null, ratingMax: op.question.type === SurveyQuestionType.RATING ? op.question.ratingMax : null, ratingMinLabel: op.question.type === SurveyQuestionType.RATING ? (op.question.ratingMinLabel ?? null) : null, ratingMaxLabel: op.question.type === SurveyQuestionType.RATING ? (op.question.ratingMaxLabel ?? null) : null, maxSelections: op.question.type === SurveyQuestionType.MULTIPLE_CHOICE ? (op.question.maxSelections ?? null) : null } });
@@ -294,7 +308,7 @@ export async function applySurveyAiProposal(input: { actorUserId: string; propos
         const expected = op.before; const expectedSnapshot = snapshotOf([{ id: expected.id as string, prompt: expected.prompt, helpText: expected.helpText ?? null, type: expected.type, required: expected.required ?? false, randomizeOptions: expected.randomizeOptions ?? false, ratingMin: expected.ratingMin ?? null, ratingMax: expected.ratingMax ?? null, ratingMinLabel: expected.ratingMinLabel ?? null, ratingMaxLabel: expected.ratingMaxLabel ?? null, maxSelections: expected.maxSelections ?? null, options: (expected.options ?? []).map((o) => ({ id: o.id as string, label: o.label })) }]);
         const actualSnapshot = snapshotOf([{ ...question, options: question.options }]); if (actualSnapshot !== expectedSnapshot) throw new SurveyServiceError("پیش‌نویس تغییر کرده است؛ لطفاً صفحه را تازه کنید.");
         if (op.op === "remove") await tx.surveyQuestion.delete({ where: { id: op.questionId } });
-        else { let optionUpdates: Array<{ id: string; label: string; sortOrder: number }> = []; if (op.after.options) { const ids = new Set(question.options.map((o) => o.id)); if (op.after.options.length !== ids.size || op.after.options.some((o) => !o.id || !ids.has(o.id))) throw new SurveyServiceError("شناسه گزینه پیشنهادی معتبر نیست."); optionUpdates = op.after.options.map((o, index) => ({ id: o.id as string, label: o.label, sortOrder: index })); } await tx.surveyQuestion.update({ where: { id: op.questionId }, data: { prompt: op.after.prompt, helpText: op.after.helpText ?? null, type: op.after.type, required: op.after.required ?? false, randomizeOptions: op.after.randomizeOptions ?? false, ratingMin: op.after.type === SurveyQuestionType.RATING ? op.after.ratingMin : null, ratingMax: op.after.type === SurveyQuestionType.RATING ? op.after.ratingMax : null, ratingMinLabel: op.after.type === SurveyQuestionType.RATING ? (op.after.ratingMinLabel ?? null) : null, ratingMaxLabel: op.after.type === SurveyQuestionType.RATING ? (op.after.ratingMaxLabel ?? null) : null, maxSelections: op.after.type === SurveyQuestionType.MULTIPLE_CHOICE ? op.after.maxSelections : null } }); await Promise.all(optionUpdates.map((o) => tx.surveyOption.update({ where: { id: o.id }, data: { label: o.label, sortOrder: o.sortOrder } }))); }
+        else { const after = fieldSelectionByIndex.get(index) ? mergeSurveyAiReplaceAfter(op.before, op.after, fieldSelectionByIndex.get(index) as Set<string>) : op.after; let optionUpdates: Array<{ id: string; label: string; sortOrder: number }> = []; if (after.options) { const ids = new Set(question.options.map((o) => o.id)); if (after.options.length !== ids.size || after.options.some((o) => !o.id || !ids.has(o.id))) throw new SurveyServiceError("شناسه گزینه پیشنهادی معتبر نیست."); optionUpdates = after.options.map((o, index2) => ({ id: o.id as string, label: o.label, sortOrder: index2 })); } await tx.surveyQuestion.update({ where: { id: op.questionId }, data: { prompt: after.prompt, helpText: after.helpText ?? null, type: after.type, required: after.required ?? false, randomizeOptions: after.randomizeOptions ?? false, ratingMin: after.type === SurveyQuestionType.RATING ? after.ratingMin : null, ratingMax: after.type === SurveyQuestionType.RATING ? after.ratingMax : null, ratingMinLabel: after.type === SurveyQuestionType.RATING ? (after.ratingMinLabel ?? null) : null, ratingMaxLabel: after.type === SurveyQuestionType.RATING ? (after.ratingMaxLabel ?? null) : null, maxSelections: after.type === SurveyQuestionType.MULTIPLE_CHOICE ? after.maxSelections : null } }); await Promise.all(optionUpdates.map((o) => tx.surveyOption.update({ where: { id: o.id }, data: { label: o.label, sortOrder: o.sortOrder } }))); }
       }
     }
     const remaining = await tx.surveyQuestion.findMany({ where: { surveyId: proposal.surveyId }, select: { id: true }, orderBy: [{ sortOrder: "asc" }, { id: "asc" }] });

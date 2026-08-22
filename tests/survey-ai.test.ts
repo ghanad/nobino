@@ -10,6 +10,7 @@ import {
   validateSurveyAiOperationScope,
   validateSurveyAiReplaceScope,
 } from "../lib/survey-ai-service";
+import { mergeSurveyAiReplaceAfter, surveyAiReplaceFieldKeys } from "../lib/survey-ai-fields";
 import { rejectCrossSiteWrite } from "../lib/csrf";
 
 const base = {
@@ -31,6 +32,74 @@ test("survey AI apply schema rejects forbidden or malformed transport fields", (
   assert.equal(applySurveyAiRequestSchema.safeParse({ proposal: base, acceptedOperations: [1] }).success, true);
   assert.equal(applySurveyAiRequestSchema.safeParse({ proposal: base, acceptedOperations: [0, 0] }).success, false);
   assert.equal(signedSurveyAiProposalSchema.safeParse({ ...base, signature: "not-a-signature" }).success, false);
+});
+
+test("survey AI apply schema validates per-field replace selections", () => {
+  const withSelection = { proposal: base, replaceFieldSelections: [{ operationIndex: 0, fields: ["prompt", "option:o1"] }] };
+  assert.equal(applySurveyAiRequestSchema.safeParse(withSelection).success, true);
+  assert.equal(applySurveyAiRequestSchema.safeParse({ ...withSelection, replaceFieldSelections: [] }).success, true);
+  assert.equal(applySurveyAiRequestSchema.safeParse({ proposal: base, replaceFieldSelections: [{ operationIndex: 0, fields: [] }] }).success, false);
+  assert.equal(applySurveyAiRequestSchema.safeParse({ proposal: base, replaceFieldSelections: [{ operationIndex: 0, fields: ["prompt", "prompt"] }] }).success, false);
+  assert.equal(applySurveyAiRequestSchema.safeParse({ proposal: base, replaceFieldSelections: [{ operationIndex: 0, fields: ["type"] }] }).success, false);
+  assert.equal(applySurveyAiRequestSchema.safeParse({ proposal: base, replaceFieldSelections: [{ operationIndex: 0, fields: ["prompt"] }, { operationIndex: 0, fields: ["helpText"] }] }).success, false);
+});
+
+test("survey AI replace field keys detect only prompt, help text, and option label diffs", () => {
+  const before = {
+    id: "q1",
+    prompt: "متن فعلی",
+    helpText: "راهنمای فعلی",
+    type: SurveyQuestionType.SINGLE_CHOICE,
+    options: [{ id: "o1", label: "اول" }, { id: "o2", label: "دوم" }],
+  };
+  const after = {
+    ...before,
+    prompt: "متن پیشنهادی",
+    options: [{ id: "o1", label: "اول" }, { id: "o2", label: "دومِ بهتر" }],
+  };
+
+  assert.deepEqual(surveyAiReplaceFieldKeys(before, after), ["prompt", "option:o2"]);
+  assert.deepEqual(surveyAiReplaceFieldKeys(after, after), []);
+  assert.deepEqual(surveyAiReplaceFieldKeys({ ...before, helpText: " راهنمای فعلی " }, after), ["prompt", "option:o2"]);
+});
+
+test("survey AI replace field keys always satisfy the apply transport pattern", () => {
+  const before = {
+    id: "q1",
+    prompt: "متن فعلی",
+    helpText: null,
+    type: SurveyQuestionType.SINGLE_CHOICE,
+    options: [{ id: "cmt398oux0001lagmfts4f0hc", label: "اول" }],
+  };
+  const after = { ...before, prompt: "پیشنهادی", helpText: "راهنما", options: [{ id: "cmt398oux0001lagmfts4f0hc", label: "اولِ جدید" }] };
+
+  for (const key of surveyAiReplaceFieldKeys(before, after)) assert.match(key, /^(prompt|helpText|option:[A-Za-z0-9_-]+)$/);
+});
+
+test("merging accepted replace fields keeps rejected suggestions at their current values", () => {
+  const before = {
+    id: "q1",
+    prompt: "متن فعلی",
+    helpText: "راهنمای فعلی",
+    type: SurveyQuestionType.SINGLE_CHOICE,
+    required: true,
+    options: [{ id: "o1", label: "اول" }, { id: "o2", label: "دوم" }],
+  };
+  const after = {
+    ...before,
+    prompt: "متن پیشنهادی",
+    helpText: "راهنمای پیشنهادی",
+    options: [{ id: "o1", label: "اول جدید" }, { id: "o2", label: "دوم جدید" }],
+  };
+
+  const merged = mergeSurveyAiReplaceAfter(before, after, new Set(["prompt", "option:o1"]));
+  assert.equal(merged.prompt, "متن پیشنهادی");
+  assert.equal(merged.helpText, "راهنمای فعلی");
+  assert.deepEqual(merged.options, [{ id: "o1", label: "اول جدید" }, { id: "o2", label: "دوم" }]);
+  assert.equal(mergeSurveyAiReplaceAfter(before, after, new Set()).prompt, before.prompt);
+
+  const fullMerge = mergeSurveyAiReplaceAfter(before, after, new Set(["prompt", "helpText", "option:o1", "option:o2"]));
+  assert.deepEqual(fullMerge.options, after.options);
 });
 
 test("survey AI signed proposal schema remains strict about proposal fields", () => {

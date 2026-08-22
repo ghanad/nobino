@@ -1,10 +1,11 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { mergeSurveyAiReplaceAfter, surveyAiReplaceFieldKeys } from "@/lib/survey-ai-fields";
 
 export type SurveyAiQuestionPayload = {
   id?: string;
@@ -64,11 +65,11 @@ async function requestProposal(request: AiRequest): Promise<Proposal> {
   return data;
 }
 
-async function applyProposal(proposal: Proposal, acceptedOperations: number[], options?: { removeOperationIndexes?: number[]; confirmRemovals?: boolean }): Promise<void> {
+async function applyProposal(proposal: Proposal, acceptedOperations: number[], options?: { removeOperationIndexes?: number[]; confirmRemovals?: boolean; replaceFieldSelections?: Array<{ operationIndex: number; fields: string[] }> }): Promise<void> {
   const response = await fetch("/api/survey-ai/apply", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ proposal, acceptedOperations, removeOperationIndexes: options?.removeOperationIndexes ?? [], confirmRemovals: options?.confirmRemovals ?? false }),
+    body: JSON.stringify({ proposal, acceptedOperations, removeOperationIndexes: options?.removeOperationIndexes ?? [], confirmRemovals: options?.confirmRemovals ?? false, replaceFieldSelections: options?.replaceFieldSelections ?? [] }),
   });
   const data = (await response.json()) as { error?: string };
   if (!response.ok) throw new Error(data.error ?? "اعمال پیشنهاد ناموفق بود.");
@@ -90,49 +91,56 @@ function DiagnosticList({ diagnostics }: { diagnostics: Diagnostic[] }) {
   );
 }
 
-function OptionComparison({ before, after }: { before: SurveyAiQuestionPayload; after: SurveyAiQuestionPayload }) {
-  if (!before.options && !after.options) return null;
+type ReplaceFieldRow = { key: string; title: string; current: string; proposed: string };
+
+function replaceFieldRows(before: SurveyAiQuestionPayload, after: SurveyAiQuestionPayload): ReplaceFieldRow[] {
+  return surveyAiReplaceFieldKeys(before, after).flatMap((key) => {
+    if (key === "prompt") return [{ key, title: "متن سؤال", current: before.prompt, proposed: after.prompt }];
+    if (key === "helpText") return [{ key, title: "متن راهنما", current: before.helpText?.trim() ?? "", proposed: after.helpText?.trim() ?? "" }];
+    const optionId = key.slice("option:".length);
+    const current = (before.options ?? []).find((candidate) => candidate.id === optionId);
+    const proposed = (after.options ?? []).find((candidate) => candidate.id === optionId);
+    return current && proposed ? [{ key, title: "برچسب گزینه", current: current.label, proposed: proposed.label }] : [];
+  });
+}
+
+function FieldAcceptanceRow({ row, checked, disabled, onToggle }: { row: ReplaceFieldRow; checked: boolean; disabled: boolean; onToggle: (checked: boolean) => void }) {
   return (
-    <div className="grid gap-2 sm:grid-cols-2">
-      <div className="rounded-md border bg-muted/30 p-3">
-        <p className="mb-1 text-xs font-medium text-muted-foreground">گزینه‌های فعلی</p>
-        <ul className="list-inside list-disc space-y-1 text-sm">{(before.options ?? []).map((option) => <li key={option.id ?? option.label}>{option.label}</li>)}</ul>
-      </div>
-      <div className="rounded-md border border-primary/30 bg-primary/[0.04] p-3">
-        <p className="mb-1 text-xs font-medium text-muted-foreground">گزینه‌های پیشنهادی</p>
-        <ul className="list-inside list-disc space-y-1 text-sm">{(after.options ?? []).map((option) => <li key={option.id ?? option.label}>{option.label}</li>)}</ul>
-      </div>
-    </div>
+    <label className="flex cursor-pointer items-start gap-2 rounded-md border border-primary/30 bg-primary/[0.04] p-3">
+      <input aria-label={`پذیرش ${row.title}`} checked={checked} className="mt-1 h-4 w-4 shrink-0" disabled={disabled} onChange={(event) => onToggle(event.target.checked)} type="checkbox" />
+      <span className="grid min-w-0 gap-1 text-sm">
+        <span className="font-medium">{row.title}</span>
+        <span className="text-xs leading-5 text-muted-foreground">فعلی: {row.current || "خالی"}</span>
+        <span className="leading-6">پیشنهادی: {row.proposed || "خالی"}</span>
+      </span>
+    </label>
   );
 }
 
-function HelpTextComparison({ before, after }: { before: SurveyAiQuestionPayload; after: SurveyAiQuestionPayload }) {
-  const beforeHelp = before.helpText?.trim() ?? "";
-  const afterHelp = after.helpText?.trim() ?? "";
-  if (beforeHelp === afterHelp) return null;
-  return (
-    <div className="grid gap-2 sm:grid-cols-2">
-      <div className="rounded-md border bg-muted/30 p-3"><p className="mb-1 text-xs font-medium text-muted-foreground">راهنمای فعلی</p><p className="text-sm leading-6">{beforeHelp || "بدون متن راهنما"}</p></div>
-      <div className="rounded-md border border-primary/30 bg-primary/[0.04] p-3"><p className="mb-1 text-xs font-medium text-muted-foreground">راهنمای پیشنهادی</p><p className="text-sm leading-6">{afterHelp || "بدون متن راهنما"}</p></div>
-    </div>
-  );
-}
+function ReplacementProposal({ operation, pending, onApply, onReject }: { operation: Operation; pending: boolean; onApply: (acceptedFields: string[]) => void; onReject: () => void }) {
+  const before = operation.before;
+  const after = operation.after;
+  const rows = useMemo(() => before && after ? replaceFieldRows(before, after) : [], [before, after]);
+  const [accepted, setAccepted] = useState<string[]>(rows.map((row) => row.key));
+  // Rows are memoized on the proposal payload, so this resets to "all selected"
+  // whenever a brand-new proposal lands on the same tree position.
+  useEffect(() => { setAccepted(rows.map((row) => row.key)); }, [rows]);
 
-function ReplacementProposal({ operation, pending, onApply, onReject }: { operation: Operation; pending: boolean; onApply: () => void; onReject: () => void }) {
-  if (!operation.before || !operation.after) return null;
+  function toggle(key: string, checked: boolean) {
+    setAccepted((current) => checked ? [...current, key] : current.filter((item) => item !== key));
+  }
+
+  if (!before || !after || rows.length === 0) return null;
   return (
     <div className="grid gap-3 rounded-md border border-primary/30 bg-background p-3">
       <div>
         <h5 className="text-sm font-medium">بازنویسی پیشنهادی</h5>
-        <p className="mt-1 text-xs text-muted-foreground">این پیشنهاد جدا از نتیجهٔ بررسی است و فقط با پذیرش شما اعمال می‌شود.</p>
+        <p className="mt-1 text-xs text-muted-foreground">هر تغییر را جداگانه بپذیرید یا رد کنید؛ فقط موارد انتخاب‌شده اعمال می‌شوند.</p>
       </div>
-      <div className="grid gap-2 sm:grid-cols-2">
-        <div className="rounded-md border bg-muted/30 p-3"><p className="mb-1 text-xs font-medium text-muted-foreground">متن فعلی</p><p className="text-sm leading-6">{operation.before.prompt}</p></div>
-        <div className="rounded-md border border-primary/30 bg-primary/[0.04] p-3"><p className="mb-1 text-xs font-medium text-muted-foreground">متن پیشنهادی</p><p className="text-sm leading-6">{operation.after.prompt}</p></div>
+      <div className="grid gap-2">
+        {rows.map((row) => <FieldAcceptanceRow checked={accepted.includes(row.key)} disabled={pending} key={row.key} onToggle={(checked) => toggle(row.key, checked)} row={row} />)}
       </div>
-      <OptionComparison before={operation.before} after={operation.after} />
-      <HelpTextComparison before={operation.before} after={operation.after} />
-      <div className="flex flex-wrap gap-2"><Button disabled={pending} onClick={onApply} size="sm" type="button">پذیرش بازنویسی پیشنهادی</Button><Button disabled={pending} onClick={onReject} size="sm" type="button" variant="outline">رد پیشنهاد</Button></div>
+      <div className="flex flex-wrap gap-2"><Button disabled={pending || accepted.length === 0} onClick={() => onApply(accepted)} size="sm" type="button">پذیرش تغییرهای انتخاب‌شده</Button><Button disabled={pending} onClick={onReject} size="sm" type="button" variant="outline">رد پیشنهاد</Button></div>
     </div>
   );
 }
@@ -271,12 +279,14 @@ export function SurveyAiQuestionReview({ surveyId, questionId, revision, disable
     finally { setPending(false); }
   }
 
-  async function acceptRewrite(operation: Operation, sourceProposal: Proposal) {
-    if (!operation.after || disabled) return;
+  async function acceptRewrite(operation: Operation, sourceProposal: Proposal, acceptedFields: string[]) {
+    if (!operation.before || !operation.after || disabled) return;
+    const operationIndex = sourceProposal.operations.indexOf(operation);
     setPending(true); setMessage(null);
     try {
-      await applyProposal(sourceProposal, [sourceProposal.operations.indexOf(operation)]);
-      onApplied?.(operation.after); setProposal(null); setMessage("بازنویسی با پذیرش شما اعمال شد."); router.refresh();
+      await applyProposal(sourceProposal, [operationIndex], { replaceFieldSelections: [{ operationIndex, fields: acceptedFields }] });
+      onApplied?.(mergeSurveyAiReplaceAfter(operation.before, operation.after, new Set(acceptedFields)));
+      setProposal(null); setMessage("تغییرهای انتخاب‌شده با پذیرش شما اعمال شد."); router.refresh();
     } catch (error) { setMessage(error instanceof Error ? error.message : "اعمال بازنویسی ناموفق بود."); }
     finally { setPending(false); }
   }
@@ -291,7 +301,7 @@ export function SurveyAiQuestionReview({ surveyId, questionId, revision, disable
 
   function renderResult(result: Proposal) {
     const replacement = result.operations.find((operation) => operation.op === "replace");
-    return <div className="grid gap-3"><DiagnosticList diagnostics={result.diagnostics} />{replacement ? <ReplacementProposal operation={replacement} pending={pending || disabled} onApply={() => void acceptRewrite(replacement, result)} onReject={() => dismissReplacement(result, replacement)} /> : null}</div>;
+    return <div className="grid gap-3"><DiagnosticList diagnostics={result.diagnostics} />{replacement ? <ReplacementProposal operation={replacement} pending={pending || disabled} onApply={(acceptedFields) => void acceptRewrite(replacement, result, acceptedFields)} onReject={() => dismissReplacement(result, replacement)} /> : null}</div>;
   }
 
   if (!open) return null;
