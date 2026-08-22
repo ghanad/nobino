@@ -32,7 +32,6 @@ import {
   SurveyAiPanel,
   SurveyAiQuestionReview,
   SurveyAiQuestionReviewTrigger,
-  type SurveyAiQuestionPayload,
 } from "@/components/surveys/survey-ai-panel";
 
 const QUESTION_TYPE_OPTIONS: {
@@ -87,21 +86,6 @@ function editableFieldsFromQuestion(question: Pick<SurveyQuestionData, "prompt" 
   };
 }
 
-function editableFieldsFromAiQuestion(question: SurveyAiQuestionPayload): EditableQuestionFields | null {
-  if (!question.type) return null;
-  return {
-    prompt: question.prompt,
-    helpText: question.helpText ?? "",
-    type: question.type as SurveyQuestionType,
-    required: question.required ?? false,
-    ratingMin: question.ratingMin?.toString() ?? "1",
-    ratingMax: question.ratingMax?.toString() ?? "5",
-    ratingMinLabel: question.ratingMinLabel ?? "",
-    ratingMaxLabel: question.ratingMaxLabel ?? "",
-    maxSelections: question.maxSelections?.toString() ?? "",
-  };
-}
-
 type SurveyQuestionBuilderProps = {
   surveyId: string;
   canEdit: boolean;
@@ -136,34 +120,6 @@ export function SurveyQuestionBuilder({
           ...question,
           options: item.options,
           targetCondition: item.targetCondition,
-        };
-      }),
-    );
-  }
-
-  function handleAiApplied(questionId: string, next: SurveyAiQuestionPayload) {
-    setQuestions((prev) =>
-      prev.map((item) => {
-        if (item.id !== questionId || !next.type) return item;
-        return {
-          ...item,
-          prompt: next.prompt,
-          helpText: next.helpText ?? null,
-          type: next.type as SurveyQuestionType,
-          required: next.required ?? false,
-          randomizeOptions: next.randomizeOptions ?? false,
-          ratingMin: next.ratingMin ?? null,
-          ratingMax: next.ratingMax ?? null,
-          ratingMinLabel: next.ratingMinLabel ?? null,
-          ratingMaxLabel: next.ratingMaxLabel ?? null,
-          maxSelections: next.maxSelections ?? null,
-          options: next.options
-            ? next.options.map((option, index) => ({
-                id: option.id ?? item.options[index]?.id ?? `${questionId}-option-${index}`,
-                label: option.label,
-                sortOrder: index,
-              }))
-            : item.options,
         };
       }),
     );
@@ -388,7 +344,6 @@ export function SurveyQuestionBuilder({
                   handleOptionUpdated(question.id, option)
                 }
                 onUpdated={handleUpdated}
-                onAiApplied={(next) => handleAiApplied(question.id, next)}
                 onSelect={() => setActiveQuestionId(question.id)}
                 onRandomizeToggle={handleRandomizeToggle}
                 onConditionUpdated={(condition) =>
@@ -558,7 +513,6 @@ type SurveyQuestionCardProps = {
   onOptionUpdated: (option: OptionData) => void;
   onConditionUpdated: (condition: QuestionConditionData | null) => void;
   onUpdated: (question: SurveyQuestionData) => void;
-  onAiApplied: (question: SurveyAiQuestionPayload) => void;
   onSelect: () => void;
   onRandomizeToggle: (questionId: string, enabled: boolean) => void;
   question: QuestionWithOptions;
@@ -580,7 +534,6 @@ function SurveyQuestionCard({
   onOptionUpdated,
   onConditionUpdated,
   onUpdated,
-  onAiApplied,
   onSelect,
   onRandomizeToggle,
   question,
@@ -687,22 +640,6 @@ function SurveyQuestionCard({
     }
   }
 
-  function handleAiApplied(next: SurveyAiQuestionPayload) {
-    const nextFields = editableFieldsFromAiQuestion(next);
-    if (!nextFields) return;
-    setPrompt(nextFields.prompt);
-    setHelpText(nextFields.helpText);
-    setType(nextFields.type);
-    setRequired(nextFields.required);
-    setRatingMin(nextFields.ratingMin);
-    setRatingMax(nextFields.ratingMax);
-    setRatingMinLabel(nextFields.ratingMinLabel);
-    setRatingMaxLabel(nextFields.ratingMaxLabel);
-    setMaxSelections(nextFields.maxSelections);
-    setSavedFields(nextFields);
-    onAiApplied(next);
-  }
-
   function handleOptionDirtyChange(optionId: string, dirty: boolean) {
     setDirtyOptionIds((current) => {
       const next = new Set(current);
@@ -795,7 +732,6 @@ function SurveyQuestionCard({
 
       <SurveyAiQuestionReview
         disabled={isDirty}
-        onApplied={handleAiApplied}
         onClose={closeAiReview}
         open={aiReviewOpen}
         questionId={question.id}

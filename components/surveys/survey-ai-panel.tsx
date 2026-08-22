@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { mergeSurveyAiReplaceAfter, surveyAiReplaceFieldKeys } from "@/lib/survey-ai-fields";
+import { surveyAiReplaceFieldKeys } from "@/lib/survey-ai-fields";
 
 export type SurveyAiQuestionPayload = {
   id?: string;
@@ -65,11 +65,11 @@ async function requestProposal(request: AiRequest): Promise<Proposal> {
   return data;
 }
 
-async function applyProposal(proposal: Proposal, acceptedOperations: number[], options?: { removeOperationIndexes?: number[]; confirmRemovals?: boolean; replaceFieldSelections?: Array<{ operationIndex: number; fields: string[] }> }): Promise<void> {
+async function applyProposal(proposal: Proposal, acceptedOperations: number[], options?: { removeOperationIndexes?: number[]; confirmRemovals?: boolean }): Promise<void> {
   const response = await fetch("/api/survey-ai/apply", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ proposal, acceptedOperations, removeOperationIndexes: options?.removeOperationIndexes ?? [], confirmRemovals: options?.confirmRemovals ?? false, replaceFieldSelections: options?.replaceFieldSelections ?? [] }),
+    body: JSON.stringify({ proposal, acceptedOperations, removeOperationIndexes: options?.removeOperationIndexes ?? [], confirmRemovals: options?.confirmRemovals ?? false, replaceFieldSelections: [] }),
   });
   const data = (await response.json()) as { error?: string };
   if (!response.ok) throw new Error(data.error ?? "اعمال پیشنهاد ناموفق بود.");
@@ -104,43 +104,26 @@ function replaceFieldRows(before: SurveyAiQuestionPayload, after: SurveyAiQuesti
   });
 }
 
-function FieldAcceptanceRow({ row, checked, disabled, onToggle }: { row: ReplaceFieldRow; checked: boolean; disabled: boolean; onToggle: (checked: boolean) => void }) {
-  return (
-    <label className="flex cursor-pointer items-start gap-2 rounded-md border border-primary/30 bg-primary/[0.04] p-3">
-      <input aria-label={`پذیرش ${row.title}`} checked={checked} className="mt-1 h-4 w-4 shrink-0" disabled={disabled} onChange={(event) => onToggle(event.target.checked)} type="checkbox" />
-      <span className="grid min-w-0 gap-1 text-sm">
-        <span className="font-medium">{row.title}</span>
-        <span className="text-xs leading-5 text-muted-foreground">فعلی: {row.current || "خالی"}</span>
-        <span className="leading-6">پیشنهادی: {row.proposed || "خالی"}</span>
-      </span>
-    </label>
-  );
-}
-
-function ReplacementProposal({ operation, pending, onApply, onReject }: { operation: Operation; pending: boolean; onApply: (acceptedFields: string[]) => void; onReject: () => void }) {
+function AdviceRewriteCard({ operation }: { operation: Operation }) {
   const before = operation.before;
   const after = operation.after;
-  const rows = useMemo(() => before && after ? replaceFieldRows(before, after) : [], [before, after]);
-  const [accepted, setAccepted] = useState<string[]>(rows.map((row) => row.key));
-  // Rows are memoized on the proposal payload, so this resets to "all selected"
-  // whenever a brand-new proposal lands on the same tree position.
-  useEffect(() => { setAccepted(rows.map((row) => row.key)); }, [rows]);
-
-  function toggle(key: string, checked: boolean) {
-    setAccepted((current) => checked ? [...current, key] : current.filter((item) => item !== key));
-  }
-
+  const rows = useMemo(() => (before && after ? replaceFieldRows(before, after) : []), [before, after]);
   if (!before || !after || rows.length === 0) return null;
   return (
-    <div className="grid gap-3 rounded-md border border-primary/30 bg-background p-3">
+    <div className="grid gap-2 rounded-md border border-sky-200 bg-sky-50 p-3">
       <div>
-        <h5 className="text-sm font-medium">بازنویسی پیشنهادی</h5>
-        <p className="mt-1 text-xs text-muted-foreground">هر تغییر را جداگانه بپذیرید یا رد کنید؛ فقط موارد انتخاب‌شده اعمال می‌شوند.</p>
+        <h5 className="text-sm font-medium">پیشنهاد بازنویسی (فقط راهنما)</h5>
+        <p className="mt-1 text-xs leading-5 text-muted-foreground">این پیشنهاد خودکار اعمال نمی‌شود؛ اگر مناسب بود، متن را در فرم همین سؤال خودتان به‌روز کنید.</p>
       </div>
       <div className="grid gap-2">
-        {rows.map((row) => <FieldAcceptanceRow checked={accepted.includes(row.key)} disabled={pending} key={row.key} onToggle={(checked) => toggle(row.key, checked)} row={row} />)}
+        {rows.map((row) => (
+          <div className="rounded-md border bg-background p-3 text-sm" key={row.key}>
+            <p className="font-medium">{row.title}</p>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">فعلی: {row.current || "خالی"}</p>
+            <p className="leading-6">پیشنهادی: {row.proposed || "خالی"}</p>
+          </div>
+        ))}
       </div>
-      <div className="flex flex-wrap gap-2"><Button disabled={pending || accepted.length === 0} onClick={() => onApply(accepted)} size="sm" type="button">پذیرش تغییرهای انتخاب‌شده</Button><Button disabled={pending} onClick={onReject} size="sm" type="button" variant="outline">رد پیشنهاد</Button></div>
     </div>
   );
 }
@@ -226,8 +209,7 @@ export function SurveyAiQuestionReviewTrigger({ questionId, open, disabled = fal
   );
 }
 
-export function SurveyAiQuestionReview({ surveyId, questionId, revision, disabled = false, open, onClose, onApplied }: { surveyId: string; questionId: string; revision?: string; disabled?: boolean; open: boolean; onClose: () => void; onApplied?: (question: SurveyAiQuestionPayload) => void }) {
-  const router = useRouter();
+export function SurveyAiQuestionReview({ surveyId, questionId, revision, disabled = false, open, onClose }: { surveyId: string; questionId: string; revision?: string; disabled?: boolean; open: boolean; onClose: () => void }) {
   const generationRef = useRef(0);
   const [reviewAttempt, setReviewAttempt] = useState(0);
   const [pending, setPending] = useState(false);
@@ -279,36 +261,16 @@ export function SurveyAiQuestionReview({ surveyId, questionId, revision, disable
     finally { setPending(false); }
   }
 
-  async function acceptRewrite(operation: Operation, sourceProposal: Proposal, acceptedFields: string[]) {
-    if (!operation.before || !operation.after || disabled) return;
-    const operationIndex = sourceProposal.operations.indexOf(operation);
-    setPending(true); setMessage(null);
-    try {
-      await applyProposal(sourceProposal, [operationIndex], { replaceFieldSelections: [{ operationIndex, fields: acceptedFields }] });
-      onApplied?.(mergeSurveyAiReplaceAfter(operation.before, operation.after, new Set(acceptedFields)));
-      setProposal(null); setMessage("تغییرهای انتخاب‌شده با پذیرش شما اعمال شد."); router.refresh();
-    } catch (error) { setMessage(error instanceof Error ? error.message : "اعمال بازنویسی ناموفق بود."); }
-    finally { setPending(false); }
-  }
-
-  function dismissReplacement(sourceProposal: Proposal, operation: Operation) {
-    if (sourceProposal === proposal) {
-      setProposal((current) => current ? { ...current, operations: current.operations.filter((item) => item !== operation) } : null);
-      return;
-    }
-    setHistory((current) => current.map((item) => item.proposal === sourceProposal ? { ...item, proposal: { ...item.proposal, operations: item.proposal.operations.filter((candidate) => candidate !== operation) } } : item));
-  }
-
   function renderResult(result: Proposal) {
-    const replacement = result.operations.find((operation) => operation.op === "replace");
-    return <div className="grid gap-3"><DiagnosticList diagnostics={result.diagnostics} />{replacement ? <ReplacementProposal operation={replacement} pending={pending || disabled} onApply={(acceptedFields) => void acceptRewrite(replacement, result, acceptedFields)} onReject={() => dismissReplacement(result, replacement)} /> : null}</div>;
+    const replacements = result.operations.filter((operation) => operation.op === "replace");
+    return <div className="grid gap-3"><DiagnosticList diagnostics={result.diagnostics} />{replacements.map((operation, index) => <AdviceRewriteCard key={index} operation={operation} />)}</div>;
   }
 
   if (!open) return null;
 
   return (
     <div className="grid gap-3 border-t px-4 pb-4 pt-3" aria-live="polite" id={`survey-ai-review-${questionId}`}>
-      <div><h4 className="text-sm font-semibold">بررسی همین سؤال</h4><p className="text-xs text-muted-foreground">وضوح، جهت‌داری، دوگانگی، تناسب نوع پاسخ و کامل‌بودن گزینه‌ها بررسی می‌شود؛ تغییری خودکار اعمال نمی‌شود.</p></div>{pending && !proposal ? <p className="text-sm text-muted-foreground">در حال بررسی همین سؤال…</p> : null}{message ? <div className="flex flex-wrap items-center gap-3 rounded-md border border-destructive/30 bg-destructive/5 p-3"><p className="text-sm text-destructive" role="alert">{message}</p><Button disabled={pending || disabled} onClick={() => setReviewAttempt((current) => current + 1)} size="sm" type="button" variant="outline">تلاش دوباره</Button></div> : null}{proposal ? renderResult(proposal) : null}{history.map((item, index) => <div className="grid gap-2 border-t pt-3" key={`${item.question}-${index}`}><p className="text-xs font-medium text-muted-foreground">پرسش مستقل قبلی: {item.question}</p>{renderResult(item.proposal)}</div>)}<form className="grid gap-2 border-t pt-3" onSubmit={askFollowup}><label className="text-sm font-medium" htmlFor={`survey-ai-followup-${questionId}`}>دربارهٔ همین سؤال بپرسید</label><textarea aria-describedby={`survey-ai-followup-hint-${questionId}`} className="min-h-20 rounded-md border bg-background p-3 text-sm" disabled={pending || disabled} id={`survey-ai-followup-${questionId}`} maxLength={1200} onChange={(event) => setFollowup(event.target.value)} placeholder="مثلاً: چرا جهت‌دار است؟ یا رسمی‌ترش کن" value={followup} /><p className="text-xs text-muted-foreground" id={`survey-ai-followup-hint-${questionId}`}>هر پرسش مستقل است و فقط بر اساس همین سؤال پاسخ می‌گیرد؛ پیام‌های قبلی به مدل فرستاده نمی‌شوند. تغییرها جداگانه برای پذیرش نمایش داده می‌شوند.</p><Button disabled={pending || disabled || !followup.trim()} size="sm" type="submit">{pending ? "در حال پاسخ…" : "پرسیدن"}</Button></form>
+      <div><h4 className="text-sm font-semibold">بررسی همین سؤال</h4><p className="text-xs text-muted-foreground">وضوح، جهت‌داری، دوگانگی، تناسب نوع پاسخ و کامل‌بودن گزینه‌ها بررسی می‌شود؛ نتیجه فقط جنبهٔ راهنمایی دارد و هیچ تغییری روی پیش‌نویس اعمال نمی‌شود.</p></div>{pending && !proposal ? <p className="text-sm text-muted-foreground">در حال بررسی همین سؤال…</p> : null}{message ? <div className="flex flex-wrap items-center gap-3 rounded-md border border-destructive/30 bg-destructive/5 p-3"><p className="text-sm text-destructive" role="alert">{message}</p><Button disabled={pending || disabled} onClick={() => setReviewAttempt((current) => current + 1)} size="sm" type="button" variant="outline">تلاش دوباره</Button></div> : null}{proposal ? renderResult(proposal) : null}{history.map((item, index) => <div className="grid gap-2 border-t pt-3" key={`${item.question}-${index}`}><p className="text-xs font-medium text-muted-foreground">پرسش مستقل قبلی: {item.question}</p>{renderResult(item.proposal)}</div>)}<form className="grid gap-2 border-t pt-3" onSubmit={askFollowup}><label className="text-sm font-medium" htmlFor={`survey-ai-followup-${questionId}`}>دربارهٔ همین سؤال بپرسید</label><textarea aria-describedby={`survey-ai-followup-hint-${questionId}`} className="min-h-20 rounded-md border bg-background p-3 text-sm" disabled={pending || disabled} id={`survey-ai-followup-${questionId}`} maxLength={1200} onChange={(event) => setFollowup(event.target.value)} placeholder="مثلاً: چرا جهت‌دار است؟ یا رسمی‌ترش کن" value={followup} /><p className="text-xs text-muted-foreground" id={`survey-ai-followup-hint-${questionId}`}>هر پرسش مستقل است و فقط بر اساس همین سؤال پاسخ می‌گیرد؛ پیام‌های قبلی به مدل فرستاده نمی‌شوند. بازنویسی پیشنهادی فقط برای راهنمایی نمایش داده می‌شود.</p><Button disabled={pending || disabled || !followup.trim()} size="sm" type="submit">{pending ? "در حال پاسخ…" : "پرسیدن"}</Button></form>
     </div>
   );
 }
