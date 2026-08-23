@@ -76,6 +76,11 @@ function getNavItems(user: CurrentUser): GlobalNavItem[] {
           label: "گزارش تیم‌ها",
           match: "prefix",
         },
+        {
+          href: "/manager/desk-report",
+          label: "گزارش میزها",
+          match: "prefix",
+        },
       ],
     });
   }
