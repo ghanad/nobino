@@ -143,25 +143,60 @@ function RatingResults({
 }: {
   rating: NonNullable<SurveyResultsAvailable["questions"][number]["rating"]>;
 }) {
+  // Percentages are relative to answered ratings, not submissions, so skipped
+  // questions do not dilute the distribution.
   const total = rating.distribution.reduce((sum, item) => sum + item.count, 0);
+  const hasResponses = total > 0;
 
   return (
-    <div className="mt-4 space-y-4">
-      <p className="text-sm text-muted-foreground">
-        میانگین امتیاز: <span className="font-semibold tabular-nums text-foreground">{rating.average === null ? "—" : formatDecimal(rating.average)}</span>
-        <span aria-hidden="true"> از </span>{formatInteger(rating.max)}
-      </p>
-      <ul className="grid gap-2 sm:grid-cols-2" aria-label={`توزیع امتیاز از ${formatInteger(rating.min)} تا ${formatInteger(rating.max)}`}>
-        {rating.distribution.map((item) => {
-          const ratio = total === 0 ? 0 : item.count / total;
-          return (
-            <li className="flex items-center justify-between gap-3 rounded-md bg-muted/50 px-3 py-2 text-sm" key={item.value}>
-              <span>امتیاز {formatInteger(item.value)}</span>
-              <span className="tabular-nums text-muted-foreground">{formatInteger(item.count)} پاسخ ({PERCENT_FORMATTER.format(ratio)})</span>
-            </li>
-          );
-        })}
-      </ul>
+    <div className="mt-4">
+      <div className="flex items-baseline gap-2">
+        <span className="text-2xl font-semibold tabular-nums text-foreground">
+          {rating.average === null ? "—" : formatDecimal(rating.average)}
+        </span>
+        <span className="text-sm text-muted-foreground tabular-nums" aria-hidden="true">
+          / {formatInteger(rating.max)}
+        </span>
+        <span className="text-sm text-muted-foreground">میانگین امتیاز</span>
+      </div>
+
+      {hasResponses ? (
+        <>
+          <ul className="mt-4 space-y-2" aria-label={`توزیع امتیاز از ${formatInteger(rating.min)} تا ${formatInteger(rating.max)}`}>
+            {rating.distribution.map((item) => {
+              const ratio = item.count / total;
+              return (
+                <li className="grid grid-cols-[2rem_1fr_auto] items-center gap-3 text-sm" key={item.value}>
+                  <span className={`tabular-nums ${item.count === 0 ? "text-muted-foreground" : "font-medium text-foreground"}`}>
+                    {formatInteger(item.value)}
+                  </span>
+                  <div
+                    className="h-2 overflow-hidden rounded-full bg-muted"
+                    role="progressbar"
+                    aria-label={`امتیاز ${formatInteger(item.value)}: ${formatInteger(item.count)} پاسخ`}
+                    aria-valuemin={0}
+                    aria-valuemax={total}
+                    aria-valuenow={item.count}
+                  >
+                    <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(ratio * 100, 100)}%` }} />
+                  </div>
+                  <span className="shrink-0 tabular-nums text-muted-foreground">
+                    {formatInteger(item.count)} پاسخ<span aria-hidden="true"> · </span>{PERCENT_FORMATTER.format(ratio)}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+          {rating.minLabel || rating.maxLabel ? (
+            <div className="mt-2 flex justify-between gap-4 text-xs text-muted-foreground">
+              <span>{rating.minLabel}</span>
+              <span>{rating.maxLabel}</span>
+            </div>
+          ) : null}
+        </>
+      ) : (
+        <p className="mt-3 text-sm text-muted-foreground">هنوز پاسخی برای این پرسش ثبت نشده است.</p>
+      )}
     </div>
   );
 }

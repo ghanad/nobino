@@ -51,6 +51,8 @@ export type SurveyResultsAvailable = SurveyResultBase & {
     rating: {
       min: number;
       max: number;
+      minLabel: string | null;
+      maxLabel: string | null;
       distribution: Array<{ value: number; count: number }>;
       average: number | null;
     } | null;
@@ -117,6 +119,8 @@ export async function getSurveyResults(input: {
         type: true,
         ratingMin: true,
         ratingMax: true,
+        ratingMinLabel: true,
+        ratingMaxLabel: true,
         options: { select: { id: true, label: true, sortOrder: true } },
       },
       orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
@@ -190,7 +194,11 @@ export async function getSurveyResults(input: {
               }))
           : null;
         const rating = question.type === SurveyQuestionType.RATING
-          ? makeRatingResult(question.ratingMin ?? 1, question.ratingMax ?? 5, questionAnswers)
+          ? {
+              ...makeRatingResult(question.ratingMin ?? 1, question.ratingMax ?? 5, questionAnswers),
+              minLabel: question.ratingMinLabel,
+              maxLabel: question.ratingMaxLabel,
+            }
           : null;
 
         const textAnswers = isTextQuestion(question.type)
