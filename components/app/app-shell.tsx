@@ -32,7 +32,6 @@ function getNavItems(user: CurrentUser): GlobalNavItem[] {
   const navItems: GlobalNavItem[] = [
     {
       children: [
-        { href: "/reservations/history", label: "رزروهای من", match: "prefix" },
         { href: "/desks", label: "میز کار", match: "prefix" },
         { href: "/meeting-rooms", label: "اتاق جلسه", match: "prefix" },
         { href: "/reservations", label: "رزرو سیستم", match: "exact" },
