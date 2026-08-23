@@ -60,6 +60,12 @@ export default async function SurveyDetailPage({ params }: Props) {
         {showManagementLink ? (
           <div className="flex flex-wrap gap-2">
               <Link
+                href={`/surveys/${data.id}/preview`}
+                className="inline-flex min-h-10 items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                پیش‌نمایش
+              </Link>
+              <Link
                 href={`/surveys/${data.id}/results`}
                 className="inline-flex min-h-10 items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
