@@ -61,7 +61,6 @@ export function SurveyResponseForm({
   const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
   const [saveState, setSaveState] = useState<SaveDraftActionState>({ status: "idle" });
   const [initialLoaded, setInitialLoaded] = useState(false);
-  const [showConfirmation, setShowConfirmation] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [stepError, setStepError] = useState<string | null>(null);
   const [submitState, setSubmitState] = useState<SubmitActionState>({ status: "idle" });
@@ -212,6 +211,7 @@ export function SurveyResponseForm({
   const handleAnswer = useCallback(
     (questionId: string, value: AnswerValue) => {
       setStepError(null);
+      setSubmitState({ status: "idle" });
       setSaveState({ status: "idle" });
       hasUnsavedAnswersRef.current = true;
       setAnswers((prev) => {
@@ -254,29 +254,6 @@ export function SurveyResponseForm({
     [handleAnswer, syncedAnswers],
   );
 
-  const goToNextQuestion = useCallback(() => {
-    if (!currentQuestion) return;
-
-    if (currentQuestion.required && !hasAnswer(syncedAnswers[currentQuestion.id])) {
-      setStepError("پاسخ به این سؤال الزامی است.");
-      return;
-    }
-
-    setStepError(null);
-    if (isLastQuestion) {
-      setSubmitState({ status: "idle" });
-      setShowConfirmation(true);
-      return;
-    }
-    setCurrentStep((step) => Math.min(step + 1, visibleQuestions.length - 1));
-  }, [currentQuestion, isLastQuestion, syncedAnswers, visibleQuestions.length]);
-
-  const goToPreviousQuestion = useCallback(() => {
-    setStepError(null);
-    setShowConfirmation(false);
-    setCurrentStep((step) => Math.max(step - 1, 0));
-  }, []);
-
   const handleFinalSubmit = useCallback(() => {
     if (isSubmitting) return;
 
@@ -296,11 +273,30 @@ export function SurveyResponseForm({
         { surveyId, answers: finalAnswers },
       );
       setSubmitState(result);
-      if (result.status !== "success") {
-        setShowConfirmation(true);
-      }
     });
   }, [identityMode, isSubmitting, surveyId, visibilityQuestions]);
+
+  const goToNextQuestion = useCallback(() => {
+    if (!currentQuestion) return;
+
+    if (currentQuestion.required && !hasAnswer(syncedAnswers[currentQuestion.id])) {
+      setStepError("پاسخ به این سؤال الزامی است.");
+      return;
+    }
+
+    setStepError(null);
+    if (isLastQuestion) {
+      setSubmitState({ status: "idle" });
+      handleFinalSubmit();
+      return;
+    }
+    setCurrentStep((step) => Math.min(step + 1, visibleQuestions.length - 1));
+  }, [currentQuestion, handleFinalSubmit, isLastQuestion, syncedAnswers, visibleQuestions.length]);
+
+  const goToPreviousQuestion = useCallback(() => {
+    setStepError(null);
+    setCurrentStep((step) => Math.max(step - 1, 0));
+  }, []);
 
   if (submitState.status === "success") {
     return (
@@ -490,10 +486,13 @@ export function SurveyResponseForm({
         );
       }) : null}
 
-      {!showConfirmation && currentQuestion ? (
+      {currentQuestion ? (
         <section className="space-y-3 border-t pt-4" aria-label="پیمایش سؤال‌ها">
           {stepError ? (
             <p className="text-sm text-destructive" role="alert">{stepError}</p>
+          ) : null}
+          {submitState.status === "error" || submitState.status === "conflict" ? (
+            <p className="text-sm text-destructive" role="alert">{submitState.message}</p>
           ) : null}
           <div className="flex w-full items-center justify-between gap-3">
             <button
@@ -510,45 +509,11 @@ export function SurveyResponseForm({
               disabled={!initialLoaded || isSubmitting}
               onClick={goToNextQuestion}
             >
-              {isLastQuestion ? "ادامه و بازبینی پاسخ‌ها" : "سؤال بعدی"}
+              {isLastQuestion ? (isSubmitting ? "در حال ثبت..." : "ثبت نهایی پاسخ‌ها") : "سؤال بعدی"}
             </button>
           </div>
         </section>
       ) : null}
-
-      <section className={showConfirmation ? "rounded-lg border bg-card p-5 sm:p-6" : "hidden"} aria-live="polite">
-        {showConfirmation ? (
-          <div className="space-y-3">
-            <div>
-              <h3 className="text-sm font-semibold">ثبت نهایی پاسخ‌ها</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                پس از ثبت نهایی، پاسخ‌ها قابل ویرایش یا ارسال دوباره نیستند.
-              </p>
-            </div>
-            {submitState.status === "error" || submitState.status === "conflict" ? (
-              <p className="text-sm text-destructive" role="alert">{submitState.message}</p>
-            ) : null}
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                className="min-h-11 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={isSubmitting || !initialLoaded}
-                onClick={handleFinalSubmit}
-              >
-                {isSubmitting ? "در حال ثبت..." : "تأیید و ثبت نهایی"}
-              </button>
-              <button
-                type="button"
-                className="min-h-11 rounded-md border px-4 py-2 text-sm font-medium transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={isSubmitting}
-                onClick={() => setShowConfirmation(false)}
-              >
-                بازگشت و ویرایش
-              </button>
-            </div>
-          </div>
-        ) : null}
-      </section>
     </div>
   );
 }
