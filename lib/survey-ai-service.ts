@@ -37,7 +37,7 @@ const MODEL_OUTPUT_CONTRACT = `
 مقدار type باید دقیقاً یکی از این پنج مقدار باشد: SHORT_TEXT، LONG_TEXT، SINGLE_CHOICE، MULTIPLE_CHOICE یا RATING. علامت | را در مقدار type ننویس.
 نمونهٔ کامل و معتبر برای یک سؤال متنی:
 { "operations": [{ "op": "add", "question": { "prompt": "نظر شما دربارهٔ این خدمت چیست؟", "type": "SHORT_TEXT", "required": false } }], "diagnostics": [] }
-برای SINGLE_CHOICE و MULTIPLE_CHOICE، در question یک آرایهٔ "options" با 1 تا 12 آیتم مانند { "label": "گزینه" } قرار بده. برای RATING، ratingMin و ratingMax را با دو عدد صحیح 0 تا 10 قرار بده که min از max کوچک‌تر باشد. برای سایر نوع‌ها options، تنظیمات امتیازدهی و maxSelections را نفرست. اگر پیشنهادی نداری، operations را [] بفرست.
+برای SINGLE_CHOICE و MULTIPLE_CHOICE، در question یک آرایهٔ "options" با 1 تا 12 آیتم مانند { "label": "گزینه" } قرار بده. برای RATING، ratingMin و ratingMax را با دو عدد صحیح 0 تا 10 قرار بده که min از max کوچک‌تر باشد. اگر brief برچسب دو سرِ مقیاس داشت، آن‌ها را دقیقاً در ratingMinLabel و ratingMaxLabel بگذار. نمونهٔ معتبر امتیاز ۱ تا ۵: { "prompt": "پیداکردن گزینهٔ موردنظر چقدر آسان است؟", "type": "RATING", "ratingMin": 1, "ratingMax": 5, "ratingMinLabel": "خیلی سخت", "ratingMaxLabel": "خیلی راحت" }. برای سایر نوع‌ها options، تنظیمات امتیازدهی و maxSelections را نفرست. اگر پیشنهادی نداری، operations را [] بفرست.
 
 در حالت question-review و question-followup، اگر بازنویسی مفید است فقط یک operation از این شکل مجاز است و questionId و idها باید عیناً از پیش‌نویس ورودی باشند:
 { "op": "replace", "questionId": "...", "before": { ...سؤال فعلی با id و گزینه‌ها... }, "after": { ...سؤال بازنویسی‌شده با همان id و همان id گزینه‌ها... } }
@@ -89,13 +89,41 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function normalizeQuestionType(value: unknown): unknown {
   if (typeof value !== "string") return value;
-  const normalized = value.trim().toUpperCase();
-  return questionTypes.has(normalized as SurveyQuestionType) ? normalized : value;
+  const normalized = value.trim().toUpperCase().replace(/[–—]/g, "-").replace(/[\s-]+/g, "_");
+  const aliases: Record<string, SurveyQuestionType> = {
+    SHORTTEXT: SurveyQuestionType.SHORT_TEXT,
+    LONGTEXT: SurveyQuestionType.LONG_TEXT,
+    SINGLECHOICE: SurveyQuestionType.SINGLE_CHOICE,
+    MULTIPLECHOICE: SurveyQuestionType.MULTIPLE_CHOICE,
+    RATING_1_5: SurveyQuestionType.RATING,
+    RATING_1_TO_5: SurveyQuestionType.RATING,
+  };
+  return questionTypes.has(normalized as SurveyQuestionType)
+    ? normalized
+    : (aliases[normalized] ?? value);
 }
 
 function normalizeQuestionOutput(value: unknown): unknown {
   if (!isRecord(value)) return value;
   const question: Record<string, unknown> = { ...value, type: normalizeQuestionType(value.type) };
+  const rating = isRecord(question.rating) ? question.rating : undefined;
+  const aliases: Array<[string, string]> = [
+    ["minLabel", "ratingMinLabel"],
+    ["maxLabel", "ratingMaxLabel"],
+    ["minimumLabel", "ratingMinLabel"],
+    ["maximumLabel", "ratingMaxLabel"],
+  ];
+  for (const [alias, field] of aliases) {
+    if (question[field] === undefined && question[alias] !== undefined) question[field] = question[alias];
+    delete question[alias];
+  }
+  if (rating) {
+    if (question.ratingMin === undefined) question.ratingMin = rating.min;
+    if (question.ratingMax === undefined) question.ratingMax = rating.max;
+    if (question.ratingMinLabel === undefined) question.ratingMinLabel = rating.minLabel ?? rating.minimumLabel;
+    if (question.ratingMaxLabel === undefined) question.ratingMaxLabel = rating.maxLabel ?? rating.maximumLabel;
+    delete question.rating;
+  }
   // Some compatible model providers encode omitted arrays as null. For a
   // non-choice question, null means the same thing as an omitted options field.
   if (question.options === null) delete question.options;

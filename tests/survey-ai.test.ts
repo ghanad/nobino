@@ -120,6 +120,35 @@ test("survey AI normalizes safe provider formatting differences before validatin
   assert.equal(surveyAiProposalSchema.safeParse({ ...(output as object), kind: "suggest" }).success, true);
 });
 
+test("survey AI normalizes a rating scale and its endpoint-label aliases", () => {
+  const output = normalizeSurveyAiModelOutput({
+    operations: [{
+      op: "add",
+      question: {
+        prompt: "معمولاً چقدر راحت گزینهٔ موردنظر را پیدا می‌کنید؟",
+        type: "Rating 1–5",
+        rating: { min: 1, max: 5, minLabel: "خیلی سخت", maxLabel: "خیلی راحت" },
+      },
+    }],
+    diagnostics: [],
+  });
+
+  const parsed = surveyAiProposalSchema.safeParse({ ...(output as object), kind: "suggest" });
+  assert.equal(parsed.success, true);
+  if (!parsed.success) return;
+  assert.deepEqual(parsed.data.operations[0], {
+    op: "add",
+    question: {
+      prompt: "معمولاً چقدر راحت گزینهٔ موردنظر را پیدا می‌کنید؟",
+      type: SurveyQuestionType.RATING,
+      ratingMin: 1,
+      ratingMax: 5,
+      ratingMinLabel: "خیلی سخت",
+      ratingMaxLabel: "خیلی راحت",
+    },
+  });
+});
+
 test("question review proposal keeps diagnostics separate from an explicit replacement", () => {
   const before = {
     id: "q1",

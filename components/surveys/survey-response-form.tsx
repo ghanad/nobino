@@ -470,10 +470,10 @@ export function SurveyResponseForm({
                           type="button"
                           aria-label={`${val} از مقیاس ${ratingMinLabel} تا ${ratingMaxLabel}`}
                           aria-pressed={isSelected}
-                          className={`flex h-11 w-11 items-center justify-center rounded-md border text-sm font-medium transition-colors hover:border-primary hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                          className={`flex h-11 w-11 items-center justify-center rounded-md border text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                             isSelected
-                              ? "border-primary bg-primary text-primary-foreground"
-                              : ""
+                              ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
+                              : "hover:border-primary hover:bg-primary/5"
                           }`}
                           onClick={() => handleRating(question.id, val)}
                         >
