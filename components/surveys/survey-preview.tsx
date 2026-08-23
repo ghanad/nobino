@@ -10,11 +10,12 @@ import {
   type AnswerValue,
   type QuestionWithCondition,
 } from "@/lib/survey-response-utils";
+import {
+  SurveyQuestionView,
+  type SurveyQuestionViewData,
+} from "@/components/surveys/survey-question-view";
 
-type PreviewOption = {
-  id: string;
-  label: string;
-};
+const PREVIEW_USER_ID = "preview";
 
 type PreviewCondition = {
   sourceQuestionId: string;
@@ -24,24 +25,15 @@ type PreviewCondition = {
   operator: "IS_SELECTED" | "IS_NOT_SELECTED";
 };
 
-type PreviewQuestion = {
-  id: string;
-  prompt: string;
-  helpText: string | null;
+type PreviewQuestion = SurveyQuestionViewData & {
   type: SurveyQuestionType;
-  required: boolean;
   sortOrder: number;
-  randomizeOptions: boolean;
-  ratingMin: number | null;
-  ratingMax: number | null;
-  ratingMinLabel: string | null;
-  ratingMaxLabel: string | null;
-  maxSelections: number | null;
-  options: PreviewOption[];
   condition: PreviewCondition | null;
 };
 
 type SurveyPreviewProps = {
+  surveyId: string;
+  surveyKind: string;
   title: string;
   description: string | null;
   questions: PreviewQuestion[];
@@ -50,6 +42,8 @@ type SurveyPreviewProps = {
 };
 
 export function SurveyPreview({
+  surveyId,
+  surveyKind,
   title,
   description,
   questions,
@@ -83,8 +77,12 @@ export function SurveyPreview({
   const visibleQuestions = questions.filter((question) =>
     visibleQuestionIds.has(question.id),
   );
-  const currentQuestion = visibleQuestions[currentStep];
-  const isLastQuestion = currentStep === visibleQuestions.length - 1;
+  const currentQuestionIndex = Math.min(
+    currentStep,
+    Math.max(visibleQuestions.length - 1, 0),
+  );
+  const currentQuestion = visibleQuestions[currentQuestionIndex];
+  const isLastQuestion = currentQuestionIndex === visibleQuestions.length - 1;
 
   useEffect(() => {
     setCurrentStep((step) =>
@@ -95,17 +93,12 @@ export function SurveyPreview({
   const updateAnswer = (questionId: string, value: AnswerValue) => {
     setPreviewComplete(false);
     setStepError(null);
-    setAnswers((currentAnswers) =>
-      clearHiddenAnswers(visibilityQuestions, {
-        ...currentAnswers,
-        [questionId]: value,
-      }),
-    );
+    setAnswers((currentAnswers) => {
+      const nextAnswers = { ...currentAnswers, [questionId]: value };
+      return clearHiddenAnswers(visibilityQuestions, nextAnswers);
+    });
   };
-  const getTextAnswer = (questionId: string) => {
-    const answer = answers[questionId];
-    return typeof answer === "string" ? answer : "";
-  };
+
   const goToNextQuestion = () => {
     if (!currentQuestion) {
       return;
@@ -144,162 +137,28 @@ export function SurveyPreview({
 
       <div className="space-y-4">
         {currentQuestion ? [currentQuestion].map((question) => (
-          <div
+          <SurveyQuestionView
             key={question.id}
-            className="space-y-4 rounded-lg border bg-card p-4 sm:p-5"
-          >
-            {question.condition ? (
-              <p className="text-xs text-muted-foreground">
-                (تنها در صورتی نمایش داده می‌شود که در سوال &ldquo;
-                {question.condition.sourceQuestionPrompt}
-                &rdquo; گزینه &ldquo;
-                {question.condition.sourceOptionLabel}
-                &rdquo; را انتخاب کرده باشید)
-              </p>
-            ) : null}
-
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">
-                  سؤال {currentStep + 1} از {visibleQuestions.length}
-                </p>
-                <div
-                  aria-hidden="true"
-                  className="h-1 overflow-hidden rounded-full bg-muted"
-                >
-                  <div
-                    className="h-full rounded-full bg-primary transition-[width] duration-200 ease-out"
-                    style={{
-                      width: `${((currentStep + 1) / visibleQuestions.length) * 100}%`,
-                    }}
-                  />
-                </div>
-              </div>
-              <p className="text-sm font-medium">
-                {question.prompt}
-                {question.required ? (
-                  <span className="mr-1 text-red-500">*</span>
-                ) : null}
-              </p>
-              {question.helpText ? (
+            question={question}
+            questionIndex={currentQuestionIndex}
+            totalQuestions={visibleQuestions.length}
+            value={answers[question.id]}
+            surveyId={surveyId}
+            userId={PREVIEW_USER_ID}
+            surveyKind={surveyKind}
+            onChange={updateAnswer}
+            topNote={
+              question.condition ? (
                 <p className="text-xs text-muted-foreground">
-                  {question.helpText}
+                  (تنها در صورتی نمایش داده می‌شود که در سوال &ldquo;
+                  {question.condition.sourceQuestionPrompt}
+                  &rdquo; گزینه &ldquo;
+                  {question.condition.sourceOptionLabel}
+                  &rdquo; را انتخاب کرده باشید)
                 </p>
-              ) : null}
-            </div>
-
-            {question.type === "SHORT_TEXT" ? (
-              <input
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                onChange={(event) => updateAnswer(question.id, event.target.value)}
-                placeholder="پاسخ کوتاه"
-                type="text"
-                value={getTextAnswer(question.id)}
-              />
-            ) : null}
-
-            {question.type === "LONG_TEXT" ? (
-              <textarea
-                className="min-h-[80px] w-full rounded-md border border-input bg-background p-3 text-sm"
-                onChange={(event) => updateAnswer(question.id, event.target.value)}
-                placeholder="پاسخ بلند"
-                value={getTextAnswer(question.id)}
-              />
-            ) : null}
-
-            {question.type === "SINGLE_CHOICE" || question.type === "MULTIPLE_CHOICE" ? (
-              <div className="space-y-2">
-                {question.type === "MULTIPLE_CHOICE" && question.maxSelections ? (
-                  <p className="text-xs text-muted-foreground">
-                    حداکثر {question.maxSelections} گزینه می‌توانید انتخاب کنید.
-                  </p>
-                ) : null}
-                {question.options.map((option) => {
-                  const selectedValues: string[] = Array.isArray(
-                    answers[question.id],
-                  )
-                    ? (answers[question.id] as string[])
-                    : [];
-                  const isSelected =
-                    question.type === "SINGLE_CHOICE"
-                      ? answers[question.id] === option.id
-                      : selectedValues.includes(option.id);
-                  const hasReachedSelectionLimit =
-                    question.type === "MULTIPLE_CHOICE" &&
-                    question.maxSelections !== null &&
-                    selectedValues.length >= question.maxSelections &&
-                    !isSelected;
-
-                  return (
-                    <label
-                      key={option.id}
-                      className="flex cursor-pointer items-center gap-2 rounded-md border p-3 text-sm transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5 hover:bg-accent/50 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60"
-                    >
-                      {question.type === "SINGLE_CHOICE" ? (
-                      <input
-                        checked={isSelected}
-                        className="h-4 w-4"
-                        name={`question_${question.id}`}
-                        onChange={() => updateAnswer(question.id, option.id)}
-                        type="radio"
-                      />
-                    ) : (
-                      <input
-                        checked={isSelected}
-                        className="h-4 w-4"
-                        disabled={hasReachedSelectionLimit}
-                        onChange={(event) => {
-                          const nextValues = event.target.checked
-                            ? [...selectedValues, option.id]
-                            : selectedValues.filter((value) => value !== option.id);
-                          updateAnswer(question.id, nextValues);
-                        }}
-                        type="checkbox"
-                      />
-                    )}
-                    {option.label}
-                  </label>
-                  );
-                })}
-              </div>
-            ) : null}
-
-            {question.type === "RATING" ? (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  {question.ratingMinLabel ? (
-                    <span className="text-xs text-muted-foreground">
-                      {question.ratingMinLabel}
-                    </span>
-                  ) : null}
-                  <div className="flex gap-1">
-                    {Array.from(
-                      {
-                        length:
-                          (question.ratingMax ?? 5) - (question.ratingMin ?? 1) + 1,
-                      },
-                      (_, i) => (question.ratingMin ?? 1) + i,
-                    ).map((val) => (
-                      <button
-                        aria-pressed={answers[question.id] === val}
-                        key={val}
-                        className={`flex h-9 w-9 items-center justify-center rounded-md border text-sm transition-colors ${answers[question.id] === val ? "border-primary bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"}`}
-                        onClick={() => updateAnswer(question.id, val)}
-                        type="button"
-                      >
-                        {val}
-                      </button>
-                    ))}
-                  </div>
-                  {question.ratingMaxLabel ? (
-                    <span className="text-xs text-muted-foreground">
-                      {question.ratingMaxLabel}
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-            ) : null}
-          </div>
+              ) : null
+            }
+          />
         )) : (
           <div className="rounded-lg border bg-card p-5 text-sm text-muted-foreground">
             هنوز سوالی برای پیش‌نمایش اضافه نشده است.
@@ -312,7 +171,7 @@ export function SurveyPreview({
           {stepError ? <p className="text-sm text-destructive" role="alert">{stepError}</p> : null}
           <div className="flex items-center justify-between gap-3">
             <Button
-              disabled={currentStep === 0}
+              disabled={currentQuestionIndex === 0}
               onClick={() => {
                 setStepError(null);
                 setCurrentStep((step) => Math.max(step - 1, 0));

@@ -37,6 +37,7 @@ export default async function SurveyPreviewPage({
       title: true,
       description: true,
       identityMode: true,
+      kind: true,
       state: true,
       ownerId: true,
       questions: {
@@ -114,6 +115,8 @@ export default async function SurveyPreviewPage({
           description={survey.description}
           identityMode={survey.identityMode}
           isAnonymous={survey.identityMode === "ANONYMOUS"}
+          surveyId={survey.id}
+          surveyKind={survey.kind}
           questions={survey.questions.map((question) => ({
             ...question,
             condition: question.targetCondition
