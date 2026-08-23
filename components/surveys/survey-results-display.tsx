@@ -94,7 +94,11 @@ function AvailableResults({ results }: { results: SurveyResultsAvailable }) {
           </h2>
 
           {question.choices ? (
-            <ChoiceResults choices={question.choices} submittedCount={results.participation.submittedCount} />
+            <ChoiceResults
+              choices={question.choices}
+              questionType={question.type}
+              submittedCount={results.participation.submittedCount}
+            />
           ) : null}
           {question.rating ? <RatingResults rating={question.rating} /> : null}
           {question.textAnswers.length > 0 ? (
@@ -109,31 +113,148 @@ function AvailableResults({ results }: { results: SurveyResultsAvailable }) {
   );
 }
 
+// Donut charts are reserved for single-choice questions with few options, where
+// slices form an honest part-to-whole picture; multi-select and long option
+// lists compare better as horizontal bars.
 function ChoiceResults({
   choices,
+  questionType,
   submittedCount,
 }: {
   choices: NonNullable<SurveyResultsAvailable["questions"][number]["choices"]>;
+  questionType: SurveyResultsAvailable["questions"][number]["type"];
   submittedCount: number;
 }) {
+  const answeredTotal = choices.reduce((sum, choice) => sum + choice.count, 0);
+
+  if (answeredTotal === 0) {
+    return <p className="mt-3 text-sm text-muted-foreground">هنوز پاسخی برای این پرسش ثبت نشده است.</p>;
+  }
+
+  // Single-choice shares sum to the answered total (part-to-whole). Multi-select
+  // penetration is measured against submissions, so totals may exceed 100%.
+  const denominator = questionType === "SINGLE_CHOICE" ? answeredTotal : submittedCount;
+  const stats: ChoiceStat[] = choices.map((choice) => ({
+    id: choice.id,
+    label: choice.label,
+    count: choice.count,
+    ratio: denominator === 0 ? 0 : choice.count / denominator,
+  }));
+
+  const useDonut = questionType === "SINGLE_CHOICE" && choices.length >= 2 && choices.length <= 4;
+
+  return useDonut ? (
+    <ChoiceDonut stats={stats} total={answeredTotal} />
+  ) : (
+    <ChoiceBars stats={stats} denominator={denominator} />
+  );
+}
+
+type ChoiceStat = {
+  id: string;
+  label: string;
+  count: number;
+  ratio: number;
+};
+
+const DONUT_SEGMENT_COLORS = [
+  "hsl(221.2 83.2% 53.3%)",
+  "hsl(173.4 80.4% 32%)",
+  "hsl(32.1 94.6% 43.7%)",
+  "hsl(215.3 19% 36.7%)",
+];
+
+function ChoiceDonut({ stats, total }: { stats: ChoiceStat[]; total: number }) {
+  const visibleCount = stats.filter((stat) => stat.count > 0).length;
+  const gap = visibleCount > 1 ? 1.5 : 0;
+
+  let start = 0;
+  const arcs = stats.map((stat, index) => {
+    const arcStart = start;
+    start += stat.ratio * 100;
+    return { ...stat, arcStart, color: DONUT_SEGMENT_COLORS[index % DONUT_SEGMENT_COLORS.length] };
+  });
+
   return (
-    <ul className="mt-4 space-y-3" aria-label="توزیع گزینه‌ها">
-      {choices.map((choice) => {
-        const ratio = submittedCount === 0 ? 0 : choice.count / submittedCount;
-        return (
-          <li key={choice.id}>
-            <div className="flex items-baseline justify-between gap-4 text-sm">
-              <span className="font-medium">{choice.label}</span>
-              <span className="shrink-0 tabular-nums text-muted-foreground">
-                {formatInteger(choice.count)} پاسخ ({PERCENT_FORMATTER.format(ratio)})
-              </span>
-            </div>
-            <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-label={`${choice.label}: ${formatInteger(choice.count)} پاسخ`} aria-valuemax={submittedCount} aria-valuemin={0} aria-valuenow={choice.count}>
-              <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(ratio * 100, 100)}%` }} />
-            </div>
+    <div className="mt-4 flex flex-col gap-5 sm:flex-row sm:items-center sm:gap-8">
+      <div
+        aria-label={`توزیع ${formatInteger(total)} پاسخ میان ${formatInteger(stats.length)} گزینه`}
+        className="relative mx-auto aspect-square w-40 shrink-0 sm:mx-0"
+        role="img"
+      >
+        <svg viewBox="0 0 42 42" className="size-full -rotate-90">
+          <circle cx="21" cy="21" fill="none" r="15.9155" strokeWidth="5" className="stroke-[hsl(var(--muted))]" />
+          {arcs.map((arc) =>
+            arc.count === 0 ? null : (
+              <circle
+                cx="21"
+                cy="21"
+                fill="none"
+                key={arc.id}
+                r="15.9155"
+                stroke={arc.color}
+                strokeWidth="5"
+                {...(arc.ratio > 0.999
+                  ? {}
+                  : {
+                      strokeDasharray: `${Math.max(arc.ratio * 100 - gap, 0.5)} ${100 - Math.max(arc.ratio * 100 - gap, 0.5)}`,
+                      strokeDashoffset: -(arc.arcStart + gap / 2),
+                    })}
+              />
+            ),
+          )}
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+          <span className="text-xl font-semibold leading-none tabular-nums text-foreground">{formatInteger(total)}</span>
+          <span className="mt-1 text-xs text-muted-foreground">پاسخ</span>
+        </div>
+      </div>
+
+      <ul aria-label="توزیع گزینه‌ها" className="min-w-0 flex-1 space-y-2.5">
+        {arcs.map((arc) => (
+          <li className="flex items-start gap-2.5 text-sm" key={arc.id}>
+            <span
+              className={`mt-[7px] size-2 shrink-0 rounded-full ${arc.count === 0 ? "border border-input bg-transparent" : ""}`}
+              style={{ backgroundColor: arc.count === 0 ? undefined : arc.color }}
+            />
+            <span className={`min-w-0 flex-1 leading-5 ${arc.count === 0 ? "text-muted-foreground" : "font-medium text-foreground"}`}>
+              {arc.label}
+            </span>
+            <span className="shrink-0 leading-5 tabular-nums text-muted-foreground">
+              {formatInteger(arc.count)} پاسخ<span aria-hidden="true"> · </span>{PERCENT_FORMATTER.format(arc.ratio)}
+            </span>
           </li>
-        );
-      })}
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function ChoiceBars({ stats, denominator }: { stats: ChoiceStat[]; denominator: number }) {
+  return (
+    <ul aria-label="توزیع گزینه‌ها" className="mt-4 space-y-3">
+      {stats.map((stat) => (
+        <li key={stat.id}>
+          <div className="flex items-baseline justify-between gap-x-4 gap-y-1 text-sm">
+            <span className={stat.count === 0 ? "leading-5 text-muted-foreground" : "font-medium leading-5 text-foreground"}>
+              {stat.label}
+            </span>
+            <span className="shrink-0 tabular-nums text-muted-foreground">
+              {formatInteger(stat.count)} پاسخ<span aria-hidden="true"> · </span>{PERCENT_FORMATTER.format(stat.ratio)}
+            </span>
+          </div>
+          <div
+            className="mt-1.5 h-2 overflow-hidden rounded-full bg-muted"
+            role="progressbar"
+            aria-label={`${stat.label}: ${formatInteger(stat.count)} پاسخ`}
+            aria-valuemax={denominator}
+            aria-valuemin={0}
+            aria-valuenow={stat.count}
+          >
+            <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(stat.ratio * 100, 100)}%` }} />
+          </div>
+        </li>
+      ))}
     </ul>
   );
 }
