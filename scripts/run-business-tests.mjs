@@ -57,3 +57,9 @@ run(process.execPath, [
   path.join(buildDir, "tests/lunch-building-selection.test.js"),
   path.join(buildDir, "tests/manager-weekly-calendar-helpers.test.js"),
 ]);
+run(process.execPath, [
+  "--test",
+  "--test-concurrency=1",
+  path.join(buildDir, "tests/team-reservation-report-service.test.js"),
+  path.join(buildDir, "tests/user-reservation-report-service.test.js"),
+]);

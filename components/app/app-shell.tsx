@@ -77,6 +77,11 @@ function getNavItems(user: CurrentUser): GlobalNavItem[] {
           match: "prefix",
         },
         {
+          href: "/manager/user-report",
+          label: "گزارش کاربران",
+          match: "prefix",
+        },
+        {
           href: "/manager/desk-report",
           label: "گزارش میزها",
           match: "prefix",

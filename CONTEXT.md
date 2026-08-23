@@ -28,6 +28,10 @@ _Avoid_: food order
 Approved-only system Reservation consumption aggregated by Team, for a week or Jalali month.
 _Avoid_: team statistics
 
+**User Report**:
+Approved-only system Reservation consumption aggregated by User, for a week or Jalali month; only users with at least one approved reservation appear. Distinct from Team Report (same Reservations, grouped by Team) and Desk Report (Desk Reservations, by person).
+_Avoid_: user statistics
+
 **Desk Report**:
 Approved-only Desk Reservation consumption aggregated by person, for a week or Jalali month; only people with at least one approved reservation appear.
 _Avoid_: people report, user statistics
