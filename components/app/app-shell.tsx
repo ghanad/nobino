@@ -24,23 +24,39 @@ type AppShellProps = {
 
 function getNavItems(user: CurrentUser): GlobalNavItem[] {
   const canViewLunchReport = canAccessLunchReport(user);
+  const lunchReportItem: GlobalNavItem = {
+    href: "/lunch/report",
+    label: "گزارش غذا",
+    match: "prefix",
+  };
   const navItems: GlobalNavItem[] = [
-    { href: "/reservations", label: "رزروها", match: "prefix" },
-    { href: "/desks", label: "میز کار", match: "prefix" },
-    { href: "/meeting-rooms", label: "اتاق جلسه", match: "prefix" },
-    { href: "/surveys", label: "نظرسنجی‌ها", match: "prefix" },
     {
-      href: "/lunch",
-      label: "غذا",
+      children: [
+        { href: "/reservations/history", label: "رزروهای من", match: "prefix" },
+        { href: "/desks", label: "میز کار", match: "prefix" },
+        { href: "/meeting-rooms", label: "اتاق جلسه", match: "prefix" },
+        { href: "/reservations", label: "رزرو سیستم", match: "exact" },
+      ],
+      href: "/reservations",
+      label: "رزروها",
       match: "exact",
-      children: canViewLunchReport
-        ? [
-            { href: "/lunch", label: "رزرو غذا", match: "exact" },
-            { href: "/lunch/report", label: "گزارش غذا", match: "prefix" },
-        ]
-        : undefined,
     },
-    { href: "/wiki", label: "دانشنامه", match: "prefix" },
+    {
+      children: [
+        { href: "/lunch", label: "غذا", match: "exact" },
+        ...(canViewLunchReport ? [lunchReportItem] : []),
+        { href: "/surveys", label: "نظرسنجی‌ها", match: "prefix" },
+      ],
+      href: "/",
+      label: "خدمات",
+      match: "exact",
+    },
+    {
+      children: [{ href: "/wiki", label: "دانشنامه", match: "prefix" }],
+      href: "/wiki",
+      label: "منابع",
+      match: "prefix",
+    },
   ];
 
   if (canAccessManagerArea(user.role)) {
