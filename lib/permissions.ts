@@ -27,3 +27,13 @@ export function canAccessLunchReport(
 ): boolean {
   return isManagerOrAdmin(user.role) || user.canViewLunchReport;
 }
+
+export function canCreateSurvey(
+  user: Pick<CurrentUser, "role" | "active" | "canCreateSurveys">,
+): boolean {
+  if (!user.active) {
+    return false;
+  }
+
+  return user.role === "ADMIN" || user.canCreateSurveys;
+}

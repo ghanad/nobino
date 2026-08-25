@@ -45,10 +45,21 @@ if (!existsSync(componentsAliasPath)) {
   symlinkSync("../../components", componentsAliasPath, "dir");
 }
 
+const appAliasPath = path.join(scopedAliasDir, "app");
+if (!existsSync(appAliasPath)) {
+  symlinkSync("../../app", appAliasPath, "dir");
+}
+
 run("npx", ["prisma", "db", "push", "--skip-generate"]);
 run(process.execPath, [
   "--test",
   path.join(buildDir, "tests/business-rules.test.js"),
   path.join(buildDir, "tests/lunch-building-selection.test.js"),
   path.join(buildDir, "tests/manager-weekly-calendar-helpers.test.js"),
+]);
+run(process.execPath, [
+  "--test",
+  "--test-concurrency=1",
+  path.join(buildDir, "tests/team-reservation-report-service.test.js"),
+  path.join(buildDir, "tests/user-reservation-report-service.test.js"),
 ]);

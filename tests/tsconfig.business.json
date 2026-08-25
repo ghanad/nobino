@@ -36,8 +36,18 @@
     "../lib/notification-service.ts",
     "../lib/reservation-service.ts",
     "../lib/schedule.ts",
+    "../lib/survey-permissions.ts",
+    "../lib/survey-status.ts",
+    "../lib/survey-service/metadata.ts",
+    "../lib/survey-service/shared.ts",
+    "../lib/survey-service/collaborator.ts",
     "../lib/user-management-service.ts",
     "../lib/utils.ts",
+    "../lib/survey-service/draft-response.ts",
+    "../lib/survey-service/submit-response.ts",
+    "../lib/survey-service/reminder.ts",
+    "../lib/survey-validators.ts",
+    "../lib/survey-ai-service.ts",
     "../types/pholiday.d.ts"
   ]
 }

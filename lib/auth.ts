@@ -17,7 +17,13 @@ type SessionPayload = {
 
 export type CurrentUser = Pick<
   User,
-  "id" | "name" | "email" | "role" | "active" | "canViewLunchReport"
+  | "id"
+  | "name"
+  | "email"
+  | "role"
+  | "active"
+  | "canViewLunchReport"
+  | "canCreateSurveys"
 >;
 
 function getSessionSecret(): string {
@@ -157,6 +163,7 @@ export async function getCurrentUserFromSessionToken(
       role: true,
       active: true,
       canViewLunchReport: true,
+      canCreateSurveys: true,
     },
   });
 

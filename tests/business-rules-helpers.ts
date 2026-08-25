@@ -149,6 +149,18 @@ export async function nextMidweekIranHolidayDateAtHour(
 }
 
 export async function resetDatabase() {
+  await db.surveyAnswerOption.deleteMany();
+  await db.surveyAnswer.deleteMany();
+  await db.surveyResponse.deleteMany();
+  await db.surveyDraft.deleteMany();
+  await db.surveyRecipient.deleteMany();
+  await db.surveyQuestionCondition.deleteMany();
+  await db.surveyOption.deleteMany();
+  await db.surveyQuestion.deleteMany();
+  await db.surveyAudienceUser.deleteMany();
+  await db.surveyAudienceTeam.deleteMany();
+  await db.surveyCollaborator.deleteMany();
+  await db.survey.deleteMany();
   await db.baleLunchReportDelivery.deleteMany();
   await db.baleLunchReportRecipient.deleteMany();
   await db.baleNotificationDelivery.deleteMany();

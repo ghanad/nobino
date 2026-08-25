@@ -1,0 +1,6 @@
+import { NextResponse } from "next/server";
+import { requireCurrentUser } from "@/lib/auth";
+import { applySurveyAiProposal, applySurveyAiRequestSchema } from "@/lib/survey-ai-service";
+import { SurveyServiceError } from "@/lib/survey-service/shared";
+import { rejectCrossSiteWrite } from "@/lib/csrf";
+export async function POST(request: Request) { const csrfError = rejectCrossSiteWrite(request); if (csrfError) return csrfError; try { const user = await requireCurrentUser(); let body: unknown; try { body = await request.json(); } catch { return NextResponse.json({ error: "درخواست نامعتبر است." }, { status: 400 }); } const parsed = applySurveyAiRequestSchema.safeParse(body); if (!parsed.success) return NextResponse.json({ error: "درخواست نامعتبر است." }, { status: 400 }); return NextResponse.json(await applySurveyAiProposal({ actorUserId: user.id, ...parsed.data })); } catch (error) { if (error instanceof SurveyServiceError) return NextResponse.json({ error: error.message }, { status: error.message.includes("تغییر کرده") ? 409 : 400 }); return NextResponse.json({ error: "اعمال پیشنهاد ناموفق بود." }, { status: 500 }); } }

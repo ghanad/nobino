@@ -6,6 +6,7 @@ import { ReservationStatus, UserRole } from "@prisma/client";
 import {
   deleteManagedUser,
   findOrProvisionLdapUser,
+  updateManagedUser,
   UserManagementError,
 } from "@/lib/user-management-service";
 
@@ -33,6 +34,7 @@ test("ldap-authenticated users are provisioned with the default user role", asyn
       select: {
         active: true,
         canViewLunchReport: true,
+        canCreateSurveys: true,
         name: true,
         passwordHash: true,
         role: true,
@@ -50,6 +52,7 @@ test("ldap-authenticated users are provisioned with the default user role", asyn
   assert.equal(user?.role, UserRole.USER);
   assert.equal(storedUser?.active, true);
   assert.equal(storedUser?.canViewLunchReport, false);
+  assert.equal(storedUser?.canCreateSurveys, false);
   assert.equal(storedUser?.name, "New LDAP User");
   assert.equal(storedUser?.passwordHash, "ldap-provisioned");
   assert.equal(storedUser?.role, UserRole.USER);
@@ -128,4 +131,41 @@ test("admin cannot delete their own account", async () => {
 
   assert.equal(admin?.active, true);
   assert.equal(admin?.deletedAt, null);
+});
+
+test("admin can toggle survey creation permission and audit the old and new values", async () => {
+  const updated = await updateManagedUser({
+    adminId,
+    userId: secondUserId,
+    name: "Second User",
+    role: UserRole.USER,
+    active: true,
+    canViewLunchReport: false,
+    canCreateSurveys: true,
+  });
+
+  const enabledAudit = await db.auditLog.findFirstOrThrow({
+    where: { entityId: secondUserId, action: "USER_UPDATED" },
+    orderBy: { createdAt: "desc" },
+  });
+
+  assert.equal(updated.canCreateSurveys, true);
+  assert.equal((enabledAudit.oldValue as { canCreateSurveys: boolean }).canCreateSurveys, false);
+  assert.equal((enabledAudit.newValue as { canCreateSurveys: boolean }).canCreateSurveys, true);
+
+  await updateManagedUser({
+    adminId,
+    userId: secondUserId,
+    name: "Second User",
+    role: UserRole.USER,
+    active: true,
+    canViewLunchReport: false,
+    canCreateSurveys: false,
+  });
+
+  const storedUser = await db.user.findUniqueOrThrow({
+    where: { id: secondUserId },
+    select: { canCreateSurveys: true },
+  });
+  assert.equal(storedUser.canCreateSurveys, false);
 });

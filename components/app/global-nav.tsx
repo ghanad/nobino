@@ -23,6 +23,7 @@ type GlobalNavProps = {
 };
 
 type NavNotification = {
+  actionHref: string | null;
   body: string;
   createdAtLabel: string;
   id: string;
@@ -56,83 +57,20 @@ function isActiveNavItem(pathname: string, item: GlobalNavItem): boolean {
 }
 
 function getMobileNavSections(navItems: GlobalNavItem[]): MobileNavSection[] {
-  const sections: MobileNavSection[] = [];
-  const reservationsItem = navItems.find((item) => item.href === "/reservations");
-  const meetingRoomsItem = navItems.find((item) => item.href === "/meeting-rooms");
-  const desksItem = navItems.find((item) => item.href === "/desks");
-  const lunchItem = navItems.find((item) => item.href === "/lunch");
-  const wikiItem = navItems.find((item) => item.href === "/wiki");
-  const managerItem = navItems.find((item) => item.href === "/manager");
-  const adminItem = navItems.find((item) => item.href === "/admin");
-  const auditItem = navItems.find((item) => item.href === "/admin/audit");
+  const sections: MobileNavSection[] = navItems.map((item) => {
+    if (item.children?.length) {
+      return {
+        entries: item.children.map((child) => ({
+          item: child,
+          label: child.href === "/admin/lunch" ? "تنظیمات غذا" : undefined,
+        })),
+        id: item.href,
+        label: item.label,
+      };
+    }
 
-  if (reservationsItem) {
-    sections.push({
-      entries: [{ item: reservationsItem }],
-      id: "reservations",
-    });
-  }
-
-  if (meetingRoomsItem) {
-    sections.push({
-      entries: [{ item: meetingRoomsItem }],
-      id: "meeting-rooms",
-    });
-  }
-
-  if (desksItem) {
-    sections.push({ entries: [{ item: desksItem }], id: "desks" });
-  }
-
-  if (lunchItem?.children?.length) {
-    sections.push({
-      entries: lunchItem.children.map((child) => ({ item: child })),
-      id: "lunch",
-      label: "غذا",
-    });
-  } else if (lunchItem) {
-    sections.push({
-      entries: [{ item: lunchItem, label: "رزرو غذا" }],
-      id: "lunch",
-    });
-  }
-
-  if (wikiItem) {
-    sections.push({
-      entries: [{ item: wikiItem }],
-      id: "wiki",
-      label: "دانشنامه",
-    });
-  }
-
-  if (managerItem) {
-    sections.push({
-      entries: managerItem.children?.length
-        ? managerItem.children.map((child) => ({ item: child }))
-        : [{ item: managerItem }],
-      id: "requests",
-      label: "درخواست‌ها",
-    });
-  }
-
-  if (adminItem?.children?.length) {
-    sections.push({
-      entries: adminItem.children.map((child) => ({
-        item: child,
-        label: child.href === "/admin/lunch" ? "تنظیمات غذا" : child.label,
-      })),
-      id: "management",
-      label: "مدیریت",
-    });
-  }
-
-  if (auditItem) {
-    sections.push({
-      entries: [{ item: auditItem }],
-      id: "reports",
-      label: "گزارش‌ها",
-    });
-  }
+    return { entries: [{ item }], id: item.href };
+  });
 
   sections.push({
     entries: [
@@ -150,65 +88,112 @@ function getMobileNavSections(navItems: GlobalNavItem[]): MobileNavSection[] {
   return sections;
 }
 
-function NavLink({
-  enableDropdown = true,
+function NavDropdown({
+  isOpen,
   item,
+  onClose,
+  onToggle,
   pathname,
 }: {
-  enableDropdown?: boolean;
+  isOpen: boolean;
   item: GlobalNavItem;
+  onClose: () => void;
+  onToggle: () => void;
   pathname: string;
 }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      if (
+        containerRef.current &&
+        event.target instanceof Node &&
+        !containerRef.current.contains(event.target)
+      ) {
+        onClose();
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   const isActive = isActiveNavItem(pathname, item);
-  const hasChildren = Boolean(item.children?.length);
+  const chevron = (
+    <ChevronDown
+      className={cn(
+        "h-3 w-3 shrink-0 text-slate-400 transition-transform",
+        isOpen ? "rotate-180" : "",
+      )}
+    />
+  );
 
-  if (hasChildren && enableDropdown) {
-    return (
-      <div className="group relative">
-        <Link
-          aria-current={isActive ? "page" : undefined}
-          aria-haspopup="menu"
-          className={cn(
-            "relative inline-flex h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border px-3 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
-            isActive
-              ? "border-slate-200 bg-slate-100 text-slate-950"
-              : "border-transparent text-slate-700 hover:bg-slate-50 hover:text-slate-950",
-          )}
-          href={item.href}
+  return (
+    <div className="relative" ref={containerRef}>
+      <button
+        aria-expanded={isOpen}
+        aria-haspopup="menu"
+        className={cn(
+          "inline-flex h-10 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border px-3 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+          isActive || isOpen
+            ? "border-slate-200 bg-slate-100 text-slate-950"
+            : "border-transparent text-slate-700 hover:bg-slate-50 hover:text-slate-950",
+        )}
+        onClick={onToggle}
+        type="button"
+      >
+        <span>{item.label}</span>
+        {chevron}
+      </button>
+      {isOpen ? (
+        <div
+          className="absolute right-0 top-full z-30 mt-1.5 min-w-44 rounded-md border border-slate-200 bg-card p-1 text-card-foreground shadow-sm"
+          role="menu"
         >
-          <span>{item.label}</span>
-          <ChevronDown className="h-3.5 w-3.5 text-slate-500 transition-transform group-hover:rotate-180 group-focus-within:rotate-180" />
-        </Link>
-        <div className="invisible absolute right-0 top-full z-20 w-40 pt-1.5 opacity-0 transition-opacity group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
-          <div
-            className="rounded-md border border-slate-200 bg-card p-1 text-card-foreground shadow-sm"
-            role="menu"
-          >
-            {item.children?.map((child) => {
-              const isChildActive = isActiveNavItem(pathname, child);
+          {item.children?.map((child) => {
+            const isChildActive = isActiveNavItem(pathname, child);
 
-              return (
-                <Link
-                  aria-current={isChildActive ? "page" : undefined}
-                  className={cn(
-                    "flex h-8 items-center justify-start rounded-sm px-2 text-xs font-medium transition-colors",
-                    isChildActive
-                      ? "bg-slate-100 text-slate-950"
-                      : "text-slate-700 hover:bg-slate-50 hover:text-slate-950",
-                  )}
-                  href={child.href}
-                  key={child.href}
-                  role="menuitem"
-                >
-                  {child.label}
-                </Link>
-              );
-            })}
-          </div>
+            return (
+              <Link
+                aria-current={isChildActive ? "page" : undefined}
+                className={cn(
+                  "flex h-8 items-center justify-start whitespace-nowrap rounded-sm px-2 text-xs font-medium transition-colors",
+                  isChildActive
+                    ? "bg-slate-100 text-slate-950"
+                    : "text-slate-700 hover:bg-slate-50 hover:text-slate-950",
+                )}
+                href={child.href}
+                key={child.href}
+                onClick={onClose}
+                role="menuitem"
+              >
+                {child.label}
+              </Link>
+            );
+          })}
         </div>
-      </div>
-    );
-  }
+      ) : null}
+    </div>
+  );
+}
+
+function NavLink({ item, pathname }: { item: GlobalNavItem; pathname: string }) {
+  const isActive = isActiveNavItem(pathname, item);
 
   return (
     <Link
@@ -349,7 +334,7 @@ function NotificationLink({
               {recentNotifications.map((notification) => (
                 <Link
                   className="block rounded-md px-3 py-2.5 transition-colors hover:bg-slate-50"
-                  href="/notifications"
+                  href={notification.actionHref ?? "/notifications"}
                   key={notification.id}
                   onClick={() => setIsOpen(false)}
                 >
@@ -729,6 +714,7 @@ export function GlobalNav({
 }: GlobalNavProps) {
   const pathname = usePathname();
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+  const [openMenuHref, setOpenMenuHref] = useState<string | null>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const wasMobileDrawerOpenRef = useRef(false);
 
@@ -736,8 +722,13 @@ export function GlobalNav({
     setIsMobileDrawerOpen(false);
   }, []);
 
+  const closeOpenMenu = useCallback(() => {
+    setOpenMenuHref(null);
+  }, []);
+
   useEffect(() => {
     setIsMobileDrawerOpen(false);
+    setOpenMenuHref(null);
   }, [pathname]);
 
   useEffect(() => {
@@ -774,13 +765,22 @@ export function GlobalNav({
           aria-label="ناوبری اصلی"
           className="hidden min-w-0 flex-1 items-center justify-start gap-2 xl:flex"
         >
-          {navItems.map((item) => (
-            <NavLink
-              item={item}
-              key={item.href}
-              pathname={pathname}
-            />
-          ))}
+          {navItems.map((item) =>
+            item.children?.length ? (
+              <NavDropdown
+                isOpen={openMenuHref === item.href}
+                item={item}
+                key={item.href}
+                onClose={closeOpenMenu}
+                onToggle={() =>
+                  setOpenMenuHref(openMenuHref === item.href ? null : item.href)
+                }
+                pathname={pathname}
+              />
+            ) : (
+              <NavLink item={item} key={item.href} pathname={pathname} />
+            ),
+          )}
         </nav>
 
         <div className="hidden shrink-0 items-center gap-1.5 xl:flex">

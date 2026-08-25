@@ -101,6 +101,93 @@ The seed script creates:
 
 The first operational version is implemented. Seeded users can sign in, create hourly reservation requests, see their own reservations grouped by status, cancel pending requests, and accept or reject manager-proposed alternatives. Managers can approve, reject, propose alternatives, and review auto-approval deadlines from `/manager`. Admins manage buildings centrally from `/admin/buildings`, then assign each resource pool to an active real building from the capacity settings. A pool with future active reservations cannot be moved between real buildings, so an existing reservation’s physical location is never changed silently; initial assignment from the transitional placeholder preserves the reservation’s date and capacity. Admins can also manage capacity and active state, Jalali date-specific capacity exceptions, weekly working schedule rows, centralized operational-calendar corrections, service-specific schedule exceptions, reservation policy settings, users from `/admin`, and audit history from `/admin/audit`. Users and managers can review unread in-app notifications from `/notifications` and mark notifications as read. Capacity reductions are blocked when future approved reservations would exceed the new effective capacity. Core service rules are covered by automated tests.
 
+## Surveys
+
+Nobino includes internal surveys for satisfaction, votes, and data collection.
+All survey dates, forms, and displayed timestamps use Persian/Jalali values;
+survey date inputs are the application Jalali picker, not the browser date
+picker.
+
+- `/surveys` lists surveys available to respond to and surveys the user manages.
+- `/surveys/new` is available to administrators and active users with the
+  `canCreateSurveys` permission. An administrator grants that permission from
+  the existing user-management screen.
+- `/surveys/[surveyId]` is the recipient view. A guessed or unavailable survey
+  URL returns the same not-found experience rather than revealing its details.
+- `/surveys/[surveyId]/edit` is the authoring and lifecycle screen for the
+  owner, administrators, and (for draft content only) collaborators.
+- `/surveys/[surveyId]/results` and `/surveys/[surveyId]/export` are limited
+  to administrators, owners, and current collaborators; the export is a real
+  `.xlsx` workbook.
+
+Survey lifecycle is `DRAFT` → `PUBLISHED` → `CLOSED`/`ARCHIVED`. A published
+survey is scheduled, active, or ended from its Jalali-configured start/end
+window; no scheduler is required. Only active surveys accept drafts or final
+responses. Publishing is irreversible. Owners and administrators may close an
+active survey early, extend its end only while active, archive ended/closed
+surveys, and manually send reminders while a survey is active. Collaborators
+can edit draft content and view permitted results, but cannot publish, change
+audience/collaborators, close/archive, or send reminders.
+
+For anonymous surveys, Nobino records a recipient's completion flag separately
+from the final response and deletes that user's linked draft in the same
+transaction. The final anonymous response has no user relation, recipient
+relation, actor-linked audit event, completion time on the recipient, or
+identity/timestamp/order fields in results and Excel exports. Anonymous
+publication requires at least five eligible recipients; results and exports
+remain unavailable until at least five final responses exist. Free-text answers
+can still reveal identity, and this is application-level anonymity only:
+database/server administrators or infrastructure timing/logs may be able to
+infer information. Do not represent it as cryptographic anonymity.
+
+Vote answers, aggregates, and Excel exports are embargoed from everyone,
+including administrators, until the survey has ended or been closed. While the
+vote is active, authorized managers can see only participation totals.
+
+Publishing creates an in-app invitation for every immutable recipient snapshot.
+Manual reminders use the same internal survey link and are delivered through
+the existing Bale notification path for recipients with an enabled Bale link.
+The reminder operation reports aggregate counts only; it never exposes an
+anonymous survey's non-respondent list. Bale delivery remains best-effort and
+its connection/delivery health is managed through the existing Bale screens.
+
+### Survey operations and troubleshooting
+
+After deploying code containing survey changes, apply migrations before serving
+traffic and regenerate Prisma client as part of the normal install/deploy flow:
+
+```bash
+npm install
+npx prisma migrate deploy
+npm run prisma:generate
+npm run build
+```
+
+If publication is rejected, use the draft readiness messages to add a valid
+Jalali start/end window, at least one fully configured question, and an active
+audience (five recipients for anonymous surveys). If a participant cannot
+submit, confirm that the survey is active, the user was in the publication
+snapshot and is still active, and they have not already submitted. If reminders
+are unavailable, confirm the survey is active, the actor is its owner or an
+administrator, and wait 15 minutes after the prior reminder batch. If an Excel
+export or results page is unavailable, check vote embargoes, the anonymous
+five-response threshold, and owner/admin/current-collaborator access. For Bale
+delivery, verify the recipient's enabled Bale link and inspect `/admin/bale`;
+the in-app notification remains the canonical invitation/reminder.
+
+Server Actions retain Next.js origin-based CSRF protection and the framework's
+1 MB request-body limit. Survey final answers and drafts also have server-side
+size limits; services re-check authentication, authorization, lifecycle,
+recipient eligibility, and disclosure rules rather than trusting UI state.
+
+## Survey AI
+
+در صفحه ویرایش پیش‌نویس نظرسنجی، «کمک با هوش مصنوعی» از همان تنظیمات مدل Wiki استفاده می‌کند و سه حالت ساخت سؤال از brief فارسی، بازنویسی سؤال فعال و review کل پیش‌نویس را ارائه می‌دهد. پاسخ مدل strict با Zod بررسی می‌شود؛ Wiki content وارد prompt نمی‌شود و تنظیمات حساس Survey هرگز در قرارداد پیشنهاد وجود ندارند.
+
+پیشنهادها ephemeral و با snapshot امضاشده هستند. هیچ تغییری پیش از پذیرش کاربر اعمال نمی‌شود، پذیرش عمومی حذف را اعمال نمی‌کند، و apply سمت سرور دوباره draft بودن، مجوز و تازگی snapshot را بررسی و تغییرات را در یک transaction اعمال می‌کند. در بازنویسی سؤال (question-review و followup) هر تغییر قابل‌تغییر — متن سؤال، متن راهنما و برچسب هر گزینه — جداگانه قابل پذیرش یا رد است؛ انتخاب فیلدها با `replaceFieldSelections` به API اعمال فرستاده می‌شود و سرور فقط بین مقادیر امضاشدهٔ before/after انتخاب می‌کند. محدودیت‌ها شامل brief حداکثر ۴۰۰۰ نویسه، دستور بازنویسی ۱۲۰۰ نویسه، حداکثر ۲۰ سؤال/۱۲ گزینه و ۶ درخواست در دقیقه برای هر کاربر است. برای محیط عملیاتی `SURVEY_AI_SECRET` را تنظیم کنید؛ در صورت نبودن آن `AUTH_SECRET` استفاده می‌شود.
+
+manual test: یک draft قابل ویرایش باز کنید، brief فارسی بدهید، diff را بررسی کنید، یک مورد را رد و بقیه را accept کنید؛ سپس سؤال را در تب دیگری تغییر دهید و apply را امتحان کنید تا پیام «پیش‌نویس تغییر کرده است» و refresh دیده شود. review باید فقط diagnostic بدهد و هرگز branching را تغییر ندهد.
+
 ## Auth Routes
 
 - `/login` accepts seeded user credentials.

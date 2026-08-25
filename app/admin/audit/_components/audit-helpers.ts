@@ -157,6 +157,7 @@ const FIELD_LABELS: Record<string, string> = {
   baseUrl: "نشانی سرویس مدل",
   capacity: "ظرفیت",
   dailyUserHourLimit: "سقف روزانه هر کاربر",
+  canCreateSurveys: "امکان ساخت نظرسنجی",
   autoAcceptAt: "مهلت تایید خودکار",
   autoAcceptDelayHours: "مهلت تایید خودکار (ساعت)",
   autoAcceptEnabled: "فعال بودن تایید خودکار",

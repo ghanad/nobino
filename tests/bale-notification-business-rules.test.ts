@@ -5,6 +5,10 @@ import { test } from "node:test";
 import {
   BaleDeliveryStatus,
   LunchReservationStatus,
+  SurveyAudienceMode,
+  SurveyIdentityMode,
+  SurveyKind,
+  SurveyState,
 } from "@prisma/client";
 
 import {
@@ -16,6 +20,7 @@ import {
   connectBaleChat,
   createBaleLinkToken,
   deliverPendingBaleNotifications,
+  buildNotificationMessage,
   disconnectBaleAccount,
   consumeBaleUpdates,
   isBaleChatIdCommand,
@@ -107,6 +112,23 @@ async function createDefaultLunchReportRecipient() {
 
 test("Bale chat ID parser accepts /chatid", () => {
   assert.equal(isBaleChatIdCommand("/chatid"), true);
+});
+
+test("survey reminders use the existing Bale notification link path", () => {
+  process.env.APP_BASE_URL = "https://nobino.example";
+  try {
+    assert.match(
+      buildNotificationMessage({
+        type: "SURVEY_REMINDER",
+        title: "یادآوری نظرسنجی",
+        body: "یادآوری",
+        surveyId: "survey-id",
+      }),
+      /https:\/\/nobino\.example\/surveys\/survey-id/,
+    );
+  } finally {
+    delete process.env.APP_BASE_URL;
+  }
 });
 
 test("Bale chat ID parser accepts /chatid@bot_username", () => {
@@ -578,6 +600,49 @@ test("Bale delivery sends only notifications created after linking", async () =>
   });
   assert.equal(skippedDelivery?.status, "SKIPPED");
   assert.equal(await db.baleNotificationDelivery.count(), 2);
+});
+
+test("Bale delivery appends a validated direct Nobino link for survey invitations", async () => {
+  const survey = await db.survey.create({
+    data: {
+      audienceMode: SurveyAudienceMode.ALL_ACTIVE,
+      identityMode: SurveyIdentityMode.NAMED,
+      kind: SurveyKind.SATISFACTION,
+      ownerId: adminId,
+      state: SurveyState.PUBLISHED,
+      title: "Survey invitation",
+    },
+  });
+  const link = await createBaleLinkToken(userId);
+  await connectBaleChat(tokenFromCommand(link.command), "666666666");
+  await db.notification.create({
+    data: {
+      body: "برای شرکت در نظرسنجی دعوت شده‌اید.",
+      surveyId: survey.id,
+      title: "دعوت به نظرسنجی",
+      type: "SURVEY_INVITATION",
+      userId,
+    },
+  });
+  const sentBodies: string[] = [];
+
+  await withBaleMock(
+    {
+      fetchImpl: async (_input, init) => {
+        sentBodies.push(String(init?.body));
+        return new Response(JSON.stringify({ ok: true }), {
+          headers: { "Content-Type": "application/json" },
+          status: 200,
+        });
+      },
+    },
+    async () => {
+      assert.deepEqual(await deliverPendingBaleNotifications(), { failed: 0, sent: 1 });
+    },
+  );
+
+  const text = new URLSearchParams(sentBodies[0]).get("text") ?? "";
+  assert.match(text, new RegExp(`https://nobino\\.example/surveys/${survey.id}`));
 });
 
 test("lunch report does not claim or send before the eligible minute", async () => {

@@ -16,6 +16,7 @@ const managedUserSelect = {
   role: true,
   active: true,
   canViewLunchReport: true,
+  canCreateSurveys: true,
 } satisfies Prisma.UserSelect;
 
 export class UserManagementError extends Error {
@@ -162,6 +163,7 @@ export async function updateManagedUser(input: {
   role: UserRole;
   active: boolean;
   canViewLunchReport: boolean;
+  canCreateSurveys: boolean;
 }) {
   const name = normalizeName(input.name);
 
@@ -181,6 +183,7 @@ export async function updateManagedUser(input: {
         role: true,
         active: true,
         canViewLunchReport: true,
+        canCreateSurveys: true,
       },
     });
 
@@ -199,6 +202,7 @@ export async function updateManagedUser(input: {
         role: input.role,
         active: input.active,
         canViewLunchReport: input.canViewLunchReport,
+        canCreateSurveys: input.canCreateSurveys,
       },
       select: {
         id: true,
@@ -207,6 +211,7 @@ export async function updateManagedUser(input: {
         role: true,
         active: true,
         canViewLunchReport: true,
+        canCreateSurveys: true,
       },
     });
 
