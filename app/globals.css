@@ -39,7 +39,27 @@
   }
 }
 
+@keyframes report-bar-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
 @layer components {
+  .report-bar-fill {
+    transform-origin: right center;
+    animation: report-bar-grow 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .report-bar-fill {
+      animation: none;
+    }
+  }
+
   .wiki-content {
     @apply grid gap-4 text-right text-slate-700;
   }

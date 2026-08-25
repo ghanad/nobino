@@ -72,18 +72,8 @@ function getNavItems(user: CurrentUser): GlobalNavItem[] {
         },
         { href: "/manager/desks", label: "میزهای کار", match: "prefix" },
         {
-          href: "/manager/team-report",
-          label: "گزارش تیم‌ها",
-          match: "prefix",
-        },
-        {
-          href: "/manager/user-report",
-          label: "گزارش کاربران",
-          match: "prefix",
-        },
-        {
-          href: "/manager/desk-report",
-          label: "گزارش میزها",
+          href: "/manager/reports",
+          label: "گزارش‌ها",
           match: "prefix",
         },
       ],
