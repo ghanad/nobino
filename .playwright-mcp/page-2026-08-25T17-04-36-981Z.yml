@@ -1,0 +1,90 @@
+- generic [active] [ref=f2e1]:
+  - button "Open Next.js Dev Tools" [ref=f2e330] [cursor=pointer]
+  - alert [ref=f2e334]: Nobino
+  - main [ref=f2e397]:
+    - status [ref=f2e398]:
+      - button "بستن اعلان" [ref=f2e399] [cursor=pointer]
+      - generic [ref=f2e407]:
+        - paragraph [ref=f2e408]: درخواست اتاق جلسه
+        - paragraph [ref=f2e409]: درخواست رزرو اتاق جلسه اصلی توسط Admin User برای تاریخ چهار شنبه ۴ شهریور ۱۴۰۵ در انتظار بررسی است.
+        - link "مشاهده اعلان‌ها" [ref=f2e410] [cursor=pointer]:
+          - /url: /notifications
+    - generic [ref=f2e412]:
+      - generic [ref=f2e413]:
+        - generic [ref=f2e414]:
+          - link "Nobino" [ref=f2e415] [cursor=pointer]:
+            - /url: /
+          - button "باز کردن منوی ناوبری" [ref=f2e416] [cursor=pointer]
+        - link "۳ اعلان خوانده‌نشده" [ref=f2e419] [cursor=pointer]:
+          - /url: /notifications
+          - generic [ref=f2e423]: ۳
+      - generic:
+        - button
+        - dialog:
+          - generic:
+            - link:
+              - /url: /
+              - text: Nobino
+            - button
+          - navigation:
+            - generic:
+              - button:
+                - generic: رزروها
+            - generic:
+              - button:
+                - generic: خدمات
+            - generic:
+              - button:
+                - generic: منابع
+            - generic:
+              - button:
+                - generic: بررسی درخواست‌ها
+            - generic:
+              - button:
+                - generic: مدیریت
+            - generic:
+              - link:
+                - /url: /admin/audit
+                - text: گزارش فعالیت‌ها
+            - generic:
+              - link:
+                - /url: /notifications
+                - text: اعلان‌ها
+          - generic:
+            - paragraph: Admin User
+            - link:
+              - /url: /settings/bale
+              - text: تنظیمات اعلان بله
+            - generic:
+              - button: خروج
+    - generic [ref=f2e425]:
+      - region [ref=f2e426]:
+        - heading "خدمات" [level=1] [ref=f2e427]
+        - paragraph [ref=f2e428]: سرویس مورد نیازتان را انتخاب کنید.
+      - navigation "فهرست خدمات قابل رزرو" [ref=f2e429]:
+        - link "دانشنامه راهنماها، فرایندها و اطلاعات داخلی شرکت" [ref=f2e430] [cursor=pointer]:
+          - /url: /wiki
+          - generic [ref=f2e434]:
+            - generic [ref=f2e435]: دانشنامه
+            - generic [ref=f2e436]: راهنماها، فرایندها و اطلاعات داخلی شرکت
+        - link "رزرو غذا ثبت یا مشاهده رزرو غذای روزانه" [ref=f2e440] [cursor=pointer]:
+          - /url: /lunch
+          - generic [ref=f2e445]:
+            - generic [ref=f2e446]: رزرو غذا
+            - generic [ref=f2e447]: ثبت یا مشاهده رزرو غذای روزانه
+        - link "رزرو نوبت سیستم ثبت درخواست استفاده از سیستم‌های شرکت" [ref=f2e451] [cursor=pointer]:
+          - /url: /reservations
+          - generic [ref=f2e457]:
+            - generic [ref=f2e458]: رزرو نوبت سیستم
+            - generic [ref=f2e459]: ثبت درخواست استفاده از سیستم‌های شرکت
+        - link "رزرو اتاق جلسه ثبت یا مشاهده رزرو اتاق‌های جلسه" [ref=f2e463] [cursor=pointer]:
+          - /url: /meeting-rooms
+          - generic [ref=f2e468]:
+            - generic [ref=f2e469]: رزرو اتاق جلسه
+            - generic [ref=f2e470]: ثبت یا مشاهده رزرو اتاق‌های جلسه
+        - link "رزرو میز کار انتخاب میز در دفتر برای ساعت‌های مورد نیاز" [ref=f2e474] [cursor=pointer]:
+          - /url: /desks
+          - generic [ref=f2e479]:
+            - generic [ref=f2e480]: رزرو میز کار
+            - generic [ref=f2e481]: انتخاب میز در دفتر برای ساعت‌های مورد نیاز
+    - paragraph [ref=f2e486]: توسعه داده‌شده در هلدینگ آقاجانی

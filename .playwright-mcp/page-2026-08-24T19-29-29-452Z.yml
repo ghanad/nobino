@@ -1,0 +1,179 @@
+- generic [active] [ref=f5e1]:
+  - main [ref=f5e2]:
+    - generic [ref=f5e4]:
+      - generic [ref=f5e5]:
+        - generic [ref=f5e6]:
+          - link "Nobino" [ref=f5e7] [cursor=pointer]:
+            - /url: /
+          - button "باز کردن منوی ناوبری" [ref=f5e8] [cursor=pointer]
+        - link "۳ اعلان خوانده‌نشده" [ref=f5e11] [cursor=pointer]:
+          - /url: /notifications
+          - generic [ref=f5e15]: ۳
+      - generic:
+        - button
+        - dialog:
+          - generic:
+            - link:
+              - /url: /
+              - text: Nobino
+            - button
+          - navigation:
+            - generic:
+              - button:
+                - generic: رزروها
+            - generic:
+              - button:
+                - generic: خدمات
+            - generic:
+              - button:
+                - generic: منابع
+            - generic:
+              - button [expanded]:
+                - generic: بررسی درخواست‌ها
+              - generic:
+                - link:
+                  - /url: /manager
+                  - text: تقویم رزروها
+                - link:
+                  - /url: /manager/meeting-rooms
+                  - text: اتاق‌های جلسه
+                - link:
+                  - /url: /manager/desks
+                  - text: میزهای کار
+                - link:
+                  - /url: /manager/reports
+                  - text: گزارش‌ها
+            - generic:
+              - link:
+                - /url: /notifications
+                - text: اعلان‌ها
+          - generic:
+            - paragraph: Manager User
+            - link:
+              - /url: /settings/bale
+              - text: تنظیمات اعلان بله
+            - generic:
+              - button: خروج
+    - generic [ref=f5e17]:
+      - generic [ref=f5e19]:
+        - heading "گزارش‌ها" [level=1] [ref=f5e20]
+        - paragraph [ref=f5e21]: گزارش مصرف رزروها به تفکیک تیم، کاربر و میز کاری، فقط بر پایه رزروهای تاییدشده
+      - generic [ref=f5e22]:
+        - complementary [ref=f5e23]:
+          - navigation "تنظیمات گزارش" [ref=f5e24]:
+            - generic [ref=f5e25]:
+              - paragraph [ref=f5e26]: نما
+              - group [ref=f5e27]:
+                - link "تیم‌ها" [ref=f5e28] [cursor=pointer]:
+                  - /url: /manager/reports?period=month&view=team
+                - link "کاربران" [ref=f5e29] [cursor=pointer]:
+                  - /url: /manager/reports?period=month&view=user
+                - link "میزها" [ref=f5e30] [cursor=pointer]:
+                  - /url: /manager/reports?period=month&view=desk
+            - generic [ref=f5e31]:
+              - paragraph [ref=f5e32]: بازه
+              - generic [ref=f5e33]:
+                - group [ref=f5e34]:
+                  - link "هفتگی" [ref=f5e35] [cursor=pointer]:
+                    - /url: /manager/reports?period=week&view=team
+                  - link "ماهانه" [ref=f5e36] [cursor=pointer]:
+                    - /url: /manager/reports?period=month&view=team
+                - generic [ref=f5e37]:
+                  - paragraph [ref=f5e38]: بازه ماهانه
+                  - paragraph [ref=f5e39]: شهریور ۱۴۰۵
+                - group [ref=f5e40]:
+                  - link "بازه قبل" [ref=f5e41] [cursor=pointer]:
+                    - /url: /manager/reports?period=month&view=team&date=1405-05-01
+                  - link "امروز" [ref=f5e44] [cursor=pointer]:
+                    - /url: /manager/reports?period=month&view=team&date=1405-06-01
+                  - link "بازه بعد" [ref=f5e45] [cursor=pointer]:
+                    - /url: /manager/reports?period=month&view=team&date=1405-07-01
+          - generic [ref=f5e48]:
+            - paragraph [ref=f5e49]: جمع‌بندی بازه
+            - generic [ref=f5e50]:
+              - generic [ref=f5e51]:
+                - paragraph [ref=f5e52]: ساعت تاییدشده واقعی
+                - paragraph [ref=f5e53]: ۱۷ ساعت
+                - paragraph [ref=f5e54]: کل واقعی رزروهای تاییدشده در این بازه
+              - generic [ref=f5e55]:
+                - paragraph [ref=f5e56]: ساعت نسبت‌داده‌شده
+                - paragraph [ref=f5e57]: ۲۲ ساعت
+                - paragraph [ref=f5e58]: در عضویت چندتیمی ممکن است از کل واقعی بیشتر شود
+              - generic [ref=f5e59]:
+                - paragraph [ref=f5e60]: تعداد رزرو تاییدشده
+                - paragraph [ref=f5e61]: ۶
+                - paragraph [ref=f5e62]: فقط وضعیت APPROVED شمرده شده است
+              - generic [ref=f5e63]:
+                - paragraph [ref=f5e64]: کاربران رزروکننده
+                - paragraph [ref=f5e65]: ۴
+                - paragraph [ref=f5e66]: کاربران یکتای رزروکننده در این بازه
+        - generic [ref=f5e67]:
+          - generic [ref=f5e68]:
+            - generic [ref=f5e69]:
+              - heading "مقایسه تیم‌ها" [level=2] [ref=f5e70]
+              - paragraph [ref=f5e71]: نمودار بر اساس ساعت رزرو تاییدشده در شهریور ۱۴۰۵
+            - list [ref=f5e72]:
+              - listitem [ref=f5e73]:
+                - generic [ref=f5e74]: ۱
+                - generic [ref=f5e76]:
+                  - generic [ref=f5e77]:
+                    - paragraph [ref=f5e78]: تیم زیرساخت
+                    - paragraph [ref=f5e79]: ۴ رزرو · میانگین ۴ ساعت برای هر عضو
+                  - paragraph [ref=f5e80]:
+                    - text: ۸ ساعت
+                    - generic [ref=f5e81]: ۳۶٪ از کل
+              - listitem [ref=f5e84]:
+                - generic [ref=f5e85]: ۲
+                - generic [ref=f5e87]:
+                  - generic [ref=f5e88]:
+                    - paragraph [ref=f5e89]: تیم محصول
+                    - paragraph [ref=f5e90]: ۳ رزرو · میانگین ۴ ساعت برای هر عضو
+                  - paragraph [ref=f5e91]:
+                    - text: ۸ ساعت
+                    - generic [ref=f5e92]: ۳۶٪ از کل
+              - listitem [ref=f5e94]:
+                - generic [ref=f5e95]: ۳
+                - generic [ref=f5e97]:
+                  - generic [ref=f5e98]:
+                    - paragraph [ref=f5e99]: بدون تیم
+                    - paragraph [ref=f5e100]: ۱ رزرو · بدون عضو تعریف‌شده
+                  - paragraph [ref=f5e101]:
+                    - text: ۶ ساعت
+                    - generic [ref=f5e102]: ۲۷٪ از کل
+          - generic [ref=f5e104]:
+            - generic [ref=f5e105]:
+              - heading "جزئیات تیم‌ها" [level=2] [ref=f5e106]
+              - paragraph [ref=f5e107]: عضویت‌ها بر اساس تیم‌های فعلی کاربر محاسبه شده‌اند.
+            - table [ref=f5e109]:
+              - rowgroup [ref=f5e110]:
+                - row [ref=f5e111]:
+                  - columnheader "نام تیم" [ref=f5e112]
+                  - columnheader "ساعت تاییدشده" [ref=f5e113]
+                  - columnheader "تعداد رزرو" [ref=f5e114]
+                  - columnheader "کاربران رزروکننده" [ref=f5e115]
+                  - columnheader "تعداد اعضا" [ref=f5e116]
+                  - columnheader "میانگین ساعت به ازای عضو" [ref=f5e117]
+              - rowgroup [ref=f5e118]:
+                - row [ref=f5e119]:
+                  - cell "تیم زیرساخت" [ref=f5e120]
+                  - cell "۸" [ref=f5e121]
+                  - cell "۴" [ref=f5e122]
+                  - cell "۲" [ref=f5e123]
+                  - cell "۲" [ref=f5e124]
+                  - cell "۴" [ref=f5e125]
+                - row [ref=f5e126]:
+                  - cell "تیم محصول" [ref=f5e127]
+                  - cell "۸" [ref=f5e128]
+                  - cell "۳" [ref=f5e129]
+                  - cell "۲" [ref=f5e130]
+                  - cell "۲" [ref=f5e131]
+                  - cell "۴" [ref=f5e132]
+                - row [ref=f5e133]:
+                  - cell "بدون تیم" [ref=f5e134]
+                  - cell "۶" [ref=f5e135]
+                  - cell "۱" [ref=f5e136]
+                  - cell "۱" [ref=f5e137]
+                  - cell "۰" [ref=f5e138]
+                  - cell "۰" [ref=f5e139]
+    - paragraph [ref=f5e141]: توسعه داده‌شده در هلدینگ آقاجانی
+  - button "Open Next.js Dev Tools" [ref=f5e147] [cursor=pointer]

@@ -183,10 +183,11 @@ export function SurveyQuestionView({
       ) : null}
 
       {question.type === "RATING" ? (
-        <div className="flex justify-center" role="group" aria-label={`امتیاز برای ${question.prompt}`}>
-          <div className="inline-flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-2 text-muted-foreground">
-            <span className="max-w-full text-xs leading-5">{ratingMinLabel}</span>
-            <div className="flex flex-wrap justify-center gap-2" aria-label="مقیاس امتیازدهی">
+        <div className="mx-auto max-w-full overflow-x-auto" role="group" aria-label={`امتیاز برای ${question.prompt}`}>
+          <div className="grid min-w-[17.75rem] w-max grid-cols-2 gap-x-3 text-xs leading-5 text-muted-foreground">
+            <span className="min-w-0 text-right">{ratingMinLabel}</span>
+            <span className="min-w-0 text-left">{ratingMaxLabel}</span>
+            <div className="col-span-2 mt-1 flex gap-2" aria-label="مقیاس امتیازدهی">
               {Array.from(
                 {
                   length: (question.ratingMax ?? 5) - (question.ratingMin ?? 1) + 1,
@@ -212,7 +213,6 @@ export function SurveyQuestionView({
                 );
               })}
             </div>
-            <span className="max-w-full text-xs leading-5">{ratingMaxLabel}</span>
           </div>
         </div>
       ) : null}

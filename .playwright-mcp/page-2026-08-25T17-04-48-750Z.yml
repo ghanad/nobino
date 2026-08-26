@@ -1,0 +1,152 @@
+- generic [active] [ref=f3e1]:
+  - main [ref=f3e2]:
+    - generic [ref=f3e4]:
+      - generic [ref=f3e5]:
+        - generic [ref=f3e6]:
+          - link "Nobino" [ref=f3e7] [cursor=pointer]:
+            - /url: /
+          - button "باز کردن منوی ناوبری" [ref=f3e8] [cursor=pointer]
+        - link "۳ اعلان خوانده‌نشده" [ref=f3e11] [cursor=pointer]:
+          - /url: /notifications
+          - generic [ref=f3e15]: ۳
+      - generic:
+        - button
+        - dialog:
+          - generic:
+            - link:
+              - /url: /
+              - text: Nobino
+            - button
+          - navigation:
+            - generic:
+              - button:
+                - generic: رزروها
+            - generic:
+              - button:
+                - generic: خدمات
+            - generic:
+              - button:
+                - generic: منابع
+            - generic:
+              - button:
+                - generic: بررسی درخواست‌ها
+            - generic:
+              - button:
+                - generic: مدیریت
+            - generic:
+              - link:
+                - /url: /admin/audit
+                - text: گزارش فعالیت‌ها
+            - generic:
+              - link:
+                - /url: /notifications
+                - text: اعلان‌ها
+          - generic:
+            - paragraph: Admin User
+            - link:
+              - /url: /settings/bale
+              - text: تنظیمات اعلان بله
+            - generic:
+              - button: خروج
+    - generic [ref=f3e17]:
+      - generic [ref=f3e18]:
+        - generic [ref=f3e19]:
+          - heading "ali2" [level=1] [ref=f3e20]
+          - paragraph [ref=f3e21]: مدیریت نقش، دسترسی‌ها، تیم‌ها و رمز موقت کاربر
+        - link "بازگشت به کاربران" [ref=f3e23] [cursor=pointer]:
+          - /url: /admin
+      - generic [ref=f3e26]:
+        - generic [ref=f3e27]:
+          - heading "اطلاعات عمومی" [level=2] [ref=f3e28]
+          - paragraph [ref=f3e29]: اطلاعات پایه حساب، نقش و دسترسی‌های کاربر
+        - generic [ref=f3e30]:
+          - generic [ref=f3e31]:
+            - generic [ref=f3e32]:
+              - generic [ref=f3e33]:
+                - generic [ref=f3e34]:
+                  - heading "ali2" [level=3] [ref=f3e35]
+                  - generic [ref=f3e36]: کاربر
+                  - generic [ref=f3e37]: فعال
+                - paragraph [ref=f3e38]:
+                  - generic [ref=f3e42]: ali2@nobino.local
+              - generic [ref=f3e43]:
+                - generic [ref=f3e44]: ثبت و پیگیری رزروهای خودش
+                - generic [ref=f3e49]: ساخته شده در پنج شنبه ۳۱ اردیبهشت ۱۴۰۵
+            - generic [ref=f3e50]:
+              - generic [ref=f3e51]:
+                - generic [ref=f3e52]: نام
+                - textbox "نام" [ref=f3e53]: ali2
+              - generic [ref=f3e54]:
+                - generic [ref=f3e55]: ایمیل
+                - textbox "ایمیل" [disabled] [ref=f3e56]: ali2@nobino.local
+              - generic [ref=f3e57]:
+                - generic [ref=f3e58]: نقش
+                - combobox "نقش" [ref=f3e59]:
+                  - option "کاربر" [selected]
+                  - option "مدیر"
+                  - option "ادمین"
+            - generic [ref=f3e60]:
+              - generic [ref=f3e61]:
+                - heading "تنظیمات دسترسی" [level=3] [ref=f3e62]
+                - paragraph [ref=f3e63]: وضعیت حساب و دسترسی‌های تکمیلی را مدیریت کنید.
+              - generic [ref=f3e64]:
+                - generic [ref=f3e65]:
+                  - checkbox "حساب فعال باشد کاربر امکان ورود و استفاده از سامانه را داشته باشد." [checked] [ref=f3e66]
+                  - generic [ref=f3e67]:
+                    - generic [ref=f3e68]: حساب فعال باشد
+                    - generic [ref=f3e69]: کاربر امکان ورود و استفاده از سامانه را داشته باشد.
+                - generic [ref=f3e70]:
+                  - checkbox "دسترسی گزارش غذا نمایش گزارش روزانه غذا برای این کاربر" [ref=f3e71]
+                  - generic [ref=f3e72]:
+                    - generic [ref=f3e73]: دسترسی گزارش غذا
+                    - generic [ref=f3e74]: نمایش گزارش روزانه غذا برای این کاربر
+                - generic [ref=f3e75]:
+                  - checkbox "امکان ساخت نظرسنجی اجازه ایجاد و انتشار نظرسنجی‌های داخلی" [ref=f3e76]
+                  - generic [ref=f3e77]:
+                    - generic [ref=f3e78]: امکان ساخت نظرسنجی
+                    - generic [ref=f3e79]: اجازه ایجاد و انتشار نظرسنجی‌های داخلی
+          - button "ذخیره تغییرات" [ref=f3e81] [cursor=pointer]
+      - generic [ref=f3e86]:
+        - generic [ref=f3e87]:
+          - heading "تیم‌ها" [level=2] [ref=f3e88]
+          - paragraph [ref=f3e89]: عضویت‌های تیمی این کاربر را مدیریت کنید.
+        - generic [ref=f3e90]:
+          - generic [ref=f3e91]:
+            - generic [ref=f3e92]:
+              - heading "تیم‌های اختصاص‌یافته" [level=3] [ref=f3e93]
+              - generic [ref=f3e94]: ۱ تیم
+            - generic [ref=f3e96]:
+              - paragraph [ref=f3e105]: تیم زیرساخت
+              - button "حذف از تیم" [ref=f3e107] [cursor=pointer]
+          - generic [ref=f3e111]:
+            - generic [ref=f3e112]:
+              - heading "افزودن به تیم" [level=3] [ref=f3e113]
+              - paragraph [ref=f3e114]: عضویت جدید برای این کاربر
+            - generic [ref=f3e115]:
+              - generic [ref=f3e116]:
+                - generic [ref=f3e117]: تیم
+                - combobox "تیم" [ref=f3e118]:
+                  - option "انتخاب تیم…" [disabled] [selected]
+                  - option "تیم محصول"
+              - button "افزودن به تیم" [ref=f3e119] [cursor=pointer]
+      - generic [ref=f3e123]:
+        - generic [ref=f3e124]:
+          - heading "رمز موقت" [level=2] [ref=f3e125]
+          - paragraph [ref=f3e126]: یک رمز جدید برای ورود بعدی کاربر تنظیم کنید.
+        - generic [ref=f3e127]:
+          - generic [ref=f3e128]: رمز موقت جدید
+          - generic [ref=f3e129]:
+            - textbox "رمز موقت جدید" [ref=f3e130]
+            - button "تنظیم رمز موقت" [ref=f3e131] [cursor=pointer]
+          - paragraph [ref=f3e135]: حداقل ۸ کاراکتر
+      - region [ref=f3e136]:
+        - generic [ref=f3e137]:
+          - heading "محدوده خطر" [level=2] [ref=f3e138]
+          - paragraph [ref=f3e139]: اقدامات این بخش بر دسترسی کاربر اثر مستقیم دارند.
+        - generic [ref=f3e141]:
+          - generic [ref=f3e142]:
+            - heading "حذف کاربر" [level=3] [ref=f3e143]
+            - paragraph [ref=f3e144]: حساب غیرفعال و از فهرست کاربران پنهان می‌شود. رزروها و تاریخچه تغییرات برای گزارش‌گیری باقی می‌مانند.
+          - button "حذف کاربر" [ref=f3e146] [cursor=pointer]
+    - paragraph [ref=f3e151]: توسعه داده‌شده در هلدینگ آقاجانی
+  - button "Open Next.js Dev Tools" [ref=f3e157] [cursor=pointer]

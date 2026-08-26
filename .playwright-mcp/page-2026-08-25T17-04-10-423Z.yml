@@ -1,0 +1,21 @@
+- generic [active] [ref=f2e1]:
+  - button "Open Next.js Dev Tools" [ref=f2e330] [cursor=pointer]
+  - alert [ref=f2e334]: ورود به سامانه
+  - main [ref=f2e382]:
+    - generic [ref=f2e383]:
+      - generic [ref=f2e384]:
+        - generic [ref=f2e385]:
+          - paragraph [ref=f2e386]: نوبینو
+          - heading "ورود به سامانه" [level=1] [ref=f2e387]
+        - generic [ref=f2e388]:
+          - generic [ref=f2e389]:
+            - text: ایمیل
+            - textbox "ایمیل از ایمیل شرکت استفاده کنید؛ مثل user@balout.co" [ref=f2e390]
+            - generic [ref=f2e391]:
+              - text: از ایمیل شرکت استفاده کنید؛ مثل
+              - generic [ref=f2e392]: user@balout.co
+          - generic [ref=f2e393]:
+            - text: رمز عبور
+            - textbox "رمز عبور" [ref=f2e394]
+          - button "ورود" [ref=f2e395] [cursor=pointer]
+      - paragraph [ref=f2e396]: توسعه داده‌شده در هلدینگ آقاجانی

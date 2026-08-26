@@ -1,0 +1,160 @@
+- generic [ref=f2e1]:
+  - main [ref=f2e2]:
+    - generic [ref=f2e4]:
+      - generic [ref=f2e5]:
+        - generic [ref=f2e6]:
+          - link "Nobino" [ref=f2e7] [cursor=pointer]:
+            - /url: /
+          - button "باز کردن منوی ناوبری" [expanded] [ref=f2e8] [cursor=pointer]
+        - link "۳ اعلان خوانده‌نشده" [ref=f2e11] [cursor=pointer]:
+          - /url: /notifications
+          - generic [ref=f2e15]: ۳
+      - generic [ref=f2e335]:
+        - button "بستن منوی ناوبری" [ref=f2e336]
+        - dialog "منوی ناوبری موبایل" [active] [ref=f2e337]:
+          - generic [ref=f2e338]:
+            - link "Nobino" [ref=f2e339] [cursor=pointer]:
+              - /url: /
+            - button "بستن منوی ناوبری" [ref=f2e340] [cursor=pointer]
+          - navigation "ناوبری اصلی" [ref=f2e344]:
+            - generic [ref=f2e345]:
+              - button "رزروها" [expanded] [ref=f2e346] [cursor=pointer]
+              - generic [ref=f2e350]:
+                - link "میز کار" [ref=f2e351] [cursor=pointer]:
+                  - /url: /desks
+                - link "اتاق جلسه" [ref=f2e352] [cursor=pointer]:
+                  - /url: /meeting-rooms
+                - link "رزرو سیستم" [ref=f2e353] [cursor=pointer]:
+                  - /url: /reservations
+            - button "خدمات" [ref=f2e355] [cursor=pointer]
+            - button "منابع" [ref=f2e360] [cursor=pointer]
+            - button "بررسی درخواست‌ها" [ref=f2e365] [cursor=pointer]
+            - link "اعلان‌ها" [ref=f2e370] [cursor=pointer]:
+              - /url: /notifications
+          - generic [ref=f2e371]:
+            - paragraph [ref=f2e372]: Manager User
+            - link "تنظیمات اعلان بله" [ref=f2e373] [cursor=pointer]:
+              - /url: /settings/bale
+            - button "خروج" [ref=f2e378] [cursor=pointer]
+    - generic [ref=f2e17]:
+      - generic [ref=f2e19]:
+        - heading "رزروها" [level=1] [ref=f2e20]
+        - paragraph [ref=f2e21]: درخواست رزرو جدید و مشاهده ظرفیت سیستم‌ها
+      - generic [ref=f2e22]:
+        - generic [ref=f2e23]:
+          - generic [ref=f2e25]:
+            - link "هفته قبل" [ref=f2e26] [cursor=pointer]:
+              - /url: "?date=1405-05-24"
+            - paragraph [ref=f2e31]: ۳۱ مرداد تا ۶ شهریور ۱۴۰۵
+            - link "هفته بعد" [ref=f2e32] [cursor=pointer]:
+              - /url: "?date=1405-06-07"
+          - generic [ref=f2e36]:
+            - generic [ref=f2e37]: ظرفیت آزاد
+            - generic [ref=f2e39]: رزرو تاییدشده شما
+            - generic [ref=f2e43]: رزرو تاییدشده
+            - generic [ref=f2e45]: درخواست در انتظار
+        - generic [ref=f2e53]:
+          - generic [ref=f2e54]:
+            - generic [ref=f2e55]: ساعت
+            - generic "شنبه ۳۱ مرداد ۱۴۰۵" [ref=f2e56]: شنبه ۳۱ مرداد
+            - generic "یک شنبه ۱ شهریور ۱۴۰۵" [ref=f2e57]: یک شنبه ۱ شهریور
+            - generic "دو شنبه ۲ شهریور ۱۴۰۵" [ref=f2e58]: دو شنبه ۲ شهریور
+            - generic "سه شنبه ۳ شهریور ۱۴۰۵" [ref=f2e59]: سه شنبه ۳ شهریور
+            - generic "چهار شنبه ۴ شهریور ۱۴۰۵" [ref=f2e60]: چهار شنبه ۴ شهریور
+            - generic "پنج شنبه ۵ شهریور ۱۴۰۵" [ref=f2e61]: پنج شنبه ۵ شهریور
+            - generic "جمعه ۶ شهریور ۱۴۰۵، روز غیرکاری، این روز قابل رزرو نیست" [ref=f2e62]:
+              - text: جمعه ۶ شهریور
+              - generic [ref=f2e63]: روز غیرکاری
+          - generic [ref=f2e65]:
+            - generic "از ساعت ۰۹:۰۰ تا ۱۰:۰۰" [ref=f2e67]: ۰۹–۱۰
+            - generic "از ساعت ۱۰:۰۰ تا ۱۱:۰۰" [ref=f2e69]: ۱۰–۱۱
+            - generic "از ساعت ۱۱:۰۰ تا ۱۲:۰۰" [ref=f2e71]: ۱۱–۱۲
+            - generic "از ساعت ۱۲:۰۰ تا ۱۳:۰۰" [ref=f2e73]: ۱۲–۱۳
+            - generic "از ساعت ۱۳:۰۰ تا ۱۴:۰۰" [ref=f2e75]: ۱۳–۱۴
+            - generic "از ساعت ۱۴:۰۰ تا ۱۵:۰۰" [ref=f2e77]: ۱۴–۱۵
+            - generic "از ساعت ۱۵:۰۰ تا ۱۶:۰۰" [ref=f2e79]: ۱۵–۱۶
+            - generic "از ساعت ۱۶:۰۰ تا ۱۷:۰۰" [ref=f2e81]: ۱۶–۱۷
+            - button "شنبه ۳۱ مرداد ۱۴۰۵، ساعت ۰۹:۰۰، این زمان گذشته و قابل رزرو نیست" [disabled] [ref=f2e83]
+            - button "یک شنبه ۱ شهریور ۱۴۰۵، ساعت ۰۹:۰۰، این زمان گذشته و قابل رزرو نیست" [disabled] [ref=f2e85]
+            - button "دو شنبه ۲ شهریور ۱۴۰۵، ساعت ۰۹:۰۰، این زمان گذشته و قابل رزرو نیست" [disabled] [ref=f2e87]
+            - button "سه شنبه ۳ شهریور ۱۴۰۵، ساعت ۰۹:۰۰، این زمان گذشته و قابل رزرو نیست" [disabled] [ref=f2e89]
+            - button "چهار شنبه ۴ شهریور ۱۴۰۵، ساعت ۰۹:۰۰، ظرفیت آزاد ۵ از ۵، ۰ رزرو تاییدشده، ۰ درخواست در انتظار تایید" [ref=f2e91] [cursor=pointer]
+            - button "پنج شنبه ۵ شهریور ۱۴۰۵، ساعت ۰۹:۰۰، ظرفیت آزاد ۵ از ۵، ۰ رزرو تاییدشده، ۰ درخواست در انتظار تایید" [ref=f2e99] [cursor=pointer]
+            - button "جمعه ۶ شهریور ۱۴۰۵، روز غیرکاری، این روز قابل رزرو نیست" [disabled] [ref=f2e107]:
+              - generic [ref=f2e108]: روز غیرکاری
+            - button "شنبه ۳۱ مرداد ۱۴۰۵، ساعت ۱۰:۰۰، این زمان گذشته و قابل رزرو نیست" [disabled] [ref=f2e110]
+            - button "یک شنبه ۱ شهریور ۱۴۰۵، ساعت ۱۰:۰۰، این زمان گذشته و قابل رزرو نیست" [disabled] [ref=f2e112]
+            - button "دو شنبه ۲ شهریور ۱۴۰۵، ساعت ۱۰:۰۰، این زمان گذشته و قابل رزرو نیست" [disabled] [ref=f2e114]
+            - button "سه شنبه ۳ شهریور ۱۴۰۵، ساعت ۱۰:۰۰، این زمان گذشته و قابل رزرو نیست" [disabled] [ref=f2e116]
+            - button "چهار شنبه ۴ شهریور ۱۴۰۵، ساعت ۱۰:۰۰، ظرفیت آزاد ۵ از ۵، ۰ رزرو تاییدشده، ۰ درخواست در انتظار تایید" [ref=f2e118] [cursor=pointer]
+            - button "پنج شنبه ۵ شهریور ۱۴۰۵، ساعت ۱۰:۰۰، ظرفیت آزاد ۵ از ۵، ۰ رزرو تاییدشده، ۰ درخواست در انتظار تایید" [ref=f2e126] [cursor=pointer]
+            - button "جمعه ۶ شهریور ۱۴۰۵، روز غیرکاری، این روز قابل رزرو نیست" [disabled] [ref=f2e134]:
+              - generic [ref=f2e135]: روز غیرکاری
+            - button "شنبه ۳۱ مرداد ۱۴۰۵، ساعت ۱۱:۰۰، این زمان گذشته و قابل رزرو نیست" [disabled] [ref=f2e137]
+            - button "یک شنبه ۱ شهریور ۱۴۰۵، ساعت ۱۱:۰۰، این زمان گذشته و قابل رزرو نیست" [disabled] [ref=f2e139]
+            - button "دو شنبه ۲ شهریور ۱۴۰۵، ساعت ۱۱:۰۰، این زمان گذشته و قابل رزرو نیست" [disabled] [ref=f2e141]
+            - button "سه شنبه ۳ شهریور ۱۴۰۵، ساعت ۱۱:۰۰، این زمان گذشته و قابل رزرو نیست" [disabled] [ref=f2e143]
+            - button "چهار شنبه ۴ شهریور ۱۴۰۵، ساعت ۱۱:۰۰، ظرفیت آزاد ۵ از ۵، ۰ رزرو تاییدشده، ۰ درخواست در انتظار تایید" [ref=f2e145] [cursor=pointer]
+            - button "پنج شنبه ۵ شهریور ۱۴۰۵، ساعت ۱۱:۰۰، ظرفیت آزاد ۵ از ۵، ۰ رزرو تاییدشده، ۰ درخواست در انتظار تایید" [ref=f2e153] [cursor=pointer]
+            - button "جمعه ۶ شهریور ۱۴۰۵، روز غیرکاری، این روز قابل رزرو نیست" [disabled] [ref=f2e161]:
+              - generic [ref=f2e162]: روز غیرکاری
+            - button "شنبه ۳۱ مرداد ۱۴۰۵، ساعت ۱۲:۰۰، این زمان گذشته و قابل رزرو نیست" [disabled] [ref=f2e164]
+            - button "یک شنبه ۱ شهریور ۱۴۰۵، ساعت ۱۲:۰۰، این زمان گذشته و قابل رزرو نیست" [disabled] [ref=f2e166]
+            - button "دو شنبه ۲ شهریور ۱۴۰۵، ساعت ۱۲:۰۰، این زمان گذشته و قابل رزرو نیست" [disabled] [ref=f2e168]
+            - button "سه شنبه ۳ شهریور ۱۴۰۵، ساعت ۱۲:۰۰، این زمان گذشته و قابل رزرو نیست" [disabled] [ref=f2e170]
+            - button "چهار شنبه ۴ شهریور ۱۴۰۵، ساعت ۱۲:۰۰، ظرفیت آزاد ۵ از ۵، ۰ رزرو تاییدشده، ۰ درخواست در انتظار تایید" [ref=f2e172] [cursor=pointer]
+            - button "پنج شنبه ۵ شهریور ۱۴۰۵، ساعت ۱۲:۰۰، ظرفیت آزاد ۵ از ۵، ۰ رزرو تاییدشده، ۰ درخواست در انتظار تایید" [ref=f2e180] [cursor=pointer]
+            - button "جمعه ۶ شهریور ۱۴۰۵، روز غیرکاری، این روز قابل رزرو نیست" [disabled] [ref=f2e188]:
+              - generic [ref=f2e189]: روز غیرکاری
+            - button "شنبه ۳۱ مرداد ۱۴۰۵، ساعت ۱۳:۰۰، این زمان گذشته و قابل رزرو نیست" [disabled] [ref=f2e191]
+            - button "یک شنبه ۱ شهریور ۱۴۰۵، ساعت ۱۳:۰۰، این زمان گذشته و قابل رزرو نیست" [disabled] [ref=f2e193]
+            - button "دو شنبه ۲ شهریور ۱۴۰۵، ساعت ۱۳:۰۰، این زمان گذشته و قابل رزرو نیست" [disabled] [ref=f2e195]
+            - button "سه شنبه ۳ شهریور ۱۴۰۵، ساعت ۱۳:۰۰، این زمان گذشته و قابل رزرو نیست" [disabled] [ref=f2e197]
+            - button "چهار شنبه ۴ شهریور ۱۴۰۵، ساعت ۱۳:۰۰، ظرفیت آزاد ۵ از ۵، ۰ رزرو تاییدشده، ۰ درخواست در انتظار تایید" [ref=f2e199] [cursor=pointer]
+            - button "پنج شنبه ۵ شهریور ۱۴۰۵، ساعت ۱۳:۰۰، ظرفیت آزاد ۵ از ۵، ۰ رزرو تاییدشده، ۰ درخواست در انتظار تایید" [ref=f2e207] [cursor=pointer]
+            - button "جمعه ۶ شهریور ۱۴۰۵، روز غیرکاری، این روز قابل رزرو نیست" [disabled] [ref=f2e215]:
+              - generic [ref=f2e216]: روز غیرکاری
+            - button "شنبه ۳۱ مرداد ۱۴۰۵، ساعت ۱۴:۰۰، این زمان گذشته و قابل رزرو نیست" [disabled] [ref=f2e218]
+            - button "یک شنبه ۱ شهریور ۱۴۰۵، ساعت ۱۴:۰۰، این زمان گذشته و قابل رزرو نیست" [disabled] [ref=f2e220]
+            - button "دو شنبه ۲ شهریور ۱۴۰۵، ساعت ۱۴:۰۰، این زمان گذشته و قابل رزرو نیست" [disabled] [ref=f2e222]
+            - button "سه شنبه ۳ شهریور ۱۴۰۵، ساعت ۱۴:۰۰، این زمان گذشته و قابل رزرو نیست" [disabled] [ref=f2e224]
+            - button "چهار شنبه ۴ شهریور ۱۴۰۵، ساعت ۱۴:۰۰، ظرفیت آزاد ۵ از ۵، ۰ رزرو تاییدشده، ۰ درخواست در انتظار تایید" [ref=f2e226] [cursor=pointer]
+            - button "پنج شنبه ۵ شهریور ۱۴۰۵، ساعت ۱۴:۰۰، ظرفیت آزاد ۵ از ۵، ۰ رزرو تاییدشده، ۰ درخواست در انتظار تایید" [ref=f2e234] [cursor=pointer]
+            - button "جمعه ۶ شهریور ۱۴۰۵، روز غیرکاری، این روز قابل رزرو نیست" [disabled] [ref=f2e242]:
+              - generic [ref=f2e243]: روز غیرکاری
+            - button "شنبه ۳۱ مرداد ۱۴۰۵، ساعت ۱۵:۰۰، این زمان گذشته و قابل رزرو نیست" [disabled] [ref=f2e245]
+            - button "یک شنبه ۱ شهریور ۱۴۰۵، ساعت ۱۵:۰۰، این زمان گذشته و قابل رزرو نیست" [disabled] [ref=f2e247]
+            - button "دو شنبه ۲ شهریور ۱۴۰۵، ساعت ۱۵:۰۰، این زمان گذشته و قابل رزرو نیست" [disabled] [ref=f2e249]
+            - button "سه شنبه ۳ شهریور ۱۴۰۵، ساعت ۱۵:۰۰، این زمان گذشته و قابل رزرو نیست" [disabled] [ref=f2e251]
+            - button "چهار شنبه ۴ شهریور ۱۴۰۵، ساعت ۱۵:۰۰، ظرفیت آزاد ۵ از ۵، ۰ رزرو تاییدشده، ۰ درخواست در انتظار تایید" [ref=f2e253] [cursor=pointer]
+            - button "پنج شنبه ۵ شهریور ۱۴۰۵، ساعت ۱۵:۰۰، ظرفیت آزاد ۵ از ۵، ۰ رزرو تاییدشده، ۰ درخواست در انتظار تایید" [ref=f2e261] [cursor=pointer]
+            - button "جمعه ۶ شهریور ۱۴۰۵، روز غیرکاری، این روز قابل رزرو نیست" [disabled] [ref=f2e269]:
+              - generic [ref=f2e270]: روز غیرکاری
+            - button "شنبه ۳۱ مرداد ۱۴۰۵، ساعت ۱۶:۰۰، این زمان گذشته و قابل رزرو نیست" [disabled] [ref=f2e272]
+            - button "یک شنبه ۱ شهریور ۱۴۰۵، ساعت ۱۶:۰۰، این زمان گذشته و قابل رزرو نیست" [disabled] [ref=f2e274]
+            - button "دو شنبه ۲ شهریور ۱۴۰۵، ساعت ۱۶:۰۰، این زمان گذشته و قابل رزرو نیست" [disabled] [ref=f2e276]
+            - button "سه شنبه ۳ شهریور ۱۴۰۵، ساعت ۱۶:۰۰، این زمان گذشته و قابل رزرو نیست" [disabled] [ref=f2e278]
+            - button "چهار شنبه ۴ شهریور ۱۴۰۵، ساعت ۱۶:۰۰، ظرفیت آزاد ۵ از ۵، ۰ رزرو تاییدشده، ۰ درخواست در انتظار تایید" [ref=f2e280] [cursor=pointer]
+            - button "پنج شنبه ۵ شهریور ۱۴۰۵، ساعت ۱۶:۰۰، ظرفیت آزاد ۵ از ۵، ۰ رزرو تاییدشده، ۰ درخواست در انتظار تایید" [ref=f2e288] [cursor=pointer]
+            - button "جمعه ۶ شهریور ۱۴۰۵، روز غیرکاری، این روز قابل رزرو نیست" [disabled] [ref=f2e296]:
+              - generic [ref=f2e297]: روز غیرکاری
+      - generic [ref=f2e298]:
+        - generic [ref=f2e299]:
+          - generic [ref=f2e300]:
+            - heading "درخواست‌های فعال من" [level=2] [ref=f2e301]
+            - paragraph [ref=f2e302]: وضعیت رزروهای فعال و موارد نیازمند اقدام را پیگیری کنید.
+          - link "مشاهده تاریخچه رزروها" [ref=f2e303] [cursor=pointer]:
+            - /url: /reservations/history
+        - article [ref=f2e309]:
+          - generic [ref=f2e310]:
+            - generic [ref=f2e311]:
+              - heading "Company Systems" [level=3] [ref=f2e312]
+              - paragraph [ref=f2e313]:
+                - generic [ref=f2e314]: یک شنبه ۱ شهریور ۱۴۰۵، ۱۰:۰۰ تا ۱۱:۰۰
+            - generic [ref=f2e315]:
+              - generic [ref=f2e316]: در انتظار تایید
+              - button "لغو درخواست" [ref=f2e318] [cursor=pointer]
+          - generic [ref=f2e322]: درخواست شما ثبت شده و در انتظار تایید است.
+    - paragraph [ref=f2e324]: توسعه داده‌شده در هلدینگ آقاجانی
+  - button "Open Next.js Dev Tools" [ref=f2e330] [cursor=pointer]
+  - alert [ref=f2e334]

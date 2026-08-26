@@ -122,14 +122,15 @@ export function SurveyDetailDisplay({
           ) : null}
 
           {question.type === "RATING" ? (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                {question.ratingMinLabel ? (
-                  <span className="text-xs text-muted-foreground">
-                    {question.ratingMinLabel}
-                  </span>
-                ) : null}
-                <div className="flex gap-1">
+            <div className="max-w-full overflow-x-auto">
+              <div className="grid min-w-[17.75rem] w-max grid-cols-2 gap-x-3 text-xs leading-5 text-muted-foreground">
+                <span className="min-w-0 text-right">
+                  {question.ratingMinLabel}
+                </span>
+                <span className="min-w-0 text-left">
+                  {question.ratingMaxLabel}
+                </span>
+                <div className="col-span-2 flex justify-between gap-1">
                   {Array.from(
                     {
                       length:
@@ -147,11 +148,6 @@ export function SurveyDetailDisplay({
                     </button>
                   ))}
                 </div>
-                {question.ratingMaxLabel ? (
-                  <span className="text-xs text-muted-foreground">
-                    {question.ratingMaxLabel}
-                  </span>
-                ) : null}
               </div>
             </div>
           ) : null}

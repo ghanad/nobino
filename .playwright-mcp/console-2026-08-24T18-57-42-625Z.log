@@ -1,0 +1,430 @@
+[     176ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:776
+[     207ms] [LOG] [HMR] connected @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:776
+[     250ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:3000/favicon.ico:0
+[  913375ms] [LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:776
+[  913464ms] [ERROR] ./app/manager/reports/desk-report-sections.tsx:6:1
+Error: Export SummaryCard doesn't exist in target module
+  4 | } from "@/lib/desk-people-report-service";
+  5 |
+> 6 | import { formatPersianNumber, SummaryCard } from "./report-ui";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  7 |
+  8 | function PeopleTable({ report }: { report: DeskPeopleReport }) {
+  9 |   if (report.people.length === 0) {
+
+The export SummaryCard was not found in module [project]/app/manager/reports/report-ui.tsx [app-rsc] (ecmascript).
+Did you mean to import parseReportPeriod?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import trace:
+  Server Component:
+    ./app/manager/reports/desk-report-sections.tsx
+    ./app/manager/reports/page.tsx @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:1052
+[  913464ms] [ERROR] ./app/manager/reports/team-report-sections.tsx:6:1
+Error: Export SummaryCard doesn't exist in target module
+  4 | } from "@/lib/team-reservation-report-service";
+  5 |
+> 6 | import { formatPersianNumber, SummaryCard } from "./report-ui";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  7 |
+  8 | function TeamUsageChart({ report }: { report: TeamReservationReport }) {
+  9 |   const maxHours = Math.max(...report.teams.map((team) => team.approvedHours), 0);
+
+The export SummaryCard was not found in module [project]/app/manager/reports/report-ui.tsx [app-rsc] (ecmascript).
+Did you mean to import parseReportPeriod?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import trace:
+  Server Component:
+    ./app/manager/reports/team-report-sections.tsx
+    ./app/manager/reports/page.tsx @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:1052
+[  913464ms] [ERROR] ./app/manager/reports/user-report-sections.tsx:6:1
+Error: Export SummaryCard doesn't exist in target module
+  4 | } from "@/lib/user-reservation-report-service";
+  5 |
+> 6 | import { formatPersianNumber, SummaryCard } from "./report-ui";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  7 |
+  8 | function UserUsageChart({ report }: { report: UserReservationReport }) {
+  9 |   const maxHours = Math.max(...report.users.map((user) => user.approvedHours), 0);
+
+The export SummaryCard was not found in module [project]/app/manager/reports/report-ui.tsx [app-rsc] (ecmascript).
+Did you mean to import parseReportPeriod?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import trace:
+  Server Component:
+    ./app/manager/reports/user-report-sections.tsx
+    ./app/manager/reports/page.tsx @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:1052
+[  913514ms] [ERROR] ./app/manager/reports/desk-report-sections.tsx:6:1
+Error: Export SummaryCard doesn't exist in target module
+  4 | } from "@/lib/desk-people-report-service";
+  5 |
+> 6 | import { formatPersianNumber, SummaryCard } from "./report-ui";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  7 |
+  8 | function PeopleTable({ report }: { report: DeskPeopleReport }) {
+  9 |   if (report.people.length === 0) {
+
+The export SummaryCard was not found in module [project]/app/manager/reports/report-ui.tsx [app-rsc] (ecmascript).
+Did you mean to import parseReportPeriod?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import trace:
+  Server Component:
+    ./app/manager/reports/desk-report-sections.tsx
+    ./app/manager/reports/page.tsx @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:1052
+[  913514ms] [ERROR] ./app/manager/reports/team-report-sections.tsx:6:1
+Error: Export SummaryCard doesn't exist in target module
+  4 | } from "@/lib/team-reservation-report-service";
+  5 |
+> 6 | import { formatPersianNumber, SummaryCard } from "./report-ui";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  7 |
+  8 | function TeamUsageChart({ report }: { report: TeamReservationReport }) {
+  9 |   const maxHours = Math.max(...report.teams.map((team) => team.approvedHours), 0);
+
+The export SummaryCard was not found in module [project]/app/manager/reports/report-ui.tsx [app-rsc] (ecmascript).
+Did you mean to import parseReportPeriod?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import trace:
+  Server Component:
+    ./app/manager/reports/team-report-sections.tsx
+    ./app/manager/reports/page.tsx @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:1052
+[  913514ms] [ERROR] ./app/manager/reports/user-report-sections.tsx:6:1
+Error: Export SummaryCard doesn't exist in target module
+  4 | } from "@/lib/user-reservation-report-service";
+  5 |
+> 6 | import { formatPersianNumber, SummaryCard } from "./report-ui";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  7 |
+  8 | function UserUsageChart({ report }: { report: UserReservationReport }) {
+  9 |   const maxHours = Math.max(...report.users.map((user) => user.approvedHours), 0);
+
+The export SummaryCard was not found in module [project]/app/manager/reports/report-ui.tsx [app-rsc] (ecmascript).
+Did you mean to import parseReportPeriod?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import trace:
+  Server Component:
+    ./app/manager/reports/user-report-sections.tsx
+    ./app/manager/reports/page.tsx @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:1052
+[  948586ms] [ERROR] ./app/manager/reports/desk-report-sections.tsx:6:1
+Error: Export SummaryCard doesn't exist in target module
+  4 | } from "@/lib/desk-people-report-service";
+  5 |
+> 6 | import { formatPersianNumber, SummaryCard } from "./report-ui";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  7 |
+  8 | function PeopleTable({ report }: { report: DeskPeopleReport }) {
+  9 |   if (report.people.length === 0) {
+
+The export SummaryCard was not found in module [project]/app/manager/reports/report-ui.tsx [app-rsc] (ecmascript).
+Did you mean to import parseReportPeriod?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import trace:
+  Server Component:
+    ./app/manager/reports/desk-report-sections.tsx
+    ./app/manager/reports/page.tsx @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:1052
+[  948586ms] [ERROR] ./app/manager/reports/team-report-sections.tsx:6:1
+Error: Export SummaryCard doesn't exist in target module
+  4 | } from "@/lib/team-reservation-report-service";
+  5 |
+> 6 | import { formatPersianNumber, SummaryCard } from "./report-ui";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  7 |
+  8 | function TeamUsageChart({ report }: { report: TeamReservationReport }) {
+  9 |   const maxHours = Math.max(...report.teams.map((team) => team.approvedHours), 0);
+
+The export SummaryCard was not found in module [project]/app/manager/reports/report-ui.tsx [app-rsc] (ecmascript).
+Did you mean to import parseReportPeriod?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import trace:
+  Server Component:
+    ./app/manager/reports/team-report-sections.tsx
+    ./app/manager/reports/page.tsx @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:1052
+[  948586ms] [ERROR] ./app/manager/reports/user-report-sections.tsx:6:1
+Error: Export SummaryCard doesn't exist in target module
+  4 | } from "@/lib/user-reservation-report-service";
+  5 |
+> 6 | import { formatPersianNumber, SummaryCard } from "./report-ui";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  7 |
+  8 | function UserUsageChart({ report }: { report: UserReservationReport }) {
+  9 |   const maxHours = Math.max(...report.users.map((user) => user.approvedHours), 0);
+
+The export SummaryCard was not found in module [project]/app/manager/reports/report-ui.tsx [app-rsc] (ecmascript).
+Did you mean to import parseReportPeriod?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import trace:
+  Server Component:
+    ./app/manager/reports/user-report-sections.tsx
+    ./app/manager/reports/page.tsx @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:1052
+[  948651ms] [LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:776
+[  965541ms] [ERROR] ./app/manager/reports/desk-report-sections.tsx:6:1
+Error: Export SummaryCard doesn't exist in target module
+  4 | } from "@/lib/desk-people-report-service";
+  5 |
+> 6 | import { formatPersianNumber, SummaryCard } from "./report-ui";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  7 |
+  8 | function PeopleTable({ report }: { report: DeskPeopleReport }) {
+  9 |   if (report.people.length === 0) {
+
+The export SummaryCard was not found in module [project]/app/manager/reports/report-ui.tsx [app-rsc] (ecmascript).
+Did you mean to import parseReportPeriod?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import trace:
+  Server Component:
+    ./app/manager/reports/desk-report-sections.tsx
+    ./app/manager/reports/page.tsx @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:1052
+[  965541ms] [ERROR] ./app/manager/reports/user-report-sections.tsx:6:1
+Error: Export SummaryCard doesn't exist in target module
+  4 | } from "@/lib/user-reservation-report-service";
+  5 |
+> 6 | import { formatPersianNumber, SummaryCard } from "./report-ui";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  7 |
+  8 | function UserUsageChart({ report }: { report: UserReservationReport }) {
+  9 |   const maxHours = Math.max(...report.users.map((user) => user.approvedHours), 0);
+
+The export SummaryCard was not found in module [project]/app/manager/reports/report-ui.tsx [app-rsc] (ecmascript).
+Did you mean to import parseReportPeriod?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import trace:
+  Server Component:
+    ./app/manager/reports/user-report-sections.tsx
+    ./app/manager/reports/page.tsx @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:1052
+[  965602ms] [LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:776
+[ 1002345ms] [ERROR] ./app/manager/reports/desk-report-sections.tsx:6:1
+Error: Export SummaryCard doesn't exist in target module
+  4 | } from "@/lib/desk-people-report-service";
+  5 |
+> 6 | import { formatPersianNumber, SummaryCard } from "./report-ui";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  7 |
+  8 | function PeopleTable({ report }: { report: DeskPeopleReport }) {
+  9 |   if (report.people.length === 0) {
+
+The export SummaryCard was not found in module [project]/app/manager/reports/report-ui.tsx [app-rsc] (ecmascript).
+Did you mean to import parseReportPeriod?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import trace:
+  Server Component:
+    ./app/manager/reports/desk-report-sections.tsx
+    ./app/manager/reports/page.tsx @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:1052
+[ 1002345ms] [ERROR] ./app/manager/reports/user-report-sections.tsx:6:1
+Error: Export SummaryCard doesn't exist in target module
+  4 | } from "@/lib/user-reservation-report-service";
+  5 |
+> 6 | import { formatPersianNumber, SummaryCard } from "./report-ui";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  7 |
+  8 | function UserUsageChart({ report }: { report: UserReservationReport }) {
+  9 |   const maxHours = Math.max(...report.users.map((user) => user.approvedHours), 0);
+
+The export SummaryCard was not found in module [project]/app/manager/reports/report-ui.tsx [app-rsc] (ecmascript).
+Did you mean to import parseReportPeriod?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import trace:
+  Server Component:
+    ./app/manager/reports/user-report-sections.tsx
+    ./app/manager/reports/page.tsx @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:1052
+[ 1002345ms] [ERROR] ./app/manager/reports/page.tsx:26:1
+Error: Export TeamReportSections doesn't exist in target module
+  24 |   type ReportView,
+  25 | } from "./report-ui";
+> 26 | import { TeamReportSections } from "./team-report-sections";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  27 | import { UserReportSections } from "./user-report-sections";
+  28 |
+  29 | // DESIGN CONTRACT — Split Cockpit (dealt 3 of 7, seed 7d97f391)
+
+The export TeamReportSections was not found in module [project]/app/manager/reports/team-report-sections.tsx [app-rsc] (ecmascript).
+Did you mean to import TeamReportRail?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist. @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:1052
+[ 1002444ms] [LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:776
+[ 1025477ms] [ERROR] ./app/manager/reports/desk-report-sections.tsx:6:1
+Error: Export SummaryCard doesn't exist in target module
+  4 | } from "@/lib/desk-people-report-service";
+  5 |
+> 6 | import { formatPersianNumber, SummaryCard } from "./report-ui";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  7 |
+  8 | function PeopleTable({ report }: { report: DeskPeopleReport }) {
+  9 |   if (report.people.length === 0) {
+
+The export SummaryCard was not found in module [project]/app/manager/reports/report-ui.tsx [app-rsc] (ecmascript).
+Did you mean to import parseReportPeriod?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import trace:
+  Server Component:
+    ./app/manager/reports/desk-report-sections.tsx
+    ./app/manager/reports/page.tsx @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:1052
+[ 1025477ms] [ERROR] ./app/manager/reports/page.tsx:26:1
+Error: Export TeamReportSections doesn't exist in target module
+  24 |   type ReportView,
+  25 | } from "./report-ui";
+> 26 | import { TeamReportSections } from "./team-report-sections";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  27 | import { UserReportSections } from "./user-report-sections";
+  28 |
+  29 | // DESIGN CONTRACT — Split Cockpit (dealt 3 of 7, seed 7d97f391)
+
+The export TeamReportSections was not found in module [project]/app/manager/reports/team-report-sections.tsx [app-rsc] (ecmascript).
+Did you mean to import TeamReportRail?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist. @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:1052
+[ 1025477ms] [ERROR] ./app/manager/reports/page.tsx:27:1
+Error: Export UserReportSections doesn't exist in target module
+  25 | } from "./report-ui";
+  26 | import { TeamReportSections } from "./team-report-sections";
+> 27 | import { UserReportSections } from "./user-report-sections";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  28 |
+  29 | // DESIGN CONTRACT — Split Cockpit (dealt 3 of 7, seed 7d97f391)
+  30 | // THESIS: an instrument panel — controls and headline figures hold a
+
+The export UserReportSections was not found in module [project]/app/manager/reports/user-report-sections.tsx [app-rsc] (ecmascript).
+Did you mean to import UserReportRail?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist. @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:1052
+[ 1026628ms] [ERROR] ./app/manager/reports/desk-report-sections.tsx:6:1
+Error: Export SummaryCard doesn't exist in target module
+  4 | } from "@/lib/desk-people-report-service";
+  5 |
+> 6 | import { formatPersianNumber, SummaryCard } from "./report-ui";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  7 |
+  8 | function PeopleTable({ report }: { report: DeskPeopleReport }) {
+  9 |   if (report.people.length === 0) {
+
+The export SummaryCard was not found in module [project]/app/manager/reports/report-ui.tsx [app-rsc] (ecmascript).
+Did you mean to import parseReportPeriod?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import trace:
+  Server Component:
+    ./app/manager/reports/desk-report-sections.tsx
+    ./app/manager/reports/page.tsx @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:1052
+[ 1026628ms] [ERROR] ./app/manager/reports/page.tsx:26:1
+Error: Export TeamReportSections doesn't exist in target module
+  24 |   type ReportView,
+  25 | } from "./report-ui";
+> 26 | import { TeamReportSections } from "./team-report-sections";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  27 | import { UserReportSections } from "./user-report-sections";
+  28 |
+  29 | // DESIGN CONTRACT — Split Cockpit (dealt 3 of 7, seed 7d97f391)
+
+The export TeamReportSections was not found in module [project]/app/manager/reports/team-report-sections.tsx [app-rsc] (ecmascript).
+Did you mean to import TeamReportRail?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist. @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:1052
+[ 1026628ms] [ERROR] ./app/manager/reports/page.tsx:27:1
+Error: Export UserReportSections doesn't exist in target module
+  25 | } from "./report-ui";
+  26 | import { TeamReportSections } from "./team-report-sections";
+> 27 | import { UserReportSections } from "./user-report-sections";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  28 |
+  29 | // DESIGN CONTRACT — Split Cockpit (dealt 3 of 7, seed 7d97f391)
+  30 | // THESIS: an instrument panel — controls and headline figures hold a
+
+The export UserReportSections was not found in module [project]/app/manager/reports/user-report-sections.tsx [app-rsc] (ecmascript).
+Did you mean to import UserReportRail?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist. @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:1052
+[ 1026809ms] [ERROR] ./app/manager/reports/desk-report-sections.tsx:6:1
+Error: Export SummaryCard doesn't exist in target module
+  4 | } from "@/lib/desk-people-report-service";
+  5 |
+> 6 | import { formatPersianNumber, SummaryCard } from "./report-ui";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  7 |
+  8 | function PeopleTable({ report }: { report: DeskPeopleReport }) {
+  9 |   if (report.people.length === 0) {
+
+The export SummaryCard was not found in module [project]/app/manager/reports/report-ui.tsx [app-rsc] (ecmascript).
+Did you mean to import parseReportPeriod?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import trace:
+  Server Component:
+    ./app/manager/reports/desk-report-sections.tsx
+    ./app/manager/reports/page.tsx @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:1052
+[ 1026809ms] [ERROR] ./app/manager/reports/page.tsx:26:1
+Error: Export TeamReportSections doesn't exist in target module
+  24 |   type ReportView,
+  25 | } from "./report-ui";
+> 26 | import { TeamReportSections } from "./team-report-sections";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  27 | import { UserReportSections } from "./user-report-sections";
+  28 |
+  29 | // DESIGN CONTRACT — Split Cockpit (dealt 3 of 7, seed 7d97f391)
+
+The export TeamReportSections was not found in module [project]/app/manager/reports/team-report-sections.tsx [app-rsc] (ecmascript).
+Did you mean to import TeamReportRail?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist. @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:1052
+[ 1026809ms] [ERROR] ./app/manager/reports/page.tsx:27:1
+Error: Export UserReportSections doesn't exist in target module
+  25 | } from "./report-ui";
+  26 | import { TeamReportSections } from "./team-report-sections";
+> 27 | import { UserReportSections } from "./user-report-sections";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  28 |
+  29 | // DESIGN CONTRACT — Split Cockpit (dealt 3 of 7, seed 7d97f391)
+  30 | // THESIS: an instrument panel — controls and headline figures hold a
+
+The export UserReportSections was not found in module [project]/app/manager/reports/user-report-sections.tsx [app-rsc] (ecmascript).
+Did you mean to import UserReportRail?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist. @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:1052
+[ 1027082ms] [ERROR] ./app/manager/reports/desk-report-sections.tsx:6:1
+Error: Export SummaryCard doesn't exist in target module
+  4 | } from "@/lib/desk-people-report-service";
+  5 |
+> 6 | import { formatPersianNumber, SummaryCard } from "./report-ui";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  7 |
+  8 | function PeopleTable({ report }: { report: DeskPeopleReport }) {
+  9 |   if (report.people.length === 0) {
+
+The export SummaryCard was not found in module [project]/app/manager/reports/report-ui.tsx [app-rsc] (ecmascript).
+Did you mean to import parseReportPeriod?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import trace:
+  Server Component:
+    ./app/manager/reports/desk-report-sections.tsx
+    ./app/manager/reports/page.tsx @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:1052
+[ 1027082ms] [ERROR] ./app/manager/reports/page.tsx:26:1
+Error: Export TeamReportSections doesn't exist in target module
+  24 |   type ReportView,
+  25 | } from "./report-ui";
+> 26 | import { TeamReportSections } from "./team-report-sections";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  27 | import { UserReportSections } from "./user-report-sections";
+  28 |
+  29 | // DESIGN CONTRACT — Split Cockpit (dealt 3 of 7, seed 7d97f391)
+
+The export TeamReportSections was not found in module [project]/app/manager/reports/team-report-sections.tsx [app-rsc] (ecmascript).
+Did you mean to import TeamReportRail?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist. @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:1052
+[ 1027082ms] [ERROR] ./app/manager/reports/page.tsx:27:1
+Error: Export UserReportSections doesn't exist in target module
+  25 | } from "./report-ui";
+  26 | import { TeamReportSections } from "./team-report-sections";
+> 27 | import { UserReportSections } from "./user-report-sections";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  28 |
+  29 | // DESIGN CONTRACT — Split Cockpit (dealt 3 of 7, seed 7d97f391)
+  30 | // THESIS: an instrument panel — controls and headline figures hold a
+
+The export UserReportSections was not found in module [project]/app/manager/reports/user-report-sections.tsx [app-rsc] (ecmascript).
+Did you mean to import UserReportRail?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist. @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:1052

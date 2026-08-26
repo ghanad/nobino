@@ -1,0 +1,76 @@
+- generic [active] [ref=f2e1]:
+  - main [ref=f2e2]:
+    - generic [ref=f2e5]:
+      - link "Nobino" [ref=f2e7] [cursor=pointer]:
+        - /url: /
+      - navigation "ناوبری اصلی" [ref=f2e8]:
+        - button "رزروها" [ref=f2e10] [cursor=pointer]
+        - button "خدمات" [ref=f2e15] [cursor=pointer]
+        - button "منابع" [ref=f2e20] [cursor=pointer]
+        - button "بررسی درخواست‌ها" [ref=f2e25] [cursor=pointer]
+      - generic [ref=f2e29]:
+        - button "۳ اعلان خوانده‌نشده" [ref=f2e31] [cursor=pointer]:
+          - generic [ref=f2e35]: ۳
+        - button "Manager User" [ref=f2e37] [cursor=pointer]
+    - generic [ref=f2e42]:
+      - generic [ref=f2e44]:
+        - heading "گزارش‌ها" [level=1] [ref=f2e45]
+        - paragraph [ref=f2e46]: گزارش مصرف رزروها به تفکیک تیم، کاربر و میز کاری، فقط بر پایه رزروهای تاییدشده
+      - generic [ref=f2e47]:
+        - complementary [ref=f2e48]:
+          - navigation "تنظیمات گزارش" [ref=f2e49]:
+            - generic [ref=f2e50]:
+              - paragraph [ref=f2e51]: نما
+              - group [ref=f2e52]:
+                - link "تیم‌ها" [ref=f2e53] [cursor=pointer]:
+                  - /url: /manager/reports?period=week&view=team
+                - link "کاربران" [ref=f2e54] [cursor=pointer]:
+                  - /url: /manager/reports?period=week&view=user
+                - link "میزها" [ref=f2e55] [cursor=pointer]:
+                  - /url: /manager/reports?period=week&view=desk
+            - generic [ref=f2e56]:
+              - paragraph [ref=f2e57]: بازه
+              - generic [ref=f2e58]:
+                - group [ref=f2e59]:
+                  - link "هفتگی" [ref=f2e60] [cursor=pointer]:
+                    - /url: /manager/reports?period=week&view=desk
+                  - link "ماهانه" [ref=f2e61] [cursor=pointer]:
+                    - /url: /manager/reports?period=month&view=desk
+                - generic [ref=f2e62]:
+                  - paragraph [ref=f2e63]: بازه هفتگی
+                  - paragraph [ref=f2e64]: ۳۱ مرداد تا ۶ شهریور ۱۴۰۵
+                - group [ref=f2e65]:
+                  - link "بازه قبل" [ref=f2e66] [cursor=pointer]:
+                    - /url: /manager/reports?period=week&view=desk&date=1405-05-24
+                  - link "امروز" [ref=f2e69] [cursor=pointer]:
+                    - /url: /manager/reports?period=week&view=desk&date=1405-05-31
+                  - link "بازه بعد" [ref=f2e70] [cursor=pointer]:
+                    - /url: /manager/reports?period=week&view=desk&date=1405-06-07
+          - generic [ref=f2e73]:
+            - paragraph [ref=f2e74]: جمع‌بندی بازه
+            - generic [ref=f2e75]:
+              - generic [ref=f2e76]:
+                - paragraph [ref=f2e77]: ساعت تاییدشده
+                - paragraph [ref=f2e78]: ۰ ساعت
+                - paragraph [ref=f2e79]: کل واقعی رزروهای تاییدشده میزها در این بازه
+              - generic [ref=f2e80]:
+                - paragraph [ref=f2e81]: تعداد رزرو تاییدشده
+                - paragraph [ref=f2e82]: ۰
+                - paragraph [ref=f2e83]: فقط وضعیت APPROVED شمرده شده است
+              - generic [ref=f2e84]:
+                - paragraph [ref=f2e85]: تعداد افراد فعال
+                - paragraph [ref=f2e86]: ۰
+                - paragraph [ref=f2e87]: افرادی که حداقل یک رزرو تاییدشده دارند
+        - generic [ref=f2e88]:
+          - generic [ref=f2e89]:
+            - generic [ref=f2e90]:
+              - heading "مقایسه افراد" [level=2] [ref=f2e91]
+              - paragraph [ref=f2e92]: نمودار بر اساس ساعت رزرو تاییدشده میزها در ۳۱ مرداد ۱۴۰۵ تا ۶ شهریور ۱۴۰۵
+            - generic [ref=f2e93]: در این بازه رزرو تاییدشده‌ای برای میزهای کاری وجود ندارد.
+          - generic [ref=f2e94]:
+            - generic [ref=f2e95]:
+              - heading "جزئیات افراد" [level=2] [ref=f2e96]
+              - paragraph [ref=f2e97]: ساعت رزرو تاییدشده میزها بر اساس ۳۱ مرداد ۱۴۰۵ تا ۶ شهریور ۱۴۰۵
+            - generic [ref=f2e98]: داده‌ای برای نمایش وجود ندارد.
+    - paragraph [ref=f2e100]: توسعه داده‌شده در هلدینگ آقاجانی
+  - button "Open Next.js Dev Tools" [ref=f2e106] [cursor=pointer]

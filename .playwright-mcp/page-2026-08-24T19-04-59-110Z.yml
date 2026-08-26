@@ -1,0 +1,100 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]: Impeccable
+  - main [ref=e8]:
+    - generic [ref=e9]:
+      - heading "Redesign /manager/reports" [level=1] [ref=e18]
+      - paragraph [ref=e19]: Three dealt compositions for the reports page — lock one in, steer the next hand, or re-roll. The app's visual identity (quiet blue on white, Persian RTL, flat borders) stays fixed; this choice is composition only.
+      - generic [ref=e21]:
+        - article [ref=e22]:
+          - generic [ref=e24]:
+            - generic [ref=e25]: THE ROLL
+            - img "Layout schematic" [ref=e26]:
+              - generic [ref=e27]:
+                - generic [ref=e28]: sticky controls
+                - generic [ref=e30]: totals strip
+                - generic [ref=e32]: ranked board
+                - generic [ref=e34]: details table
+              - paragraph [ref=e36]: layout
+            - generic [ref=e37]:
+              - paragraph [ref=e38]: league standings tables, capacity utilization boards
+              - heading "Ranked Comparison Board" [level=2] [ref=e39]
+              - paragraph [ref=e40]: "One ranked comparison is the page: totals annotate the board as a ruled strip, and the detail table is the same data one toggle away."
+              - generic [ref=e41]:
+                - generic [ref=e42]:
+                  - generic "hsl(221.2 83.2% 53.3%)" [ref=e43]
+                  - generic "hsl(222.2 84% 4.9%)" [ref=e44]
+                  - generic "hsl(210 40% 96.1%)" [ref=e45]
+                  - generic "hsl(214.3 31.8% 91.4%)" [ref=e46]
+                - generic [ref=e47]: hairline rules
+                - generic [ref=e48]: proportional bars
+                - generic [ref=e49]: tabular Persian numerals
+              - paragraph [ref=e50]:
+                - generic [ref=e51]: First viewport
+                - text: One sticky control row (view · period · range); a ruled annotation strip carrying the four totals inline; then a full-width ranked board where each team/user/desk row shows rank, proportional bar with share-of-total, hours, and per-member intensity; the table renders the same data in table form one toggle away.
+              - paragraph [ref=e52]:
+                - generic [ref=e53]: Risk
+                - text: Long team lists need disciplined row rhythm; the board↔table toggle must stay obvious.
+              - button "Build this" [ref=e54] [cursor=pointer]
+        - article [ref=e55]:
+          - generic [ref=e57]:
+            - img "Layout schematic" [ref=e58]:
+              - generic [ref=e59]:
+                - generic [ref=e60]: control + totals rail
+                - generic [ref=e62]: ranked comparison
+                - generic [ref=e64]: details table
+              - paragraph [ref=e66]: layout
+            - generic [ref=e67]:
+              - paragraph [ref=e68]: two-pane operations consoles
+              - heading "Split Cockpit" [level=2] [ref=e69]
+              - paragraph [ref=e70]: A persistent control-and-totals rail beside a pure report pane that never scrolls its controls away.
+              - generic [ref=e71]:
+                - generic [ref=e72]:
+                  - generic "hsl(221.2 83.2% 53.3%)" [ref=e73]
+                  - generic "hsl(222.2 84% 4.9%)" [ref=e74]
+                  - generic "hsl(210 40% 96.1%)" [ref=e75]
+                  - generic "hsl(214.3 31.8% 91.4%)" [ref=e76]
+                - generic [ref=e77]: quiet surface rail
+                - generic [ref=e78]: hairline rules
+                - generic [ref=e79]: proportional bars
+              - paragraph [ref=e80]:
+                - generic [ref=e81]: First viewport
+                - text: A right-hand rail (RTL reading start) holds view, period, range navigation, and the totals as a stacked column; the main pane holds the ranked comparison above the full details table.
+              - paragraph [ref=e82]:
+                - generic [ref=e83]: Risk
+                - text: A rail carrying three toggles can feel heavy; it must collapse cleanly on mobile.
+              - button "Build this" [ref=e84] [cursor=pointer]
+        - article [ref=e85]:
+          - generic [ref=e87]:
+            - img "Layout schematic" [ref=e88]:
+              - generic [ref=e89]:
+                - generic [ref=e90]: masthead + inline controls
+                - generic [ref=e92]: 100% share bar
+                - generic [ref=e94]: ruled totals row
+                - generic [ref=e96]: details table
+              - paragraph [ref=e98]: layout
+            - generic [ref=e99]:
+              - paragraph [ref=e100]: typeset financial statements
+              - heading "Continuous Report Sheet" [level=2] [ref=e101]
+              - paragraph [ref=e102]: One continuous sheet set like a printed report — masthead, single share bar, ruled figures, table — with no floating cards at all.
+              - generic [ref=e103]:
+                - generic [ref=e104]:
+                  - generic "hsl(221.2 83.2% 53.3%)" [ref=e105]
+                  - generic "hsl(222.2 84% 4.9%)" [ref=e106]
+                  - generic "hsl(210 40% 96.1%)" [ref=e107]
+                  - generic "hsl(214.3 31.8% 91.4%)" [ref=e108]
+                - generic [ref=e109]: document rules
+                - generic [ref=e110]: one stacked share bar
+                - generic [ref=e111]: ruled figure columns
+              - paragraph [ref=e112]:
+                - generic [ref=e113]: First viewport
+                - text: "A single bordered sheet: masthead with the Jalali range and inline period controls above a strong rule; one 100% stacked share bar with inline legend; the totals as a ruled figure row; then the details table ruled into the same sheet."
+              - paragraph [ref=e114]:
+                - generic [ref=e115]: Risk
+                - text: The document feel can read as static; inline controls must stay discoverable.
+              - button "Build this" [ref=e116] [cursor=pointer]
+  - contentinfo [ref=e117]:
+    - 'textbox "Optional steer: what should be different or kept?" [ref=e118]'
+    - button "← Safer hand" [ref=e119] [cursor=pointer]
+    - button "Re-roll" [ref=e121] [cursor=pointer]
+    - button "Bolder hand →" [ref=e130] [cursor=pointer]
