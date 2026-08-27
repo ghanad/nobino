@@ -273,8 +273,9 @@ export async function deleteScheduleException(input: {
   });
 }
 
-export async function importIranHolidayScheduleExceptions(input: {
-  adminId: string;
+async function reconcileIranHolidayScheduleExceptions(input: {
+  actorUserId: string | null;
+  adminId?: string;
   year: number;
 }) {
   if (input.year < 1300 || input.year > 1600) {
@@ -298,7 +299,9 @@ export async function importIranHolidayScheduleExceptions(input: {
   );
 
   return db.$transaction(async (tx) => {
-    await assertAdmin(input.adminId, tx);
+    if (input.adminId) {
+      await assertAdmin(input.adminId, tx);
+    }
 
     const existingExceptions = await tx.scheduleException.findMany({
       where: {
@@ -351,7 +354,7 @@ export async function importIranHolidayScheduleExceptions(input: {
 
         await tx.auditLog.create({
           data: {
-            actorUserId: input.adminId,
+            actorUserId: input.actorUserId,
             entityType: "ScheduleException",
             entityId: exception.id,
             action: "SCHEDULE_EXCEPTION_UPDATED",
@@ -391,7 +394,7 @@ export async function importIranHolidayScheduleExceptions(input: {
 
       await tx.auditLog.create({
         data: {
-          actorUserId: input.adminId,
+          actorUserId: input.actorUserId,
           entityType: "ScheduleException",
           entityId: exception.id,
           action: "SCHEDULE_EXCEPTION_CREATED",
@@ -420,7 +423,7 @@ export async function importIranHolidayScheduleExceptions(input: {
       await tx.scheduleException.delete({ where: { id: exception.id } });
       await tx.auditLog.create({
         data: {
-          actorUserId: input.adminId,
+          actorUserId: input.actorUserId,
           entityType: "ScheduleException",
           entityId: exception.id,
           action: "SCHEDULE_EXCEPTION_DELETED",
@@ -447,5 +450,25 @@ export async function importIranHolidayScheduleExceptions(input: {
       skippedCount: preservedManualCount + unchangedCount,
       totalCount: holidays.length,
     };
+  });
+}
+
+export async function importIranHolidayScheduleExceptions(input: {
+  adminId: string;
+  year: number;
+}) {
+  return reconcileIranHolidayScheduleExceptions({
+    actorUserId: input.adminId,
+    adminId: input.adminId,
+    year: input.year,
+  });
+}
+
+export async function syncIranHolidayScheduleExceptions(input: {
+  year: number;
+}) {
+  return reconcileIranHolidayScheduleExceptions({
+    actorUserId: null,
+    year: input.year,
   });
 }

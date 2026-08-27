@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { runAutoAcceptBatch } from "@/lib/auto-accept-service";
+import { runScheduledIranHolidaySyncIfDue } from "@/lib/iran-holiday-scheduled-sync";
 
 function secretsMatch(actual: string, expected: string): boolean {
   const actualBuffer = Buffer.from(actual);
@@ -33,6 +34,10 @@ export async function POST(request: NextRequest) {
   }
 
   const result = await runAutoAcceptBatch();
+  const iranHolidaySync = await runScheduledIranHolidaySyncIfDue();
 
-  return NextResponse.json(result);
+  return NextResponse.json({
+    ...result,
+    maintenance: { iranHolidaySync },
+  });
 }

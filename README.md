@@ -438,6 +438,15 @@ auto-approval deadline has arrived. Existing pending reservations are not
 backfilled when the feature is enabled; only new requests and subsequently
 rescheduled pending reservation requests receive deadlines.
 
+The same minute-level auto-accept call also checks whether the official Iran
+holiday schedule is due for synchronization. It performs only an indexed audit
+lookup on ordinary calls. Once seven days have passed since the last successful
+run, it synchronizes the current and next Jalali years and records the start,
+success, or failure in the audit history as a system operation. A failed run
+does not advance the success timestamp, so the next minute-level cron call
+retries it. Keep the documented `flock` wrapper to prevent overlapping calls;
+no request counter or additional cron entry is required.
+
 The endpoint tracks Bale's `update_id` offset, records each notification
 delivery, and retries failed sends up to three times. It does not send
 notifications that predate the user's latest account connection. Food reports

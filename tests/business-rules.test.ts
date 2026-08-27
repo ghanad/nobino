@@ -7,6 +7,7 @@ import "./desk-business-rules.test";
 import "./reservation-business-rules.test";
 import "./reservation-auto-accept-business-rules.test";
 import "./schedule-business-rules.test";
+import "./iran-holiday-scheduled-sync.test";
 import "./team-reservation-report-service.test";
 import "./user-management-business-rules.test";
 import "./permissions.test";

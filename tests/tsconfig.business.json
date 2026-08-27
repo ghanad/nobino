@@ -29,6 +29,7 @@
     "../lib/capacity-service.ts",
     "../lib/db.ts",
     "../lib/iran-holidays.ts",
+    "../lib/iran-holiday-scheduled-sync.ts",
     "../lib/jalali-date.ts",
     "../lib/lunch-service.ts",
     "../lib/food-reservation-rules.ts",

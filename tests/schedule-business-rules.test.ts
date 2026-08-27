@@ -5,6 +5,7 @@ import { ScheduleExceptionSource } from "@prisma/client";
 
 import {
   importIranHolidayScheduleExceptions,
+  syncIranHolidayScheduleExceptions,
 } from "@/lib/admin-settings-service";
 import { getIranHolidaysForJalaliYear } from "@/lib/iran-holidays";
 import { parseJalaliDateParam } from "@/lib/jalali-date";
@@ -160,7 +161,7 @@ test("Iran holiday sync removes moved dates and preserves manual exceptions", as
     },
   });
 
-  const result = await importIranHolidayScheduleExceptions({ adminId, year });
+  const result = await syncIranHolidayScheduleExceptions({ year });
 
   assert.equal(result.createdCount, holidays.length - 2);
   assert.equal(result.updatedCount, 1);
@@ -185,18 +186,16 @@ test("Iran holiday sync removes moved dates and preserves manual exceptions", as
   const auditActions = await db.auditLog.findMany({
     where: { entityId: { in: [existingImported.id, staleImported.id] } },
     orderBy: { action: "asc" },
-    select: { action: true },
+    select: { action: true, actorUserId: true },
   });
 
   assert.deepEqual(
     auditActions.map((audit) => audit.action),
     ["SCHEDULE_EXCEPTION_DELETED", "SCHEDULE_EXCEPTION_UPDATED"],
   );
+  assert.ok(auditActions.every((audit) => audit.actorUserId === null));
 
-  const repeatedResult = await importIranHolidayScheduleExceptions({
-    adminId,
-    year,
-  });
+  const repeatedResult = await syncIranHolidayScheduleExceptions({ year });
 
   assert.equal(repeatedResult.createdCount, 0);
   assert.equal(repeatedResult.updatedCount, 0);
