@@ -258,13 +258,13 @@ export default async function AdminDesksPage({ searchParams }: Props) {
             <Button asChild size="sm" variant="outline">
               <Link href="/admin/buildings">
                 <Building2 className="h-4 w-4" />
-                مدیریت ساختمان‌ها
+                ساختمان‌ها
               </Link>
             </Button>
           </div>
         }
-        subtitle="یک ساختمان را انتخاب کنید و میزها، ساعات کاری یا استثناهای رزرو آن را مدیریت کنید."
-        title="مدیریت میزها و زمان‌بندی"
+        subtitle="یک ساختمان را انتخاب کنید و میزها، ساعات کاری و استثناهای رزرو آن را تنظیم کنید."
+        title="میزها و زمان‌بندی"
       />
 
       <section className={cn(panelClass, "p-4")}>

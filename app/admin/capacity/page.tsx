@@ -95,8 +95,8 @@ export default async function AdminCapacityPage({
   return (
     <SpacesReservationSectionShell>
       <PageHeader
-        subtitle="ظرفیت، استثناهای روزانه و قواعد تأیید درخواست‌های رزرو سیستم"
-        title="مدیریت رزرو سیستم"
+        subtitle="ظرفیت، استثناهای روزانه و قواعد تأیید رزرو سیستم"
+        title="رزرو سیستم"
       />
 
       {toast ? <UrlToast {...toast} /> : null}

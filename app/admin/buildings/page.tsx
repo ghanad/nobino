@@ -90,12 +90,12 @@ export default async function AdminBuildingsPage() {
           <Button asChild size="sm" variant="outline">
             <Link href="/admin/desks">
               <LayoutGrid className="h-4 w-4" />
-              مدیریت میزها
+              میزها
             </Link>
           </Button>
         }
-        subtitle="ساختمان‌ها مکان مشترک میزها، سیستم‌ها و تحویل غذا هستند. هر ساختمان را فقط یک‌بار اینجا تعریف کنید."
-        title="مدیریت ساختمان‌ها"
+        subtitle="ساختمان‌ها مکان مشترک میزها، سیستم‌ها و تحویل غذا هستند؛ هر ساختمان را فقط یک‌بار تعریف کنید."
+        title="ساختمان‌ها"
       />
 
       <section className="overflow-hidden rounded-xl border bg-card shadow-sm">

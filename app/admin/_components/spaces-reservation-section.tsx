@@ -15,7 +15,7 @@ import { PageHeader } from "@/components/app/page-header";
 import { cn } from "@/lib/utils";
 
 const items = [
-  { href: "/admin/capacity", label: "مدیریت رزرو سیستم", icon: Gauge },
+  { href: "/admin/capacity", label: "رزرو سیستم", icon: Gauge },
   { href: "/admin/meeting-rooms", label: "اتاق‌های جلسه", icon: DoorOpen },
   { href: "/admin/buildings", label: "ساختمان‌ها", icon: Building2 },
   { href: "/admin/desks", label: "میزها", icon: LayoutGrid },
@@ -36,11 +36,11 @@ export function SpacesReservationSectionShell({
   return (
     <div className="grid gap-6" dir="rtl">
       <PageHeader
-        subtitle="مدیریت فضاها، ظرفیت رزرو و زمان‌بندی سرویس‌های مشترک"
+        subtitle="فضاها، ظرفیت رزرو و زمان‌بندی سرویس‌های مشترک"
         title="فضاها و رزرو"
       />
       <div className="grid items-start gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
-        <aside className="min-w-0 rounded-lg border bg-muted/20 p-2 sm:p-3 lg:sticky lg:top-8">
+        <aside className="min-w-0 rounded-lg border bg-muted/20 p-2 lg:sticky lg:top-8">
           <nav aria-label="بخش‌های فضاها و رزرو">
             <div className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-1">
               {items.map((item) => {
@@ -51,10 +51,10 @@ export function SpacesReservationSectionShell({
                   <Link
                     aria-current={active ? "page" : undefined}
                     className={cn(
-                      "flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-md border px-2 py-2 text-center text-xs font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring sm:px-3 lg:min-h-12 lg:justify-start lg:px-4 lg:text-sm",
+                      "flex min-h-10 min-w-0 items-center justify-center gap-2 rounded-md border px-2.5 py-2 text-center text-xs font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring lg:min-h-11 lg:justify-start lg:px-3 lg:text-sm",
                       active
-                        ? "border-border bg-card text-slate-950 shadow-sm"
-                        : "border-transparent text-slate-600 hover:bg-card/60 hover:text-slate-950",
+                        ? "border-border bg-card text-slate-950"
+                        : "border-transparent text-slate-600 hover:bg-card/70 hover:text-slate-950",
                     )}
                     href={item.href}
                     key={item.href}
@@ -67,7 +67,7 @@ export function SpacesReservationSectionShell({
             </div>
           </nav>
         </aside>
-        <main className="min-w-0">{children}</main>
+        <main className="grid min-w-0 gap-6">{children}</main>
       </div>
     </div>
   );

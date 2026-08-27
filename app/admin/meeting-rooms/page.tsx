@@ -423,8 +423,8 @@ export default async function AdminMeetingRoomsPage({
             </Button>
           </div>
         }
-        subtitle="یک اتاق را انتخاب کنید و مشخصات، برنامه هفتگی یا استثناهای آن را مدیریت کنید."
-        title="مدیریت اتاق‌های جلسه"
+        subtitle="یک اتاق را انتخاب کنید و مشخصات، برنامه هفتگی و استثناهای آن را تنظیم کنید."
+        title="اتاق‌های جلسه"
       />
 
       {toast ? <UrlToast {...toast} /> : null}
