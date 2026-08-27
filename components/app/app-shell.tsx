@@ -83,12 +83,11 @@ function getNavItems(user: CurrentUser): GlobalNavItem[] {
   if (canAccessAdminArea(user.role)) {
     navItems.push(
       {
-        href: "/admin/users",
+        href: "/admin",
         label: "مدیریت",
         match: "prefix",
         children: [
-          { href: "/admin/users", label: "کاربران", match: "exact" },
-          { href: "/admin/teams", label: "تیم‌ها", match: "prefix" },
+          { href: "/admin/users", label: "کاربران و تیم‌ها", match: "prefix" },
           {
             href: "/admin/capacity",
             label: "مدیریت رزرو سیستم",

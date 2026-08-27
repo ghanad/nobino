@@ -1,14 +1,13 @@
 import { UserRole } from "@prisma/client";
-
-import { PageHeader } from "@/components/app/page-header";
 import { UrlToast } from "@/components/ui/url-toast";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
-  ADMIN_PAGE_LABELS,
   getAdminToast,
   UserManagement,
 } from "@/app/admin/_sections";
+
+import { UsersTeamsSectionShell } from "@/app/admin/_components/users-teams-section";
 
 type AdminUsersPageProps = {
   searchParams?: Promise<{
@@ -52,14 +51,9 @@ export default async function AdminUsersPage({
   });
 
   return (
-    <div className="grid gap-6">
-      <PageHeader
-        subtitle="نمای کلی کاربران، نقش‌ها، وضعیت و عضویت تیمی"
-        title={ADMIN_PAGE_LABELS.users}
-      />
-
+    <UsersTeamsSectionShell>
       {toast ? <UrlToast {...toast} /> : null}
       <UserManagement users={users} />
-    </div>
+    </UsersTeamsSectionShell>
   );
 }

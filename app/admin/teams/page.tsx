@@ -7,7 +7,7 @@ import {
   FieldLabel,
   TextInput,
 } from "@/app/admin/users/_components";
-import { PageHeader } from "@/components/app/page-header";
+import { UsersTeamsSectionShell } from "@/app/admin/_components/users-teams-section";
 import { Button } from "@/components/ui/button";
 import { UrlToast } from "@/components/ui/url-toast";
 import { requireRole } from "@/lib/auth";
@@ -85,12 +85,7 @@ export default async function AdminTeamsPage({ searchParams }: TeamsPageProps) {
   );
 
   return (
-    <div className="grid gap-6" dir="rtl">
-      <PageHeader
-        subtitle="تعریف تیم‌ها و مدیریت اعضای هر تیم"
-        title="تیم‌ها"
-      />
-
+    <UsersTeamsSectionShell>
       {toast ? <UrlToast {...toast} /> : null}
 
       <section className="grid gap-5 text-card-foreground">
@@ -185,6 +180,6 @@ export default async function AdminTeamsPage({ searchParams }: TeamsPageProps) {
           </div>
         )}
       </section>
-    </div>
+    </UsersTeamsSectionShell>
   );
 }
