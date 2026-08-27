@@ -1,7 +1,7 @@
 export { CapacityExceptions } from "./_components/capacity-exceptions-section";
 export { ReservationPolicySettings } from "./_components/reservation-policy-settings-section";
 export { ResourcePoolSettings } from "./_components/resource-pool-settings-section";
-export { ScheduleExceptions } from "./_components/schedule-exceptions-section";
+export { OfficialHolidaySettings } from "./_components/schedule-exceptions-section";
 export { UserManagement } from "./_components/user-management-section";
 export { WeeklyScheduleSettings } from "./_components/weekly-schedule-settings-section";
 

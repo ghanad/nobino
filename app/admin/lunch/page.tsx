@@ -1,5 +1,5 @@
 import { UserRole } from "@prisma/client";
-import { Plus, Save, Trash2 } from "lucide-react";
+import { MessageSquareText, Plus, Save, Settings2, Trash2 } from "lucide-react";
 import Link from "next/link";
 
 import {
@@ -9,6 +9,7 @@ import {
   updateLunchSettingsAction,
 } from "@/app/admin/lunch/actions";
 import { LunchWeeklyScheduleForm } from "@/app/admin/lunch/lunch-weekly-schedule-form";
+import { AdminLunchReportSettings } from "@/app/admin/lunch-notifications/page";
 import { PageHeader } from "@/components/app/page-header";
 import { JalaliDatePicker } from "@/components/ui/jalali-date-picker";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -24,8 +25,69 @@ type AdminLunchPageProps = {
     exceptionDeleted?: string;
     exceptionUpdated?: string;
     settingsUpdated?: string;
+    view?: string;
+    manualFailed?: string;
+    manualSent?: string;
+    recipientCreated?: string;
+    recipientDeleted?: string;
+    recipientUpdated?: string;
+    reportSettingsUpdated?: string;
   }>;
 };
+
+type LunchAdminView = "settings" | "reports";
+
+function parseLunchAdminView(value?: string): LunchAdminView {
+  return value === "reports" ? "reports" : "settings";
+}
+
+function LunchAdminRail({ activeView }: { activeView: LunchAdminView }) {
+  const items = [
+    {
+      icon: Settings2,
+      label: "تنظیمات رزرو",
+      value: "settings" as const,
+    },
+    {
+      icon: MessageSquareText,
+      label: "گزارش و ارسال",
+      value: "reports" as const,
+    },
+  ];
+
+  return (
+    <aside className="flex flex-col rounded-lg border bg-muted/20 p-3 sm:p-5 lg:sticky lg:top-8">
+      <nav aria-label="بخش‌های مدیریت غذا">
+        <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1 lg:grid-cols-1">
+          {items.map((item) => {
+            const Icon = item.icon;
+            const isActive = item.value === activeView;
+            const href =
+              item.value === "settings"
+                ? "/admin/lunch"
+                : "/admin/lunch?view=reports";
+
+            return (
+              <Link
+                aria-current={isActive ? "page" : undefined}
+                className={`flex min-h-11 items-center justify-center gap-2 rounded-md border px-3 py-2 text-center text-xs font-medium transition-colors lg:min-h-12 lg:justify-start lg:px-4 lg:text-sm ${
+                  isActive
+                    ? "border-border bg-card text-slate-950 shadow-sm"
+                    : "border-transparent text-slate-600 hover:bg-card/60 hover:text-slate-950"
+                }`}
+                href={href}
+                key={item.value}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+    </aside>
+  );
+}
 
 function getAdminLunchToast(params: Awaited<AdminLunchPageProps["searchParams"]>) {
   if (params?.error) {
@@ -80,7 +142,28 @@ export default async function AdminLunchPage({
 }: AdminLunchPageProps) {
   await requireRole([UserRole.ADMIN]);
   const params = await searchParams;
+  const activeView = parseLunchAdminView(params?.view);
   const toast = getAdminLunchToast(params);
+
+  if (activeView === "reports") {
+    return (
+      <div className="grid gap-6" dir="rtl">
+        <PageHeader
+          subtitle="تنظیمات رزرو، گزارش روزانه و گیرنده‌های ارسال غذا در یک صفحه"
+          title="مدیریت غذا"
+        />
+        <div className="grid items-start gap-6 lg:grid-cols-[290px_minmax(0,1fr)]">
+          <LunchAdminRail activeView={activeView} />
+          <main className="min-w-0">
+            <AdminLunchReportSettings
+              searchParams={Promise.resolve(params ?? {})}
+              showHeader={false}
+            />
+          </main>
+        </div>
+      </div>
+    );
+  }
   const [
     settings,
     weeklySchedule,
@@ -106,12 +189,14 @@ export default async function AdminLunchPage({
   return (
     <div className="grid gap-6 text-right" dir="rtl">
       <PageHeader
-        subtitle="تنظیمات رزرو غذا، روزهای سرویس و استثناها"
+        subtitle="تنظیمات رزرو، گزارش روزانه و گیرنده‌های ارسال غذا در یک صفحه"
         title="مدیریت غذا"
       />
 
       {toast ? <UrlToast {...toast} /> : null}
-
+      <div className="grid items-start gap-6 lg:grid-cols-[290px_minmax(0,1fr)]">
+        <LunchAdminRail activeView={activeView} />
+        <main className="grid min-w-0 gap-6">
       <section className="grid gap-4 rounded-lg border bg-card p-5">
         <div>
           <h2 className="font-medium">تنظیمات کلی</h2>
@@ -240,6 +325,8 @@ export default async function AdminLunchPage({
           ))}
         </div>
       </section>
+        </main>
+      </div>
     </div>
   );
 }

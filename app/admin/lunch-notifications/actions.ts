@@ -47,7 +47,7 @@ const reportSettingsSchema = z.object({
 function redirectToLunchNotifications(
   params: Record<string, string | undefined>,
 ): never {
-  redirectToPath("/admin/lunch-notifications", params);
+  redirectToPath("/admin/lunch?view=reports", params);
 }
 
 export async function createBaleLunchReportRecipientAction(

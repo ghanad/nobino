@@ -1,5 +1,6 @@
 import { BaleDeliveryStatus, UserRole } from "@prisma/client";
 import { MessageSquareText, Plus, Save, Send, Trash2, Users } from "lucide-react";
+import { redirect } from "next/navigation";
 
 import {
   createBaleLunchReportRecipientAction,
@@ -109,7 +110,7 @@ function getToast(params: {
   return null;
 }
 
-export default async function AdminLunchNotificationsPage(props: {
+type AdminLunchReportSettingsProps = {
   searchParams?: Promise<{
     error?: string;
     manualFailed?: string;
@@ -119,9 +120,15 @@ export default async function AdminLunchNotificationsPage(props: {
     recipientUpdated?: string;
     reportSettingsUpdated?: string;
   }>;
-}) {
+  showHeader?: boolean;
+};
+
+export async function AdminLunchReportSettings({
+  searchParams,
+  showHeader = true,
+}: AdminLunchReportSettingsProps) {
   await requireRole([UserRole.ADMIN]);
-  const params = (await props.searchParams) ?? {};
+  const params = (await searchParams) ?? {};
   const toast = getToast(params);
   const baleBotUsername = getBaleBotUsername();
 
@@ -178,10 +185,12 @@ export default async function AdminLunchNotificationsPage(props: {
 
   return (
     <div className="grid gap-6 text-right" dir="rtl">
-      <PageHeader
-        subtitle="وضعیت ارسال روزانه و مدیریت گیرنده‌های گزارش غذا"
-        title="ارسال گزارش غذا"
-      />
+      {showHeader ? (
+        <PageHeader
+          subtitle="وضعیت ارسال روزانه و مدیریت گیرنده‌های گزارش غذا"
+          title="ارسال گزارش غذا"
+        />
+      ) : null}
 
       {toast ? <UrlToast {...toast} /> : null}
 
@@ -431,4 +440,19 @@ export default async function AdminLunchNotificationsPage(props: {
       </section>
     </div>
   );
+}
+
+export default async function AdminLunchNotificationsPage(props: {
+  searchParams?: Promise<Record<string, string | undefined>>;
+}) {
+  const params = (await props.searchParams) ?? {};
+  const searchParams = new URLSearchParams({ view: "reports" });
+
+  for (const [key, value] of Object.entries(params)) {
+    if (value) {
+      searchParams.set(key, value);
+    }
+  }
+
+  redirect(`/admin/lunch?${searchParams.toString()}`);
 }

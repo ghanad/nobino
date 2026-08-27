@@ -1,6 +1,7 @@
 import {
   CalendarDayOverrideMode,
   CalendarDayTargetType,
+  ScheduleExceptionSource,
   UserRole,
 } from "@prisma/client";
 import {
@@ -15,7 +16,7 @@ import Link from "next/link";
 
 import {
   getAdminToast,
-  ScheduleExceptions,
+  OfficialHolidaySettings,
   WeeklyScheduleSettings,
 } from "@/app/admin/_sections";
 import { CalendarOverrideForm } from "@/app/admin/calendar/calendar-override-form";
@@ -92,8 +93,8 @@ function CalendarRail({ activeView }: { activeView: CalendarView }) {
     },
     {
       icon: CalendarDays,
-      label: "استثناهای سامانه‌ها",
-      shortLabel: "استثناها",
+      label: "تعطیلات رسمی",
+      shortLabel: "تعطیلات",
       value: "exceptions",
     },
   ];
@@ -167,7 +168,7 @@ export default async function AdminCalendarPage({
   const activeView = parseCalendarView(params?.view);
   const toast = getToast(params);
   const currentJalaliYear = formatJalaliDateParam(new Date()).split("-")[0];
-  const [overrides, buildings, rooms, schedules, exceptions] =
+  const [overrides, buildings, rooms, schedules, holidays] =
     await Promise.all([
       db.calendarDayOverride.findMany({
         include: { targets: true },
@@ -194,13 +195,10 @@ export default async function AdminCalendarPage({
         },
       }),
       db.scheduleException.findMany({
+        where: { source: ScheduleExceptionSource.IRAN_HOLIDAY },
         orderBy: { date: "asc" },
         select: {
-          id: true,
           date: true,
-          isWorkingDay: true,
-          startTime: true,
-          endTime: true,
           reason: true,
         },
       }),
@@ -364,9 +362,9 @@ export default async function AdminCalendarPage({
           ) : activeView === "weekly" ? (
             <WeeklyScheduleSettings schedules={schedules} />
           ) : (
-            <ScheduleExceptions
+            <OfficialHolidaySettings
               currentJalaliYear={currentJalaliYear}
-              exceptions={exceptions}
+              holidays={holidays}
             />
           )}
         </main>

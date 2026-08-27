@@ -6,10 +6,7 @@ export {
   updateResourcePoolAction,
 } from "./_actions/capacity-actions";
 export {
-  createScheduleExceptionAction,
-  deleteScheduleExceptionAction,
   importIranHolidaysAction,
-  updateScheduleExceptionAction,
   updateWeeklyScheduleAction,
 } from "./_actions/schedule-actions";
 export {
