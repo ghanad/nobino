@@ -7,7 +7,6 @@ import {
   UserManagement,
 } from "@/app/admin/_sections";
 
-import { UsersTeamsSectionShell } from "@/app/admin/_components/users-teams-section";
 
 type AdminUsersPageProps = {
   searchParams?: Promise<{
@@ -51,9 +50,9 @@ export default async function AdminUsersPage({
   });
 
   return (
-    <UsersTeamsSectionShell>
+    <>
       {toast ? <UrlToast {...toast} /> : null}
       <UserManagement users={users} />
-    </UsersTeamsSectionShell>
+    </>
   );
 }

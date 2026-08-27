@@ -10,7 +10,12 @@ import { cn } from "@/lib/utils";
 type UsersTeamsSection = "users" | "teams";
 
 function resolveSection(pathname: string): UsersTeamsSection {
-  if (pathname.startsWith("/admin/teams")) return "teams";
+  if (
+    pathname === "/admin/teams" ||
+    pathname.startsWith("/admin/teams/")
+  ) {
+    return "teams";
+  }
   return "users";
 }
 

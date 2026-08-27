@@ -9,7 +9,6 @@ import {
 } from "@/app/admin/users/_components";
 import {
   UsersTeamsPageFrame,
-  UsersTeamsSectionShell,
 } from "@/app/admin/_components/users-teams-section";
 import { Button } from "@/components/ui/button";
 import { UrlToast } from "@/components/ui/url-toast";
@@ -88,7 +87,7 @@ export default async function AdminTeamsPage({ searchParams }: TeamsPageProps) {
   );
 
   return (
-    <UsersTeamsSectionShell>
+    <>
       {toast ? <UrlToast {...toast} /> : null}
 
       <UsersTeamsPageFrame
@@ -189,6 +188,6 @@ export default async function AdminTeamsPage({ searchParams }: TeamsPageProps) {
           ))
         )}
       </UsersTeamsPageFrame>
-    </UsersTeamsSectionShell>
+    </>
   );
 }
