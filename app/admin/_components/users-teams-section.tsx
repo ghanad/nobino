@@ -12,8 +12,18 @@ export function UsersTeamsSectionShell({
   return (
     <AdminSectionShell
       items={[
-        { href: "/admin/users", key: "users", label: "کاربران" },
-        { href: "/admin/teams", key: "teams", label: "تیم‌ها" },
+        {
+          href: "/admin/users",
+          icon: "users",
+          key: "users",
+          label: "کاربران",
+        },
+        {
+          href: "/admin/teams",
+          icon: "users-round",
+          key: "teams",
+          label: "تیم‌ها",
+        },
       ]}
       navLabel="بخش‌های کاربران و تیم‌ها"
       subtitle="مدیریت کاربران، نقش‌ها، تیم‌ها و عضویت‌ها"

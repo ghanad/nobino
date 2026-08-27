@@ -9,6 +9,8 @@ import {
   Megaphone,
   MessageCircle,
   Settings2,
+  Users,
+  UsersRound,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -25,7 +27,9 @@ export type AdminSectionIcon =
   | "grid"
   | "megaphone"
   | "message"
-  | "settings";
+  | "settings"
+  | "users"
+  | "users-round";
 
 export type AdminSectionNavItem = {
   href: string;
@@ -57,6 +61,8 @@ const icons = {
   megaphone: Megaphone,
   message: MessageCircle,
   settings: Settings2,
+  users: Users,
+  "users-round": UsersRound,
 } as const;
 
 export function AdminSectionShell({
