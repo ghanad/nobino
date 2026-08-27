@@ -23,13 +23,15 @@ export function redirectToAdmin(
 ): never {
   const searchParams = new URLSearchParams();
   const sectionPath =
-    params.tab === "capacity"
+    params.tab === "capacity" || params.tab === "reservation-policy"
       ? "/admin/capacity"
-      : params.tab === "reservation-policy"
-        ? "/admin/reservation-policy"
       : params.tab === "schedule"
         ? "/admin/calendar"
         : "/admin/users";
+
+  if (params.tab === "reservation-policy") {
+    searchParams.set("view", "policy");
+  }
 
   for (const [key, value] of Object.entries(params)) {
     if (value && key !== "tab") {

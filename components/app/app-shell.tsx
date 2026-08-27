@@ -89,10 +89,9 @@ function getNavItems(user: CurrentUser): GlobalNavItem[] {
         children: [
           { href: "/admin/users", label: "کاربران", match: "exact" },
           { href: "/admin/teams", label: "تیم‌ها", match: "prefix" },
-          { href: "/admin/capacity", label: "ظرفیت", match: "prefix" },
           {
-            href: "/admin/reservation-policy",
-            label: "سیاست رزرو",
+            href: "/admin/capacity",
+            label: "مدیریت رزرو سیستم",
             match: "prefix",
           },
           {
