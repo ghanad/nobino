@@ -9,6 +9,7 @@ import { logoutAction } from "@/app/login/actions";
 import { cn } from "@/lib/utils";
 
 export type GlobalNavItem = {
+  activeHrefs?: string[];
   children?: GlobalNavItem[];
   href: string;
   label: string;
@@ -49,11 +50,13 @@ function isActiveNavItem(pathname: string, item: GlobalNavItem): boolean {
     return true;
   }
 
-  if (item.match === "exact") {
-    return pathname === item.href;
-  }
+  const activeHrefs = [item.href, ...(item.activeHrefs ?? [])];
 
-  return pathname === item.href || pathname.startsWith(`${item.href}/`);
+  return activeHrefs.some((href) =>
+    item.match === "exact"
+      ? pathname === href
+      : pathname === href || pathname.startsWith(`${href}/`),
+  );
 }
 
 function getMobileNavSections(navItems: GlobalNavItem[]): MobileNavSection[] {

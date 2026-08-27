@@ -94,8 +94,12 @@ function getNavItems(user: CurrentUser): GlobalNavItem[] {
             match: "prefix",
           },
           { href: "/admin/lunch", label: "غذا", match: "prefix" },
-          { href: "/admin/announcements", label: "اعلان‌ها", match: "prefix" },
-          { href: "/admin/bale", label: "پیام‌رسان بله", match: "prefix" },
+          {
+            activeHrefs: ["/admin/bale"],
+            href: "/admin/announcements",
+            label: "ارتباطات",
+            match: "prefix",
+          },
           {
             href: "/admin/wiki-ai",
             label: "دستیار دانش‌نامه",

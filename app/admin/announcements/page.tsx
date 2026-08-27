@@ -120,7 +120,7 @@ export default async function AdminAnnouncementsPage({
     <div className="grid gap-6 text-right" dir="rtl">
       <PageHeader
         subtitle="ساخت پیام‌های عمومی برای نمایش بعد از ورود کاربران"
-        title="اعلان‌های عمومی"
+        title="اعلان‌ها"
       />
 
       {toast ? <UrlToast {...toast} /> : null}
