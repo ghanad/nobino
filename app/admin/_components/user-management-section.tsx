@@ -4,6 +4,7 @@ import { UserRole } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
 import { formatJalaliDate } from "@/lib/jalali-date";
+import { UsersTeamsPageFrame } from "./users-teams-section";
 
 import {
   formatPersianNumber,
@@ -36,57 +37,52 @@ export function UserManagement({
   ).length;
 
   return (
-    <section className="grid gap-5 text-card-foreground" dir="rtl">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="grid gap-1">
-          <h2 className="text-lg font-semibold text-slate-950">
-            نمای کلی کاربران
-          </h2>
-          <p className="text-sm leading-6 text-muted-foreground">
-            این صفحه فقط نمای کلی کاربران است. ساخت، ویرایش و تنظیم رمز در
-            صفحه جدا انجام می‌شود.
-          </p>
-        </div>
+    <UsersTeamsPageFrame
+      action={
         <Button asChild className="w-full sm:w-auto">
           <Link href="/admin/users/new">
             <UserPlus className="h-4 w-4" />
             ساخت کاربر
           </Link>
         </Button>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-lg border bg-card p-4">
-          <p className="text-xs font-medium text-muted-foreground">کل کاربران</p>
-          <p className="mt-2 text-2xl font-semibold text-slate-950">
-            {formatPersianNumber(users.length)}
-          </p>
+      }
+      description="این صفحه فقط نمای کلی کاربران است. ساخت، ویرایش و تنظیم رمز در صفحه جدا انجام می‌شود."
+      summary={
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-lg border bg-card p-4">
+            <p className="text-xs font-medium text-muted-foreground">
+              کل کاربران
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-slate-950">
+              {formatPersianNumber(users.length)}
+            </p>
+          </div>
+          <div className="rounded-lg border bg-card p-4">
+            <p className="text-xs font-medium text-muted-foreground">فعال</p>
+            <p className="mt-2 text-2xl font-semibold text-emerald-700">
+              {formatPersianNumber(activeUsers)}
+            </p>
+          </div>
+          <div className="rounded-lg border bg-card p-4">
+            <p className="text-xs font-medium text-muted-foreground">
+              مدیر و ادمین
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-blue-700">
+              {formatPersianNumber(managerUsers + adminUsers)}
+            </p>
+          </div>
         </div>
-        <div className="rounded-lg border bg-card p-4">
-          <p className="text-xs font-medium text-muted-foreground">فعال</p>
-          <p className="mt-2 text-2xl font-semibold text-emerald-700">
-            {formatPersianNumber(activeUsers)}
-          </p>
-        </div>
-        <div className="rounded-lg border bg-card p-4">
-          <p className="text-xs font-medium text-muted-foreground">
-            مدیر و ادمین
-          </p>
-          <p className="mt-2 text-2xl font-semibold text-blue-700">
-            {formatPersianNumber(managerUsers + adminUsers)}
-          </p>
-        </div>
-      </div>
-
-      <div className="grid gap-3">
-        {users.map((user) => {
+      }
+      title="نمای کلی کاربران"
+    >
+      {users.map((user) => {
           const userTeams = user.teamMemberships.map(
             (membership) => membership.team,
           );
           const visibleTeam = userTeams[0];
           const additionalTeamCount = Math.max(userTeams.length - 1, 0);
 
-          return (
+        return (
             <div
               className="rounded-lg border bg-card px-4 py-3 shadow-sm"
               key={user.id}
@@ -163,9 +159,8 @@ export function UserManagement({
                 </Button>
               </div>
             </div>
-          );
-        })}
-      </div>
-    </section>
+        );
+      })}
+    </UsersTeamsPageFrame>
   );
 }
