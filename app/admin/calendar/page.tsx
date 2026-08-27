@@ -7,6 +7,7 @@ import {
   CalendarClock,
   CalendarCog,
   CalendarDays,
+  CalendarPlus,
   CalendarRange,
   ChevronDown,
   Info,
@@ -15,6 +16,7 @@ import Link from "next/link";
 
 import {
   getAdminToast,
+  IranHolidayImport,
   ScheduleExceptions,
   WeeklyScheduleSettings,
 } from "@/app/admin/_sections";
@@ -61,10 +63,10 @@ const MODE_DETAILS = {
   },
 };
 
-type CalendarView = "exceptions" | "special-days" | "weekly";
+type CalendarView = "exceptions" | "holidays" | "special-days" | "weekly";
 
 function parseCalendarView(value?: string): CalendarView {
-  if (value === "weekly" || value === "exceptions") {
+  if (value === "weekly" || value === "exceptions" || value === "holidays") {
     return value;
   }
 
@@ -91,6 +93,12 @@ function CalendarRail({ activeView }: { activeView: CalendarView }) {
       value: "weekly",
     },
     {
+      icon: CalendarPlus,
+      label: "تعطیلی‌های رسمی ایران",
+      shortLabel: "تعطیلی‌های رسمی",
+      value: "holidays",
+    },
+    {
       icon: CalendarDays,
       label: "استثناهای سامانه‌ها",
       shortLabel: "استثناها",
@@ -101,10 +109,7 @@ function CalendarRail({ activeView }: { activeView: CalendarView }) {
   return (
     <aside className="flex flex-col rounded-lg border bg-muted/20 p-3 sm:p-5 lg:sticky lg:top-8">
       <nav aria-label="بخش‌های تقویم و ساعات کاری">
-        <p className="text-xs font-medium leading-5 text-muted-foreground">
-          بخش‌ها
-        </p>
-        <div className="mt-3 grid grid-cols-3 gap-1 rounded-lg bg-muted p-1 lg:grid-cols-1">
+        <div className="grid grid-cols-3 gap-1 rounded-lg bg-muted p-1 lg:grid-cols-1">
           {items.map((item) => {
             const Icon = item.icon;
             const isActive = item.value === activeView;
@@ -366,11 +371,10 @@ export default async function AdminCalendarPage({
             </>
           ) : activeView === "weekly" ? (
             <WeeklyScheduleSettings schedules={schedules} />
+          ) : activeView === "holidays" ? (
+            <IranHolidayImport currentJalaliYear={currentJalaliYear} />
           ) : (
-            <ScheduleExceptions
-              currentJalaliYear={currentJalaliYear}
-              exceptions={exceptions}
-            />
+            <ScheduleExceptions exceptions={exceptions} />
           )}
         </main>
       </div>

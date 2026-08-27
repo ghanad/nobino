@@ -264,7 +264,7 @@ export async function importIranHolidaysAction(
     redirectToAdmin({
       error: "سال جلالی معتبری وارد کنید.",
       tab: "schedule",
-      view: "exceptions",
+      view: "holidays",
     });
   }
 
@@ -286,7 +286,7 @@ export async function importIranHolidaysAction(
     redirectToAdmin({
       error: getActionErrorMessage(error),
       tab: "schedule",
-      view: "exceptions",
+      view: "holidays",
     });
   }
 
@@ -296,6 +296,6 @@ export async function importIranHolidaysAction(
     holidayDeleted: String(syncResult.deletedCount),
     holidayManualPreserved: String(syncResult.preservedManualCount),
     tab: "schedule",
-    view: "exceptions",
+    view: "holidays",
   });
 }
