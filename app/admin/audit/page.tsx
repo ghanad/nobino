@@ -83,7 +83,7 @@ export default async function AuditPage({ searchParams }: AuditPageProps) {
       <PageHeader
         actions={
           <Button asChild variant="outline">
-            <Link href="/admin">بازگشت به مدیریت</Link>
+            <Link href="/admin/users">بازگشت به مدیریت</Link>
           </Button>
         }
         subtitle="تاریخچه تغییرات رزروها، ظرفیت، برنامه کاری و کاربران"

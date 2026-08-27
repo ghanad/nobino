@@ -134,7 +134,7 @@ export default async function UserDetailPage({
       <PageHeader
         actions={
           <Button asChild size="sm" variant="outline">
-            <Link href="/admin">
+            <Link href="/admin/users">
               <ChevronRight className="h-4 w-4" />
               بازگشت به کاربران
             </Link>

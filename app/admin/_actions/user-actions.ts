@@ -47,11 +47,11 @@ export async function createUserAction(formData: FormData): Promise<void> {
   const admin = await requireRole([UserRole.ADMIN]);
   const errorRedirectPath = getSafeAdminRedirectPath(
     formData.get("errorRedirectPath"),
-    "/admin",
+    "/admin/users",
   );
   const successRedirectPath = getSafeAdminRedirectPath(
     formData.get("successRedirectPath"),
-    "/admin",
+    "/admin/users",
   );
   const parsed = createUserSchema.safeParse({
     name: formData.get("name"),
@@ -82,7 +82,7 @@ export async function updateUserAction(formData: FormData): Promise<void> {
   const admin = await requireRole([UserRole.ADMIN]);
   const redirectPath = getSafeAdminRedirectPath(
     formData.get("redirectPath"),
-    "/admin",
+    "/admin/users",
   );
   const parsed = updateUserSchema.safeParse({
     userId: formData.get("userId"),
@@ -115,7 +115,7 @@ export async function resetUserPasswordAction(
   const admin = await requireRole([UserRole.ADMIN]);
   const redirectPath = getSafeAdminRedirectPath(
     formData.get("redirectPath"),
-    "/admin",
+    "/admin/users",
   );
   const parsed = resetPasswordSchema.safeParse({
     userId: formData.get("userId"),
@@ -144,7 +144,7 @@ export async function deleteUserAction(formData: FormData): Promise<void> {
   const admin = await requireRole([UserRole.ADMIN]);
   const redirectPath = getSafeAdminRedirectPath(
     formData.get("redirectPath"),
-    "/admin",
+    "/admin/users",
   );
   const parsed = deleteUserSchema.safeParse({
     userId: formData.get("userId"),
@@ -163,5 +163,5 @@ export async function deleteUserAction(formData: FormData): Promise<void> {
     redirectToPath(redirectPath, { error: getActionErrorMessage(error) });
   }
 
-  redirectToPath("/admin", { userDeleted: "1" });
+  redirectToPath("/admin/users", { userDeleted: "1" });
 }

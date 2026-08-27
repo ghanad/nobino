@@ -31,7 +31,7 @@ export default async function NewUserPage({
       <PageHeader
         actions={
           <Button asChild variant="outline">
-            <Link href="/admin">
+            <Link href="/admin/users">
               <ChevronRight className="h-4 w-4" />
               بازگشت به کاربران
             </Link>
@@ -53,7 +53,7 @@ export default async function NewUserPage({
           <input
             name="successRedirectPath"
             type="hidden"
-            value="/admin"
+            value="/admin/users"
           />
 
           <div className="flex items-start gap-3 border-b pb-5">

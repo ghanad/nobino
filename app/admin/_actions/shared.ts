@@ -29,7 +29,7 @@ export function redirectToAdmin(
         ? "/admin/reservation-policy"
       : params.tab === "schedule"
         ? "/admin/calendar"
-        : "/admin";
+        : "/admin/users";
 
   for (const [key, value] of Object.entries(params)) {
     if (value && key !== "tab") {
