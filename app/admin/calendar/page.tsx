@@ -5,14 +5,11 @@ import {
   UserRole,
 } from "@prisma/client";
 import {
-  CalendarClock,
   CalendarCog,
-  CalendarDays,
-  CalendarRange,
   ChevronDown,
   Info,
 } from "lucide-react";
-import Link from "next/link";
+import { SpacesReservationSectionShell } from "@/app/admin/_components/spaces-reservation-section";
 
 import {
   getAdminToast,
@@ -70,73 +67,6 @@ function parseCalendarView(value?: string): CalendarView {
   }
 
   return "special-days";
-}
-
-function CalendarRail({ activeView }: { activeView: CalendarView }) {
-  const items: Array<{
-    icon: typeof CalendarRange;
-    label: string;
-    shortLabel: string;
-    value: CalendarView;
-  }> = [
-    {
-      icon: CalendarRange,
-      label: "روزهای خاص",
-      shortLabel: "روزهای خاص",
-      value: "special-days",
-    },
-    {
-      icon: CalendarClock,
-      label: "برنامه هفتگی سامانه‌ها",
-      shortLabel: "برنامه هفتگی",
-      value: "weekly",
-    },
-    {
-      icon: CalendarDays,
-      label: "تعطیلات رسمی",
-      shortLabel: "تعطیلات",
-      value: "exceptions",
-    },
-  ];
-
-  return (
-    <aside className="flex flex-col rounded-lg border bg-muted/20 p-3 sm:p-5 lg:sticky lg:top-8">
-      <nav aria-label="بخش‌های تقویم و ساعات کاری">
-        <div className="grid grid-cols-3 gap-1 rounded-lg bg-muted p-1 lg:grid-cols-1">
-          {items.map((item) => {
-            const Icon = item.icon;
-            const isActive = item.value === activeView;
-            const href =
-              item.value === "special-days"
-                ? "/admin/calendar"
-                : `/admin/calendar?view=${item.value}`;
-
-            return (
-              <Link
-                aria-current={isActive ? "page" : undefined}
-                className={cn(
-                  "flex min-h-11 items-center justify-center gap-2 rounded-md border px-3 py-2 text-center text-xs font-medium transition-colors lg:min-h-12 lg:justify-start lg:px-4 lg:text-sm",
-                  isActive
-                    ? "border-border bg-card text-slate-950 shadow-sm"
-                    : "border-transparent text-slate-600 hover:bg-card/60 hover:text-slate-950",
-                )}
-                href={href}
-                key={item.value}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                <span className="min-w-0 truncate lg:hidden">
-                  {item.shortLabel}
-                </span>
-                <span className="hidden min-w-0 truncate lg:inline">
-                  {item.label}
-                </span>
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
-    </aside>
-  );
 }
 
 function getToast(params: Awaited<CalendarPageProps["searchParams"]>) {
@@ -208,17 +138,14 @@ export default async function AdminCalendarPage({
   );
 
   return (
-    <div className="grid gap-6" dir="rtl">
+    <SpacesReservationSectionShell>
       <PageHeader
         subtitle="برنامه پایه و تغییرات روزهای خاص همه سرویس‌ها، در یک صفحه"
         title="تقویم و ساعات کاری"
       />
       {toast ? <UrlToast {...toast} /> : null}
 
-      <div className="grid items-start gap-6 lg:grid-cols-[290px_minmax(0,1fr)]">
-        <CalendarRail activeView={activeView} />
-
-        <main className="grid min-w-0 gap-6">
+      <main className="grid min-w-0 gap-6">
           {activeView === "special-days" ? (
             <>
         <section className="text-card-foreground">
@@ -367,8 +294,7 @@ export default async function AdminCalendarPage({
               holidays={holidays}
             />
           )}
-        </main>
-      </div>
-    </div>
+      </main>
+    </SpacesReservationSectionShell>
   );
 }

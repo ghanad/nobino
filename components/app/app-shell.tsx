@@ -90,21 +90,9 @@ function getNavItems(user: CurrentUser): GlobalNavItem[] {
           { href: "/admin/users", label: "کاربران و تیم‌ها", match: "prefix" },
           {
             href: "/admin/capacity",
-            label: "مدیریت رزرو سیستم",
+            label: "فضاها و رزرو",
             match: "prefix",
           },
-          {
-            href: "/admin/calendar",
-            label: "تقویم و ساعات کاری",
-            match: "prefix",
-          },
-          {
-            href: "/admin/meeting-rooms",
-            label: "اتاق‌های جلسه",
-            match: "prefix",
-          },
-          { href: "/admin/buildings", label: "ساختمان‌ها", match: "prefix" },
-          { href: "/admin/desks", label: "میزها و زمان‌بندی", match: "prefix" },
           { href: "/admin/lunch", label: "غذا", match: "prefix" },
           { href: "/admin/announcements", label: "اعلان‌ها", match: "prefix" },
           { href: "/admin/bale", label: "پیام‌رسان بله", match: "prefix" },

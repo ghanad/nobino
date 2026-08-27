@@ -21,6 +21,7 @@ import {
   updateBuildingScheduleAction,
   upsertBuildingExceptionAction,
 } from "@/app/admin/desks/actions";
+import { SpacesReservationSectionShell } from "@/app/admin/_components/spaces-reservation-section";
 import {
   AdminDeskForm,
   AdminDeskTrackedSubmitButton,
@@ -249,7 +250,7 @@ export default async function AdminDesksPage({ searchParams }: Props) {
       0,
     ) ?? 0) + 1;
   return (
-    <div className="grid gap-6" dir="rtl">
+    <SpacesReservationSectionShell>
       <PageHeader
         actions={
           <div className="flex flex-wrap items-center gap-2">
@@ -826,6 +827,6 @@ export default async function AdminDesksPage({ searchParams }: Props) {
 
         </main>
       ) : null}
-    </div>
+    </SpacesReservationSectionShell>
   );
 }

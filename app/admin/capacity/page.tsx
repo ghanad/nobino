@@ -1,7 +1,5 @@
 import { UserRole } from "@prisma/client";
-import { Gauge, SlidersHorizontal } from "lucide-react";
-import Link from "next/link";
-
+import { SpacesReservationSectionShell } from "@/app/admin/_components/spaces-reservation-section";
 import { PageHeader } from "@/components/app/page-header";
 import { UrlToast } from "@/components/ui/url-toast";
 import { requireRole } from "@/lib/auth";
@@ -12,7 +10,6 @@ import {
   ReservationPolicySettings,
   ResourcePoolSettings,
 } from "@/app/admin/_sections";
-import { cn } from "@/lib/utils";
 
 type AdminCapacityPageProps = {
   searchParams?: Promise<{
@@ -29,66 +26,6 @@ type SystemReservationsView = "capacity" | "policy";
 
 function parseSystemReservationsView(value?: string): SystemReservationsView {
   return value === "policy" ? "policy" : "capacity";
-}
-
-function SystemReservationsRail({
-  activeView,
-}: {
-  activeView: SystemReservationsView;
-}) {
-  const items = [
-    {
-      icon: Gauge,
-      label: "ظرفیت و استثناها",
-      shortLabel: "ظرفیت",
-      value: "capacity" as const,
-    },
-    {
-      icon: SlidersHorizontal,
-      label: "سیاست رزرو",
-      shortLabel: "سیاست رزرو",
-      value: "policy" as const,
-    },
-  ];
-
-  return (
-    <aside className="flex flex-col rounded-lg border bg-muted/20 p-3 sm:p-5 lg:sticky lg:top-8">
-      <nav aria-label="بخش‌های مدیریت رزرو سیستم">
-        <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1 lg:grid-cols-1">
-          {items.map((item) => {
-            const Icon = item.icon;
-            const isActive = item.value === activeView;
-            const href =
-              item.value === "capacity"
-                ? "/admin/capacity"
-                : "/admin/capacity?view=policy";
-
-            return (
-              <Link
-                aria-current={isActive ? "page" : undefined}
-                className={cn(
-                  "flex min-h-11 items-center justify-center gap-2 rounded-md border px-3 py-2 text-center text-xs font-medium transition-colors lg:min-h-12 lg:justify-start lg:px-4 lg:text-sm",
-                  isActive
-                    ? "border-border bg-card text-slate-950 shadow-sm"
-                    : "border-transparent text-slate-600 hover:bg-card/60 hover:text-slate-950",
-                )}
-                href={href}
-                key={item.value}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                <span className="min-w-0 truncate lg:hidden">
-                  {item.shortLabel}
-                </span>
-                <span className="hidden min-w-0 truncate lg:inline">
-                  {item.label}
-                </span>
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
-    </aside>
-  );
 }
 
 export default async function AdminCapacityPage({
@@ -156,7 +93,7 @@ export default async function AdminCapacityPage({
   };
 
   return (
-    <div className="grid gap-6" dir="rtl">
+    <SpacesReservationSectionShell>
       <PageHeader
         subtitle="ظرفیت، استثناهای روزانه و قواعد تأیید درخواست‌های رزرو سیستم"
         title="مدیریت رزرو سیستم"
@@ -164,10 +101,7 @@ export default async function AdminCapacityPage({
 
       {toast ? <UrlToast {...toast} /> : null}
 
-      <div className="grid items-start gap-6 lg:grid-cols-[290px_minmax(0,1fr)]">
-        <SystemReservationsRail activeView={activeView} />
-
-        <main className="grid min-w-0 gap-6">
+      <div className="grid min-w-0 gap-6">
           {activeView === "capacity" ? (
             <>
               <ResourcePoolSettings
@@ -182,8 +116,7 @@ export default async function AdminCapacityPage({
           ) : (
             <ReservationPolicySettings {...policyValues} />
           )}
-        </main>
       </div>
-    </div>
+    </SpacesReservationSectionShell>
   );
 }

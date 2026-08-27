@@ -8,6 +8,7 @@ import {
   deleteBuildingAction,
   updateBuildingAction,
 } from "@/app/admin/desks/actions";
+import { SpacesReservationSectionShell } from "@/app/admin/_components/spaces-reservation-section";
 import { AdminDeskForm } from "@/app/admin/desks/admin-desk-form";
 import { DeleteBuildingButton } from "@/app/admin/desks/delete-building-button";
 import { PageHeader } from "@/components/app/page-header";
@@ -83,7 +84,7 @@ export default async function AdminBuildingsPage() {
     ) + 1;
 
   return (
-    <div className="grid gap-6 text-right" dir="rtl">
+    <SpacesReservationSectionShell>
       <PageHeader
         actions={
           <Button asChild size="sm" variant="outline">
@@ -247,6 +248,6 @@ export default async function AdminBuildingsPage() {
           </div>
         )}
       </section>
-    </div>
+    </SpacesReservationSectionShell>
   );
 }

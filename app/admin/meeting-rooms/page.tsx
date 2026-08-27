@@ -24,6 +24,7 @@ import {
   updateMeetingRoomScheduleExceptionAction,
   updateMeetingRoomWeeklyScheduleAction,
 } from "@/app/admin/meeting-rooms/actions";
+import { SpacesReservationSectionShell } from "@/app/admin/_components/spaces-reservation-section";
 import { MeetingRoomPicker } from "@/app/admin/meeting-rooms/meeting-room-picker";
 import { JalaliDatePicker } from "@/app/admin/meeting-rooms/jalali-date-picker";
 import { GeneralSettingsForm } from "@/app/admin/meeting-rooms/general-settings-form";
@@ -406,7 +407,7 @@ export default async function AdminMeetingRoomsPage({
     : [];
 
   return (
-    <div className="grid gap-6" dir="rtl">
+    <SpacesReservationSectionShell>
       <PageHeader
         actions={
           <div className="flex flex-wrap items-center gap-2">
@@ -870,6 +871,6 @@ export default async function AdminMeetingRoomsPage({
           ) : null}
           </main>
         ) : null}
-    </div>
+    </SpacesReservationSectionShell>
   );
 }
