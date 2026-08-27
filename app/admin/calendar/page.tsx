@@ -7,7 +7,6 @@ import {
   CalendarClock,
   CalendarCog,
   CalendarDays,
-  CalendarPlus,
   CalendarRange,
   ChevronDown,
   Info,
@@ -16,7 +15,6 @@ import Link from "next/link";
 
 import {
   getAdminToast,
-  IranHolidayImport,
   ScheduleExceptions,
   WeeklyScheduleSettings,
 } from "@/app/admin/_sections";
@@ -63,10 +61,10 @@ const MODE_DETAILS = {
   },
 };
 
-type CalendarView = "exceptions" | "holidays" | "special-days" | "weekly";
+type CalendarView = "exceptions" | "special-days" | "weekly";
 
 function parseCalendarView(value?: string): CalendarView {
-  if (value === "weekly" || value === "exceptions" || value === "holidays") {
+  if (value === "weekly" || value === "exceptions") {
     return value;
   }
 
@@ -91,12 +89,6 @@ function CalendarRail({ activeView }: { activeView: CalendarView }) {
       label: "برنامه هفتگی سامانه‌ها",
       shortLabel: "برنامه هفتگی",
       value: "weekly",
-    },
-    {
-      icon: CalendarPlus,
-      label: "تعطیلی‌های رسمی ایران",
-      shortLabel: "تعطیلی‌های رسمی",
-      value: "holidays",
     },
     {
       icon: CalendarDays,
@@ -371,10 +363,11 @@ export default async function AdminCalendarPage({
             </>
           ) : activeView === "weekly" ? (
             <WeeklyScheduleSettings schedules={schedules} />
-          ) : activeView === "holidays" ? (
-            <IranHolidayImport currentJalaliYear={currentJalaliYear} />
           ) : (
-            <ScheduleExceptions exceptions={exceptions} />
+            <ScheduleExceptions
+              currentJalaliYear={currentJalaliYear}
+              exceptions={exceptions}
+            />
           )}
         </main>
       </div>

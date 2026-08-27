@@ -28,8 +28,11 @@ import { FieldLabel, TextInput } from "./admin-form-fields";
 import { formatPersianNumber, formatWorkingWindow } from "./admin-formatting";
 
 export function ScheduleExceptions({
+  currentJalaliYear,
   exceptions,
+  showHeader = true,
 }: {
+  currentJalaliYear: string;
   exceptions: Array<{
     id: string;
     date: Date;
@@ -38,6 +41,7 @@ export function ScheduleExceptions({
     endTime: string | null;
     reason: string | null;
   }>;
+  showHeader?: boolean;
 }) {
   const workingExceptions = exceptions.filter(
     (exception) => exception.isWorkingDay,
@@ -46,7 +50,7 @@ export function ScheduleExceptions({
 
   return (
     <section className="grid gap-5 text-card-foreground" dir="rtl">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+      {showHeader ? <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div className="grid gap-1">
           <h2 className="text-lg font-semibold text-slate-950">
             استثناهای تاریخ‌محور
@@ -60,7 +64,41 @@ export function ScheduleExceptions({
           <CalendarDays className="h-4 w-4" />
           <span>{formatPersianNumber(exceptions.length)} استثنا</span>
         </div>
-      </div>
+      </div> : null}
+
+      <form
+        action={importIranHolidaysAction}
+        className="rounded-lg border bg-card p-4 shadow-sm"
+      >
+        <div className="mb-4 flex items-center gap-2 text-sm font-medium text-slate-950">
+          <CalendarPlus className="h-4 w-4 text-primary" />
+          <span>ورود تعطیلی‌های رسمی ایران</span>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-[160px_1fr_auto] sm:items-end">
+          <div className="grid gap-2">
+            <FieldLabel htmlFor="iran-holiday-year">سال جلالی</FieldLabel>
+            <TextInput
+              defaultValue={currentJalaliYear}
+              id="iran-holiday-year"
+              inputMode="numeric"
+              max="1600"
+              min="1300"
+              name="year"
+              required
+              type="number"
+            />
+          </div>
+          <p className="text-sm leading-6 text-muted-foreground">
+            تعطیلی‌های رسمی سال انتخاب‌شده با منبع به‌روز همگام می‌شوند؛
+            تاریخ‌های جابه‌جاشده اصلاح و موارد قدیمی حذف می‌شوند. استثناهای
+            دستی مدیر بدون تغییر باقی می‌مانند.
+          </p>
+          <Button className="w-full sm:w-auto" type="submit">
+            <CalendarPlus className="h-4 w-4" />
+            همگام‌سازی تعطیلی‌ها
+          </Button>
+        </div>
+      </form>
 
       <form
         action={createScheduleExceptionAction}
@@ -260,58 +298,6 @@ export function ScheduleExceptions({
           </div>
         </ScheduleForm>
       )}
-    </section>
-  );
-}
-
-export function IranHolidayImport({
-  currentJalaliYear,
-}: {
-  currentJalaliYear: string;
-}) {
-  return (
-    <section className="grid gap-5 text-card-foreground" dir="rtl">
-      <div className="grid gap-1">
-        <h2 className="text-lg font-semibold text-slate-950">
-          ورود تعطیلی‌های رسمی ایران
-        </h2>
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-          تعطیلی‌های رسمی سال انتخاب‌شده را از منبع به‌روز تقویم همگام کنید.
-        </p>
-      </div>
-
-      <form
-        action={importIranHolidaysAction}
-        className="rounded-lg border bg-card p-4 shadow-sm"
-      >
-        <div className="mb-4 flex items-center gap-2 text-sm font-medium text-slate-950">
-          <CalendarPlus className="h-4 w-4 text-primary" />
-          <span>همگام‌سازی تعطیلی‌ها</span>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-[160px_1fr_auto] sm:items-end">
-          <div className="grid gap-2">
-            <FieldLabel htmlFor="iran-holiday-year">سال جلالی</FieldLabel>
-            <TextInput
-              defaultValue={currentJalaliYear}
-              id="iran-holiday-year"
-              inputMode="numeric"
-              max="1600"
-              min="1300"
-              name="year"
-              required
-              type="number"
-            />
-          </div>
-          <p className="text-sm leading-6 text-muted-foreground">
-            تاریخ‌های جابه‌جاشده اصلاح و موارد قدیمی حذف می‌شوند. استثناهای
-            دستی مدیر بدون تغییر باقی می‌مانند.
-          </p>
-          <Button className="w-full sm:w-auto" type="submit">
-            <CalendarPlus className="h-4 w-4" />
-            همگام‌سازی تعطیلی‌ها
-          </Button>
-        </div>
-      </form>
     </section>
   );
 }
