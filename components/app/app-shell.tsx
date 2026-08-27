@@ -97,10 +97,9 @@ function getNavItems(user: CurrentUser): GlobalNavItem[] {
           },
           {
             href: "/admin/calendar",
-            label: "تقویم عملیاتی",
+            label: "تقویم و ساعات کاری",
             match: "prefix",
           },
-          { href: "/admin/schedule", label: "زمان‌بندی", match: "prefix" },
           {
             href: "/admin/meeting-rooms",
             label: "اتاق‌های جلسه",

@@ -30,6 +30,7 @@ import { formatPersianNumber, formatWorkingWindow } from "./admin-formatting";
 export function ScheduleExceptions({
   currentJalaliYear,
   exceptions,
+  showHeader = true,
 }: {
   currentJalaliYear: string;
   exceptions: Array<{
@@ -40,6 +41,7 @@ export function ScheduleExceptions({
     endTime: string | null;
     reason: string | null;
   }>;
+  showHeader?: boolean;
 }) {
   const workingExceptions = exceptions.filter(
     (exception) => exception.isWorkingDay,
@@ -48,7 +50,7 @@ export function ScheduleExceptions({
 
   return (
     <section className="grid gap-5 text-card-foreground" dir="rtl">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+      {showHeader ? <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div className="grid gap-1">
           <h2 className="text-lg font-semibold text-slate-950">
             استثناهای تاریخ‌محور
@@ -62,7 +64,7 @@ export function ScheduleExceptions({
           <CalendarDays className="h-4 w-4" />
           <span>{formatPersianNumber(exceptions.length)} استثنا</span>
         </div>
-      </div>
+      </div> : null}
 
       <form
         action={importIranHolidaysAction}

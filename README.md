@@ -214,8 +214,10 @@ manual test: یک draft قابل ویرایش باز کنید، brief فارسی
   buildings from one dedicated screen.
 - `/admin/desks` lets admins manage named desks, schedules, Jalali date
   exceptions, and the advance-booking limit for each building.
-- `/admin/calendar` lets admins override imported Iran holidays or weekly
-  schedules once for selected systems, lunch, buildings, and meeting rooms.
+- `/admin/calendar` is the unified admin calendar for weekly system hours,
+  system-only Jalali exceptions, and date overrides across systems, lunch,
+  buildings, and meeting rooms. The legacy `/admin/schedule` route redirects
+  here.
 - `/notifications` allows authenticated users to review unread notification
   events and mark them as read.
 - `/settings/bale` allows authenticated users to securely link or unlink their

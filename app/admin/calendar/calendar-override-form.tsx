@@ -282,7 +282,7 @@ export function CalendarOverrideForm({
             />
           </div>
           <TargetGroup
-            name="buildingIds"
+            name="officeIds"
             onChange={setBuildingIds}
             options={buildings}
             selected={buildingIds}

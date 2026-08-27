@@ -22,6 +22,7 @@ import {
 
 export function WeeklyScheduleSettings({
   schedules,
+  showHeader = true,
 }: {
   schedules: Array<{
     id: string;
@@ -30,6 +31,7 @@ export function WeeklyScheduleSettings({
     startTime: string;
     endTime: string;
   }>;
+  showHeader?: boolean;
 }) {
   const sortedSchedules = [...schedules].sort(
     (left, right) =>
@@ -41,7 +43,7 @@ export function WeeklyScheduleSettings({
 
   return (
     <section className="grid gap-5 text-card-foreground" dir="rtl">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+      {showHeader ? <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div className="grid gap-1">
           <h2 className="text-lg font-semibold text-slate-950">
             برنامه هفتگی کاری
@@ -61,13 +63,13 @@ export function WeeklyScheduleSettings({
             <span>{formatPersianNumber(disabledDays)} روز تعطیل</span>
           </div>
         </div>
-      </div>
+      </div> : null}
 
       <ScheduleForm
         action={updateWeeklyScheduleAction}
         className="overflow-hidden rounded-xl border bg-card shadow-sm"
       >
-        <div className="border-b bg-blue-50/50 px-4 py-3 text-xs leading-5 text-slate-600">
+        <div className="border-b bg-blue-50/50 px-4 py-3 text-xs leading-5 text-blue-900">
           ساعت‌های روز تعطیل برای فعال‌سازی دوباره حفظ می‌شوند، اما در رزروها
           اعمال نخواهند شد.
         </div>

@@ -28,7 +28,7 @@ export function redirectToAdmin(
       : params.tab === "reservation-policy"
         ? "/admin/reservation-policy"
       : params.tab === "schedule"
-        ? "/admin/schedule"
+        ? "/admin/calendar"
         : "/admin";
 
   for (const [key, value] of Object.entries(params)) {
