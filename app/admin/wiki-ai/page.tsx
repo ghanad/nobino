@@ -1,4 +1,4 @@
-import { Activity, Bot, RotateCcw, Save } from "lucide-react";
+import { Activity, Bot, RotateCcw, Save, ShieldCheck } from "lucide-react";
 
 import {
   resetWikiAiSystemPromptAction,
@@ -71,7 +71,7 @@ function getToast(params: Awaited<WikiAiAdminPageProps["searchParams"]>) {
 }
 
 const inputClassName =
-  "h-11 w-full rounded-md border border-input bg-background px-3 text-left text-sm outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60";
+  "h-11 w-full rounded-md border border-input bg-background px-3 text-left text-sm text-slate-950 outline-none transition-[border-color,box-shadow] placeholder:text-slate-400 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60";
 
 export default async function WikiAiAdminPage({
   searchParams,
@@ -83,57 +83,57 @@ export default async function WikiAiAdminPage({
   const toast = getToast(params);
 
   return (
-    <div className="grid gap-5 text-right" dir="rtl">
+    <div className="grid w-full max-w-5xl gap-5 text-right" dir="rtl">
       {toast ? <UrlToast {...toast} /> : null}
 
       <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-        <div className="flex items-start gap-3 border-b border-slate-100 px-4 py-4 sm:px-5">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+        <div className="flex items-start gap-3 border-b border-slate-200 bg-slate-50/70 px-4 py-4 sm:px-6">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <Bot aria-hidden="true" className="h-5 w-5" />
           </span>
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <h2 className="font-semibold text-slate-950">اتصال فعال</h2>
-              <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+              <h2 className="font-semibold text-slate-950">تنظیمات دستیار دانش‌نامه</h2>
+              <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs font-medium text-slate-600">
                 OpenAI-compatible
               </span>
             </div>
-            <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
-              نوبینو از Chat Completions استفاده می‌کند، پاسخ را به‌صورت زنده
-              نمایش می‌دهد و بخش reasoning مدل را در اختیار کاربر نمی‌گذارد.
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">
+              اتصال مدل، سطح دسترسی کاربران و دستورهای پاسخ را از همین‌جا
+              مدیریت کنید. پیش از ذخیره، اتصال را آزمایش کنید.
             </p>
           </div>
         </div>
 
-        <form className="grid gap-0" action={updateWikiAiSettingsAction}>
-          <div className="grid gap-4 border-b border-slate-100 p-4 sm:p-5">
+        <form className="grid" action={updateWikiAiSettingsAction}>
+          <section className="grid gap-4 border-b border-slate-200 px-4 py-5 sm:px-6" aria-labelledby="wiki-ai-connection-heading">
             <div>
-              <h2 className="text-sm font-semibold text-slate-950">اتصال به مدل</h2>
+              <h2 className="text-sm font-semibold text-slate-950" id="wiki-ai-connection-heading">اتصال به مدل</h2>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
                 نشانی سرویس و مدل مورد استفاده دستیار را مشخص کنید.
               </p>
             </div>
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(13rem,1fr)]">
               <label className="grid min-w-0 gap-1.5 text-sm font-medium text-slate-800">
-              نشانی پایه سرویس
-              <input
-                className={inputClassName}
-                defaultValue={settings.baseUrl}
-                dir="ltr"
-                name="baseUrl"
-                placeholder="http://server:8000/v1"
-                required
-                type="url"
-              />
-              <span className="text-xs font-normal leading-5 text-muted-foreground">
-                مسیر باید شامل نسخه API، مانند <span dir="ltr">/v1</span>، باشد.
-                میزبان نیز باید در متغیر محیطی WIKI_AI_ALLOWED_HOSTS مجاز شده باشد.
-              </span>
+                نشانی پایه سرویس
+                <input
+                  className={inputClassName}
+                  defaultValue={settings.baseUrl}
+                  dir="ltr"
+                  name="baseUrl"
+                  placeholder="http://server:8000/v1"
+                  required
+                  type="url"
+                />
+                <span className="text-xs font-normal leading-5 text-muted-foreground">
+                  مسیر باید شامل نسخه API، مانند <span dir="ltr">/v1</span>، باشد.
+                  میزبان نیز باید در متغیر محیطی WIKI_AI_ALLOWED_HOSTS مجاز شده باشد.
+                </span>
               </label>
 
               <label className="grid min-w-0 gap-1.5 text-sm font-medium text-slate-800">
-              نام مدل
-              <input
+                نام مدل
+                <input
                 className={inputClassName}
                 defaultValue={settings.model}
                 dir="ltr"
@@ -141,27 +141,28 @@ export default async function WikiAiAdminPage({
                 placeholder="Qwen3.6"
                 required
                 type="text"
-              />
+                />
                 <span className="text-xs font-normal leading-5 text-muted-foreground">
-                باید دقیقاً با شناسهٔ برگشتی مسیر models یکسان باشد.
+                  باید دقیقاً با شناسهٔ برگشتی مسیر models یکسان باشد.
                 </span>
               </label>
             </div>
-          </div>
+          </section>
 
-          <div className="grid gap-4 border-b border-slate-100 p-4 sm:p-5">
+          <div className="grid gap-6 border-b border-slate-200 px-4 py-5 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,0.7fr)]">
+            <section className="grid content-start gap-4" aria-labelledby="wiki-ai-response-heading">
             <div>
-              <h2 className="text-sm font-semibold text-slate-950">رفتار پاسخ</h2>
+                <h2 className="text-sm font-semibold text-slate-950" id="wiki-ai-response-heading">رفتار پاسخ</h2>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
                 محدودیت‌های زمانی و اندازه پاسخ مدل را کنترل کنید.
               </p>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:max-w-2xl">
-              <label className="grid min-w-0 gap-1.5 text-sm font-medium text-slate-800">
-              مهلت پاسخ
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="grid min-w-0 gap-1.5 text-sm font-medium text-slate-800">
+                  مهلت پاسخ
               <span className="relative">
                 <input
-                  className={`${inputClassName} pl-16`}
+                  className={`${inputClassName} pl-16 text-right`}
                   defaultValue={settings.timeoutSeconds}
                   max={300}
                   min={5}
@@ -175,11 +176,11 @@ export default async function WikiAiAdminPage({
               </span>
               </label>
 
-              <label className="grid min-w-0 gap-1.5 text-sm font-medium text-slate-800">
-              حداکثر طول پاسخ
+                <label className="grid min-w-0 gap-1.5 text-sm font-medium text-slate-800">
+                  حداکثر طول پاسخ
               <span className="relative">
                 <input
-                  className={`${inputClassName} pl-14`}
+                  className={`${inputClassName} pl-14 text-right`}
                   defaultValue={settings.maxOutputTokens}
                   max={8000}
                   min={100}
@@ -192,17 +193,17 @@ export default async function WikiAiAdminPage({
                 </span>
               </span>
               </label>
-            </div>
-          </div>
+              </div>
+            </section>
 
-          <div className="grid gap-3 border-b border-slate-100 p-4 sm:p-5">
+            <section className="grid content-start gap-3 border-t border-slate-100 pt-5 lg:border-r lg:border-t-0 lg:pr-6 lg:pt-0" aria-labelledby="wiki-ai-access-heading">
             <div>
-              <h2 className="text-sm font-semibold text-slate-950">دسترسی کاربران</h2>
+                <h2 className="text-sm font-semibold text-slate-950" id="wiki-ai-access-heading">دسترسی کاربران</h2>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
                 مشخص کنید کاربران بتوانند از دستیار دانش‌نامه پرسش کنند یا نه.
               </p>
             </div>
-            <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border border-slate-200 bg-slate-50/70 px-3 text-sm text-slate-800 transition-colors hover:border-slate-300 hover:bg-slate-50">
+              <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-800 transition-colors hover:border-slate-300 hover:bg-slate-100">
               <input
                 className="h-4 w-4 accent-primary"
                 defaultChecked={settings.enabled}
@@ -211,11 +212,12 @@ export default async function WikiAiAdminPage({
               />
               <span>پرسش از دانش‌نامه برای کاربران فعال باشد</span>
             </label>
+            </section>
           </div>
 
-          <div className="grid gap-3 border-b border-slate-100 p-4 sm:p-5">
+          <section className="grid gap-3 px-4 py-5 sm:px-6" aria-labelledby="wiki-ai-prompt-heading">
             <div>
-              <h2 className="text-sm font-semibold text-slate-950">
+              <h2 className="text-sm font-semibold text-slate-950" id="wiki-ai-prompt-heading">
                 دستورهای رفتاری دستیار
               </h2>
               <p className="mt-1 max-w-3xl text-xs leading-5 text-muted-foreground">
@@ -225,29 +227,21 @@ export default async function WikiAiAdminPage({
               </p>
             </div>
             <textarea
-              className="min-h-72 w-full resize-y rounded-md border border-input bg-background px-3 py-3 text-right text-sm leading-7 text-slate-900 outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-ring"
+              className="min-h-64 w-full resize-y rounded-md border border-input bg-background px-3 py-3 text-right text-sm leading-7 text-slate-900 outline-none transition-[border-color,box-shadow] focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring"
               defaultValue={settings.systemPrompt}
               dir="rtl"
               maxLength={12000}
               name="systemPrompt"
               required
+              rows={11}
               spellCheck={false}
             />
-          </div>
+          </section>
 
-          <div className="flex flex-wrap gap-2 p-4 sm:p-5">
+          <div className="flex flex-wrap items-center gap-2 border-t border-slate-200 bg-slate-50/70 px-4 py-4 sm:px-6">
             <SubmitButton pendingLabel="در حال ذخیره">
               <Save aria-hidden="true" className="h-4 w-4" />
               ذخیره تنظیمات
-            </SubmitButton>
-            <SubmitButton
-              formAction={resetWikiAiSystemPromptAction}
-              formNoValidate
-              pendingLabel="در حال بازگردانی"
-              variant="outline"
-            >
-              <RotateCcw aria-hidden="true" className="h-4 w-4" />
-              بازگردانی متن پیش‌فرض
             </SubmitButton>
             <SubmitButton
               formAction={testWikiAiConnectionAction}
@@ -257,16 +251,28 @@ export default async function WikiAiAdminPage({
               <Activity aria-hidden="true" className="h-4 w-4" />
               آزمایش اتصال
             </SubmitButton>
+            <SubmitButton
+              formAction={resetWikiAiSystemPromptAction}
+              formNoValidate
+              pendingLabel="در حال بازگردانی"
+              variant="outline"
+            >
+              <RotateCcw aria-hidden="true" className="h-4 w-4" />
+              بارگذاری متن پیش‌فرض
+            </SubmitButton>
           </div>
         </form>
       </section>
 
-      <section className="grid gap-2 rounded-xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm leading-6 text-slate-700">
-        <h2 className="font-semibold text-slate-950">حریم اطلاعات</h2>
-        <p>
+      <section className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm leading-6 text-slate-700 sm:px-5">
+        <ShieldCheck aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-slate-500" />
+        <div>
+          <h2 className="font-semibold text-slate-950">حریم اطلاعات</h2>
+          <p className="mt-0.5 max-w-4xl text-muted-foreground">
           فقط محتوای قابل مشاهده برای هر کاربر به مدل ارسال می‌شود. صفحات مخفی
           و زیرشاخه‌های آن‌ها برای کاربران عادی وارد زمینهٔ پاسخ نمی‌شوند.
-        </p>
+          </p>
+        </div>
       </section>
     </div>
   );

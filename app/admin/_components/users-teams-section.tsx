@@ -14,7 +14,7 @@ export function UsersTeamsSectionShell({
       items={[
         {
           href: "/admin/users",
-          icon: "users",
+          icon: "user",
           key: "users",
           label: "کاربران",
         },

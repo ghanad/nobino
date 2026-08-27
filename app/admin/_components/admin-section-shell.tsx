@@ -9,6 +9,7 @@ import {
   Megaphone,
   MessageCircle,
   Settings2,
+  User,
   Users,
   UsersRound,
 } from "lucide-react";
@@ -28,6 +29,7 @@ export type AdminSectionIcon =
   | "megaphone"
   | "message"
   | "settings"
+  | "user"
   | "users"
   | "users-round";
 
@@ -61,6 +63,7 @@ const icons = {
   megaphone: Megaphone,
   message: MessageCircle,
   settings: Settings2,
+  user: User,
   users: Users,
   "users-round": UsersRound,
 } as const;
