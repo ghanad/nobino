@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
+import { ScheduleExceptionSource } from "@prisma/client";
+
 import {
   importIranHolidayScheduleExceptions,
 } from "@/lib/admin-settings-service";
+import { getIranHolidaysForJalaliYear } from "@/lib/iran-holidays";
 import { parseJalaliDateParam } from "@/lib/jalali-date";
 import { createReservationRequest } from "@/lib/reservation-service";
 import {
@@ -94,6 +97,112 @@ test("imported Iran holiday titles use official overrides", async () => {
 
   assert.equal(exception?.isWorkingDay, false);
   assert.match(exception?.reason ?? "", /عید سعید قربان/);
+});
+
+test("Iran holiday sync removes moved dates and preserves manual exceptions", async () => {
+  const year = 1405;
+  const holidays = await getIranHolidaysForJalaliYear(year);
+  const importedHoliday = holidays[0];
+  const manualHoliday = holidays[1];
+
+  assert.ok(importedHoliday);
+  assert.ok(manualHoliday);
+
+  const holidayDates = new Set(
+    holidays.map((holiday) => startOfLocalDay(holiday.date).toISOString()),
+  );
+  let staleImportedDate: Date | null = null;
+
+  for (let month = 1; month <= 12 && !staleImportedDate; month += 1) {
+    for (let day = 1; day <= 31; day += 1) {
+      const candidate = parseJalaliDateParam(
+        `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
+      );
+
+      if (
+        candidate &&
+        !holidayDates.has(startOfLocalDay(candidate).toISOString())
+      ) {
+        staleImportedDate = startOfLocalDay(candidate);
+        break;
+      }
+    }
+  }
+
+  assert.ok(staleImportedDate);
+
+  const existingImported = await db.scheduleException.create({
+    data: {
+      date: startOfLocalDay(importedHoliday.date),
+      isWorkingDay: true,
+      startTime: "09:00",
+      endTime: "17:00",
+      reason: "Stale imported holiday",
+      source: ScheduleExceptionSource.IRAN_HOLIDAY,
+    },
+  });
+  const manualException = await db.scheduleException.create({
+    data: {
+      date: startOfLocalDay(manualHoliday.date),
+      isWorkingDay: true,
+      startTime: "10:00",
+      endTime: "16:00",
+      reason: "Manager correction",
+      source: ScheduleExceptionSource.MANUAL,
+    },
+  });
+  const staleImported = await db.scheduleException.create({
+    data: {
+      date: staleImportedDate,
+      isWorkingDay: false,
+      reason: "Holiday before lunar-date correction",
+      source: ScheduleExceptionSource.IRAN_HOLIDAY,
+    },
+  });
+
+  const result = await importIranHolidayScheduleExceptions({ adminId, year });
+
+  assert.equal(result.createdCount, holidays.length - 2);
+  assert.equal(result.updatedCount, 1);
+  assert.equal(result.deletedCount, 1);
+  assert.equal(result.preservedManualCount, 1);
+  assert.equal(result.unchangedCount, 0);
+
+  const [updatedImported, preservedManual, deletedImported] = await Promise.all([
+    db.scheduleException.findUnique({ where: { id: existingImported.id } }),
+    db.scheduleException.findUnique({ where: { id: manualException.id } }),
+    db.scheduleException.findUnique({ where: { id: staleImported.id } }),
+  ]);
+
+  assert.equal(updatedImported?.isWorkingDay, false);
+  assert.equal(updatedImported?.startTime, null);
+  assert.equal(updatedImported?.endTime, null);
+  assert.equal(updatedImported?.reason, importedHoliday.title);
+  assert.equal(preservedManual?.reason, "Manager correction");
+  assert.equal(preservedManual?.source, ScheduleExceptionSource.MANUAL);
+  assert.equal(deletedImported, null);
+
+  const auditActions = await db.auditLog.findMany({
+    where: { entityId: { in: [existingImported.id, staleImported.id] } },
+    orderBy: { action: "asc" },
+    select: { action: true },
+  });
+
+  assert.deepEqual(
+    auditActions.map((audit) => audit.action),
+    ["SCHEDULE_EXCEPTION_DELETED", "SCHEDULE_EXCEPTION_UPDATED"],
+  );
+
+  const repeatedResult = await importIranHolidayScheduleExceptions({
+    adminId,
+    year,
+  });
+
+  assert.equal(repeatedResult.createdCount, 0);
+  assert.equal(repeatedResult.updatedCount, 0);
+  assert.equal(repeatedResult.deletedCount, 0);
+  assert.equal(repeatedResult.preservedManualCount, 1);
+  assert.equal(repeatedResult.unchangedCount, holidays.length - 1);
 });
 
 test("reservation time range must start and end on exact hours", async () => {

@@ -303,7 +303,10 @@ weekly schedule. A `NORMAL` correction bypasses an incorrect official holiday
 and resumes each selected service's own weekly schedule; `CLOSED` disables the
 selected targets; `CUSTOM` applies shared exact-hour bounds to timed services
 and enables lunch. Re-importing official holidays does not overwrite these
-central corrections.
+central corrections. Synchronizing a Jalali year's official holidays creates
+new imported dates, updates changed imported entries, and removes imported
+dates that are no longer present (including moved lunar holidays). Manual
+schedule exceptions are never overwritten or deleted by this synchronization.
 
 ## Reservation Requests
 

@@ -9,20 +9,16 @@ import {
   SurveyKind,
   SurveyQuestionType,
   SurveyState,
-  UserRole,
 } from "@prisma/client";
 
 import {
   adminId,
   db,
-  managerId,
   registerBusinessRuleTestHooks,
   secondUserId,
   userId,
 } from "./business-rules-helpers";
 import { deleteTeam } from "@/lib/team-service";
-import type { SurveyActor } from "@/lib/survey-permissions";
-import { getSurveyDisplayState } from "@/lib/survey-status";
 
 registerBusinessRuleTestHooks();
 
@@ -381,28 +377,3 @@ test("a notification can optionally reference a survey and deletion is isolated"
   });
   assert.equal(preserved.surveyId, null);
 });
-
-function makeActor(input: {
-  role?: UserRole;
-  active?: boolean;
-  canCreateSurveys?: boolean;
-  isOwner?: boolean;
-  isCollaborator?: boolean;
-  isRecipient?: boolean;
-} = {}): SurveyActor {
-  return {
-    user: {
-      role: input.role ?? UserRole.USER,
-      active: input.active ?? true,
-      canCreateSurveys: input.canCreateSurveys ?? false,
-    },
-    isOwner: input.isOwner ?? false,
-    isCollaborator: input.isCollaborator ?? false,
-    isRecipient: input.isRecipient ?? false,
-  };
-}
-
-function makePublished(startsAt: Date | null, endsAt: Date | null) {
-  return { state: SurveyState.PUBLISHED, startsAt, endsAt };
-}
-

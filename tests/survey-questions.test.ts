@@ -7,7 +7,6 @@ import {
   adminId,
   db,
   registerBusinessRuleTestHooks,
-  secondUserId,
   userId,
 } from "./business-rules-helpers";
 import { createSurveyDraft } from "@/lib/survey-service/metadata";
@@ -16,7 +15,7 @@ import { SurveyServiceError } from "@/lib/survey-service/shared";
 registerBusinessRuleTestHooks();
 
 test("questions: add and return questions of each type", async () => {
-  const { addQuestion, addOption } = await import(
+  const { addQuestion } = await import(
     "@/lib/survey-service/questions"
   );
 
@@ -389,7 +388,7 @@ test("questions: delete removes question and normalizes sort order", async () =>
 });
 
 test("questions: delete handles dependent conditions", async () => {
-  const { addQuestion, addOption, deleteQuestion, deleteOption } = await import(
+  const { addQuestion, addOption, deleteQuestion } = await import(
     "@/lib/survey-service/questions"
   );
 
@@ -563,7 +562,7 @@ test("questions: reorder rejects incomplete or cross-survey IDs", async () => {
     prompt: "Q1",
     type: SurveyQuestionType.SHORT_TEXT,
   });
-  const q2 = await addQuestion({
+  await addQuestion({
     actorUserId: adminId,
     surveyId: survey.id,
     prompt: "Q2",
@@ -648,4 +647,3 @@ test("questions: collaborator can add questions", async () => {
 // ──────────────────────────────────────────────
 // Option tests
 // ──────────────────────────────────────────────
-

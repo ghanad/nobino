@@ -87,12 +87,13 @@ export function ScheduleExceptions({
             />
           </div>
           <p className="text-sm leading-6 text-muted-foreground">
-            تعطیلی‌های رسمی سال انتخاب‌شده به‌صورت استثنای تعطیل ثبت می‌شوند و
-            استثناهای موجود تکراری ساخته نمی‌شوند.
+            تعطیلی‌های رسمی سال انتخاب‌شده با منبع به‌روز همگام می‌شوند؛
+            تاریخ‌های جابه‌جاشده اصلاح و موارد قدیمی حذف می‌شوند. استثناهای
+            دستی مدیر بدون تغییر باقی می‌مانند.
           </p>
           <Button className="w-full sm:w-auto" type="submit">
             <CalendarPlus className="h-4 w-4" />
-            ورود تعطیلی‌ها
+            همگام‌سازی تعطیلی‌ها
           </Button>
         </div>
       </form>

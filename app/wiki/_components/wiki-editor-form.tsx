@@ -6,7 +6,6 @@ import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import {
   Bold,
   Code2,
-  Heading1,
   Italic,
   Link2,
   List,

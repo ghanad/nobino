@@ -216,7 +216,7 @@ test("/chatid in a group does not send a reply", async () => {
 
   await withBaleMock(
     {
-      fetchImpl: async (input, init) => {
+      fetchImpl: async (input) => {
         const method = getBaleApiMethod(input as string | URL);
 
         if (method === "getUpdates") {
@@ -270,7 +270,7 @@ test("invalid commands do not send a /chatid reply", async () => {
 
   await withBaleMock(
     {
-      fetchImpl: async (input, init) => {
+      fetchImpl: async (input) => {
         const method = getBaleApiMethod(input as string | URL);
 
         if (method === "getUpdates") {

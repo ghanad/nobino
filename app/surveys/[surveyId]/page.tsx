@@ -121,7 +121,6 @@ export default async function SurveyDetailPage({ params }: Props) {
           questions={data.questions}
           hasSubmitted={data.hasSubmitted}
           displayState={data.displayState}
-          identityMode={data.identityMode}
         />
       ) : null}
     </div>

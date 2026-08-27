@@ -1,6 +1,5 @@
 "use client";
 
-import { getSurveyDisplayStateLabel } from "@/lib/survey-status";
 import type { PublishReadinessReport } from "@/lib/survey-service/publish-readiness";
 
 type SurveyReadinessSummaryProps = {
@@ -23,7 +22,6 @@ export function SurveyReadinessSummary({
   hasSchedule,
 }: SurveyReadinessSummaryProps) {
   const errors = report.issues.filter((i) => i.severity === "error");
-  const warnings = report.issues.filter((i) => i.severity === "warning");
 
   return (
     <section className="space-y-3 border-t pt-5" dir="rtl">

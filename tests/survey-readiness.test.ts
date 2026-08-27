@@ -7,11 +7,8 @@ import {
   adminId,
   db,
   registerBusinessRuleTestHooks,
-  secondUserId,
-  userId,
 } from "./business-rules-helpers";
 import { createSurveyDraft, updateSurveyMetadata } from "@/lib/survey-service/metadata";
-import { SurveyServiceError } from "@/lib/survey-service/shared";
 
 registerBusinessRuleTestHooks();
 

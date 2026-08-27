@@ -1,6 +1,6 @@
 import "server-only";
 
-import { SurveyIdentityMode, SurveyKind, SurveyState } from "@prisma/client";
+import { SurveyIdentityMode, SurveyKind } from "@prisma/client";
 
 import { db } from "@/lib/db";
 import { assertSurveyMetadataReadyForPublish } from "@/lib/survey-service/metadata";

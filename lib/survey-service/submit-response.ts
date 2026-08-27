@@ -2,7 +2,6 @@ import "server-only";
 
 import {
   SurveyQuestionType,
-  SurveyIdentityMode,
 } from "@prisma/client";
 
 import { db } from "@/lib/db";
@@ -447,14 +446,13 @@ function validateSubmissionAnswers(
 
     if (!isAnswered) continue;
 
-    validateAnswerValue(question, value, questionMap);
+    validateAnswerValue(question, value);
   }
 }
 
 function validateAnswerValue(
   question: SurveyWithFullQuestions["questions"][number],
   value: AnswerValue,
-  _questionMap: Map<string, SurveyWithFullQuestions["questions"][number]>,
 ): void {
   switch (question.type) {
     case SurveyQuestionType.SHORT_TEXT:

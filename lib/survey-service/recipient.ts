@@ -6,7 +6,6 @@ import {
   loadActiveActorUser,
   resolveSurveyActor,
   SurveyServiceError,
-  type DbClient,
 } from "@/lib/survey-service/shared";
 import { getSurveyDisplayState } from "@/lib/survey-status";
 import type { SurveyDisplayState } from "@/lib/survey-status";

@@ -1,14 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { SurveyAudienceMode, SurveyConditionOperator, SurveyIdentityMode, SurveyKind, SurveyQuestionType, SurveyState } from "@prisma/client";
+import { SurveyIdentityMode, SurveyKind, SurveyQuestionType } from "@prisma/client";
 
 import {
   adminId,
   db,
   registerBusinessRuleTestHooks,
-  secondUserId,
-  userId,
 } from "./business-rules-helpers";
 import { createSurveyDraft } from "@/lib/survey-service/metadata";
 import { SurveyServiceError } from "@/lib/survey-service/shared";
@@ -548,4 +546,3 @@ test("conditions: cross-survey target question is rejected on remove", async () 
     SurveyServiceError,
   );
 });
-

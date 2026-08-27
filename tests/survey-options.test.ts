@@ -1,14 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { SurveyAudienceMode, SurveyConditionOperator, SurveyIdentityMode, SurveyKind, SurveyQuestionType, SurveyState } from "@prisma/client";
+import { SurveyConditionOperator, SurveyIdentityMode, SurveyKind, SurveyQuestionType } from "@prisma/client";
 
 import {
   adminId,
   db,
   registerBusinessRuleTestHooks,
-  secondUserId,
-  userId,
 } from "./business-rules-helpers";
 import { createSurveyDraft } from "@/lib/survey-service/metadata";
 import { SurveyServiceError } from "@/lib/survey-service/shared";
@@ -417,7 +415,7 @@ test("options: reorder rejects incomplete or invalid IDs", async () => {
     questionId: q.id,
     label: "A",
   });
-  const opt2 = await addOption({
+  await addOption({
     actorUserId: adminId,
     surveyId: survey.id,
     questionId: q.id,

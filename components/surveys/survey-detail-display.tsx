@@ -1,7 +1,5 @@
 "use client";
 
-import type { SurveyQuestionType } from "@prisma/client";
-
 type DetailOption = {
   id: string;
   label: string;
@@ -28,7 +26,6 @@ type SurveyDetailDisplayProps = {
   questions: DetailQuestion[];
   hasSubmitted: boolean;
   displayState: string;
-  identityMode: string;
 };
 
 /**
@@ -40,7 +37,6 @@ export function SurveyDetailDisplay({
   questions,
   hasSubmitted,
   displayState,
-  identityMode,
 }: SurveyDetailDisplayProps) {
   const isReadOnly =
     hasSubmitted ||

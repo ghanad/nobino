@@ -64,7 +64,7 @@ test("participation requires an active recipient and an active survey", () => {
 
 // ── S06: Collaborator service ──
 
-test("collaboratorCRUD: add, reject owner/duplicate/inactive, remove, cross-survey", async (t) => {
+test("collaboratorCRUD: add, reject owner/duplicate/inactive, remove, cross-survey", async () => {
   const { addCollaborator, removeCollaborator } = await import(
     "@/lib/survey-service/collaborator"
   );
@@ -425,4 +425,3 @@ test("collaborator: non-existent survey or target user is rejected", async () =>
     SurveyServiceError,
   );
 });
-

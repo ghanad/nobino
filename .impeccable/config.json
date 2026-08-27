@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "gray-on-color",
+        "value": "*",
+        "files": [
+          "app/admin/schedule/page.tsx"
+        ],
+        "createdAt": "2026-08-27T14:05:36.653Z",
+        "reason": "Existing inactive navigation intentionally pairs DESIGN.md quiet ink with the quiet neutral surface; the contrast is deliberate and the current task does not alter that visual treatment."
+      }
+    ]
+  }
+}

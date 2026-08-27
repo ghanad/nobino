@@ -3,11 +3,6 @@ import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { Eye } from "lucide-react";
 
-import type {
-  SurveyConditionOperator,
-  SurveyQuestionType,
-} from "@prisma/client";
-
 import { requireCurrentUser } from "@/lib/auth";
 import {
   canEditSurveyDraft,
@@ -27,7 +22,6 @@ import { SurveyQuestionBuilder } from "@/components/surveys/survey-question-buil
 import { SurveyReadinessSummary } from "@/components/surveys/survey-readiness-summary";
 import { SurveyLifecycleControls } from "@/components/surveys/survey-lifecycle-controls";
 import { updateSurveyMetadataAction } from "@/app/surveys/actions";
-import type { QuestionConditionData } from "@/app/surveys/survey-branching-actions";
 
 type EditSurveyPageProps = {
   params: Promise<{ surveyId: string }>;
@@ -285,7 +279,7 @@ export default async function EditSurveyPage({ params }: EditSurveyPageProps) {
             />
             {readinessReport ? <SurveyReadinessSummary report={readinessReport} surveyTitle={survey.title} hasSchedule={survey.startsAt !== null && survey.endsAt !== null} /> : null}
             <SurveyLifecycleControls
-              surveyId={survey.id} surveyTitle={survey.title} displayState={displayState}
+              surveyId={survey.id} displayState={displayState}
               isOwnerOrAdmin={isOwnerOrAdmin} isAdmin={user.role === "ADMIN" && user.active}
               endsAt={survey.endsAt} lastReminderAt={survey.lastReminderAt} kind={survey.kind}
               isAnonymous={survey.identityMode === "ANONYMOUS"} ready={readinessReport?.ready ?? false}
@@ -310,7 +304,6 @@ export default async function EditSurveyPage({ params }: EditSurveyPageProps) {
       {!isDraft ? <div className="mx-auto max-w-2xl">
         <SurveyLifecycleControls
           surveyId={survey.id}
-          surveyTitle={survey.title}
           displayState={displayState}
           isOwnerOrAdmin={isOwnerOrAdmin}
           isAdmin={user.role === "ADMIN" && user.active}

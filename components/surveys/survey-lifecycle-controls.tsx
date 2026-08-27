@@ -19,7 +19,6 @@ import type { SurveyDisplayState } from "@/lib/survey-status";
 
 type SurveyLifecycleControlsProps = {
   surveyId: string;
-  surveyTitle: string;
   displayState: SurveyDisplayState;
   isOwnerOrAdmin: boolean;
   isAdmin: boolean;
@@ -33,7 +32,6 @@ type SurveyLifecycleControlsProps = {
 
 export function SurveyLifecycleControls({
   surveyId,
-  surveyTitle,
   displayState,
   isOwnerOrAdmin,
   isAdmin,
@@ -44,7 +42,7 @@ export function SurveyLifecycleControls({
   ready,
   hasAnonymousThreshold,
 }: SurveyLifecycleControlsProps) {
-  const [publishState, publishAction, publishPending] = useActionState<
+  const [publishState, publishAction] = useActionState<
     LifecycleActionState,
     FormData
   >(publishSurveyAction, { status: "idle" });
@@ -60,22 +58,22 @@ export function SurveyLifecycleControls({
     endsAt ? formatJalaliDateParam(endsAt) : "",
   );
   const [newEndTime, setNewEndTime] = useState("");
-  const [extendState, extendAction, extendPending] = useActionState<
+  const [extendState, extendAction] = useActionState<
     LifecycleActionState,
     FormData
   >(extendSurveyEndTimeAction, { status: "idle" });
 
-  const [closeState, closeFormAction, closePending] = useActionState<
+  const [closeState, closeFormAction] = useActionState<
     LifecycleActionState,
     FormData
   >(closeSurveyAction, { status: "idle" });
 
-  const [archiveState, archiveFormAction, archivePending] = useActionState<
+  const [archiveState, archiveFormAction] = useActionState<
     LifecycleActionState,
     FormData
   >(archiveSurveyAction, { status: "idle" });
 
-  const [deleteState, deleteFormAction, deletePending] = useActionState<
+  const [deleteState, deleteFormAction] = useActionState<
     LifecycleActionState,
     FormData
   >(deleteSurveyAction, { status: "idle" });
@@ -324,8 +322,9 @@ export function SurveyLifecycleControls({
                     </label>
                     <select
                       className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-                      defaultValue={newEndTime}
                       name="newEndTime"
+                      onChange={(event) => setNewEndTime(event.target.value)}
+                      value={newEndTime}
                     >
                       <option value="">انتخاب کنید</option>
                       {Array.from({ length: 24 }, (_, i) => {

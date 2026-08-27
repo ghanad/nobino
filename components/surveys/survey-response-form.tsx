@@ -69,6 +69,7 @@ export function SurveyResponseForm({
     [questions, visibleQuestionIds],
   );
   const currentQuestion = visibleQuestions[Math.min(currentStep, Math.max(visibleQuestions.length - 1, 0))];
+  const currentQuestionId = currentQuestion?.id;
   const currentQuestionIndex = currentQuestion
     ? visibleQuestions.findIndex((question) => question.id === currentQuestion.id)
     : -1;
@@ -79,10 +80,10 @@ export function SurveyResponseForm({
   }, [visibleQuestions.length]);
 
   useEffect(() => {
-    if (initialLoaded && currentQuestion) {
+    if (initialLoaded && currentQuestionId) {
       questionHeadingRef.current?.focus();
     }
-  }, [currentQuestion?.id, initialLoaded]);
+  }, [currentQuestionId, initialLoaded]);
 
   useEffect(() => {
     if (saveState.status !== "saved") return;
@@ -105,7 +106,6 @@ export function SurveyResponseForm({
   );
 
   // Sync answers when visibility clears hidden ones
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const syncedAnswers = useMemo(() => {
     const currentKeys = new Set(Object.keys(answers));
     const visibleKeys = new Set(Object.keys(visibleAnswers));

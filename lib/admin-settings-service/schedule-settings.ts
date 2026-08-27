@@ -4,6 +4,7 @@ import { ScheduleExceptionSource } from "@prisma/client";
 
 import { db } from "@/lib/db";
 import { getIranHolidaysForJalaliYear } from "@/lib/iran-holidays";
+import { parseJalaliDateParam } from "@/lib/jalali-date";
 
 import { assertWorkingHours, startOfLocalDay } from "./date-time";
 import { AdminSettingsError, assertAdmin } from "./shared";
@@ -281,6 +282,20 @@ export async function importIranHolidayScheduleExceptions(input: {
   }
 
   const holidays = await getIranHolidaysForJalaliYear(input.year);
+  const yearStart = parseJalaliDateParam(`${input.year}-01-01`);
+  const nextYearStart = parseJalaliDateParam(`${input.year + 1}-01-01`);
+
+  if (!yearStart || !nextYearStart) {
+    throw new AdminSettingsError("Enter a valid Jalali year.");
+  }
+
+  const desiredHolidays = new Map(
+    holidays.map((holiday) => {
+      const date = startOfLocalDay(holiday.date);
+
+      return [date.toISOString(), { ...holiday, date }] as const;
+    }),
+  );
 
   return db.$transaction(async (tx) => {
     await assertAdmin(input.adminId, tx);
@@ -288,26 +303,84 @@ export async function importIranHolidayScheduleExceptions(input: {
     const existingExceptions = await tx.scheduleException.findMany({
       where: {
         date: {
-          in: holidays.map((holiday) => startOfLocalDay(holiday.date)),
+          gte: startOfLocalDay(yearStart),
+          lt: startOfLocalDay(nextYearStart),
         },
       },
-      select: { date: true },
     });
-    const existingDates = new Set(
-      existingExceptions.map((exception) => exception.date.toISOString()),
+    const existingByDate = new Map(
+      existingExceptions.map((exception) => [
+        exception.date.toISOString(),
+        exception,
+      ]),
     );
     let createdCount = 0;
+    let updatedCount = 0;
+    let deletedCount = 0;
+    let preservedManualCount = 0;
+    let unchangedCount = 0;
 
-    for (const holiday of holidays) {
-      const date = startOfLocalDay(holiday.date);
+    for (const [dateKey, holiday] of desiredHolidays) {
+      const existing = existingByDate.get(dateKey);
 
-      if (existingDates.has(date.toISOString())) {
+      if (existing?.source === ScheduleExceptionSource.MANUAL) {
+        preservedManualCount += 1;
+        continue;
+      }
+
+      if (existing) {
+        if (
+          !existing.isWorkingDay &&
+          existing.startTime === null &&
+          existing.endTime === null &&
+          existing.reason === holiday.title
+        ) {
+          unchangedCount += 1;
+          continue;
+        }
+
+        const exception = await tx.scheduleException.update({
+          where: { id: existing.id },
+          data: {
+            isWorkingDay: false,
+            startTime: null,
+            endTime: null,
+            reason: holiday.title,
+          },
+        });
+
+        await tx.auditLog.create({
+          data: {
+            actorUserId: input.adminId,
+            entityType: "ScheduleException",
+            entityId: exception.id,
+            action: "SCHEDULE_EXCEPTION_UPDATED",
+            oldValue: {
+              date: existing.date.toISOString(),
+              importedFrom: "iran_holidays",
+              isWorkingDay: existing.isWorkingDay,
+              startTime: existing.startTime,
+              endTime: existing.endTime,
+              reason: existing.reason,
+            },
+            newValue: {
+              date: exception.date.toISOString(),
+              importedFrom: "iran_holidays",
+              isWorkingDay: exception.isWorkingDay,
+              startTime: exception.startTime,
+              endTime: exception.endTime,
+              reason: exception.reason,
+            },
+          },
+        });
+
+        updatedCount += 1;
         continue;
       }
 
       const exception = await tx.scheduleException.create({
         data: {
-          date,
+          date: holiday.date,
           isWorkingDay: false,
           startTime: null,
           endTime: null,
@@ -336,9 +409,42 @@ export async function importIranHolidayScheduleExceptions(input: {
       createdCount += 1;
     }
 
+    for (const exception of existingExceptions) {
+      if (
+        exception.source !== ScheduleExceptionSource.IRAN_HOLIDAY ||
+        desiredHolidays.has(exception.date.toISOString())
+      ) {
+        continue;
+      }
+
+      await tx.scheduleException.delete({ where: { id: exception.id } });
+      await tx.auditLog.create({
+        data: {
+          actorUserId: input.adminId,
+          entityType: "ScheduleException",
+          entityId: exception.id,
+          action: "SCHEDULE_EXCEPTION_DELETED",
+          oldValue: {
+            date: exception.date.toISOString(),
+            importedFrom: "iran_holidays",
+            isWorkingDay: exception.isWorkingDay,
+            startTime: exception.startTime,
+            endTime: exception.endTime,
+            reason: exception.reason,
+          },
+        },
+      });
+
+      deletedCount += 1;
+    }
+
     return {
       createdCount,
-      skippedCount: holidays.length - createdCount,
+      updatedCount,
+      deletedCount,
+      preservedManualCount,
+      unchangedCount,
+      skippedCount: preservedManualCount + unchangedCount,
       totalCount: holidays.length,
     };
   });

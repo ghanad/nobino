@@ -22,7 +22,10 @@ type AdminSchedulePageProps = {
     exceptionCreated?: string;
     exceptionDeleted?: string;
     exceptionUpdated?: string;
-    holidayImported?: string;
+    holidayCreated?: string;
+    holidayUpdated?: string;
+    holidayDeleted?: string;
+    holidayManualPreserved?: string;
     scheduleUpdated?: string;
     view?: string;
   }>;

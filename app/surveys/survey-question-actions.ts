@@ -17,7 +17,6 @@ import {
 import {
   addQuestionSchema,
   deleteQuestionSchema,
-  updateQuestionSchema,
   updateQuestionWithConfigSchema,
 } from "@/lib/survey-validators";
 

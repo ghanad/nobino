@@ -280,6 +280,7 @@ export function SurveyAudienceEditor({
             <input
               className="mt-0.5"
               checked={audienceMode === "ALL_ACTIVE"}
+              disabled={pendingMode}
               name="audienceMode"
               onChange={() => handleModeChange("ALL_ACTIVE")}
               type="radio"
@@ -303,6 +304,7 @@ export function SurveyAudienceEditor({
             <input
               className="mt-0.5"
               checked={audienceMode === "TARGETED"}
+              disabled={pendingMode}
               name="audienceMode"
               onChange={() => handleModeChange("TARGETED")}
               type="radio"

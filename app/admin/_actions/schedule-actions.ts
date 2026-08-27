@@ -268,7 +268,12 @@ export async function importIranHolidaysAction(
     });
   }
 
-  let createdCount = 0;
+  let syncResult = {
+    createdCount: 0,
+    updatedCount: 0,
+    deletedCount: 0,
+    preservedManualCount: 0,
+  };
 
   try {
     const result = await importIranHolidayScheduleExceptions({
@@ -276,7 +281,7 @@ export async function importIranHolidaysAction(
       year: parsed.data.year,
     });
 
-    createdCount = result.createdCount;
+    syncResult = result;
   } catch (error) {
     redirectToAdmin({
       error: getActionErrorMessage(error),
@@ -286,7 +291,10 @@ export async function importIranHolidaysAction(
   }
 
   redirectToAdmin({
-    holidayImported: String(createdCount),
+    holidayCreated: String(syncResult.createdCount),
+    holidayUpdated: String(syncResult.updatedCount),
+    holidayDeleted: String(syncResult.deletedCount),
+    holidayManualPreserved: String(syncResult.preservedManualCount),
     tab: "schedule",
     view: "exceptions",
   });

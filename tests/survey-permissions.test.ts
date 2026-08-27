@@ -8,7 +8,6 @@ import {
   canCreateSurvey,
   canEditSurveyDraft,
   canManageSurveyAccess,
-  canParticipate,
   canPerformLifecycleAction,
   canSendSurveyReminder,
   canViewSurveyResults,
@@ -227,4 +226,3 @@ test("reminders require a manager and an active survey", () => {
   assert.equal(canSendSurveyReminder(admin, "DRAFT"), false);
   assert.equal(canSendSurveyReminder(collaborator, "ACTIVE"), false);
 });
-

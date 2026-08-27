@@ -15,7 +15,10 @@ type AdminPageProps = {
     exceptionCreated?: string;
     exceptionDeleted?: string;
     exceptionUpdated?: string;
-    holidayImported?: string;
+    holidayCreated?: string;
+    holidayUpdated?: string;
+    holidayDeleted?: string;
+    holidayManualPreserved?: string;
     memberAdded?: string;
     passwordReset?: string;
     poolUpdated?: string;
@@ -45,6 +48,24 @@ export function getAdminToast(params: Awaited<AdminPageProps["searchParams"]>) {
     };
   }
 
+  const hasHolidaySyncResult =
+    params?.holidayCreated !== undefined ||
+    params?.holidayUpdated !== undefined ||
+    params?.holidayDeleted !== undefined ||
+    params?.holidayManualPreserved !== undefined;
+  const holidaySyncMessage = hasHolidaySyncResult
+    ? [
+        `${params?.holidayCreated ?? "0"} مورد افزوده شد`,
+        `${params?.holidayUpdated ?? "0"} مورد اصلاح شد`,
+        `${params?.holidayDeleted ?? "0"} مورد قدیمی حذف شد`,
+        Number(params?.holidayManualPreserved ?? "0") > 0
+          ? `${params?.holidayManualPreserved} استثنای دستی بدون تغییر حفظ شد`
+          : null,
+      ]
+        .filter(Boolean)
+        .join("، ") + "."
+    : null;
+
   const successMessage =
     (params?.poolUpdated && "Resource pool settings updated.") ||
     (params?.reservationPolicyUpdated && "Reservation policy updated.") ||
@@ -55,8 +76,7 @@ export function getAdminToast(params: Awaited<AdminPageProps["searchParams"]>) {
     (params?.exceptionCreated && "استثنای تقویم ثبت شد.") ||
     (params?.exceptionUpdated && "تغییرات استثناها ذخیره شد.") ||
     (params?.exceptionDeleted && "استثنای تقویم حذف شد.") ||
-    (params?.holidayImported &&
-      `${params.holidayImported} تعطیلی رسمی وارد شد.`) ||
+    holidaySyncMessage ||
     (params?.memberAdded && "کاربر به تیم اضافه شد.") ||
     (params?.userCreated && "User created.") ||
     (params?.userDeleted && "User deleted.") ||
@@ -78,7 +98,10 @@ export function getAdminToast(params: Awaited<AdminPageProps["searchParams"]>) {
       "exceptionCreated",
       "exceptionUpdated",
       "exceptionDeleted",
-      "holidayImported",
+      "holidayCreated",
+      "holidayUpdated",
+      "holidayDeleted",
+      "holidayManualPreserved",
       "memberAdded",
       "userCreated",
       "userDeleted",

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { ArrowDown, ArrowUp, ChevronDown, GitBranch, Plus, Shuffle, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, GitBranch, Plus, Trash2 } from "lucide-react";
 import type { SurveyConditionOperator, SurveyQuestionType } from "@prisma/client";
 
 import { FieldLabel } from "@/app/admin/_components/admin-form-fields";
@@ -1432,9 +1432,6 @@ function BranchingSection({
   }, [sourceQuestionId, allQuestions]);
 
   const earlierChoiceQuestions = useMemo(() => {
-    const currentIdx = allQuestions.findIndex(
-      (q) => q.id === currentQuestion.id,
-    );
     return allQuestions
       .filter(
         (q) =>

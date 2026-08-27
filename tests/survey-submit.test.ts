@@ -874,7 +874,7 @@ test("S21 submit: rejects empty array for required multi-choice", async () => {
 // ──────────────────────────────────────────────
 
 test("S21 submit: requires conditional question when visible", async () => {
-  const { survey, qSource, optYes, qTarget } =
+  const { survey, qSource, optYes } =
     await createActiveSurveyWithConditionalQuestion();
 
   await assert.rejects(
@@ -1000,7 +1000,7 @@ test("S21 submit: already submitted cannot submit again", async () => {
 // ──────────────────────────────────────────────
 
 test("S21 submit: failed validation writes nothing", async () => {
-  const { survey, qText, qChoice, qMulti } =
+  const { survey, qText } =
     await createActiveNamedSurveyWithQuestions();
 
   const responsesBefore = await db.surveyResponse.count({
@@ -1219,7 +1219,12 @@ test("S21 submit: creates content-free audit event", async () => {
     take: 1,
   });
 
+  const auditAfter = await db.auditLog.count({
+    where: { entityId: survey.id, action: "SURVEY_RESPONSE_SUBMITTED" },
+  });
+
   assert.equal(auditLogs.length, 1);
+  assert.equal(auditAfter, auditBefore + 1);
   const auditLog = auditLogs[0];
 
   // Actor is the submitting user
@@ -1641,7 +1646,7 @@ test("S22 submit: rejects already-submitted recipient", async () => {
 // ──────────────────────────────────────────────
 
 test("S22 submit: anonymous submission validates required questions", async () => {
-  const { survey, qText, qChoice } =
+  const { survey, qChoice } =
     await createActiveAnonymousSurveyWithQuestions();
 
   // Missing required text question

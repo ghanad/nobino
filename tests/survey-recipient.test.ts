@@ -6,7 +6,6 @@ import {
   SurveyIdentityMode,
   SurveyKind,
   SurveyQuestionType,
-  SurveyState,
 } from "@prisma/client";
 
 import {

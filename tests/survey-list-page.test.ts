@@ -1,13 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { SurveyAudienceMode, SurveyIdentityMode, SurveyKind, SurveyQuestionType, SurveyState } from "@prisma/client";
+import { SurveyAudienceMode, SurveyIdentityMode, SurveyKind, SurveyQuestionType } from "@prisma/client";
 
 import {
   adminId,
   db,
   registerBusinessRuleTestHooks,
-  secondUserId,
   userId,
 } from "./business-rules-helpers";
 import {
@@ -17,7 +16,6 @@ import {
   updateSurveyMetadata,
 } from "@/lib/survey-service/metadata";
 import { groupSurveyNavigation } from "@/lib/survey-list";
-import { SurveyServiceError } from "@/lib/survey-service/shared";
 import { getSurveyDisplayState } from "@/lib/survey-status";
 
 registerBusinessRuleTestHooks();
@@ -338,4 +336,3 @@ test("survey list page: non-admin non-creator user sees only respondent surveys"
   const respondentList = await listRespondentSurveys({ actorUserId: userId });
   assert.ok(respondentList.some((s) => s.id === survey.id));
 });
-
