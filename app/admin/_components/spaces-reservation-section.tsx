@@ -28,7 +28,16 @@ const items = [
       { href: "/admin/desks?view=policy", key: "desks-policy", label: "سیاست رزرو میز" },
     ],
   },
-  { href: "/admin/calendar", label: "تقویم و تعطیلی‌ها", icon: "calendar" },
+  {
+    href: "/admin/calendar",
+    label: "تقویم و تعطیلی‌ها",
+    icon: "calendar",
+    children: [
+      { href: "/admin/calendar", key: "calendar-special-days", label: "روزهای خاص" },
+      { href: "/admin/calendar?view=exceptions", key: "calendar-holidays", label: "تعطیلات رسمی" },
+      { href: "/admin/calendar?view=weekly", key: "calendar-weekly", label: "برنامه هفتگی" },
+    ],
+  },
 ] as const;
 
 export function SpacesReservationSectionShell({

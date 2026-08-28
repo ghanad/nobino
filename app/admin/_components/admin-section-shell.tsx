@@ -130,6 +130,11 @@ function getDeskViewFromSearchParams(searchParams: URLSearchParams): string {
   return "desks";
 }
 
+function getCalendarViewFromSearchParams(searchParams: URLSearchParams): string {
+  const view = searchParams.get("view");
+  return view === "weekly" || view === "exceptions" ? view : "special-days";
+}
+
 export function AdminSectionShell({
   activeKey,
   children,
@@ -143,10 +148,12 @@ export function AdminSectionShell({
   const searchParams = useSearchParams();
   const isMeetingRoomsPath = pathname === "/admin/meeting-rooms" || pathname.startsWith("/admin/meeting-rooms/");
   const isDesksPath = pathname === "/admin/desks" || pathname.startsWith("/admin/desks/");
+  const isCalendarPath = pathname === "/admin/calendar" || pathname.startsWith("/admin/calendar/");
   const currentRoomId = getRoomIdFromSearchParams(searchParams);
   const currentView = getViewFromSearchParams(searchParams);
   const currentBuildingId = getBuildingIdFromSearchParams(searchParams);
   const currentDeskView = getDeskViewFromSearchParams(searchParams);
+  const currentCalendarView = getCalendarViewFromSearchParams(searchParams);
 
   function meetingRoomsSubHref(view: string) {
     const params = new URLSearchParams();
@@ -163,6 +170,10 @@ export function AdminSectionShell({
     return `/admin/desks?${params.toString()}`;
   }
 
+  function calendarSubHref(view: string) {
+    return view === "special-days" ? "/admin/calendar" : `/admin/calendar?view=${view}`;
+  }
+
   return (
     <div className="grid gap-6" dir="rtl">
       <PageHeader subtitle={subtitle} title={title} />
@@ -177,7 +188,8 @@ export function AdminSectionShell({
                   : isPathActive(pathname, item.href);
                 const isExpandedMR = hasNested && isMeetingRoomsPath && item.href === "/admin/meeting-rooms";
                 const isExpandedDesks = hasNested && isDesksPath && item.href === "/admin/desks";
-                const isExpanded = isExpandedMR || isExpandedDesks;
+                const isExpandedCalendar = hasNested && isCalendarPath && item.href === "/admin/calendar";
+                const isExpanded = isExpandedMR || isExpandedDesks || isExpandedCalendar;
 
                 if (isExpanded && item.children) {
                   return (
@@ -203,6 +215,10 @@ export function AdminSectionShell({
                             else if (child.key === "desks-schedule") { resolvedHref = desksSubHref("schedule"); childActive = currentDeskView === "schedule"; }
                             else if (child.key === "desks-exceptions") { resolvedHref = desksSubHref("exceptions"); childActive = currentDeskView === "exceptions"; }
                             else if (child.key === "desks-policy") { resolvedHref = desksSubHref("policy"); childActive = currentDeskView === "policy"; }
+                          } else if (isExpandedCalendar) {
+                            if (child.key === "calendar-special-days") { resolvedHref = calendarSubHref("special-days"); childActive = currentCalendarView === "special-days"; }
+                            else if (child.key === "calendar-holidays") { resolvedHref = calendarSubHref("exceptions"); childActive = currentCalendarView === "exceptions"; }
+                            else if (child.key === "calendar-weekly") { resolvedHref = calendarSubHref("weekly"); childActive = currentCalendarView === "weekly"; }
                           }
 
                           return (
