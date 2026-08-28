@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, LayoutGrid, MoreHorizontal, Pencil, Plus, Save, Trash2, X } from "lucide-react";
+import { Building2, ChevronDown, LayoutGrid, MoreHorizontal, Pencil, Plus, Save, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useState } from "react";
@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 /* ------------------------------------------------------------------ */
 
 const inputClass =
-  "h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm text-slate-900 outline-none ring-offset-background transition placeholder:text-slate-400 hover:border-slate-400 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring";
+  "h-9 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm text-slate-900 outline-none ring-offset-background transition placeholder:text-slate-400 hover:border-slate-400 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring";
 
 function StatusPill({
   children,
@@ -32,7 +32,7 @@ function StatusPill({
   return (
     <span
       className={cn(
-        "inline-flex h-6 items-center rounded-full border px-2.5 text-xs font-medium",
+        "inline-flex h-5 items-center rounded-full border px-2 text-[11px] font-medium",
         active
           ? "border-emerald-200 bg-emerald-50 text-emerald-700"
           : "border-slate-200 bg-slate-50 text-slate-500",
@@ -51,7 +51,7 @@ function Field({
   label: string;
 }) {
   return (
-    <label className="grid min-w-0 gap-1.5 text-sm font-medium text-slate-700">
+    <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700">
       {label}
       {children}
     </label>
@@ -68,7 +68,7 @@ function ToggleSwitch({
   name: string;
 }) {
   return (
-    <label className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border bg-slate-50/70 px-3.5 py-2.5 text-sm transition hover:border-blue-200">
+    <label className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border bg-slate-50/70 px-3 py-2 text-sm transition hover:border-blue-200">
       <span className="font-medium text-slate-800">{label}</span>
       <span className="relative inline-flex shrink-0">
         <input
@@ -91,29 +91,22 @@ function ToggleSwitch({
 
 export function CreateBuildingSection({ defaultSortOrder }: { defaultSortOrder: number }) {
   return (
-    <section className="overflow-hidden rounded-xl border bg-card shadow-sm">
+    <section className="overflow-hidden rounded-lg border bg-card">
       <details className="group">
-        <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-4 outline-none [&::-webkit-details-marker]:hidden">
-          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
-            <Plus className="h-5 w-5" />
+        <summary className="flex cursor-pointer list-none items-center gap-2.5 px-4 py-2.5 outline-none [&::-webkit-details-marker]:hidden">
+          <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-600 transition-colors group-hover:bg-blue-100">
+            <Plus className="h-4 w-4" />
           </span>
-          <div className="grid flex-1 gap-1">
-            <span className="text-lg font-semibold">ساختمان جدید</span>
-            <span className="text-xs text-muted-foreground">
-              پس از ساخت، میزها و مجموعه‌های سیستم را به این ساختمان متصل کنید.
-            </span>
-          </div>
-          <span className="hidden text-sm text-primary group-open:hidden sm:inline">
-            کلیک برای باز کردن
+          <span className="text-sm font-medium text-slate-700">ساختمان جدید</span>
+          <span className="text-xs text-muted-foreground">
+            ساختمان جدید تعریف کنید و سپس میزها و سرویس‌های مرتبط را به آن متصل کنید.
           </span>
-          <span className="hidden text-sm text-muted-foreground group-open:sm:inline">
-            کلیک برای بستن
-          </span>
+          <ChevronDown className="mr-auto h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
         </summary>
 
         <AdminDeskForm
           action={createBuildingAction}
-          className="grid gap-4 border-t px-5 pb-5 pt-4 md:grid-cols-[minmax(0,1fr)_180px_auto] md:items-end"
+          className="grid gap-3 border-t px-4 pb-4 pt-3 md:grid-cols-[minmax(0,1fr)_140px_auto] md:items-end"
           resetOnSuccess
         >
           <Field label="نام ساختمان">
@@ -136,7 +129,7 @@ export function CreateBuildingSection({ defaultSortOrder }: { defaultSortOrder: 
               type="number"
             />
           </Field>
-          <SubmitButton className="w-full md:w-auto" pendingLabel="در حال ایجاد">
+          <SubmitButton className="w-full md:w-auto" pendingLabel="در حال ایجاد" size="sm">
             <Plus className="h-4 w-4" />
             ایجاد ساختمان
           </SubmitButton>
@@ -255,30 +248,34 @@ function BuildingRow({
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
+  const metadata = [
+    `${building._count.desks} میز`,
+    `${building._count.resourcePools} مجموعه سیستم`,
+    `${building._count.lunchReservations} رزرو غذا`,
+  ].join(" · ");
+
   return (
     <>
       <div className="group/building">
         {/* Collapsed row */}
         {!isEditing ? (
-          <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex min-w-0 items-start gap-3">
-              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
-                <Building2 className="h-5 w-5" />
+          <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-slate-50 text-slate-400">
+                <Building2 className="h-4 w-4" />
               </span>
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="truncate font-semibold">{building.name}</h3>
+                  <h3 className="truncate text-sm font-semibold text-slate-900">{building.name}</h3>
                   <StatusPill active={building.active}>
                     {building.active ? "فعال" : "غیرفعال"}
                   </StatusPill>
                 </div>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  {building._count.desks} میز · {building._count.resourcePools} مجموعه سیستم · {building._count.lunchReservations} رزرو غذا
-                </p>
+                <p className="mt-0.5 text-xs leading-5 text-slate-500">{metadata}</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <Button asChild size="sm" variant="outline">
                 <Link href={`/admin/desks?buildingId=${encodeURIComponent(building.id)}`}>
                   <LayoutGrid className="h-4 w-4" />
@@ -287,20 +284,23 @@ function BuildingRow({
               </Button>
               <Button
                 onClick={() => setIsEditing(true)}
-                size="sm"
+                size="icon"
                 type="button"
                 variant="ghost"
+                className="h-9 w-9 text-slate-400 hover:text-slate-600"
               >
                 <Pencil className="h-4 w-4" />
-                ویرایش
+                <span className="sr-only">ویرایش</span>
               </Button>
               <Button
                 onClick={() => setIsDeleteOpen(true)}
                 size="icon"
                 type="button"
                 variant="ghost"
+                className="h-9 w-9 text-slate-400 hover:text-slate-600"
               >
                 <MoreHorizontal className="h-4 w-4" />
+                <span className="sr-only">اقدامات بیشتر</span>
               </Button>
             </div>
           </div>
@@ -308,7 +308,7 @@ function BuildingRow({
           /* Expanded edit area */
           <AdminDeskForm
             action={updateBuildingAction}
-            className="grid gap-4 px-5 pb-5 pt-4 lg:grid-cols-[minmax(0,1fr)_160px_220px_auto] lg:items-end"
+            className="grid gap-3 px-4 pb-4 pt-3 lg:grid-cols-[minmax(0,1fr)_140px_200px_auto] lg:items-end"
           >
             <input name="buildingId" type="hidden" value={building.id} />
             <Field label="نام ساختمان">
