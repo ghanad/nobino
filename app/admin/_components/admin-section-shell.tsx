@@ -78,11 +78,13 @@ function NavItem({
   href,
   icon,
   label,
+  subtle,
 }: {
   active: boolean;
   href: string;
   icon?: AdminSectionIcon;
   label: string;
+  subtle?: boolean;
 }) {
   const Icon = icon ? icons[icon] : null;
 
@@ -91,9 +93,11 @@ function NavItem({
       aria-current={active ? "page" : undefined}
       className={cn(
         "flex h-11 min-w-0 items-center justify-start gap-2 rounded-md border px-3 py-2 text-right text-sm font-medium leading-5 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
-        active
+        active && !subtle
           ? "border-border bg-card text-slate-950"
-          : "border-transparent text-slate-600 hover:bg-card/70 hover:text-slate-950",
+          : active && subtle
+            ? "border-border/50 bg-card/50 text-slate-700"
+            : "border-transparent text-slate-600 hover:bg-card/70 hover:text-slate-950",
       )}
       href={href}
     >
@@ -183,6 +187,7 @@ export function AdminSectionShell({
                         href={item.href}
                         icon={item.icon}
                         label={item.label}
+                        subtle
                       />
                       <div className="mr-2.5 mt-0.5 grid gap-0.5 border-r border-slate-200 pr-1.5">
                         {item.children.map((child) => {
