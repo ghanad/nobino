@@ -63,14 +63,14 @@ export function GeneralSettingsForm({
         <div
           aria-live="polite"
           className={cn(
-            "sticky bottom-3 z-20 flex flex-col gap-3 rounded-xl border bg-background/95 p-3 shadow-lg backdrop-blur sm:flex-row sm:items-center sm:justify-start sm:gap-4",
+            "sticky bottom-3 z-20 flex flex-col gap-3 rounded-xl border bg-background/95 p-3 shadow-lg backdrop-blur sm:flex-row sm:items-center sm:justify-between",
             isDirty ? "border-blue-200" : "border-slate-200",
           )}
         >
           <p className={cn("text-sm font-medium", isDirty ? "text-slate-800" : "text-slate-500")}>
             {isDirty ? "تغییرات ذخیره‌نشده دارید" : "همه تغییرات ذخیره شده‌اند"}
           </p>
-          <div className="flex gap-2 sm:border-r sm:pr-4">
+          <div className="flex gap-2">
             <Button
               className="flex-1 sm:flex-none"
               disabled={!isDirty}
@@ -95,13 +95,12 @@ export function GeneralSettingsForm({
           </div>
         </div>
       </form>
-      <div className="border-t border-red-100 px-4 py-5 sm:px-5">
-        <div className="flex flex-col gap-4 rounded-lg border border-red-200 bg-red-50/50 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="border-t px-4 py-4 sm:px-5">
+        <div className="flex flex-col gap-2 rounded-lg border border-red-200 bg-red-50/50 p-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 className="text-sm font-semibold text-slate-800">حذف اتاق</h3>
-            <p className="mt-1 text-xs leading-5 text-slate-600">
-              با حذف اتاق، برنامه هفتگی، استثناها و تنظیمات مرتبط با آن نیز حذف
-              می‌شوند. این عملیات قابل بازگشت نیست.
+            <p className="text-xs text-slate-600">
+              با حذف اتاق، برنامه هفتگی، استثناها و تنظیمات مرتبط حذف می‌شوند.
             </p>
           </div>
           <DeleteMeetingRoomButton action={deleteAction} roomId={roomId} roomName={roomName} />

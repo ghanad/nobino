@@ -4,7 +4,6 @@ import {
   ChevronDown,
   Clock3,
   DoorOpen,
-  MapPin,
   Plus,
   Save,
   Settings2,
@@ -132,7 +131,7 @@ function StatusPill({
   return (
     <span
       className={cn(
-        "inline-flex h-7 items-center rounded-full border px-3 text-xs font-medium",
+        "inline-flex h-6 items-center rounded-full border px-2.5 text-xs font-medium",
         tone === "good" && "border-emerald-200 bg-emerald-50 text-emerald-700",
         tone === "muted" && "border-slate-200 bg-slate-50 text-slate-500",
         tone === "neutral" && "border-blue-200 bg-blue-50 text-blue-700",
@@ -170,12 +169,12 @@ function ToggleSwitch({
   name: string;
 }) {
   return (
-    <label className="group flex min-h-24 cursor-pointer items-start justify-between gap-4 rounded-lg border bg-background p-4 text-sm transition-colors hover:border-blue-200 hover:bg-blue-50/30">
-      <span className="grid gap-1.5">
-        <span className="font-medium text-slate-800">{label}</span>
-        <span className="text-xs leading-5 text-muted-foreground">{description}</span>
+    <label className="flex cursor-pointer items-center justify-between gap-3 py-1">
+      <span className="grid gap-0.5">
+        <span className="text-sm font-medium text-slate-800">{label}</span>
+        <span className="text-xs text-muted-foreground">{description}</span>
       </span>
-      <span className="relative mt-0.5 inline-flex shrink-0">
+      <span className="relative inline-flex shrink-0">
         <input
           className="peer sr-only"
           defaultChecked={defaultChecked}
@@ -183,8 +182,8 @@ function ToggleSwitch({
           role="switch"
           type="checkbox"
         />
-        <span className="h-6 w-11 rounded-full bg-slate-300 transition-colors peer-checked:bg-primary peer-focus-visible:ring-2 peer-focus-visible:ring-primary peer-focus-visible:ring-offset-2 peer-disabled:cursor-not-allowed peer-disabled:opacity-50" />
-        <span className="pointer-events-none absolute right-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform peer-checked:-translate-x-5" />
+        <span className="h-5 w-9 rounded-full bg-slate-300 transition-colors peer-checked:bg-primary peer-focus-visible:ring-2 peer-focus-visible:ring-primary peer-focus-visible:ring-offset-2" />
+        <span className="pointer-events-none absolute right-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform peer-checked:-translate-x-4" />
       </span>
     </label>
   );
@@ -284,7 +283,7 @@ function NewMeetingRoomForm({ defaultSortOrder }: { defaultSortOrder: number }) 
           </div>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-2 rounded-lg border bg-muted/30 px-4 py-3">
           <ToggleSwitch defaultChecked description="اتاق فعال در صفحه رزرو کاربران نمایش داده می‌شود." label="اتاق فعال باشد" name="isActive" />
           <ToggleSwitch description="درخواست پس از مدت انتظار و فقط در صورت وجود ظرفیت تأیید می‌شود." label="تأیید خودکار درخواست‌ها" name="autoApprovalEnabled" />
         </div>
@@ -391,10 +390,6 @@ export default async function AdminMeetingRoomsPage({
   const selectedRoom =
     rooms.find((room) => room.id === params?.roomId) ?? rooms[0] ?? null;
   const currentDateParam = formatJalaliDateParam(new Date());
-  const activeRoomsCount = rooms.filter((room) => room.isActive).length;
-  const autoApprovedRoomsCount = rooms.filter(
-    (room) => room.autoApprovalEnabled,
-  ).length;
   const activeView = getMeetingRoomView(params?.view);
   const isCreatingRoom = params?.view === "new" || rooms.length === 0;
   const defaultSortOrder =
@@ -410,18 +405,12 @@ export default async function AdminMeetingRoomsPage({
     <SpacesReservationSectionShell>
       <PageHeader
         actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusPill tone="good">{activeRoomsCount} اتاق فعال</StatusPill>
-            <StatusPill>
-              {autoApprovedRoomsCount} اتاق با تأیید خودکار
-            </StatusPill>
-            <Button asChild size="sm">
-              <Link href="/admin/meeting-rooms?view=new">
-                <Plus className="h-4 w-4" />
-                اتاق جدید
-              </Link>
-            </Button>
-          </div>
+          <Button asChild size="sm">
+            <Link href="/admin/meeting-rooms?view=new">
+              <Plus className="h-4 w-4" />
+              اتاق جدید
+            </Link>
+          </Button>
         }
         subtitle="یک اتاق را انتخاب کنید و مشخصات، برنامه هفتگی و استثناهای آن را تنظیم کنید."
         title="اتاق‌های جلسه"
@@ -429,107 +418,91 @@ export default async function AdminMeetingRoomsPage({
 
       {toast ? <UrlToast {...toast} /> : null}
 
-      <section className={cn(panelClass, "p-4")}>
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-          <div className="grid min-w-fit gap-0.5">
-            <div className="flex items-center gap-2">
-              <h2 className="text-base font-semibold">انتخاب اتاق</h2>
-              <StatusPill tone="muted">{rooms.length} اتاق</StatusPill>
-            </div>
-            <p className="text-xs text-slate-600">
-              تنظیمات هر اتاق مستقل است؛ برای ادامه یکی را انتخاب کنید.
-            </p>
-          </div>
-        {rooms.length === 0 ? (
-          <div className="m-4 grid justify-items-center gap-3 rounded-lg border border-dashed bg-muted/20 p-6 text-center">
-            <DoorOpen className="h-8 w-8 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
-              هنوز اتاقی تعریف نشده است؛ فرم ساخت اولین اتاق در ادامه آماده است.
-            </p>
-          </div>
-        ) : (
-          <MeetingRoomPicker
-            rooms={rooms.map((room) => ({
-              id: room.id,
-              isActive: room.isActive,
-              location: room.location,
-              name: room.name,
-            }))}
-            selectedRoomId={
-              isCreatingRoom ? undefined : (selectedRoom?.id ?? undefined)
-            }
-            view={activeView}
-          />
-        )}
-        </div>
-      </section>
-
-      {isCreatingRoom ? (
-        <NewMeetingRoomForm defaultSortOrder={defaultSortOrder} />
-      ) : selectedRoom ? (
-        <main className="grid min-w-0 gap-6">
-          <section className={cn(panelClass, "min-w-0")}>
-            <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center">
-              <div className="grid gap-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <DoorOpen className="h-5 w-5 text-primary" />
-                  <h2 className="text-lg font-semibold">{selectedRoom.name}</h2>
-                  <StatusPill tone={selectedRoom.isActive ? "good" : "muted"}>
-                    {selectedRoom.isActive ? "فعال" : "غیرفعال"}
-                  </StatusPill>
-                  {selectedRoom.autoApprovalEnabled ? (
-                    <StatusPill>تأیید خودکار</StatusPill>
-                  ) : null}
-                </div>
-                <p className="flex items-center gap-1 text-xs text-slate-600">
-                  <MapPin className="h-[18px] w-[18px]" strokeWidth={1.8} />
-                  {selectedRoom.location || "موقعیت ثبت نشده است"}
+      <section className={panelClass}>
+        <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            <h2 className="text-base font-semibold shrink-0">انتخاب اتاق</h2>
+            {rooms.length === 0 ? (
+              <div className="grid justify-items-center gap-3 rounded-lg border border-dashed bg-muted/20 p-6 text-center">
+                <DoorOpen className="h-8 w-8 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  هنوز اتاقی تعریف نشده است؛ فرم ساخت اولین اتاق در ادامه آماده است.
                 </p>
               </div>
-              <div className="flex flex-wrap items-center gap-2 sm:mr-2">
-                <form action={setMeetingRoomActiveStatusAction}>
-                  <input name="roomId" type="hidden" value={selectedRoom.id} />
-                  <input
-                    name="isActive"
-                    type="hidden"
-                    value={selectedRoom.isActive ? "false" : "true"}
-                  />
-                  <Button size="sm" type="submit" variant="outline">
-                    <Power className="h-4 w-4" />
-                    {selectedRoom.isActive ? "غیرفعال کردن" : "فعال کردن"}
-                  </Button>
-                </form>
-              </div>
+            ) : (
+              <MeetingRoomPicker
+                rooms={rooms.map((room) => ({
+                  id: room.id,
+                  isActive: room.isActive,
+                  location: room.location,
+                  name: room.name,
+                }))}
+                selectedRoomId={
+                  isCreatingRoom ? undefined : (selectedRoom?.id ?? undefined)
+                }
+                view={activeView}
+              />
+            )}
+          </div>
+          {selectedRoom && !isCreatingRoom ? (
+            <div className="flex items-center gap-2 shrink-0">
+              <form action={setMeetingRoomActiveStatusAction}>
+                <input name="roomId" type="hidden" value={selectedRoom.id} />
+                <input
+                  name="isActive"
+                  type="hidden"
+                  value={selectedRoom.isActive ? "false" : "true"}
+                />
+                <Button size="sm" type="submit" variant="outline">
+                  <Power className="h-4 w-4" />
+                  {selectedRoom.isActive ? "غیرفعال کردن" : "فعال کردن"}
+                </Button>
+              </form>
+            </div>
+          ) : null}
+        </div>
+
+        {selectedRoom && !isCreatingRoom ? (
+          <>
+            <div className="flex items-center gap-2 px-5 pb-1">
+              <DoorOpen className="h-5 w-5 text-primary shrink-0" />
+              <h2 className="text-lg font-semibold truncate">{selectedRoom.name}</h2>
+              <StatusPill tone={selectedRoom.isActive ? "good" : "muted"}>
+                {selectedRoom.isActive ? "فعال" : "غیرفعال"}
+              </StatusPill>
+              {selectedRoom.location ? (
+                <>
+                  <span className="text-slate-300">·</span>
+                  <span className="text-sm text-slate-600 truncate">{selectedRoom.location}</span>
+                </>
+              ) : null}
             </div>
             <MeetingRoomViewNavigation
               activeView={activeView}
               exceptionCount={selectedRoom.exceptions.length}
               roomId={selectedRoom.id}
             />
-          </section>
+          </>
+        ) : null}
+      </section>
 
+      {isCreatingRoom ? (
+        <NewMeetingRoomForm defaultSortOrder={defaultSortOrder} />
+      ) : selectedRoom ? (
+        <main className="grid min-w-0 gap-6">
           {activeView === "details" ? (
             <section className={cn(panelClass, "min-w-0")}>
-              <div className={panelHeaderClass}>
-                <div className="flex items-start gap-3">
-                  <Settings2 className="mt-0.5 h-5 w-5 text-primary" />
-                  <div className="grid gap-1">
-                    <h2 className="text-base font-semibold">
-                      تنظیمات عمومی اتاق
-                    </h2>
-                    <p className="text-xs text-slate-600">
-                      اطلاعات اتاق، وضعیت نمایش و نحوه تأیید رزروها را مدیریت کنید.
-                    </p>
-                  </div>
-                </div>
-              </div>
               <GeneralSettingsForm
                 deleteAction={deleteMeetingRoomAction}
                 roomId={selectedRoom.id}
                 roomName={selectedRoom.name}
                 updateAction={updateMeetingRoomAction}
               >
-                <div className="grid gap-6 md:grid-cols-2">
+                <div className="grid gap-1">
+                  <h3 className="text-sm font-semibold text-slate-800">مشخصات اتاق</h3>
+                  <p className="text-xs text-muted-foreground">نام، موقعیت و اطلاعات پایه اتاق جلسه.</p>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
                   <Field label="نام">
                     <input
                       className={inputClass}
@@ -567,28 +540,36 @@ export default async function AdminMeetingRoomsPage({
                       type="number"
                     />
                   </Field>
+                </div>
+
+                <div className="grid gap-1">
+                  <h3 className="text-sm font-semibold text-slate-800">تنظیمات رزرو</h3>
+                  <p className="text-xs text-muted-foreground">وضعیت نمایش و نحوه تأیید رزروها.</p>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
                   <DurationField defaultValue={selectedRoom.autoApprovalDelayHours} />
                 </div>
-                <div className="grid gap-3 rounded-md bg-muted/40 p-4">
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <ToggleSwitch defaultChecked={selectedRoom.isActive} description="اتاق غیرفعال در صفحه رزرو کاربران نمایش داده نمی‌شود." label="فعال بودن اتاق" name="isActive" />
-                    <div className="grid min-h-24 gap-3 rounded-lg border bg-background p-4 text-sm">
-                      <ToggleSwitch defaultChecked={selectedRoom.autoApprovalEnabled} description="درخواست‌های جدید پس از مدت انتظار و فقط در صورت وجود ظرفیت تأیید می‌شوند. درخواست‌های در انتظار قبلی تغییر نمی‌کنند." label="تأیید خودکار درخواست‌ها" name="autoApprovalEnabled" />
-                      <details className="group border-t text-xs text-muted-foreground">
-                        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between rounded-md px-2 font-medium text-slate-700 outline-none transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-primary [&::-webkit-details-marker]:hidden">
-                          <span>جزئیات فنی پردازش زمان‌دار</span>
-                          <ChevronDown className="h-[18px] w-[18px] transition-transform group-open:rotate-180" />
-                        </summary>
-                        <code className="block break-all px-2 pb-2 pt-1" dir="ltr">
-                          /api/internal/reservations/auto-accept
-                        </code>
-                      </details>
-                    </div>
-                  </div>
+                <div className="grid gap-2 rounded-lg border bg-muted/30 px-4 py-3">
+                  <ToggleSwitch defaultChecked={selectedRoom.isActive} description="اتاق غیرفعال در صفحه رزرو نمایش داده نمی‌شود." label="فعال بودن اتاق" name="isActive" />
+                  <ToggleSwitch defaultChecked={selectedRoom.autoApprovalEnabled} description="درخواست‌های جدید پس از مدت انتظار و فقط در صورت وجود ظرفیت تأیید می‌شوند." label="تأیید خودکار درخواست‌ها" name="autoApprovalEnabled" />
                 </div>
+
+                <details className="group">
+                  <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-semibold text-slate-800 outline-none [&::-webkit-details-marker]:hidden">
+                    <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
+                    تنظیمات پیشرفته
+                  </summary>
+                  <div className="mt-3 rounded-lg border bg-muted/30 p-4">
+                    <p className="mb-2 text-xs text-muted-foreground">
+                      مسیر endpoint پردازش زمان‌دار برای تأیید خودکار:
+                    </p>
+                    <code className="block break-all rounded bg-slate-100 px-3 py-2 text-xs" dir="ltr">
+                      /api/internal/reservations/auto-accept
+                    </code>
+                  </div>
+                </details>
               </GeneralSettingsForm>
             </section>
-
           ) : null}
 
           {activeView === "schedule" ? (
@@ -702,7 +683,6 @@ export default async function AdminMeetingRoomsPage({
                 </div>
               </form>
             </section>
-
           ) : null}
 
           {activeView === "exceptions" ? (
@@ -869,8 +849,8 @@ export default async function AdminMeetingRoomsPage({
               </div>
             </section>
           ) : null}
-          </main>
-        ) : null}
+        </main>
+      ) : null}
     </SpacesReservationSectionShell>
   );
 }
