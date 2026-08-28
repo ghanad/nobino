@@ -113,8 +113,8 @@ export default async function WikiAiAdminPage({
                 نشانی سرویس و مدل مورد استفاده دستیار را مشخص کنید.
               </p>
             </div>
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(13rem,1fr)]">
-              <label className="grid min-w-0 gap-1.5 text-sm font-medium text-slate-800">
+            <div className="grid gap-4 lg:grid-cols-2">
+              <label className="grid content-start min-w-0 gap-1.5 text-sm font-medium text-slate-800">
                 نشانی پایه سرویس
                 <input
                   className={inputClassName}
@@ -131,7 +131,7 @@ export default async function WikiAiAdminPage({
                 </span>
               </label>
 
-              <label className="grid min-w-0 gap-1.5 text-sm font-medium text-slate-800">
+              <label className="grid content-start min-w-0 gap-1.5 text-sm font-medium text-slate-800">
                 نام مدل
                 <input
                 className={inputClassName}
