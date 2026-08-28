@@ -29,14 +29,22 @@ export function GeneralSettingsForm({
   useEffect(() => {
     if (!isDirty) return;
 
-    const warning = "تغییرات ذخیره‌نشده دارید. آیا می‌خواهید بدون ذخیره خارج شوید؟";
+    const warning =
+      "تغییرات ذخیره‌نشده دارید. آیا می‌خواهید بدون ذخیره خارج شوید؟";
     const beforeUnload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
       event.returnValue = warning;
     };
     const followLink = (event: MouseEvent) => {
-      const link = (event.target as HTMLElement).closest<HTMLAnchorElement>("a[href]");
-      if (!link || link.target === "_blank" || link.href === window.location.href) return;
+      const link = (event.target as HTMLElement).closest<HTMLAnchorElement>(
+        "a[href]",
+      );
+      if (
+        !link ||
+        link.target === "_blank" ||
+        link.href === window.location.href
+      )
+        return;
       if (!window.confirm(warning)) event.preventDefault();
     };
 
@@ -52,7 +60,7 @@ export function GeneralSettingsForm({
     <>
       <form
         action={updateAction}
-        className="grid gap-6 p-4 pb-6 sm:p-5"
+        className="grid gap-6 p-5"
         onChange={() => setIsDirty(true)}
         onSubmit={() => setIsDirty(false)}
         ref={formRef}
@@ -60,6 +68,7 @@ export function GeneralSettingsForm({
         <input name="roomId" type="hidden" value={roomId} />
         {children}
 
+        {/* Save bar */}
         <div
           aria-live="polite"
           className={cn(
@@ -67,8 +76,17 @@ export function GeneralSettingsForm({
             isDirty ? "border-blue-200" : "border-slate-200",
           )}
         >
-          <p className={cn("text-sm font-medium", isDirty ? "text-slate-800" : "text-slate-500")}>
-            {isDirty ? "تغییرات ذخیره‌نشده دارید" : "همه تغییرات ذخیره شده‌اند"}
+          <p
+            className={cn(
+              "text-sm",
+              isDirty
+                ? "font-medium text-slate-800"
+                : "text-slate-500",
+            )}
+          >
+            {isDirty
+              ? "تغییرات ذخیره‌نشده دارید"
+              : "همه تغییرات ذخیره شده‌اند"}
           </p>
           <div className="flex gap-2">
             <Button
@@ -81,7 +99,7 @@ export function GeneralSettingsForm({
               type="button"
               variant="outline"
             >
-              <Undo2 className="h-[18px] w-[18px]" />
+              <Undo2 className="h-4 w-4" />
               انصراف
             </Button>
             <SubmitButton
@@ -89,21 +107,27 @@ export function GeneralSettingsForm({
               disabled={!isDirty}
               pendingLabel="در حال ذخیره"
             >
-              <Save className="h-[18px] w-[18px]" />
+              <Save className="h-4 w-4" />
               ذخیره تغییرات
             </SubmitButton>
           </div>
         </div>
       </form>
-      <div className="border-t px-4 py-4 sm:px-5">
-        <div className="flex flex-col gap-2 rounded-lg border border-red-200 bg-red-50/50 p-3 sm:flex-row sm:items-center sm:justify-between">
+
+      {/* Danger zone */}
+      <div className="border-t px-4 py-3 sm:px-5">
+        <div className="flex flex-col gap-2 rounded-lg border border-red-200 bg-red-50/40 p-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 className="text-sm font-semibold text-slate-800">حذف اتاق</h3>
             <p className="text-xs text-slate-600">
               با حذف اتاق، برنامه هفتگی، استثناها و تنظیمات مرتبط حذف می‌شوند.
             </p>
           </div>
-          <DeleteMeetingRoomButton action={deleteAction} roomId={roomId} roomName={roomName} />
+          <DeleteMeetingRoomButton
+            action={deleteAction}
+            roomId={roomId}
+            roomName={roomName}
+          />
         </div>
       </div>
     </>
