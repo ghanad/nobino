@@ -114,6 +114,18 @@ function getRoomIdFromSearchParams(searchParams: URLSearchParams): string | null
   return searchParams.get("roomId");
 }
 
+function getBuildingIdFromSearchParams(searchParams: URLSearchParams): string | null {
+  return searchParams.get("buildingId");
+}
+
+function getDeskViewFromSearchParams(searchParams: URLSearchParams): string {
+  const view = searchParams.get("view");
+  if (view === "schedule" || view === "exceptions" || view === "policy") {
+    return view;
+  }
+  return "desks";
+}
+
 export function AdminSectionShell({
   activeKey,
   children,
@@ -126,14 +138,25 @@ export function AdminSectionShell({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const isMeetingRoomsPath = pathname === "/admin/meeting-rooms" || pathname.startsWith("/admin/meeting-rooms/");
+  const isDesksPath = pathname === "/admin/desks" || pathname.startsWith("/admin/desks/");
   const currentRoomId = getRoomIdFromSearchParams(searchParams);
   const currentView = getViewFromSearchParams(searchParams);
+  const currentBuildingId = getBuildingIdFromSearchParams(searchParams);
+  const currentDeskView = getDeskViewFromSearchParams(searchParams);
 
   function meetingRoomsSubHref(view: string) {
     const params = new URLSearchParams();
     if (currentRoomId) params.set("roomId", currentRoomId);
     params.set("view", view);
     return `/admin/meeting-rooms?${params.toString()}`;
+  }
+
+  function desksSubHref(view: string) {
+    const params = new URLSearchParams();
+    // Policy is global — don't attach a buildingId
+    if (view !== "policy" && currentBuildingId) params.set("buildingId", currentBuildingId);
+    if (view !== "desks") params.set("view", view);
+    return `/admin/desks?${params.toString()}`;
   }
 
   return (
@@ -148,7 +171,9 @@ export function AdminSectionShell({
                 const isActive = activeKey
                   ? item.key === activeKey
                   : isPathActive(pathname, item.href);
-                const isExpanded = hasNested && isMeetingRoomsPath && item.href === "/admin/meeting-rooms";
+                const isExpandedMR = hasNested && isMeetingRoomsPath && item.href === "/admin/meeting-rooms";
+                const isExpandedDesks = hasNested && isDesksPath && item.href === "/admin/desks";
+                const isExpanded = isExpandedMR || isExpandedDesks;
 
                 if (isExpanded && item.children) {
                   return (
@@ -161,14 +186,19 @@ export function AdminSectionShell({
                       />
                       <div className="mr-2.5 mt-0.5 grid gap-0.5 border-r border-slate-200 pr-1.5">
                         {item.children.map((child) => {
-                          const childActive = child.key === `meeting-rooms-${currentView}`;
+                          let childActive = false;
+                          let resolvedHref = child.href;
 
-                          const resolvedHref = (() => {
-                            if (child.key === "meeting-rooms-details") return meetingRoomsSubHref("details");
-                            if (child.key === "meeting-rooms-schedule") return meetingRoomsSubHref("schedule");
-                            if (child.key === "meeting-rooms-exceptions") return meetingRoomsSubHref("exceptions");
-                            return child.href;
-                          })();
+                          if (isExpandedMR) {
+                            if (child.key === "meeting-rooms-details") { resolvedHref = meetingRoomsSubHref("details"); childActive = currentView === "details"; }
+                            else if (child.key === "meeting-rooms-schedule") { resolvedHref = meetingRoomsSubHref("schedule"); childActive = currentView === "schedule"; }
+                            else if (child.key === "meeting-rooms-exceptions") { resolvedHref = meetingRoomsSubHref("exceptions"); childActive = currentView === "exceptions"; }
+                          } else if (isExpandedDesks) {
+                            if (child.key === "desks-list") { resolvedHref = desksSubHref("desks"); childActive = currentDeskView === "desks"; }
+                            else if (child.key === "desks-schedule") { resolvedHref = desksSubHref("schedule"); childActive = currentDeskView === "schedule"; }
+                            else if (child.key === "desks-exceptions") { resolvedHref = desksSubHref("exceptions"); childActive = currentDeskView === "exceptions"; }
+                            else if (child.key === "desks-policy") { resolvedHref = desksSubHref("policy"); childActive = currentDeskView === "policy"; }
+                          }
 
                           return (
                             <Link

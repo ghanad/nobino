@@ -17,8 +17,18 @@ const items = [
     ],
   },
   { href: "/admin/buildings", label: "ساختمان‌ها", icon: "building" },
-  { href: "/admin/desks", label: "میزها", icon: "grid" },
-  { href: "/admin/calendar", label: "زمان‌بندی", icon: "calendar" },
+  {
+    href: "/admin/desks",
+    label: "میزها",
+    icon: "grid",
+    children: [
+      { href: "/admin/desks", key: "desks-list", label: "میزها" },
+      { href: "/admin/desks?view=schedule", key: "desks-schedule", label: "برنامه هفتگی" },
+      { href: "/admin/desks?view=exceptions", key: "desks-exceptions", label: "استثناهای تقویم" },
+      { href: "/admin/desks?view=policy", key: "desks-policy", label: "سیاست رزرو میز" },
+    ],
+  },
+  { href: "/admin/calendar", label: "تقویم و تعطیلی‌ها", icon: "calendar" },
 ] as const;
 
 export function SpacesReservationSectionShell({
