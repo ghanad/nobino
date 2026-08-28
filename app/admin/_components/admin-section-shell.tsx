@@ -159,7 +159,7 @@ export function AdminSectionShell({
                         icon={item.icon}
                         label={item.label}
                       />
-                      <div className="mr-2 mt-0.5 grid gap-0.5">
+                      <div className="mr-2.5 mt-0.5 grid gap-0.5 border-r border-slate-200 pr-1.5">
                         {item.children.map((child) => {
                           const childActive = child.key === `meeting-rooms-${currentView}`;
 
@@ -176,8 +176,8 @@ export function AdminSectionShell({
                               className={cn(
                                 "flex h-9 min-w-0 items-center justify-start gap-2 rounded-md border px-3 py-1.5 text-right text-xs leading-5 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
                                 childActive
-                                  ? "border-border bg-card text-slate-900 font-medium"
-                                  : "border-transparent text-slate-500 hover:bg-card/50 hover:text-slate-800",
+                                  ? "border-primary/20 bg-primary/5 text-primary font-medium"
+                                  : "border-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-800",
                               )}
                               href={resolvedHref}
                               key={child.key}

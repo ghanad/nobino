@@ -34,13 +34,13 @@ export function DeleteMeetingRoomButton({
   return (
     <>
       <Button
-        className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
+        className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
         onClick={() => setIsOpen(true)}
         size="sm"
         type="button"
         variant="outline"
       >
-        <Trash2 className="h-[18px] w-[18px]" />
+        <Trash2 className="h-4 w-4" />
         حذف دائمی اتاق
       </Button>
 

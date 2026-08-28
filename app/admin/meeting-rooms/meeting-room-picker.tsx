@@ -23,7 +23,7 @@ export function MeetingRoomPicker({
   return (
     <form
       action="/admin/meeting-rooms"
-      className="w-full max-w-[220px]"
+      className="w-full max-w-[240px]"
     >
       <input name="view" type="hidden" value={view} />
       <label className="sr-only" htmlFor="roomId">
