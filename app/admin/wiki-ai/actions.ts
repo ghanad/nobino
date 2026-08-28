@@ -8,6 +8,7 @@ import { requireRole } from "@/lib/auth";
 import { AdminSettingsError } from "@/lib/admin-settings-service/shared";
 import {
   resetWikiAiSystemPrompt,
+  setWikiAiEnabled,
   testWikiAiConnection,
   updateWikiAiSettings,
 } from "@/lib/wiki-ai-settings-service";
@@ -20,6 +21,12 @@ const settingsSchema = z.object({
   systemPrompt: z.string().trim().min(1).max(12_000),
   timeoutSeconds: z.coerce.number().int().min(5).max(300),
 });
+
+const enabledSchema = z.boolean();
+
+export type WikiAiEnabledActionState =
+  | { enabled: boolean; message: string; status: "success" }
+  | { message: string; status: "error" };
 
 function parseSettingsForm(formData: FormData) {
   return settingsSchema.safeParse({
@@ -84,6 +91,40 @@ export async function updateWikiAiSettingsAction(
   }
 
   redirectToSettings({ updated: "1" });
+}
+
+export async function updateWikiAiEnabledAction(
+  enabled: unknown,
+): Promise<WikiAiEnabledActionState> {
+  const admin = await requireRole([UserRole.ADMIN]);
+  const parsed = enabledSchema.safeParse(enabled);
+
+  if (!parsed.success) {
+    return {
+      message: "وضعیت دستیار دانش‌نامه معتبر نیست.",
+      status: "error",
+    };
+  }
+
+  try {
+    const settings = await setWikiAiEnabled({
+      adminId: admin.id,
+      enabled: parsed.data,
+    });
+
+    return {
+      enabled: settings.enabled,
+      message: settings.enabled
+        ? "دستیار برای کاربران فعال شد."
+        : "دستیار برای کاربران غیرفعال شد.",
+      status: "success",
+    };
+  } catch (error) {
+    return {
+      message: getErrorMessage(error),
+      status: "error",
+    };
+  }
 }
 
 export async function testWikiAiConnectionAction(

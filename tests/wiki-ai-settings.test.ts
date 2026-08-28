@@ -13,6 +13,7 @@ import {
   DEFAULT_WIKI_AI_SYSTEM_PROMPT,
   getWikiAiSettings,
   resetWikiAiSystemPrompt,
+  setWikiAiEnabled,
   updateWikiAiSettings,
 } from "@/lib/wiki-ai-settings-service";
 
@@ -59,6 +60,25 @@ test("only admins can change wiki AI settings and changes are audited", async ()
   assert.equal(updated.model, "Qwen3.6");
   assert.equal(updated.enabled, false);
   assert.equal(updated.systemPrompt, "پاسخ را دوستانه و کوتاه بنویس.");
+  assert.equal(
+    await db.auditLog.count({
+      where: { action: "WIKI_AI_SETTINGS_UPDATED" },
+    }),
+    1,
+  );
+});
+
+test("admins can change wiki AI availability without overwriting model settings", async () => {
+  await assert.rejects(
+    () => setWikiAiEnabled({ adminId: managerId, enabled: false }),
+    AdminSettingsError,
+  );
+
+  const updated = await setWikiAiEnabled({ adminId, enabled: false });
+
+  assert.equal(updated.enabled, false);
+  assert.equal(updated.baseUrl, DEFAULT_WIKI_AI_SETTINGS.baseUrl);
+  assert.equal(updated.model, DEFAULT_WIKI_AI_SETTINGS.model);
   assert.equal(
     await db.auditLog.count({
       where: { action: "WIKI_AI_SETTINGS_UPDATED" },

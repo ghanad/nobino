@@ -5,6 +5,7 @@ import {
   testWikiAiConnectionAction,
   updateWikiAiSettingsAction,
 } from "@/app/admin/wiki-ai/actions";
+import { WikiAiEnabledSwitch } from "@/app/admin/wiki-ai/_components/wiki-ai-enabled-switch";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { UrlToast } from "@/components/ui/url-toast";
 import { getWikiAiSettings } from "@/lib/wiki-ai-settings-service";
@@ -81,37 +82,58 @@ export default async function WikiAiAdminPage({
     searchParams,
   ]);
   const toast = getToast(params);
+  const connectionStatus = params?.modelMissing
+    ? "خطا"
+    : params?.tested
+      ? "متصل"
+      : "بررسی‌نشده";
+  const connectionStatusTone = params?.modelMissing
+    ? "bg-red-500"
+    : params?.tested
+      ? "bg-emerald-500"
+      : "bg-slate-400";
 
   return (
     <div className="grid w-full max-w-5xl gap-5 text-right" dir="rtl">
       {toast ? <UrlToast {...toast} /> : null}
 
       <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-        <div className="flex items-start gap-3 border-b border-slate-200 bg-slate-50/70 px-4 py-4 sm:px-6">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <Bot aria-hidden="true" className="h-5 w-5" />
-          </span>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-              <h2 className="font-semibold text-slate-950">تنظیمات دستیار دانش‌نامه</h2>
-              <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs font-medium text-slate-600">
-                OpenAI-compatible
-              </span>
-            </div>
-            <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">
-              اتصال مدل، سطح دسترسی کاربران و دستورهای پاسخ را از همین‌جا
-              مدیریت کنید. پیش از ذخیره، اتصال را آزمایش کنید.
-            </p>
-          </div>
-        </div>
-
         <form className="grid" action={updateWikiAiSettingsAction}>
+          <div className="border-b border-slate-200 bg-slate-50/70 px-4 py-4 sm:px-6">
+            <div className="flex items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Bot aria-hidden="true" className="h-5 w-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                  <h2 className="font-semibold text-slate-950">تنظیمات دستیار دانش‌نامه</h2>
+                  <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs font-medium text-slate-600">
+                    OpenAI-compatible
+                  </span>
+                </div>
+                <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">
+                  اتصال مدل، دسترسی کاربران و دستورهای پاسخ را از همین‌جا
+                  مدیریت کنید. پیش از ذخیره، اتصال را آزمایش کنید.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <WikiAiEnabledSwitch defaultEnabled={settings.enabled} />
+
           <section className="grid gap-4 border-b border-slate-200 px-4 py-5 sm:px-6" aria-labelledby="wiki-ai-connection-heading">
-            <div>
-              <h2 className="text-sm font-semibold text-slate-950" id="wiki-ai-connection-heading">اتصال به مدل</h2>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                نشانی سرویس و مدل مورد استفاده دستیار را مشخص کنید.
-              </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-950" id="wiki-ai-connection-heading">اتصال به مدل</h2>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  نشانی سرویس و مدل مورد استفاده دستیار را مشخص کنید.
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-2 text-xs text-slate-600">
+                <span aria-hidden="true" className={`h-2 w-2 rounded-full ${connectionStatusTone}`} />
+                <span>وضعیت اتصال:</span>
+                <span className="font-medium text-slate-800">{connectionStatus}</span>
+              </div>
             </div>
             <div className="grid gap-4 lg:grid-cols-2">
               <label className="grid content-start min-w-0 gap-1.5 text-sm font-medium text-slate-800">
@@ -149,7 +171,7 @@ export default async function WikiAiAdminPage({
             </div>
           </section>
 
-          <div className="grid gap-6 border-b border-slate-200 px-4 py-5 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,0.7fr)]">
+          <div className="grid gap-6 border-b border-slate-200 px-4 py-5 sm:px-6">
             <section className="grid content-start gap-4" aria-labelledby="wiki-ai-response-heading">
             <div>
                 <h2 className="text-sm font-semibold text-slate-950" id="wiki-ai-response-heading">رفتار پاسخ</h2>
@@ -194,24 +216,6 @@ export default async function WikiAiAdminPage({
               </span>
               </label>
               </div>
-            </section>
-
-            <section className="grid content-start gap-3 border-t border-slate-100 pt-5 lg:border-r lg:border-t-0 lg:pr-6 lg:pt-0" aria-labelledby="wiki-ai-access-heading">
-            <div>
-                <h2 className="text-sm font-semibold text-slate-950" id="wiki-ai-access-heading">دسترسی کاربران</h2>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                مشخص کنید کاربران بتوانند از دستیار دانش‌نامه پرسش کنند یا نه.
-              </p>
-            </div>
-              <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-800 transition-colors hover:border-slate-300 hover:bg-slate-100">
-              <input
-                className="h-4 w-4 accent-primary"
-                defaultChecked={settings.enabled}
-                name="enabled"
-                type="checkbox"
-              />
-              <span>پرسش از دانش‌نامه برای کاربران فعال باشد</span>
-            </label>
             </section>
           </div>
 

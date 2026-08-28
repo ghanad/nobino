@@ -219,6 +219,46 @@ export async function updateWikiAiSettings(input: {
   });
 }
 
+export async function setWikiAiEnabled(input: {
+  adminId: string;
+  enabled: boolean;
+}): Promise<WikiAiSettingsValue> {
+  return db.$transaction(async (tx) => {
+    await assertAdmin(input.adminId, tx);
+    const current = await getWikiAiSettings(tx);
+    const updated = await tx.wikiAiSettings.upsert({
+      where: { id: DEFAULT_WIKI_AI_SETTINGS.id },
+      update: { enabled: input.enabled },
+      create: {
+        ...DEFAULT_WIKI_AI_SETTINGS,
+        enabled: input.enabled,
+      },
+      select: {
+        baseUrl: true,
+        enabled: true,
+        id: true,
+        maxOutputTokens: true,
+        model: true,
+        systemPrompt: true,
+        timeoutSeconds: true,
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        action: "WIKI_AI_SETTINGS_UPDATED",
+        actorUserId: input.adminId,
+        entityId: updated.id,
+        entityType: "WikiAiSettings",
+        newValue: updated as unknown as Prisma.JsonObject,
+        oldValue: current as unknown as Prisma.JsonObject,
+      },
+    });
+
+    return updated;
+  });
+}
+
 export async function resetWikiAiSystemPrompt(
   adminId: string,
 ): Promise<WikiAiSettingsValue> {
