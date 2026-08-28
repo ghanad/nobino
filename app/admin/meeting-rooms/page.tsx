@@ -3,14 +3,11 @@ import {
   CalendarDays,
   ChevronDown,
   Clock3,
-  DoorOpen,
   Plus,
   Save,
   Settings2,
   Trash2,
-  Power,
 } from "lucide-react";
-import Link from "next/link";
 import type { ReactNode } from "react";
 
 import {
@@ -18,7 +15,6 @@ import {
   createMeetingRoomScheduleExceptionAction,
   deleteMeetingRoomAction,
   deleteMeetingRoomScheduleExceptionAction,
-  setMeetingRoomActiveStatusAction,
   updateMeetingRoomAction,
   updateMeetingRoomScheduleExceptionAction,
   updateMeetingRoomWeeklyScheduleAction,
@@ -27,7 +23,6 @@ import { SpacesReservationSectionShell } from "@/app/admin/_components/spaces-re
 import { MeetingRoomPicker } from "@/app/admin/meeting-rooms/meeting-room-picker";
 import { JalaliDatePicker } from "@/app/admin/meeting-rooms/jalali-date-picker";
 import { GeneralSettingsForm } from "@/app/admin/meeting-rooms/general-settings-form";
-import { PageHeader } from "@/components/app/page-header";
 import { Button } from "@/components/ui/button";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { UrlToast } from "@/components/ui/url-toast";
@@ -80,10 +75,6 @@ function getMeetingRoomView(value: string | undefined): MeetingRoomView {
   }
 
   return "details";
-}
-
-function getMeetingRoomHref(roomId: string, view: MeetingRoomView) {
-  return `/admin/meeting-rooms?roomId=${roomId}&view=${view}`;
 }
 
 function getToast(params: Awaited<AdminMeetingRoomsPageProps["searchParams"]>) {
@@ -302,70 +293,29 @@ function NewMeetingRoomForm({ defaultSortOrder }: { defaultSortOrder: number }) 
   );
 }
 
-function MeetingRoomViewNavigation({
-  activeView,
-  exceptionCount,
-  roomId,
+function RoomContextSelector({
+  rooms,
+  selectedRoomId,
+  view,
 }: {
-  activeView: MeetingRoomView;
-  exceptionCount: number;
-  roomId: string;
+  rooms: Array<{
+    id: string;
+    isActive: boolean;
+    location: string | null;
+    name: string;
+  }>;
+  selectedRoomId: string;
+  view: MeetingRoomView;
 }) {
-  const items: Array<{
-    description: string;
-    icon: ReactNode;
-    label: string;
-    view: MeetingRoomView;
-  }> = [
-    {
-      description: "نام، وضعیت و تأیید خودکار",
-      icon: <Settings2 className="h-[18px] w-[18px]" strokeWidth={1.8} />,
-      label: "اطلاعات اتاق",
-      view: "details",
-    },
-    {
-      description: "روزها و ساعت‌های قابل رزرو",
-      icon: <Clock3 className="h-[18px] w-[18px]" strokeWidth={1.8} />,
-      label: "برنامه هفتگی",
-      view: "schedule",
-    },
-    {
-      description: `${exceptionCount} استثنای ثبت‌شده`,
-      icon: <CalendarDays className="h-[18px] w-[18px]" strokeWidth={1.8} />,
-      label: "استثناهای تقویم",
-      view: "exceptions",
-    },
-  ];
-
   return (
-    <nav
-      aria-label="بخش‌های تنظیمات اتاق"
-      className="flex overflow-x-auto border-t bg-slate-50 px-2 pt-2 sm:grid sm:grid-cols-3"
-    >
-      {items.map((item) => {
-        const isActive = item.view === activeView;
-
-        return (
-          <Link
-            aria-current={isActive ? "page" : undefined}
-            className={cn(
-              "relative grid min-w-[190px] flex-1 gap-1 rounded-t-lg px-4 py-3 text-right outline-none transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary sm:min-w-0",
-              isActive
-                ? "bg-blue-50/70 text-slate-950 shadow-sm after:absolute after:inset-x-4 after:bottom-0 after:h-0.5 after:bg-primary"
-                : "text-slate-600 hover:bg-blue-50/40 hover:text-slate-950 active:bg-blue-50/70",
-            )}
-            href={getMeetingRoomHref(roomId, item.view)}
-            key={item.view}
-          >
-            <span className="flex items-center gap-2 text-sm font-medium">
-              <span className={cn(isActive && "text-primary")}>{item.icon}</span>
-              {item.label}
-            </span>
-            <span className="truncate text-xs">{item.description}</span>
-          </Link>
-        );
-      })}
-    </nav>
+    <div className="flex items-center gap-3">
+      <span className="text-xs text-muted-foreground shrink-0">اتاق</span>
+      <MeetingRoomPicker
+        rooms={rooms}
+        selectedRoomId={selectedRoomId}
+        view={view}
+      />
+    </div>
   );
 }
 
@@ -401,97 +351,50 @@ export default async function AdminMeetingRoomsPage({
       )
     : [];
 
+  const roomPickerData = rooms.map((room) => ({
+    id: room.id,
+    isActive: room.isActive,
+    location: room.location,
+    name: room.name,
+  }));
+
   return (
     <SpacesReservationSectionShell>
-      <PageHeader
-        actions={
-          <Button asChild size="sm">
-            <Link href="/admin/meeting-rooms?view=new">
-              <Plus className="h-4 w-4" />
-              اتاق جدید
-            </Link>
-          </Button>
-        }
-        subtitle="یک اتاق را انتخاب کنید و مشخصات، برنامه هفتگی و استثناهای آن را تنظیم کنید."
-        title="اتاق‌های جلسه"
-      />
-
       {toast ? <UrlToast {...toast} /> : null}
 
-      <section className={panelClass}>
-        <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <h2 className="text-base font-semibold shrink-0">انتخاب اتاق</h2>
-            {rooms.length === 0 ? (
-              <div className="grid justify-items-center gap-3 rounded-lg border border-dashed bg-muted/20 p-6 text-center">
-                <DoorOpen className="h-8 w-8 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">
-                  هنوز اتاقی تعریف نشده است؛ فرم ساخت اولین اتاق در ادامه آماده است.
-                </p>
-              </div>
-            ) : (
-              <MeetingRoomPicker
-                rooms={rooms.map((room) => ({
-                  id: room.id,
-                  isActive: room.isActive,
-                  location: room.location,
-                  name: room.name,
-                }))}
-                selectedRoomId={
-                  isCreatingRoom ? undefined : (selectedRoom?.id ?? undefined)
-                }
-                view={activeView}
-              />
-            )}
-          </div>
-          {selectedRoom && !isCreatingRoom ? (
-            <div className="flex items-center gap-2 shrink-0">
-              <form action={setMeetingRoomActiveStatusAction}>
-                <input name="roomId" type="hidden" value={selectedRoom.id} />
-                <input
-                  name="isActive"
-                  type="hidden"
-                  value={selectedRoom.isActive ? "false" : "true"}
-                />
-                <Button size="sm" type="submit" variant="outline">
-                  <Power className="h-4 w-4" />
-                  {selectedRoom.isActive ? "غیرفعال کردن" : "فعال کردن"}
-                </Button>
-              </form>
-            </div>
-          ) : null}
-        </div>
-
-        {selectedRoom && !isCreatingRoom ? (
-          <>
-            <div className="flex items-center gap-2 px-5 pb-1">
-              <DoorOpen className="h-5 w-5 text-primary shrink-0" />
-              <h2 className="text-lg font-semibold truncate">{selectedRoom.name}</h2>
-              <StatusPill tone={selectedRoom.isActive ? "good" : "muted"}>
-                {selectedRoom.isActive ? "فعال" : "غیرفعال"}
-              </StatusPill>
-              {selectedRoom.location ? (
-                <>
-                  <span className="text-slate-300">·</span>
-                  <span className="text-sm text-slate-600 truncate">{selectedRoom.location}</span>
-                </>
-              ) : null}
-            </div>
-            <MeetingRoomViewNavigation
-              activeView={activeView}
-              exceptionCount={selectedRoom.exceptions.length}
-              roomId={selectedRoom.id}
-            />
-          </>
-        ) : null}
-      </section>
-
       {isCreatingRoom ? (
-        <NewMeetingRoomForm defaultSortOrder={defaultSortOrder} />
+        <>
+          <div className="flex items-center justify-between">
+            <div className="grid gap-1">
+              <h2 className="text-lg font-semibold">اتاق جدید</h2>
+              <p className="text-sm text-muted-foreground">
+                یک اتاق جلسه جدید تعریف کنید.
+              </p>
+            </div>
+          </div>
+          <NewMeetingRoomForm defaultSortOrder={defaultSortOrder} />
+        </>
       ) : selectedRoom ? (
         <main className="grid min-w-0 gap-6">
           {activeView === "details" ? (
             <section className={cn(panelClass, "min-w-0")}>
+              <div className={panelHeaderClass}>
+                <div className="flex items-center gap-2">
+                  <Settings2 className="h-5 w-5 text-primary" />
+                  <div>
+                    <h2 className="text-base font-semibold">اطلاعات اتاق</h2>
+                    <p className="text-xs text-muted-foreground">
+                      مشخصات و تنظیمات رزرو اتاق را مدیریت کنید.
+                    </p>
+                  </div>
+                </div>
+                <RoomContextSelector
+                  rooms={roomPickerData}
+                  selectedRoomId={selectedRoom.id}
+                  view="details"
+                />
+              </div>
+
               <GeneralSettingsForm
                 deleteAction={deleteMeetingRoomAction}
                 roomId={selectedRoom.id}
@@ -582,19 +485,25 @@ export default async function AdminMeetingRoomsPage({
                       برنامه هفتگی
                     </h2>
                     <p className="text-xs text-muted-foreground">
-                      ساعت‌ها باید کامل و با قالب 09:00 باشند؛ تغییرات همه
-                      روزها با هم ذخیره می‌شوند.
+                      روزها و ساعت‌های قابل رزرو اتاق را تنظیم کنید.
                     </p>
                   </div>
                 </div>
-                <StatusPill tone="muted">
-                  {
-                    weeklySchedules.filter(
-                      (schedule) => schedule.isWorkingDay,
-                    ).length
-                  }{" "}
-                  روز قابل رزرو
-                </StatusPill>
+                <div className="flex items-center gap-3">
+                  <StatusPill tone="muted">
+                    {
+                      weeklySchedules.filter(
+                        (schedule) => schedule.isWorkingDay,
+                      ).length
+                    }{" "}
+                    روز قابل رزرو
+                  </StatusPill>
+                  <RoomContextSelector
+                    rooms={roomPickerData}
+                    selectedRoomId={selectedRoom.id}
+                    view="schedule"
+                  />
+                </div>
               </div>
               <form
                 action={updateMeetingRoomWeeklyScheduleAction}
@@ -695,14 +604,20 @@ export default async function AdminMeetingRoomsPage({
                       استثناهای تقویم
                     </h2>
                     <p className="text-xs text-muted-foreground">
-                      برای یک تاریخ جلالی، تعطیلی یا ساعت کاری متفاوت تعریف
-                      کنید.
+                      برای تاریخ‌های خاص، ساعات یا شرایط رزرو متفاوت تعریف کنید.
                     </p>
                   </div>
                 </div>
-                <StatusPill tone="muted">
-                  {selectedRoom.exceptions.length} استثنا
-                </StatusPill>
+                <div className="flex items-center gap-3">
+                  <StatusPill tone="muted">
+                    {selectedRoom.exceptions.length} استثنا
+                  </StatusPill>
+                  <RoomContextSelector
+                    rooms={roomPickerData}
+                    selectedRoomId={selectedRoom.id}
+                    view="exceptions"
+                  />
+                </div>
               </div>
 
               <div className="grid gap-4 p-5">
