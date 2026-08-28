@@ -93,7 +93,7 @@ export async function createCalendarDayOverrideAction(formData: FormData) {
     !isValidJalaliDateParam(dateValue)
   ) {
     redirectToPath("/admin/calendar", {
-      error: "تاریخ، حالت و محدوده اصلاح تقویم را معتبر وارد کنید.",
+      error: "تاریخ، رفتار و دامنه اثر را معتبر وارد کنید.",
     });
   }
 
@@ -135,7 +135,7 @@ export async function updateCalendarDayOverrideAction(formData: FormData) {
     !overrideId
   ) {
     redirectToPath("/admin/calendar", {
-      error: "اطلاعات اصلاح تقویم معتبر نیست.",
+      error: "اطلاعات استثنا معتبر نیست.",
     });
   }
 
@@ -164,7 +164,7 @@ export async function deleteCalendarDayOverrideAction(formData: FormData) {
 
   if (typeof overrideId !== "string" || !overrideId) {
     redirectToPath("/admin/calendar", {
-      error: "اصلاح تقویم معتبری انتخاب کنید.",
+      error: "استثنای معتبری انتخاب کنید.",
     });
   }
 
