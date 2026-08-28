@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, Database, Gauge, Save } from "lucide-react";
+import { AlertTriangle, Save } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -46,30 +46,41 @@ export function ResourcePoolSettings({
     (sum, pool) => sum + pool.capacity,
     0,
   );
-  const inactivePools = resourcePools.filter((pool) => !pool.active).length;
   const transitionalPools = resourcePools.filter(
     (pool) => pool.building.isTransitional,
   );
+  const reservableBuildings = [
+    ...new Set(availablePools.map((pool) => pool.building.name)),
+  ];
+  const buildingSummary =
+    reservableBuildings.length === 0
+      ? "بدون ساختمان فعال"
+      : reservableBuildings.length === 1
+        ? reservableBuildings[0]
+        : `${reservableBuildings[0]} و ${formatPersianNumber(reservableBuildings.length - 1)} ساختمان دیگر`;
 
   return (
-    <section className="grid gap-5 text-card-foreground" dir="rtl">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+    <section className="grid gap-4 text-card-foreground" dir="rtl">
+      <div className="grid gap-1">
         <div className="grid gap-1">
           <h2 className="text-lg font-semibold text-slate-950">
-            ظرفیت پایه سیستم‌ها
+            تنظیمات ظرفیت
           </h2>
           <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-            Nobino سیستم‌ها را به عنوان یک مخزن ظرفیت مدیریت می‌کند. کاهش
-            ظرفیت فقط وقتی ذخیره می‌شود که رزروهای تاییدشده آینده از مقدار
-            جدید بیشتر نباشند.
+            تعداد سیستم‌هایی را که هم‌زمان قابل رزرو هستند، برای هر ساختمان
+            تنظیم کنید.
           </p>
         </div>
       </div>
 
       {buildings.length === 0 ? (
         <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
-          ابتدا یک ساختمان واقعی ایجاد کنید؛ سپس می‌توانید مخزن‌های ظرفیت را به آن تخصیص دهید. {" "}
-          <Link className="font-medium text-amber-950 underline underline-offset-4" href="/admin/buildings">
+          ابتدا یک ساختمان واقعی ایجاد کنید؛ سپس می‌توانید تنظیمات سیستم‌ها را
+          به آن تخصیص دهید. {" "}
+          <Link
+            className="font-medium text-amber-950 underline underline-offset-4"
+            href="/admin/buildings"
+          >
             رفتن به مدیریت مرکزی ساختمان‌ها
           </Link>
         </div>
@@ -81,7 +92,9 @@ export function ResourcePoolSettings({
           <div>
             <h3 className="font-medium">نیازمند تعیین ساختمان</h3>
             <p className="mt-1 text-sm leading-6 text-amber-900">
-              {formatPersianNumber(transitionalPools.length)} مخزن هنوز به ساختمان واقعی متصل نیست و تا زمان تعیین ساختمان قابل رزرو نیست. برای هر مورد، ساختمان مقصد را انتخاب و ذخیره کنید.
+              {formatPersianNumber(transitionalPools.length)} تنظیمات سیستم‌ها
+              هنوز به ساختمان واقعی متصل نیست و تا زمان تعیین ساختمان قابل رزرو
+              نیست. برای هر مورد، ساختمان مقصد را انتخاب و ذخیره کنید.
             </p>
           </div>
         </div>
@@ -89,54 +102,34 @@ export function ResourcePoolSettings({
 
       {resourcePools.length === 0 ? (
         <div className="rounded-lg border border-dashed bg-muted/20 p-5 text-sm text-muted-foreground">
-          هنوز مخزن ظرفیتی تعریف نشده است.
+          هنوز تنظیمات ظرفیتی برای سیستم‌ها ثبت نشده است.
         </div>
       ) : (
-        <div className="grid gap-5">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-lg border bg-card p-4">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-xs font-medium text-muted-foreground">
-                  ظرفیت قابل رزرو
-                </p>
-                <Gauge className="h-4 w-4 text-emerald-700" />
-              </div>
-              <p className="mt-2 text-2xl font-semibold text-emerald-700">
-                {formatPersianNumber(totalAvailableCapacity)}
-              </p>
-            </div>
-            <div className="rounded-lg border bg-card p-4">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-xs font-medium text-muted-foreground">
-                  مخزن قابل رزرو
-                </p>
-                <Database className="h-4 w-4 text-blue-700" />
-              </div>
-              <p className="mt-2 text-2xl font-semibold text-blue-700">
-                {formatPersianNumber(availablePools.length)}
-              </p>
-            </div>
-            <div className="rounded-lg border bg-card p-4">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-xs font-medium text-muted-foreground">
-                  {transitionalPools.length > 0
-                    ? "نیازمند تعیین ساختمان"
-                    : "غیرفعال"}
-                </p>
-                {transitionalPools.length > 0 ? (
-                  <AlertTriangle className="h-4 w-4 text-amber-700" />
-                ) : (
-                  <CheckCircle2 className="h-4 w-4 text-slate-500" />
-                )}
-              </div>
-              <p className="mt-2 text-2xl font-semibold text-slate-700">
-                {formatPersianNumber(
-                  transitionalPools.length > 0
-                    ? transitionalPools.length
-                    : inactivePools,
-                )}
-              </p>
-            </div>
+        <div className="grid gap-3">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-y py-2 text-sm">
+            <span className="font-medium text-slate-950">{buildingSummary}</span>
+            <span
+              aria-hidden="true"
+              className="h-1 w-1 rounded-full bg-slate-400"
+            />
+            <span className="text-slate-700">
+              {formatPersianNumber(totalAvailableCapacity)} سیستم قابل رزرو
+            </span>
+            <span
+              aria-hidden="true"
+              className="h-1 w-1 rounded-full bg-slate-400"
+            />
+            <span
+              className={
+                availablePools.length > 0
+                  ? "font-medium text-emerald-700"
+                  : "font-medium text-slate-600"
+              }
+            >
+              {availablePools.length > 0
+                ? "رزرو فعال است"
+                : "رزرو غیرفعال است"}
+            </span>
           </div>
 
           <div className="grid gap-3">
@@ -157,7 +150,7 @@ export function ResourcePoolSettings({
               return (
               <form
                 action={updateResourcePoolAction}
-                className={`rounded-lg border bg-card p-4 shadow-sm ${
+                className={`rounded-lg border bg-card p-4 ${
                   needsBuildingAssignment
                     ? "border-amber-300 bg-amber-50/40"
                     : ""
@@ -165,7 +158,7 @@ export function ResourcePoolSettings({
                 key={pool.id}
               >
                 <input name="resourcePoolId" type="hidden" value={pool.id} />
-                <div className="grid gap-4 lg:grid-cols-[minmax(180px,1fr)_minmax(200px,1fr)_150px_160px_auto] lg:items-end">
+                <div className="grid gap-4 lg:grid-cols-[minmax(180px,1fr)_minmax(200px,1fr)_150px_160px] lg:items-end">
                   <div className="grid gap-2">
                     <div className="flex items-center gap-2">
                       <span
@@ -174,7 +167,7 @@ export function ResourcePoolSettings({
                         }`}
                       />
                       <FieldLabel htmlFor={`pool-name-${pool.id}`}>
-                        نام مخزن
+                        نام
                       </FieldLabel>
                     </div>
                     <TextInput
@@ -242,17 +235,39 @@ export function ResourcePoolSettings({
                       type="number"
                     />
                   </div>
-                  <label className="flex min-h-10 items-center justify-between gap-3 rounded-md border bg-muted/20 px-3 py-2 text-sm">
-                    <span>فعال باشد</span>
-                    <input
-                      className="h-4 w-4 rounded border-input"
-                      defaultChecked={pool.active}
-                      name="active"
-                      type="checkbox"
-                    />
-                  </label>
+                  <div className="grid gap-2">
+                    <FieldLabel htmlFor={`pool-active-${pool.id}`}>
+                      وضعیت
+                    </FieldLabel>
+                    <label className="flex h-10 cursor-pointer items-center justify-between rounded-md border bg-muted/20 px-3 text-sm">
+                      <span className="sr-only">فعال بودن رزرو سیستم‌ها</span>
+                      <input
+                        className="peer sr-only"
+                        defaultChecked={pool.active}
+                        id={`pool-active-${pool.id}`}
+                        name="active"
+                        type="checkbox"
+                      />
+                      <span className="text-muted-foreground peer-checked:hidden">
+                        غیرفعال
+                      </span>
+                      <span className="hidden font-medium text-slate-950 peer-checked:inline">
+                        فعال
+                      </span>
+                      <span
+                        aria-hidden="true"
+                        className="relative h-5 w-9 rounded-full bg-slate-300 transition-colors peer-checked:bg-primary peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 after:absolute after:right-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-transform peer-checked:after:-translate-x-4"
+                      />
+                    </label>
+                  </div>
+                </div>
+                <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                  {needsBuildingAssignment
+                    ? assignmentWarning
+                    : "فقط رزروهای تأییدشده از ظرفیت استفاده می‌کنند. تغییر ساختمان با وجود رزرو آینده ممکن نیست."}
+                </p>
+                <div className="mt-3 flex justify-end border-t pt-3">
                   <Button
-                    className="w-full lg:w-auto"
                     disabled={!hasSelectedBuilding}
                     type="submit"
                   >
@@ -260,14 +275,6 @@ export function ResourcePoolSettings({
                     ذخیره
                   </Button>
                 </div>
-                <p className="mt-3 text-xs leading-5 text-muted-foreground">
-                  {needsBuildingAssignment
-                    ? assignmentWarning
-                    : "فقط رزروهای تاییدشده ظرفیت را مصرف می‌کنند؛ درخواست‌های در انتظار در تقویم دیده می‌شوند اما جلوی درخواست جدید را نمی‌گیرند."}
-                  {pool.building.isTransitional
-                    ? " تعیین ساختمان زمان یا ظرفیت رزروهای موجود را تغییر نمی‌دهد."
-                    : " تغییر ساختمان برای مخزنی که رزرو آینده دارد، برای جلوگیری از تغییر ناخواسته مکان رزروها مسدود می‌شود."}
-                </p>
               </form>
               );
             })}

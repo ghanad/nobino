@@ -70,6 +70,9 @@ export default async function AdminCapacityPage({
             id: true,
             name: true,
             capacity: true,
+            building: {
+              select: { name: true },
+            },
           },
         },
       },
@@ -101,7 +104,7 @@ export default async function AdminCapacityPage({
 
       {toast ? <UrlToast {...toast} /> : null}
 
-      <div className="grid min-w-0 gap-6">
+      <div className="grid min-w-0 max-w-[1120px] gap-6">
           {activeView === "capacity" ? (
             <>
               <ResourcePoolSettings
