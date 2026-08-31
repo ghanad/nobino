@@ -72,8 +72,9 @@ export async function getIranHolidayForDate(
   date: Date,
 ): Promise<IranHoliday | null> {
   const dateParam = formatJalaliDateParam(date);
-  const overrideTitle =
-    OFFICIAL_HOLIDAY_OVERRIDES[Number(dateParam.slice(0, 4))]?.[dateParam];
+  const yearOverrides =
+    OFFICIAL_HOLIDAY_OVERRIDES[Number(dateParam.slice(0, 4))];
+  const overrideTitle = yearOverrides?.[dateParam];
 
   if (overrideTitle) {
     return {
@@ -81,6 +82,13 @@ export async function getIranHolidayForDate(
       dateParam,
       title: overrideTitle,
     };
+  }
+
+  // A year override is a complete authoritative calendar. Falling back to
+  // pholiday for its other dates would re-add lunar holidays on their stale
+  // calculated dates alongside the corrected official dates.
+  if (yearOverrides) {
+    return null;
   }
 
   const titles = await getOfficialHolidayTitles(date);

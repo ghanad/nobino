@@ -7,7 +7,10 @@ import {
   importIranHolidayScheduleExceptions,
   syncIranHolidayScheduleExceptions,
 } from "@/lib/admin-settings-service";
-import { getIranHolidaysForJalaliYear } from "@/lib/iran-holidays";
+import {
+  getIranHolidayForDate,
+  getIranHolidaysForJalaliYear,
+} from "@/lib/iran-holidays";
 import { parseJalaliDateParam } from "@/lib/jalali-date";
 import { createReservationRequest } from "@/lib/reservation-service";
 import {
@@ -98,6 +101,19 @@ test("imported Iran holiday titles use official overrides", async () => {
 
   assert.equal(exception?.isWorkingDay, false);
   assert.match(exception?.reason ?? "", /عید سعید قربان/);
+});
+
+test("official year overrides suppress stale lunar holiday dates", async () => {
+  const correctedAshura = parseJalaliDateParam("1405-04-04");
+  const staleCalculatedAshura = parseJalaliDateParam("1405-04-05");
+
+  assert.ok(correctedAshura);
+  assert.ok(staleCalculatedAshura);
+  assert.match(
+    (await getIranHolidayForDate(correctedAshura))?.title ?? "",
+    /عاشورای حسینی/,
+  );
+  assert.equal(await getIranHolidayForDate(staleCalculatedAshura), null);
 });
 
 test("Iran holiday sync removes moved dates and preserves manual exceptions", async () => {
