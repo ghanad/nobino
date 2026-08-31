@@ -727,7 +727,7 @@ export default async function ReservationsPage({
     <div className="grid gap-6">
       <PageHeader
         subtitle="درخواست رزرو جدید و مشاهده ظرفیت سیستم‌ها"
-        title="رزروها"
+        title="رزرو سیستم"
       />
 
       {toast ? <UrlToast {...toast} /> : null}

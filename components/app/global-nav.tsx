@@ -9,6 +9,7 @@ import { logoutAction } from "@/app/login/actions";
 import { cn } from "@/lib/utils";
 
 export type GlobalNavItem = {
+  activeOnSelf?: boolean;
   activeHrefs?: string[];
   children?: GlobalNavItem[];
   href: string;
@@ -48,6 +49,10 @@ const PERSIAN_NUMBER_FORMATTER = new Intl.NumberFormat("fa-IR");
 function isActiveNavItem(pathname: string, item: GlobalNavItem): boolean {
   if (item.children?.some((child) => isActiveNavItem(pathname, child))) {
     return true;
+  }
+
+  if (item.activeOnSelf === false) {
+    return false;
   }
 
   const activeHrefs = [item.href, ...(item.activeHrefs ?? [])];

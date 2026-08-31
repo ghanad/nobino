@@ -372,7 +372,7 @@ async function cancelDeskReservation(input: {
   return db.$transaction(async (tx) => {
     if (input.manager) await assertManagerOrAdmin(input.actorUserId, tx);
     const reservation = await tx.deskReservation.findUnique({
-      where: { id: input.reservationId }, select: { id: true, status: true, userId: true },
+      where: { id: input.reservationId }, select: { endAt: true, id: true, status: true, userId: true },
     });
     if (!reservation) throw new ReservationTransitionError("رزرو میز پیدا نشد.");
     if (!input.manager && reservation.userId !== input.actorUserId) {
@@ -380,6 +380,9 @@ async function cancelDeskReservation(input: {
     }
     if (!ACTIVE_STATUSES.includes(reservation.status)) {
       throw new ReservationTransitionError("این رزرو قبلاً پایان یافته یا لغو شده است.");
+    }
+    if (reservation.endAt <= new Date()) {
+      throw new ReservationTransitionError("رزرو پایان‌یافته قابل لغو نیست.");
     }
     const cancelledAt = new Date();
     const updated = await tx.deskReservation.update({

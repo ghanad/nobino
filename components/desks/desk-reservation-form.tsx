@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarDays, Check, Clock3, MapPin, Pencil } from "lucide-react";
 
@@ -39,6 +39,7 @@ type IntervalState =
   | "reservedOther";
 
 type DeskReservationFormProps = {
+  canModify: boolean;
   closedReason?: string;
   currentUserId: string;
   date: string;
@@ -102,6 +103,7 @@ function stateLabel(state: IntervalState) {
 }
 
 export function DeskReservationForm({
+  canModify,
   closedReason,
   currentUserId,
   date,
@@ -131,6 +133,8 @@ export function DeskReservationForm({
   const [fullDay, setFullDay] = useState(isFullDay && !isStarted);
   const [startHour, setStartHour] = useState(defaultStartHour);
   const [endHour, setEndHour] = useState(defaultEndHour);
+  const startHourRef = useRef<HTMLSelectElement>(null);
+  const endHourRef = useRef<HTMLSelectElement>(null);
   const [selectedDeskId, setSelectedDeskId] = useState<string | null>(
     myReservation && desks.some((desk) => desk.id === myReservation.deskId && desk.active)
       ? myReservation.deskId
@@ -169,7 +173,7 @@ export function DeskReservationForm({
     displayedStart !== myReservation.startHour || displayedEnd !== myReservation.endHour
   ));
   const hasChanges = movingDesk || timeChanged;
-  const canSubmit = Boolean(selectedDesk?.active && !approvedConflict && (!myReservation || (movingDesk ? true : editingTime && hasChanges)));
+  const canSubmit = Boolean(selectedDesk?.active && !approvedConflict && (!myReservation || (canModify && (movingDesk ? true : editingTime && hasChanges))));
   const availableCount = deskStates.filter((item) => item.state === "available" || item.state === "pendingOther").length;
 
   useEffect(() => {
@@ -196,6 +200,24 @@ export function DeskReservationForm({
   function dismissFoodPrompt() {
     setIsFoodPromptOpen(false);
     router.refresh();
+  }
+
+  function beginTimeEditing() {
+    if (!myReservation || !canModify) return;
+    setEditingTime(true);
+    setSelectedDeskId(myReservation.deskId);
+    requestAnimationFrame(() => {
+      (isStarted ? endHourRef : startHourRef).current?.focus();
+    });
+  }
+
+  function stopTimeEditing() {
+    if (!myReservation) return;
+    setEditingTime(false);
+    setSelectedDeskId(myReservation.deskId);
+    setStartHour(myReservation.startHour);
+    setEndHour(myReservation.endHour);
+    setFullDay(isFullDay && !isStarted);
   }
 
   function navigate(nextBuildingId: string, nextDate: string) {
@@ -283,18 +305,18 @@ export function DeskReservationForm({
           <fieldset className="grid gap-1 sm:col-span-2 lg:col-span-1">
             <legend className="text-xs font-medium text-slate-600">مدت حضور</legend>
             <div className="grid grid-cols-2 rounded-md bg-slate-100 p-0.5 text-xs">
-              <button className={cn("h-9 rounded font-medium", !fullDay ? "bg-white text-slate-950 shadow-sm" : "text-slate-600")} onClick={() => setFullDay(false)} type="button">ساعتی</button>
-              <button className={cn("h-9 rounded font-medium disabled:opacity-50", fullDay ? "bg-white text-slate-950 shadow-sm" : "text-slate-600")} disabled={isStarted} onClick={() => setFullDay(true)} type="button">کل روز کاری</button>
+              <button className={cn("h-9 rounded font-medium disabled:opacity-50", !fullDay ? "bg-white text-slate-950 shadow-sm" : "text-slate-600")} disabled={Boolean(myReservation && (!editingTime || !canModify))} onClick={() => setFullDay(false)} type="button">ساعتی</button>
+              <button className={cn("h-9 rounded font-medium disabled:opacity-50", fullDay ? "bg-white text-slate-950 shadow-sm" : "text-slate-600")} disabled={isStarted || Boolean(myReservation && (!editingTime || !canModify))} onClick={() => setFullDay(true)} type="button">کل روز کاری</button>
             </div>
           </fieldset>
           {!fullDay ? <>
             <label className="grid gap-1 text-xs font-medium text-slate-600">شروع
-              <select className={inputClass} disabled={isStarted} name="startHour" onChange={(event) => { const next = Number(event.target.value); setStartHour(next); if (endHour <= next) setEndHour(next + 1); }} value={startHour}>
+              <select className={inputClass} disabled={isStarted || Boolean(myReservation && (!editingTime || !canModify))} name="startHour" onChange={(event) => { const next = Number(event.target.value); setStartHour(next); if (endHour <= next) setEndHour(next + 1); }} ref={startHourRef} value={startHour}>
                 {hours.slice(0, -1).map((hour) => <option key={hour} value={hour}>{formatHour(hour)}</option>)}
               </select>
             </label>
             <label className="grid gap-1 text-xs font-medium text-slate-600">پایان
-              <select className={inputClass} name="endHour" onChange={(event) => setEndHour(Number(event.target.value))} value={endHour}>
+              <select className={inputClass} disabled={Boolean(myReservation && (!editingTime || !canModify))} name="endHour" onChange={(event) => setEndHour(Number(event.target.value))} ref={endHourRef} value={endHour}>
                 {hours.slice(1).filter((hour) => hour > startHour).map((hour) => <option key={hour} value={hour}>{formatHour(hour)}</option>)}
               </select>
             </label>
@@ -307,10 +329,16 @@ export function DeskReservationForm({
         </div>
         <div className="mt-1.5 flex flex-col gap-1.5 border-t pt-1.5 text-xs sm:flex-row sm:items-center sm:justify-between">
           <span className="text-slate-500">بازه انتخابی: <strong className="text-slate-800">{formatHour(displayedStart)} تا {formatHour(displayedEnd)}</strong></span>
-          {myReservation ? <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-slate-600">
-            <span><strong className="text-blue-900">رزرو شما:</strong> {desks.find((desk) => desk.id === myReservation.deskId)?.name}، {formatHour(myReservation.startHour)} تا {formatHour(myReservation.endHour)} · {statusLabel(myReservation.status)}</span>
-            <Button className="h-8 px-2.5" disabled={!desks.some((desk) => desk.id === myReservation.deskId && desk.active)} onClick={() => { setEditingTime(true); setSelectedDeskId(myReservation.deskId); }} type="button" variant="outline"><Pencil className="h-3.5 w-3.5" />ویرایش زمان</Button>
-            <SubmitButton className="h-8 px-2.5 text-red-600 hover:bg-red-50 hover:text-red-700" formAction={cancelOwnDeskReservationAction} pendingLabel="در حال لغو" variant="ghost">لغو رزرو</SubmitButton>
+          {myReservation ? <div className="flex flex-wrap items-center gap-2 text-slate-600">
+            <span className="me-auto"><strong className="text-blue-900">رزرو شما:</strong> {desks.find((desk) => desk.id === myReservation.deskId)?.name}، {formatHour(myReservation.startHour)} تا {formatHour(myReservation.endHour)} · {statusLabel(myReservation.status)}</span>
+            {!canModify ? <span className="rounded-md bg-slate-100 px-2.5 py-1.5 text-slate-600">این رزرو پایان یافته و فقط قابل مشاهده است.</span> : editingTime ? <>
+              <span aria-live="polite" className="text-blue-800">حالت ویرایش زمان فعال است.</span>
+              <SubmitButton className="h-11 px-4 sm:h-10" disabled={!canSubmit} pendingLabel="در حال ذخیره">ذخیره تغییرات</SubmitButton>
+              <Button className="h-11 sm:h-10" onClick={stopTimeEditing} type="button" variant="outline">انصراف</Button>
+            </> : <>
+              <Button className="h-11 sm:h-10" disabled={!desks.some((desk) => desk.id === myReservation.deskId && desk.active)} onClick={beginTimeEditing} type="button" variant="outline"><Pencil className="h-4 w-4" />ویرایش زمان</Button>
+              <SubmitButton className="h-11 px-4 text-red-600 hover:bg-red-50 hover:text-red-700 sm:h-10" formAction={cancelOwnDeskReservationAction} pendingLabel="در حال لغو" variant="ghost">لغو رزرو</SubmitButton>
+            </>}
           </div> : null}
         </div>
       </section>
@@ -343,7 +371,7 @@ export function DeskReservationForm({
                 return <div className={cn("absolute", placement?.deskClass)} key={desk.id}>
                   <button
                     aria-label={`${desk.name}، ${stateLabel(state)}${isSelected ? "، انتخاب‌شده" : ""}`}
-                    aria-disabled={!desk.active}
+                    aria-disabled={!desk.active || Boolean(myReservation && !canModify)}
                     aria-selected={isSelected}
                     className={cn(
                       "relative flex h-full w-full flex-col items-center justify-center gap-0.5 rounded-md border-2 bg-white p-0.5 text-center transition focus-visible:ring-2 focus-visible:ring-ring",
@@ -354,7 +382,7 @@ export function DeskReservationForm({
                       isSelected && !isCurrentDesk && "border-slate-700 ring-2 ring-slate-700/10",
                       isSelected && isCurrentDesk && "ring-2 ring-blue-400/30",
                     )}
-                    disabled={!desk.active}
+                    disabled={!desk.active || Boolean(myReservation && !canModify)}
                     onClick={() => setSelectedDeskId(desk.id)}
                     role="option"
                     title={!desk.active ? `${desk.name} غیرفعال و غیرقابل انتخاب است` : relevant ? `${relevant.userName}، ${formatHour(relevant.startHour)} تا ${formatHour(relevant.endHour)}، ${statusLabel(relevant.status)}` : `${desk.name} برای این بازه آزاد است`}
@@ -394,7 +422,7 @@ export function DeskReservationForm({
               <section className="grid gap-2 border-t pt-3">
                 {movingDesk && myReservation ? <p className="text-xs text-slate-600">انتقال رزرو از <strong>{desks.find((desk) => desk.id === myReservation.deskId)?.name}</strong> به <strong>{selectedDesk.name}</strong> برای {formatHour(displayedStart)} تا {formatHour(displayedEnd)}</p> : <p className="text-xs text-slate-600">{selectedDesk.name} · {formatHour(displayedStart)} تا {formatHour(displayedEnd)}</p>}
                 {approvedConflict ? <p className="rounded-md bg-red-50 p-2.5 text-xs text-red-700">این بازه با رزرو {approvedConflict.userName} از {formatHour(approvedConflict.startHour)} تا {formatHour(approvedConflict.endHour)} هم‌پوشانی دارد.</p> : null}
-                {!myReservation ? <SubmitButton className="w-full" disabled={!canSubmit} pendingLabel="در حال ثبت"><Check className="h-4 w-4" />{actionLabel}</SubmitButton> : movingDesk ? <SubmitButton className="w-full" disabled={!canSubmit} pendingLabel="در حال انتقال"><Check className="h-4 w-4" />{actionLabel}</SubmitButton> : editingTime ? <div className="grid gap-2"><SubmitButton className="w-full" disabled={!canSubmit} pendingLabel="در حال ذخیره"><Check className="h-4 w-4" />{actionLabel}</SubmitButton>{!hasChanges ? <p className="text-center text-[11px] text-muted-foreground">برای ذخیره، بازه زمانی را تغییر دهید.</p> : null}<Button onClick={() => { setEditingTime(false); setStartHour(myReservation.startHour); setEndHour(myReservation.endHour); setFullDay(isFullDay); }} type="button" variant="ghost">انصراف از ویرایش</Button></div> : <Button onClick={() => setEditingTime(true)} type="button"><Pencil className="h-4 w-4" />ویرایش زمان رزرو</Button>}
+                {!myReservation ? <SubmitButton className="w-full" disabled={!canSubmit} pendingLabel="در حال ثبت"><Check className="h-4 w-4" />{actionLabel}</SubmitButton> : !canModify ? <p className="text-xs text-muted-foreground">برای رزرو پایان‌یافته اقدامی در دسترس نیست.</p> : movingDesk ? <SubmitButton className="w-full" disabled={!canSubmit} pendingLabel="در حال انتقال"><Check className="h-4 w-4" />{actionLabel}</SubmitButton> : editingTime ? <p className="text-xs text-blue-800">زمان جدید را در بخش بالای صفحه انتخاب و همان‌جا ذخیره کنید.</p> : <Button onClick={beginTimeEditing} type="button"><Pencil className="h-4 w-4" />ویرایش زمان رزرو</Button>}
               </section>
             </div>}
           </aside>

@@ -41,6 +41,7 @@ function getNavItems(user: CurrentUser): GlobalNavItem[] {
       match: "exact",
     },
     {
+      activeOnSelf: false,
       children: [
         { href: "/lunch", label: "غذا", match: "exact" },
         ...(canViewLunchReport ? [lunchReportItem] : []),

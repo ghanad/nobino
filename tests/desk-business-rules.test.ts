@@ -14,7 +14,12 @@ import {
   updateBuildingDesks,
   updateBuildingWeeklySchedule,
 } from "@/lib/desk-admin-service";
-import { approveDeskReservation, createDeskReservation, updateDeskReservation } from "@/lib/desk-reservation-service";
+import {
+  approveDeskReservation,
+  cancelDeskReservationByUser,
+  createDeskReservation,
+  updateDeskReservation,
+} from "@/lib/desk-reservation-service";
 import { formatJalaliDate } from "@/lib/jalali-date";
 import { ReservationTransitionError } from "@/lib/reservation-service";
 
@@ -232,6 +237,28 @@ test("manager can move and reschedule a future desk reservation", async () => {
   });
   assert.equal(updated.deskId, secondDeskId);
   assert.equal(updated.startAt.getTime(), addHours(startAt, 1).getTime());
+});
+
+test("an ended desk reservation cannot be cancelled", async () => {
+  const startAt = addHours(new Date(), -2);
+  const reservation = await db.deskReservation.create({
+    data: {
+      deskId,
+      endAt: addHours(startAt, 1),
+      startAt,
+      status: ReservationStatus.APPROVED,
+      userId,
+    },
+  });
+
+  await assert.rejects(
+    cancelDeskReservationByUser({ reservationId: reservation.id, userId }),
+    /رزرو پایان‌یافته قابل لغو نیست/,
+  );
+  assert.equal(
+    (await db.deskReservation.findUniqueOrThrow({ where: { id: reservation.id } })).status,
+    ReservationStatus.APPROVED,
+  );
 });
 
 test("desk with a future approved reservation cannot be disabled", async () => {

@@ -28,16 +28,10 @@ type ServiceLink = {
 
 const serviceLinks: ServiceLink[] = [
   {
-    title: "دانشنامه",
-    description: "راهنماها، فرایندها و اطلاعات داخلی شرکت",
-    href: "/wiki",
-    icon: BookOpen,
-  },
-  {
-    title: "رزرو غذا",
-    description: "ثبت یا مشاهده رزرو غذای روزانه",
-    href: "/lunch",
-    icon: Utensils,
+    title: "رزرو میز کار",
+    description: "انتخاب میز در دفتر برای ساعت‌های مورد نیاز",
+    href: "/desks",
+    icon: Armchair,
   },
   {
     title: "رزرو نوبت سیستم",
@@ -46,16 +40,22 @@ const serviceLinks: ServiceLink[] = [
     icon: CalendarClock,
   },
   {
+    title: "رزرو غذا",
+    description: "ثبت یا مشاهده رزرو غذای روزانه",
+    href: "/lunch",
+    icon: Utensils,
+  },
+  {
     title: "رزرو اتاق جلسه",
     description: "ثبت یا مشاهده رزرو اتاق‌های جلسه",
     href: "/meeting-rooms",
     icon: DoorOpen,
   },
   {
-    title: "رزرو میز کار",
-    description: "انتخاب میز در دفتر برای ساعت‌های مورد نیاز",
-    href: "/desks",
-    icon: Armchair,
+    title: "دانشنامه",
+    description: "راهنماها، فرایندها و اطلاعات داخلی شرکت",
+    href: "/wiki",
+    icon: BookOpen,
   },
 ];
 
@@ -102,15 +102,15 @@ function ServicesGateway({ user }: { user: CurrentUser }) {
             className="text-2xl font-semibold leading-9 text-slate-950"
             id="services-title"
           >
-            خدمات
+            نوبینو
           </h1>
           <p className="text-sm leading-6 text-slate-600">
-            سرویس مورد نیازتان را انتخاب کنید.
+            بخش مورد نیازتان را انتخاب کنید.
           </p>
         </section>
 
         <nav
-          aria-label="فهرست خدمات قابل رزرو"
+          aria-label="فهرست بخش‌های نوبینو"
           className="grid gap-4 md:grid-cols-2"
         >
           {serviceLinks.map((service) => (
