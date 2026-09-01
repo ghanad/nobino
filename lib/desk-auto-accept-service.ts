@@ -3,13 +3,17 @@ import "server-only";
 import { ReservationStatus } from "@prisma/client";
 
 import { db } from "@/lib/db";
-import { approveDeskReservationInTransaction } from "@/lib/desk-reservation-service";
+import {
+  approveDeskReservationInTransaction,
+  rejectDeskReservationForApprovedConflictInTransaction,
+} from "@/lib/desk-reservation-service";
 import { ReservationTransitionError } from "@/lib/reservation-service";
 
 export type DeskAutoAcceptRunResult = {
   approved: number;
   considered: number;
   failed: number;
+  rejected: number;
   skipped: number;
   stillPending: number;
 };
@@ -38,6 +42,7 @@ export async function runDeskAutoAcceptBatch(
     approved: 0,
     considered: eligibleReservations.length,
     failed: 0,
+    rejected: 0,
     skipped: 0,
     stillPending: 0,
   };
@@ -58,7 +63,20 @@ export async function runDeskAutoAcceptBatch(
       result.approved += 1;
     } catch (error) {
       if (isSkippedAutoAcceptError(error)) result.skipped += 1;
-      else if (error instanceof ReservationTransitionError) result.stillPending += 1;
+      else if (error instanceof ReservationTransitionError) {
+        try {
+          const rejected = await db.$transaction((tx) =>
+            rejectDeskReservationForApprovedConflictInTransaction(tx, {
+              now,
+              reservationId: reservation.id,
+            }),
+          );
+          if (rejected) result.rejected += 1;
+          else result.stillPending += 1;
+        } catch {
+          result.failed += 1;
+        }
+      }
       else result.failed += 1;
     }
   }

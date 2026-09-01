@@ -113,7 +113,34 @@ test("desk auto approval uses the existing shared cron batch", async () => {
   }), 1);
 });
 
-test("desk auto approval leaves a conflicting request pending", async () => {
+test("zero desk auto approval delay makes a new request immediately eligible", async () => {
+  await updateDeskSettings({
+    adminId,
+    autoApprovalDelayHours: 0,
+    autoApprovalEnabled: true,
+    maxAdvanceDays: 14,
+  });
+  const startAt = nextWorkingDateAtHour(9);
+  const pending = await createDeskReservation({
+    deskId,
+    endAt: addHours(startAt, 1),
+    startAt,
+    userId,
+  });
+
+  assert.equal(pending.autoApprovalAt?.getTime(), pending.createdAt.getTime());
+
+  const result = await runDeskAutoAcceptBatch(pending.createdAt);
+  const approved = await db.deskReservation.findUniqueOrThrow({
+    where: { id: pending.id },
+  });
+
+  assert.equal(result.approved, 1);
+  assert.equal(approved.status, ReservationStatus.APPROVED);
+  assert.equal(approved.autoApprovalAt, null);
+});
+
+test("desk auto approval rejects and notifies a conflicting request at its deadline", async () => {
   await updateDeskSettings({
     adminId,
     autoApprovalDelayHours: 1,
@@ -133,12 +160,24 @@ test("desk auto approval leaves a conflicting request pending", async () => {
     startAt,
     userId: secondUserId,
   });
-  await db.deskReservation.updateMany({
-    where: { id: { in: [first.id, second.id] } },
-    data: { autoApprovalAt: addHours(new Date(), -1) },
-  });
+  const beforeDeadline = new Date(first.autoApprovalAt!.getTime() - 1);
+  const beforeResult = await runDeskAutoAcceptBatch(beforeDeadline);
+  assert.equal(beforeResult.considered, 0);
+  assert.equal((await db.deskReservation.findUniqueOrThrow({
+    where: { id: second.id },
+  })).status, ReservationStatus.PENDING);
+  assert.equal(await db.notification.count({
+    where: {
+      deskReservationId: second.id,
+      type: "DESK_RESERVATION_AUTO_REJECTED_CONFLICT",
+    },
+  }), 0);
 
-  const result = await runDeskAutoAcceptBatch();
+  const deadline = new Date(Math.max(
+    first.autoApprovalAt!.getTime(),
+    second.autoApprovalAt!.getTime(),
+  ));
+  const result = await runDeskAutoAcceptBatch(deadline);
   const reservations = await db.deskReservation.findMany({
     where: { id: { in: [first.id, second.id] } },
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
@@ -146,9 +185,25 @@ test("desk auto approval leaves a conflicting request pending", async () => {
 
   assert.equal(result.considered, 2);
   assert.equal(result.approved, 1);
-  assert.equal(result.stillPending, 1);
+  assert.equal(result.rejected, 1);
+  assert.equal(result.stillPending, 0);
   assert.equal(reservations[0].status, ReservationStatus.APPROVED);
-  assert.equal(reservations[1].status, ReservationStatus.PENDING);
+  assert.equal(reservations[1].status, ReservationStatus.REJECTED);
+  assert.equal(reservations[1].autoApprovalAt, null);
+  assert.equal(await db.auditLog.count({
+    where: {
+      action: "DESK_RESERVATION_AUTO_REJECTED_CONFLICT",
+      entityId: second.id,
+    },
+  }), 1);
+  const notification = await db.notification.findFirstOrThrow({
+    where: {
+      deskReservationId: second.id,
+      type: "DESK_RESERVATION_AUTO_REJECTED_CONFLICT",
+      userId: secondUserId,
+    },
+  });
+  assert.match(notification.body, /لطفاً میز دیگری انتخاب کنید/);
 });
 
 test("disabling desk auto approval clears pending deadlines without backfilling", async () => {

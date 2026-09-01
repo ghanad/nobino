@@ -386,7 +386,7 @@ function PolicyView({
                 className="min-w-0 flex-1 bg-transparent px-3 text-left text-sm outline-none"
                 defaultValue={settings.autoApprovalDelayHours}
                 max={24}
-                min={1}
+                min={0}
                 name="autoApprovalDelayHours"
                 required
                 type="number"
@@ -399,7 +399,7 @@ function PolicyView({
         </div>
         <ToggleSwitch
           defaultChecked={settings.autoApprovalEnabled}
-          description="درخواست پس از مهلت تعیین‌شده، یا در زمان شروع رزرو اگر زودتر باشد، بررسی و در صورت نبود تداخل تأیید می‌شود."
+          description="با مقدار صفر، درخواست در اولین اجرای زمان‌بند بررسی می‌شود. مقادیر دیگر پس از مهلت تعیین‌شده، یا در زمان شروع رزرو اگر زودتر باشد، بررسی و در صورت نبود تداخل تأیید می‌شوند."
           label="تأیید خودکار رزرو میز"
           name="autoApprovalEnabled"
         />

@@ -121,7 +121,7 @@ export async function updateBuildingDesksAction(_state: AdminDeskActionState, fo
 export async function updateDeskSettingsAction(_state: AdminDeskActionState, formData: FormData): Promise<AdminDeskActionState> {
   const admin = await requireRole([UserRole.ADMIN]);
   const parsed = z.object({
-    autoApprovalDelayHours: z.coerce.number().int().min(1).max(24),
+    autoApprovalDelayHours: z.coerce.number().int().min(0).max(24),
     maxAdvanceDays: z.coerce.number().int().min(1).max(365),
   }).safeParse(Object.fromEntries(formData));
   if (!parsed.success) return result(false, "تعداد روز یا مهلت تأیید خودکار معتبر نیست.");

@@ -29,6 +29,7 @@ const NOTIFICATION_TITLE_LABELS: Record<string, string> = {
   ALTERNATIVE_ACCEPTED: "زمان پیشنهادی پذیرفته شد",
   ALTERNATIVE_PROPOSED: "زمان جایگزین پیشنهاد شد",
   ALTERNATIVE_REJECTED: "زمان پیشنهادی رد شد",
+  DESK_RESERVATION_AUTO_REJECTED_CONFLICT: "میز انتخاب‌شده رزرو شد",
   FOOD_CANCELLED: "رزرو غذا لغو شد",
   FOOD_RESERVED: "رزرو غذا ثبت شد",
   FOOD_UPDATED: "رزرو غذا تغییر کرد",

@@ -4,7 +4,7 @@ import { ReservationStatus, UserRole } from "@prisma/client";
 
 import { db } from "@/lib/db";
 import { endOfLocalDay, startOfLocalDay, validateDeskReservationTimeRange } from "@/lib/desk-schedule";
-import { formatJalaliDate } from "@/lib/jalali-date";
+import { formatJalaliDate, formatPersianLocalTime } from "@/lib/jalali-date";
 import { assertManagerOrAdmin, ReservationTransitionError, type DbClient } from "@/lib/reservation-service/shared";
 
 const ACTIVE_STATUSES: ReservationStatus[] = [
@@ -233,6 +233,84 @@ export async function approveDeskReservationInTransaction(
       },
     });
     return approved;
+}
+
+export async function rejectDeskReservationForApprovedConflictInTransaction(
+  tx: DbClient,
+  input: {
+    now: Date;
+    reservationId: string;
+  },
+): Promise<boolean> {
+  const reservation = await tx.deskReservation.findUnique({
+    where: { id: input.reservationId },
+    select: {
+      autoApprovalAt: true,
+      deskId: true,
+      endAt: true,
+      id: true,
+      startAt: true,
+      status: true,
+      userId: true,
+      desk: {
+        select: {
+          name: true,
+          building: { select: { name: true } },
+        },
+      },
+    },
+  });
+  if (
+    !reservation ||
+    reservation.status !== ReservationStatus.PENDING ||
+    !reservation.autoApprovalAt ||
+    reservation.autoApprovalAt.getTime() > input.now.getTime() ||
+    reservation.endAt.getTime() <= input.now.getTime()
+  ) {
+    return false;
+  }
+
+  const approvedConflict = await tx.deskReservation.findFirst({
+    where: {
+      deskId: reservation.deskId,
+      endAt: { gt: reservation.startAt },
+      id: { not: reservation.id },
+      startAt: { lt: reservation.endAt },
+      status: ReservationStatus.APPROVED,
+    },
+    select: { id: true },
+  });
+  if (!approvedConflict) return false;
+
+  const rejected = await tx.deskReservation.update({
+    where: { id: reservation.id },
+    data: {
+      autoApprovalAt: null,
+      status: ReservationStatus.REJECTED,
+    },
+  });
+  await tx.auditLog.create({
+    data: {
+      action: "DESK_RESERVATION_AUTO_REJECTED_CONFLICT",
+      actorUserId: null,
+      entityId: rejected.id,
+      entityType: "DeskReservation",
+      newValue: {
+        conflictingReservationId: approvedConflict.id,
+        status: rejected.status,
+      },
+    },
+  });
+  await tx.notification.create({
+    data: {
+      body: `درخواست رزرو ${reservation.desk.name} در ${reservation.desk.building.name} برای ${formatJalaliDate(reservation.startAt)}، ساعت ${formatPersianLocalTime(reservation.startAt)} تا ${formatPersianLocalTime(reservation.endAt)} به‌دلیل تأیید یک درخواست زودتر پذیرفته نشد. لطفاً میز دیگری انتخاب کنید.`,
+      deskReservationId: rejected.id,
+      title: "میز انتخاب‌شده رزرو شد",
+      type: "DESK_RESERVATION_AUTO_REJECTED_CONFLICT",
+      userId: rejected.userId,
+    },
+  });
+  return true;
 }
 
 export async function rejectDeskReservation(input: {

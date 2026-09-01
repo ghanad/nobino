@@ -39,6 +39,8 @@ export const ACTION_LABELS: Record<string, string> = {
   DESK_UPDATED: "میز ویرایش شد",
   DESK_RESERVATION_CREATED: "درخواست رزرو میز ثبت شد",
   DESK_RESERVATION_AUTO_APPROVED: "رزرو میز خودکار تأیید شد",
+  DESK_RESERVATION_AUTO_REJECTED_CONFLICT:
+    "درخواست رزرو میز به‌دلیل تداخل خودکار رد شد",
   DESK_RESERVATION_APPROVED: "رزرو میز توسط مدیر تأیید شد",
   DESK_RESERVATION_REJECTED: "درخواست رزرو میز رد شد",
   DESK_RESERVATION_UPDATED: "رزرو میز ویرایش شد",

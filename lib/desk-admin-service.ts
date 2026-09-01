@@ -188,10 +188,10 @@ export async function updateDeskSettings(input: {
 }) {
   if (
     !Number.isInteger(input.autoApprovalDelayHours) ||
-    input.autoApprovalDelayHours < 1 ||
+    input.autoApprovalDelayHours < 0 ||
     input.autoApprovalDelayHours > 24
   ) {
-    throw new AdminSettingsError("مهلت تأیید خودکار باید بین ۱ تا ۲۴ ساعت باشد.");
+    throw new AdminSettingsError("مهلت تأیید خودکار باید بین ۰ تا ۲۴ ساعت باشد.");
   }
 
   return db.$transaction(async (tx) => {
