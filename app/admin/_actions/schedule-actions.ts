@@ -49,8 +49,8 @@ export async function updateWeeklyScheduleAction(
   if (!parsed.success) {
     redirectToAdmin({
       error: "ساعت‌های برنامه را دقیقاً روی ابتدای ساعت وارد کنید.",
-      tab: "schedule",
-      view: "weekly",
+      tab: "capacity",
+      view: "schedule",
     });
   }
 
@@ -62,15 +62,15 @@ export async function updateWeeklyScheduleAction(
   } catch (error) {
     redirectToAdmin({
       error: getActionErrorMessage(error),
-      tab: "schedule",
-      view: "weekly",
+      tab: "capacity",
+      view: "schedule",
     });
   }
 
   redirectToAdmin({
     scheduleUpdated: "1",
-    tab: "schedule",
-    view: "weekly",
+    tab: "capacity",
+    view: "schedule",
   });
 }
 

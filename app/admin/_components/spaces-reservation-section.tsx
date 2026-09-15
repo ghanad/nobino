@@ -5,7 +5,16 @@ import type { ReactNode } from "react";
 import { AdminSectionShell } from "./admin-section-shell";
 
 const items = [
-  { href: "/admin/capacity", label: "رزرو سیستم", icon: "gauge" },
+  {
+    href: "/admin/capacity",
+    label: "رزرو سیستم",
+    icon: "gauge",
+    children: [
+      { href: "/admin/capacity", key: "capacity-details", label: "ظرفیت و استثناها" },
+      { href: "/admin/capacity?view=schedule", key: "capacity-schedule", label: "ساعات کاری" },
+      { href: "/admin/capacity?view=policy", key: "capacity-policy", label: "سیاست رزرو" },
+    ],
+  },
   {
     href: "/admin/meeting-rooms",
     label: "اتاق‌های جلسه",
@@ -35,7 +44,6 @@ const items = [
     children: [
       { href: "/admin/calendar", key: "calendar-special-days", label: "روزهای خاص" },
       { href: "/admin/calendar?view=exceptions", key: "calendar-holidays", label: "تعطیلات رسمی" },
-      { href: "/admin/calendar?view=weekly", key: "calendar-weekly", label: "برنامه هفتگی" },
     ],
   },
 ] as const;

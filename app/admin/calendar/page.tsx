@@ -5,12 +5,12 @@ import {
   UserRole,
 } from "@prisma/client";
 import { Info } from "lucide-react";
+import { redirect } from "next/navigation";
 import { SpacesReservationSectionShell } from "@/app/admin/_components/spaces-reservation-section";
 
 import {
   getAdminToast,
   OfficialHolidaySettings,
-  WeeklyScheduleSettings,
 } from "@/app/admin/_sections";
 import {
   EditDeleteMenu,
@@ -63,10 +63,10 @@ const MODE_HOURS_CLASS = {
   [CalendarDayOverrideMode.CUSTOM]: "text-blue-700",
 };
 
-type CalendarView = "exceptions" | "special-days" | "weekly";
+type CalendarView = "exceptions" | "special-days";
 
 function parseCalendarView(value?: string): CalendarView {
-  if (value === "weekly" || value === "exceptions") {
+  if (value === "exceptions") {
     return value;
   }
 
@@ -117,10 +117,26 @@ export default async function AdminCalendarPage({
 }: CalendarPageProps) {
   await requireRole([UserRole.ADMIN]);
   const params = await searchParams;
+
+  // The weekly working-hours editor moved to the system reservations section.
+  if (params?.view === "weekly") {
+    const nextParams = new URLSearchParams({ view: "schedule" });
+
+    if (params.error) {
+      nextParams.set("error", params.error);
+    }
+
+    if (params.scheduleUpdated) {
+      nextParams.set("scheduleUpdated", params.scheduleUpdated);
+    }
+
+    redirect(`/admin/capacity?${nextParams.toString()}`);
+  }
+
   const activeView = parseCalendarView(params?.view);
   const toast = getToast(params);
 
-  const [overrides, buildings, rooms, schedules, holidays] =
+  const [overrides, buildings, rooms, holidays] =
     await Promise.all([
       db.calendarDayOverride.findMany({
         include: { targets: true },
@@ -135,16 +151,6 @@ export default async function AdminCalendarPage({
         where: { isActive: true, deletedAt: null },
         orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
         select: { id: true, name: true },
-      }),
-      db.workingSchedule.findMany({
-        orderBy: { dayOfWeek: "asc" },
-        select: {
-          id: true,
-          dayOfWeek: true,
-          isWorkingDay: true,
-          startTime: true,
-          endTime: true,
-        },
       }),
       db.scheduleException.findMany({
         where: { source: ScheduleExceptionSource.IRAN_HOLIDAY },
@@ -171,7 +177,7 @@ export default async function AdminCalendarPage({
     <SpacesReservationSectionShell>
       <PageHeader
         subtitle="تعریف روزهای خاص و استثناهای تقویم"
-        title="تقویم و ساعات کاری"
+        title="تقویم و تعطیلی‌ها"
       />
       {toast ? <UrlToast {...toast} /> : null}
 
@@ -301,8 +307,6 @@ export default async function AdminCalendarPage({
               </p>
             </div>
           </>
-        ) : activeView === "weekly" ? (
-          <WeeklyScheduleSettings schedules={schedules} />
         ) : (
           <OfficialHolidaySettings
             currentJalaliYear={new Date().toLocaleDateString("fa-IR-u-ca-persian", { year: "numeric" })}

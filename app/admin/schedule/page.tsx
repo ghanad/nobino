@@ -27,6 +27,13 @@ export default async function AdminSchedulePage({
     }
   }
 
+  // The weekly working-hours editor moved to the system reservations section.
+  if (params?.view === "weekly") {
+    nextParams.set("view", "schedule");
+    const query = nextParams.toString();
+    redirect(query ? `/admin/capacity?${query}` : "/admin/capacity");
+  }
+
   const query = nextParams.toString();
   redirect(query ? `/admin/calendar?${query}` : "/admin/calendar");
 }

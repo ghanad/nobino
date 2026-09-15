@@ -9,6 +9,7 @@ import {
   getAdminToast,
   ReservationPolicySettings,
   ResourcePoolSettings,
+  WeeklyScheduleSettings,
 } from "@/app/admin/_sections";
 
 type AdminCapacityPageProps = {
@@ -18,14 +19,19 @@ type AdminCapacityPageProps = {
     capacityExceptionDeleted?: string;
     capacityExceptionUpdated?: string;
     poolUpdated?: string;
+    scheduleUpdated?: string;
     view?: string;
   }>;
 };
 
-type SystemReservationsView = "capacity" | "policy";
+type SystemReservationsView = "capacity" | "policy" | "schedule";
 
 function parseSystemReservationsView(value?: string): SystemReservationsView {
-  return value === "policy" ? "policy" : "capacity";
+  if (value === "policy") {
+    return "policy";
+  }
+
+  return value === "schedule" ? "schedule" : "capacity";
 }
 
 export default async function AdminCapacityPage({
@@ -95,10 +101,24 @@ export default async function AdminCapacityPage({
     oneReservationPerDayEnabled: true,
   };
 
+  const workingSchedules =
+    activeView === "schedule"
+      ? await db.workingSchedule.findMany({
+          orderBy: { dayOfWeek: "asc" },
+          select: {
+            id: true,
+            dayOfWeek: true,
+            isWorkingDay: true,
+            startTime: true,
+            endTime: true,
+          },
+        })
+      : [];
+
   return (
     <SpacesReservationSectionShell>
       <PageHeader
-        subtitle="ظرفیت، استثناهای روزانه و قواعد تأیید رزرو سیستم"
+        subtitle="ظرفیت، ساعات کاری و قواعد تأیید رزرو سیستم"
         title="رزرو سیستم"
       />
 
@@ -116,6 +136,8 @@ export default async function AdminCapacityPage({
                 resourcePools={resourcePools}
               />
             </>
+          ) : activeView === "schedule" ? (
+            <WeeklyScheduleSettings schedules={workingSchedules} />
           ) : (
             <ReservationPolicySettings {...policyValues} />
           )}
